@@ -49,6 +49,52 @@ test.group('schema compiler', () => {
     assert.equal(compiled.spec.elements['f.items.sku']?.props.error, undefined)
     assert.equal(compiled.state.data && typeof compiled.state.data, 'object')
   })
+  test('emits repeater addLabel and grid descriptors supported by the wire schema', async ({
+    assert,
+  }) => {
+    const compiled = await compileForm(
+      [
+        node(
+          schema
+            .repeater('items')
+            .schema([schema.text('name')])
+            .addLabel('Add item')
+            .grid(2)
+        ),
+      ],
+      options
+    )
+    const descriptor = compiled.spec.elements['f.items']?.props.descriptor as
+      Record<string, unknown> | undefined
+    assert.equal(descriptor?.addLabel, 'Add item')
+    assert.equal(descriptor?.grid, 2)
+  })
+  test('emits section icons, inline checkbox/toggle props, and toggle colors', async ({
+    assert,
+  }) => {
+    const compiled = await compileForm(
+      [
+        node(
+          schema
+            .section('Details')
+            .icon('book')
+            .components([
+              schema.checkbox('published').inline(),
+              schema.toggle('enabled').inline().onColor('green').offColor('gray'),
+            ])
+        ),
+      ],
+      options
+    )
+    const section = Object.values(compiled.spec.elements).find(
+      (element) => element.type === 'Section'
+    )
+    assert.equal(section?.props.icon, 'book')
+    assert.equal(compiled.spec.elements['f.published']?.props.inline, true)
+    assert.equal(compiled.spec.elements['f.enabled']?.props.inline, true)
+    assert.equal(compiled.spec.elements['f.enabled']?.props.onColor, 'green')
+    assert.equal(compiled.spec.elements['f.enabled']?.props.offColor, 'gray')
+  })
 
   test('places repeater item label expressions in the item template scope', async ({ assert }) => {
     const compiled = await compileForm(
@@ -68,7 +114,46 @@ test.group('schema compiler', () => {
     assert.deepEqual(item?.props.itemLabel, { $template: 'SKU ${sku}' })
     assert.deepEqual(item?.props.index, { $index: true })
   })
+  test('rejects repeater item labels that cannot be lifted into item scope', async ({ assert }) => {
+    let failure: unknown
+    try {
+      await compileForm(
+        [
+          node(
+            schema
+              .repeater('items')
+              .schema([schema.text('sku')])
+              .itemLabel(({ get }) => 'SKU ' + (get('sku') || 'unknown'))
+          ),
+        ],
+        options
+      )
+    } catch (error) {
+      failure = error
+    }
+    assert.instanceOf(failure, E_PUPITRE_UNLIFTABLE_CLOSURE)
+  })
 
+  test('keeps time field wall-clock values on the form load path', async ({ assert }) => {
+    const compiled = await compileForm([node(schema.time('opensAt'))], {
+      ...options,
+      data: { opensAt: '09:30' },
+    })
+    assert.equal((compiled.state.data as Record<string, unknown>).opensAt, '09:30')
+  })
+
+  test('resolves each image-entry key and preserves external URLs', async ({ assert }) => {
+    const compiled = await compileInfolist([node(schema.imageEntry('avatars'))], {
+      ...options,
+      record: { avatars: ['stored/key.png', 'https://example.test/avatar.png'] },
+      resolveFileUrl: async (key) =>
+        key === 'stored/key.png' ? 'https://cdn.test/avatar.png' : null,
+    })
+    assert.deepEqual(compiled.spec.elements['f.avatars']?.props.value, [
+      'https://cdn.test/avatar.png',
+      'https://example.test/avatar.png',
+    ])
+  })
   test('compiles options and field bindings with catalog-valid element types', async ({
     assert,
   }) => {
@@ -182,7 +267,21 @@ test.group('schema compiler', () => {
       'static'
     )
     assert.equal(
-      liftClosure(({ get }: typeof getter) => get('a') && get('b'), 'content', scope).kind,
+      liftClosure(({ get }: typeof getter) => 'Name: ' + (get('name') || 'guest'), 'label', scope)
+        .kind,
+      'static'
+    )
+    assert.equal(
+      liftClosure(
+        ({ get }: typeof getter) => 'Status ' + (get('status') === 'open'),
+        'label',
+        scope
+      ).kind,
+      'static'
+    )
+    assert.equal(
+      liftClosure(({ get }: typeof getter) => 'Value ' + (get('a') && get('b')), 'content', scope)
+        .kind,
       'static'
     )
     assert.deepEqual(

@@ -53,8 +53,6 @@ const actions = {
     method: 'get' | 'post' | 'put' | 'patch' | 'delete'
     ids?: Array<string | number>
   }) => runAction(params ?? { url: '', method: 'post' }),
-  evaluate: unavailable('evaluate'),
-  fetchOptions: unavailable('fetchOptions'),
   upload: unavailable('upload'),
   toast: unavailable('toast'),
   copy: async (params?: { text: string }) => {

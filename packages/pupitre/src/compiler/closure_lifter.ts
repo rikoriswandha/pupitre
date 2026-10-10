@@ -253,6 +253,32 @@ function lift(node: Node, scope: Scope): Lifted | null {
   }
   return null
 }
+function hasNestedCondition(node: Node, root = true): boolean {
+  if (
+    !root &&
+    (node.type === 'LogicalExpression' ||
+      (node.type === 'BinaryExpression' &&
+        ['===', '!==', '==', '!=', '>', '>=', '<', '<='].includes(node.operator ?? '')))
+  )
+    return true
+  return Object.values(node).some((value) => {
+    if (Array.isArray(value))
+      return value.some(
+        (child) =>
+          child &&
+          typeof child === 'object' &&
+          'type' in child &&
+          hasNestedCondition(child as Node, false)
+      )
+    return (
+      value &&
+      typeof value === 'object' &&
+      'type' in value &&
+      hasNestedCondition(value as Node, false)
+    )
+  })
+}
+
 export function liftClosure(
   fn: Function,
   purpose: 'visible' | 'disabled' | 'label' | 'content' | 'afterStateUpdated',
@@ -286,7 +312,8 @@ export function liftClosure(
     }
     return { kind: 'expression', value: updates }
   }
-  if (purpose !== 'visible' && body.type === 'LogicalExpression') return { kind: 'static' }
+  if (purpose !== 'visible' && (body.type === 'LogicalExpression' || hasNestedCondition(body)))
+    return { kind: 'static' }
   const result = lift(body, closureScope)
   if (!result) return { kind: 'static' }
   if (purpose === 'visible')

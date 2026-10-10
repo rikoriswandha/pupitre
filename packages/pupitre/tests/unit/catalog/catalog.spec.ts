@@ -63,6 +63,7 @@ test.group('catalog component contracts', () => {
     assert.isTrue(
       jsonRenderExpression.safeParse({ $computed: 'concat', args: { first: 'Hi' } }).success
     )
+    assert.isFalse(jsonRenderExpression.safeParse({ $computed: 'concat', args: ['Hi'] }).success)
     const rawString = raw(z.string())
     expectTypeOf<z.output<typeof rawString>>().toEqualTypeOf<string>()
     assert.deepEqual(rawString.parse({ $raw: 'hello' }), 'hello')

@@ -87,6 +87,7 @@ type ActionDescriptor = {
 ```
 
 Per-record action pada tabel dikirim di setiap `row.actions`, bukan di spec, karena `enabled` dievaluasi per record.
+`keyBindings` diterapkan pada action header dan bulk; action row tidak menerima `keyBindings`.
 
 Protokol (ADR-0012). Semua submit action berjalan lewat `fetch` JSON, bukan `router.post` Inertia, supaya satu respons bisa membawa flash, redirect, reload, atau patch:
 
@@ -97,7 +98,7 @@ Protokol (ADR-0012). Semua submit action berjalan lewat `fetch` JSON, bukan `rou
 | `confirm` | `ConfirmDialog` → `fetch(url, { ids? })` JSON | — |
 | `form` | `GET url` (`Accept: application/json`) → `ActionFormResponse` → `ActionModal` | `fetch(url, { data, ids? })` JSON |
 
-Header submit: `Accept: application/json`, `Content-Type: application/json`, `X-Requested-With: XMLHttpRequest`, `X-Pupitre-Action: 1`, `X-XSRF-TOKEN` (dekode cookie `XSRF-TOKEN` Shield), `credentials: 'same-origin'`; body `{ data?, ids? }`. Route resource (`store`/`update`/`destroy`) menjawab redirect Inertia biasa, tetapi JSON bila header `X-Pupitre-Action: 1` ada — `actions.delete()` memakai route `destroy` lewat jalur yang sama.
+Header submit: `Accept: application/json`, `Content-Type: application/json`, `X-Requested-With: XMLHttpRequest`, `X-Pupitre-Action: 1`, `X-Pupitre-Url: <current page pathname + query>` (untuk `redirect.back()`; server hanya menerima path relatif same-origin), `X-XSRF-TOKEN` (dekode cookie `XSRF-TOKEN` Shield), `credentials: 'same-origin'`; body `{ data?, ids? }`. Route resource (`store`/`update`/`destroy`) menjawab redirect Inertia biasa, tetapi JSON bila header `X-Pupitre-Action: 1` ada — `actions.delete()` memakai route `destroy` lewat jalur yang sama.
 
 ```ts
 type ActionFormResponse = { spec: Spec; state: StateModel; catalogVersion: string }
@@ -166,7 +167,7 @@ type ColumnDescriptor = {
   wrap?: boolean
   width?: string
   props: Record<string, unknown>     // spesifik tipe: colors, limit, since, options (select), circular...
-  editable?: { url: string }         // inline edit: PATCH url (template dengan :id)
+  editable?: { url: string }         // M3 only: PATCH inline edit
   summarize?: ('sum' | 'avg' | 'count' | 'min' | 'max')[]
 }
 ```
@@ -198,7 +199,7 @@ Nilai cell dikirim **sudah terformat** server-side (tanggal di timezone panel, a
 | Method & URL | Body | Respons |
 | --- | --- | --- |
 | `GET <list>?...` (Inertia, `only: ['data']`) | — | props (`data` saja) |
-| `PATCH <list>/:id/column/:name` | `{ value }` | 204 atau 422 |
+| `PATCH <list>/:id/column/:name` (M3) | `{ value }` | 204 atau 422; tidak tersedia di M1 |
 | `POST <list>/reorder` | `{ ids: (string\|number)[] }` | 204 |
 | `POST <list>/export` | `{ format: 'csv', columns?: string[], query }` | redirect ke download atau `{ jobId }` kalau adapter jobs ada |
 

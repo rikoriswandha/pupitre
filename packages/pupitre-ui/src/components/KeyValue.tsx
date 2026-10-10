@@ -46,6 +46,8 @@ export function KeyValue({ props, bindings }: Runtime) {
   function addEntry() {
     if (!newEntry.key.trim() || entries.some((entry) => entry.key === newEntry.key)) return
     const nextEntries = [...entries, { ...newEntry, id: `row-${nextId.current++}` }]
+    const keys = nextEntries.map((entry) => entry.key.trim())
+    if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
     setEntries(nextEntries)
     changeValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
     setNewEntry({ id: 'new', key: '', value: '' })
@@ -55,6 +57,8 @@ export function KeyValue({ props, bindings }: Runtime) {
     const destination = index + direction
     if (destination < 0 || destination >= nextEntries.length) return
     ;[nextEntries[index], nextEntries[destination]] = [nextEntries[destination], nextEntries[index]]
+    const keys = nextEntries.map((entry) => entry.key.trim())
+    if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
     setEntries(nextEntries)
     changeValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
   }
@@ -145,6 +149,8 @@ export function KeyValue({ props, bindings }: Runtime) {
                   aria-label={`Remove ${entry.key}`}
                   onClick={() => {
                     const nextEntries = entries.filter((_, i) => i !== index)
+                    const keys = nextEntries.map((row) => row.key.trim())
+                    if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
                     setEntries(nextEntries)
                     changeValue(
                       Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item]))

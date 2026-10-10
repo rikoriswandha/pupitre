@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Icon } from '../icons.js'
 import { useBoundValue } from '@rikology/pupitre-react'
 import type { ActionDescriptor } from '@rikology/pupitre/catalog'
 import { cn } from '../primitives/index.js'
@@ -36,7 +37,12 @@ export function Section({ props, children, bindings }: RuntimeProps) {
       {(heading || typeof props.aside === 'string' || props.collapsible === true) && (
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            {heading && <h2 className="text-base font-semibold text-foreground">{heading}</h2>}
+            {heading && (
+              <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+                {typeof props.icon === 'string' && <Icon name={props.icon} className="size-4" />}
+                {heading}
+              </h2>
+            )}
             {typeof props.description === 'string' && (
               <p className="mt-1 text-sm text-muted-foreground">{props.description}</p>
             )}

@@ -55,7 +55,7 @@ export function Radio({ props, bindings }: Runtime) {
           )}
           <RadioGroup
             {...props.extraAttributes}
-            name={props.name}
+            name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
             value={value === null || value === undefined ? undefined : String(value)}
             onValueChange={(next) =>
               setValue(options.find((option) => String(option.value) === next)?.value ?? next)

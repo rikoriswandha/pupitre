@@ -12,7 +12,12 @@ import { buildPageProps } from '../page_props.js'
 import { isPupitreActionRequest, actionJson, errorJson, setPupitreFlash } from '../responses.js'
 import type { ResourceRuntime } from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
-import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../../definition/schema.js'
+import { getComponentDefinition, schema as schemaFactory } from '../../builder/schema/schema.js'
+import type {
+  FieldDefinitionUnion,
+  SchemaNodeBuilder,
+  SchemaNodeDefinition,
+} from '../../definition/schema.js'
 import { resolveFileUrl, cleanupReplacedFiles } from '../../storage/index.js'
 import type { UploadField } from '../../storage/index.js'
 import { findUploadField } from '../../storage/upload_validation.js'
@@ -38,24 +43,86 @@ function setRedirectFlash(ctx: HttpContext, flash: unknown) {
     setPupitreFlash(ctx, flash)
 }
 
-function pruneUploads(ctx: HttpContext, resourceSlug: string) {
-  const uploads = (ctx.session.get('pupitre.uploads') ?? []) as { resource: string }[]
+function pruneUploads(ctx: HttpContext, resourceSlug: string, consumed: Map<string, string>) {
+  const uploads = (ctx.session.get('pupitre.uploads') ?? []) as {
+    resource: string
+    key: string
+    field: string
+  }[]
   ctx.session.put(
     'pupitre.uploads',
-    uploads.filter((upload) => upload.resource !== resourceSlug)
+    uploads.filter(
+      (upload) => !(upload.resource === resourceSlug && consumed.get(upload.key) === upload.field)
+    )
   )
 }
 
-function uploadFields(nodes: SchemaNodeDefinition[]): UploadField[] {
+function uploadFields(nodes: SchemaNodeDefinition[], prefix = ''): UploadField[] {
   const fields: UploadField[] = []
   for (const node of nodes) {
-    if (node.kind === 'fileUpload') fields.push(node as UploadField)
+    const path =
+      node.kind === 'repeater' || node.kind === 'fileUpload'
+        ? [prefix, node.name].filter(Boolean).join('.')
+        : prefix
+    if (node.kind === 'fileUpload') fields.push({ ...node, name: path } as UploadField)
     if ('children' in node && Array.isArray(node.children))
-      fields.push(...uploadFields(node.children))
-    if (node.kind === 'repeater' && Array.isArray(node.schema))
-      fields.push(...uploadFields(node.schema as SchemaNodeDefinition[]))
+      fields.push(...uploadFields(node.children, path))
+    if (node.kind === 'repeater') {
+      const schema =
+        typeof node.schema === 'function'
+          ? (
+              node.schema(schemaFactory as never) as unknown as (
+                SchemaNodeDefinition | SchemaNodeBuilder
+              )[]
+            ).map((child) => {
+              const builder = child as SchemaNodeBuilder
+              return typeof builder.toDefinition === 'function'
+                ? getComponentDefinition(builder)
+                : (child as SchemaNodeDefinition)
+            })
+          : node.schema
+      if (Array.isArray(schema)) fields.push(...uploadFields(schema, path))
+    }
   }
   return fields
+}
+
+function valuesAt(value: unknown, path: string): unknown[] {
+  let values: unknown[] = [value]
+  for (const segment of path.split('.')) {
+    values = values.flatMap((item) => {
+      if (Array.isArray(item)) return item.map((row) => (row as Record<string, unknown>)?.[segment])
+      if (!item || typeof item !== 'object') return []
+      return [(item as Record<string, unknown>)[segment]]
+    })
+  }
+  return values
+}
+
+function consumedUploads(
+  fields: UploadField[],
+  data: Record<string, unknown>
+): Map<string, string> {
+  const consumed = new Map<string, string>()
+  for (const field of fields) {
+    for (const value of valuesAt(data, field.name)) {
+      for (const key of Array.isArray(value) ? value : [value]) {
+        if (typeof key === 'string') consumed.set(key, field.name)
+      }
+    }
+  }
+  return consumed
+}
+
+function recordValue(record: LucidRow, name: string): unknown {
+  return valuesAt(record.serialize() as Record<string, unknown>, name).at(-1)
+}
+
+function serialized(record: LucidRow): Record<string, unknown> {
+  return record.serialize() as Record<string, unknown>
+}
+function serializedValue(record: LucidRow, name: string): unknown[] {
+  return valuesAt(serialized(record), name)
 }
 
 function keyName(model: LucidModel): string {
@@ -66,13 +133,6 @@ async function findRecord(ctx: HttpContext, target: ResourceRuntime): Promise<Lu
   const query = target.model.query()
   target.definition.scope?.(query, ctx)
   return query.where(keyName(target.model), ctx.params.id).first()
-}
-
-function serialized(record: LucidRow): Record<string, unknown> {
-  return record.serialize() as Record<string, unknown>
-}
-function recordValue(record: LucidRow, name: string): unknown {
-  return record.$attributes[name]
 }
 
 function handleActionValidation(ctx: HttpContext, error: unknown): boolean {
@@ -138,11 +198,12 @@ async function compileActions(
   ctx: HttpContext,
   target: ResourceRuntime,
   actions: ActionDefinition[],
-  record?: LucidRow
+  record?: LucidRow,
+  rowContext = false
 ): Promise<ActionDescriptor[]> {
   return Promise.all(
     actions.map((action) =>
-      compileActionDescriptor(action, {
+      compileActionDescriptor(rowContext ? { ...action, keyBindings: undefined } : action, {
         baseUrl: target.urls.list,
         ...(record
           ? { record, recordKey: recordValue(record, keyName(target.model)) as string | number }
@@ -213,19 +274,20 @@ export default class ResourceController {
       elements: { table: { type: 'DataTable', props: { descriptor } } },
     } as JsonRenderSpec
     const scopedQuery = target.model.query()
+    const preloaded = new Set<string>()
     for (const column of table.columns) {
-      if (column.kind !== 'fragment' && column.name.includes('.'))
-        scopedQuery.preload(column.name.split('.')[0]! as never)
+      if (column.kind === 'fragment' || !column.name.includes('.')) continue
+      const relation = column.name.split('.')[0]!
+      if (!preloaded.has(relation) && target.model.$getRelation(relation)) {
+        scopedQuery.preload(relation as never)
+        preloaded.add(relation)
+      }
     }
     target.definition.scope?.(scopedQuery, ctx)
     const queryResult = applyTableQuery(scopedQuery, table, ctx.request.qs(), {
       ctx,
       tabs: pageConfig?.tabs,
     })
-    for (const column of table.columns) {
-      if (column.kind !== 'fragment' && column.name.includes('.'))
-        queryResult.query.preload(column.name.split('.')[0]! as never)
-    }
     let rows: LucidRow[]
     let meta: {
       total: number
@@ -269,13 +331,14 @@ export default class ResourceController {
       timezone: ctx.pupitre.timezone,
       normalized: queryResult.normalized,
       rowUrl: (record) => rowUrls.get(record),
-      rowActions: (record) => compileActions(ctx, target, definition.actions?.row ?? [], record),
+      rowActions: (record) =>
+        compileActions(ctx, target, definition.actions?.row ?? [], record, true),
       resolveFileUrl: (key, column) => {
         const field =
           column.kind === 'fragment'
             ? undefined
             : findUploadField(target.definition.form, column.name)
-        return field ? resolveFileUrl(key, field) : Promise.resolve(null)
+        return field ? resolveFileUrl(key, field) : Promise.resolve(key)
       },
     })
     return render(
@@ -429,7 +492,7 @@ export default class ResourceController {
       await target.definition.hooks.afterSave?.(record, ctx, trx)
       return record
     })
-    pruneUploads(ctx, target.slug)
+    pruneUploads(ctx, target.slug, consumedUploads(uploadFields(target.definition.form), validated))
     const redirectTo = target.definition.pages.create?.redirectTo ?? 'edit'
     const savedId = recordValue(saved, keyName(target.model)) as string | number
     const redirect =
@@ -466,22 +529,27 @@ export default class ResourceController {
     }
     const fileFields = uploadFields(target.definition.form)
     const oldValues = new Map(
-      fileFields.map((field) => [field.name, recordValue(record, field.name)])
+      fileFields.map((field) => [field.name, valuesAt(serialized(record), field.name)])
     )
+    let savedRecord = record
     await target.model.transaction(async (trx) => {
       const data =
         (await target.definition.hooks.mutateBeforeSave?.(validated, record, ctx, trx)) ?? validated
       await target.definition.hooks.beforeSave?.(record, data, ctx, trx)
       record.useTransaction(trx)
-      const saved = target.definition.handlers.update
+      savedRecord = target.definition.handlers.update
         ? ((await target.definition.handlers.update(record, data, ctx, trx)) as LucidRow)
         : ((await record.merge(data).save()) as LucidRow)
-      saved.useTransaction(trx)
-      await target.definition.hooks.afterSave?.(saved, ctx, trx)
+      savedRecord.useTransaction(trx)
+      await target.definition.hooks.afterSave?.(savedRecord, ctx, trx)
     })
-    pruneUploads(ctx, target.slug)
+    pruneUploads(ctx, target.slug, consumedUploads(fileFields, validated))
     for (const field of fileFields) {
-      await cleanupReplacedFiles(field, oldValues.get(field.name), recordValue(record, field.name))
+      await cleanupReplacedFiles(
+        field,
+        oldValues.get(field.name),
+        serializedValue(savedRecord, field.name)
+      )
     }
     const flash = [{ type: 'success' as const, title: 'Saved' }]
     setRedirectFlash(ctx, flash)

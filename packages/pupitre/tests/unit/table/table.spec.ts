@@ -71,6 +71,24 @@ test.group('table compiler', () => {
     assert.equal(descriptor.layout, 'table')
     assert.isTrue(descriptor.striped)
   })
+  test('emits text badge props and wrap at the descriptor level', async ({ assert }) => {
+    const descriptor = await compileTable(
+      {
+        ...table,
+        columns: [{ kind: 'text', name: 'title', badge: true, wrap: true }],
+      },
+      { url: '/posts', id: 'posts', bulkActions: [], compileFilterForm: async () => spec }
+    )
+    assert.deepEqual(descriptor.columns[0], {
+      name: 'title',
+      label: 'Title',
+      type: 'text',
+      sortable: false,
+      searchable: false,
+      wrap: true,
+      props: { badge: true },
+    })
+  })
 
   test('wraps custom filter sub-specs in $raw without changing catalog output', async ({
     assert,
@@ -155,5 +173,30 @@ test.group('table data formatting', (group) => {
     assert.equal(data.rows[0].cells.cover, 'https://cdn.test/covers/one.png')
     assert.equal(data.rows[0].url, '/posts/1')
     assert.equal(data.rows[0].key, record.id)
+  })
+  test('resolves every image key, preserves unresolved URLs, and honors recordUrl', async ({
+    assert,
+  }) => {
+    const record = await Post.create({ title: 'URL test', slug: 'url-test', status: 'draft' })
+    record.$attributes.cover = ['one.png', 'external.png']
+    const data = await buildTableData(
+      {
+        ...table,
+        columns: [{ kind: 'image', name: 'cover' }],
+        recordUrl: ({ record: row }) => `/custom/${(row as Post).id}`,
+      },
+      [record],
+      undefined,
+      {
+        locale: 'en',
+        timezone: 'UTC',
+        normalized: {},
+        rowActions: async () => [],
+        rowUrl: () => '/default',
+        resolveFileUrl: async (key) => (key === 'one.png' ? `https://cdn.test/${key}` : null),
+      }
+    )
+    assert.deepEqual(data.rows[0]?.cells.cover, ['https://cdn.test/one.png', 'external.png'])
+    assert.equal(data.rows[0]?.url, `/custom/${record.id}`)
   })
 })

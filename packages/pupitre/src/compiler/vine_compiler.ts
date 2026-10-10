@@ -6,12 +6,15 @@ import type { FieldContext } from '@vinejs/vine/types'
 import { DateTime } from 'luxon'
 import type {
   FieldDefinitionUnion,
+  RepeaterFieldDefinition,
+  SchemaNamespace,
+  SchemaNodeBuilder,
   SchemaNodeDefinition,
   ValidationRules,
 } from '../definition/schema.js'
+import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
 import { parseInZone } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
-
 type ValidatorOptions = {
   record?: LucidRow | null
   /** Resource model: default table + attribute→column mapping for `unique` on create. */
@@ -45,11 +48,17 @@ function resourceSlug(nodes: SchemaNodeDefinition[], ctx?: HttpContext): string 
   return resources.find((resource) => resource.definition.form === nodes)?.slug
 }
 
-function persistedAt(record: Record<string, unknown> | null, path: string): unknown {
-  return path.split('.').reduce<unknown>((value, segment) => {
-    if (value === null || typeof value !== 'object') return undefined
-    return (value as Record<string, unknown>)[segment]
-  }, record)
+function persistedAt(record: Record<string, unknown> | null, path: string): unknown[] {
+  let values: unknown[] = [record]
+  for (const segment of path.split('.')) {
+    values = values.flatMap((value) => {
+      if (Array.isArray(value))
+        return value.map((item) => (item as Record<string, unknown>)?.[segment])
+      if (value === null || typeof value !== 'object') return []
+      return [(value as Record<string, unknown>)[segment]]
+    })
+  }
+  return values
 }
 
 function sessionUploads(ctx: HttpContext | undefined): UploadedSessionFile[] {
@@ -76,9 +85,9 @@ function isUploadedFileKey(value: unknown, targetField: string, vineField: Field
   const meta = vineField.meta as
     { ctx?: HttpContext; resource?: string; record?: LucidRow | null } | undefined
   const record = meta?.record?.serialize() ?? null
-  const previous = persistedAt(record, String(vineField.name)) ?? persistedAt(record, targetField)
-  const persisted = Array.isArray(previous) ? previous : [previous]
-  if (persisted.includes(value)) return true
+  const previous = persistedAt(record, targetField)
+  if (previous.some((item) => (Array.isArray(item) ? item.includes(value) : item === value)))
+    return true
   return sessionUploads(meta?.ctx).some(
     (upload) =>
       upload.key === value && upload.resource === meta?.resource && upload.field === targetField
@@ -209,6 +218,19 @@ function applyPresence(schema: any, field: FieldDefinitionUnion): any {
   return schema
 }
 
+function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeDefinition[] {
+  if (typeof value !== 'function') return value ?? []
+  const children = value(schemaFactory as SchemaNamespace) as unknown as (
+    SchemaNodeDefinition | SchemaNodeBuilder
+  )[]
+  return children.map((child) => {
+    const builder = child as SchemaNodeBuilder
+    return typeof builder.toDefinition === 'function'
+      ? getComponentDefinition(builder)
+      : (child as SchemaNodeDefinition)
+  })
+}
+
 function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
   const rules = field.rules ?? {}
   let schema: any
@@ -305,9 +327,7 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
       break
     case 'repeater':
       schema = vine.array(
-        vine.object(
-          schemaProperties(Array.isArray(field.schema) ? field.schema : [], fieldPath) as never
-        )
+        vine.object(schemaProperties(repeaterChildren(field.schema), fieldPath) as never)
       )
       if (field.minItems !== undefined) schema = schema.minLength(field.minItems)
       if (field.maxItems !== undefined) schema = schema.maxLength(field.maxItems)
@@ -403,8 +423,8 @@ function collectFields(
       const field = node as FieldDefinitionUnion
       const path = prefix ? `${prefix}.${field.name}` : field.name
       result.push({ field, path, repeatPath })
-      if (field.kind === 'repeater' && Array.isArray(field.schema))
-        collectFields(field.schema, path, path, result)
+      if (field.kind === 'repeater')
+        collectFields(repeaterChildren(field.schema), path, path, result)
     }
   }
   return result

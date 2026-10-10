@@ -11,6 +11,13 @@ import { RuntimeContext } from '../runtime.js'
 import type { RuntimeContextValue } from '../runtime.js'
 import { getRegistryHandlers } from '../registry/defineRegistry.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
+export function exposePupitreDevContext(
+  target: Window,
+  enabled: boolean,
+  context: { store: StateStore; page: PupitrePageProps['page'] }
+): void {
+  if (enabled) (target as Window & { __pupitre?: typeof context }).__pupitre = context
+}
 
 export type PupitreRendererProps = {
   page: PupitrePageProps['page']
@@ -63,10 +70,8 @@ function PupitreRendererInstance({
     onStore?.(store)
   }, [onStore, store])
   useEffect(() => {
-    if (typeof window === 'undefined' || !isDev) return
-    ;(
-      window as Window & { __pupitre?: { store: StateStore; page: PupitrePageProps['page'] } }
-    ).__pupitre = { store, page }
+    if (typeof window === 'undefined') return
+    exposePupitreDevContext(window, isDev, { store, page })
   }, [page, store])
   const dispatchState: SetState = (updater) => {
     const next = updater(store.getSnapshot())

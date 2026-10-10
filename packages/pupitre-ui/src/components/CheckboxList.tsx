@@ -80,7 +80,9 @@ export function CheckboxList({ props, bindings }: Runtime) {
                   <BaseCheckbox.Root
                     {...props.extraAttributes}
                     id={optionId}
-                    name={props.name}
+                    name={
+                      bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name
+                    }
                     value={String(option.value)}
                     checked={selected.some((item) => String(item) === String(option.value))}
                     disabled={option.disabled || props.disabled}

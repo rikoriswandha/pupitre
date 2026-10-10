@@ -32,6 +32,7 @@ function columnProps(column: TableColumnDefinition): Record<string, unknown> {
   switch (column.kind) {
     case 'text':
       return {
+        ...(column.badge ? { badge: true } : {}),
         ...(column.limit !== undefined ? { limit: column.limit } : {}),
         ...(column.description ? { hasDescription: true } : {}),
         ...(column.money ? { money: column.money } : {}),

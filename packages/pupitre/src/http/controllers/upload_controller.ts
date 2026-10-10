@@ -137,7 +137,7 @@ export default class UploadController {
         ? {}
         : { recordId: String(recordId) }),
     })
-    context.session.put('pupitre.uploads', uploads)
+    context.session.put('pupitre.uploads', uploads.slice(-50))
 
     return ctx.response.ok({
       key,

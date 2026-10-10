@@ -235,6 +235,89 @@ test.group('Pupitre upload HTTP runtime', () => {
       await closeTestApp(fixture)
     }
   })
+  test('prunes only consumed repeater uploads and cleans up files when a row attachment is replaced', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      const first = await Post.create({
+        title: 'First repeater upload',
+        slug: `repeater-a-${Date.now()}`,
+        status: 'draft',
+        tenantId: 1,
+      })
+      const second = await Post.create({
+        title: 'Second repeater upload',
+        slug: `repeater-b-${Date.now()}`,
+        status: 'draft',
+        tenantId: 1,
+      })
+      const firstUpload = await upload(
+        fixture.baseUrl,
+        uploadFields('items.attachment', 'posts', { record: String(first.id) })
+      )
+      const oldSecondUpload = await upload(
+        fixture.baseUrl,
+        uploadFields('items.attachment', 'posts', { record: String(second.id) }),
+        png,
+        'old-attachment.png',
+        'image/png',
+        firstUpload.cookie
+      )
+      assert.equal(oldSecondUpload.status, 200, JSON.stringify(oldSecondUpload.body))
+      let cookie = oldSecondUpload.cookie
+      const save = async (post: Post, attachment: string, title: string) => {
+        const response = await fetch(`${fixture.baseUrl}/admin/posts/${post.id}`, {
+          method: 'PUT',
+          redirect: 'manual',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Cookie': cookie,
+            'X-Pupitre-Action': '1',
+          },
+          body: JSON.stringify({
+            title,
+            slug: post.slug,
+            status: 'draft',
+            items: [{ attachment }],
+          }),
+        })
+        const nextCookie = response.headers.getSetCookie()[0]?.split(';', 1)[0]
+        if (nextCookie) cookie = nextCookie
+        return response
+      }
+      const firstKey = firstUpload.body.key as string
+      const oldSecondKey = oldSecondUpload.body.key as string
+      const savedFirst = await save(first, firstKey, first.title)
+      assert.equal(savedFirst.status, 200, await savedFirst.text())
+      const savedSecond = await save(second, oldSecondKey, second.title)
+      assert.equal(savedSecond.status, 200, await savedSecond.text())
+      const savedSecondRecord = await Post.findOrFail(second.id)
+      assert.equal(savedSecondRecord.items?.[0]?.attachment, oldSecondKey)
+
+      const replacement = await upload(
+        fixture.baseUrl,
+        uploadFields('items.attachment', 'posts', { record: String(second.id) }),
+        png,
+        'replacement-attachment.png',
+        'image/png',
+        cookie
+      )
+      assert.equal(replacement.status, 200, JSON.stringify(replacement.body))
+      const replaced = await save(second, replacement.body.key as string, 'Replaced attachment')
+      assert.equal(replaced.status, 200, await replaced.text())
+      assert.isFalse(await storedFile(fixture.storagePath, oldSecondKey))
+      assert.isTrue(await storedFile(fixture.storagePath, replacement.body.key as string))
+
+      const resaved = await save(second, replacement.body.key as string, 'Saved again')
+      assert.equal(resaved.status, 200, await resaved.text())
+      const resavedRecord = await Post.findOrFail(second.id)
+      assert.equal(resavedRecord.title, 'Saved again')
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
 
   test('resolves image URLs in list cells and image entries', async ({ assert }) => {
     const fixture = await createTestApp()

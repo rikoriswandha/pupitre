@@ -4,6 +4,14 @@ import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Category from './category.js'
 
+function jsonPrepare(value: unknown) {
+  return value === null ? value : JSON.stringify(value)
+}
+
+function jsonConsume(value: unknown) {
+  return typeof value === 'string' ? (JSON.parse(value) as unknown) : value
+}
+
 export default class Post extends BaseModel {
   static table = 'posts'
 
@@ -17,7 +25,10 @@ export default class Post extends BaseModel {
   @column() declare viewsCount: number
   @column() declare authorId: number | null
   @column() declare categoryId: number | null
-  @column() declare items: { sku: string; qty: number }[] | null
+  @column({ prepare: jsonPrepare, consume: jsonConsume })
+  declare items: { sku: string; qty: number; attachment?: string }[] | null
+  @column({ prepare: jsonPrepare, consume: jsonConsume })
+  declare metadata: Record<string, unknown> | null
   @column() declare cover: string | null
   @column() declare privateCover: string | null
   @column() declare tenantId: number | null

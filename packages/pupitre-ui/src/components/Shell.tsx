@@ -35,6 +35,21 @@ export function Shell({
     return () => media.removeEventListener('change', update)
   }, [darkMode])
   useEffect(() => {
+    const root = document.documentElement
+    const previousDark = root.classList.contains('dark')
+    const previousPrimary = root.style.getPropertyValue('--primary')
+    const previousPriority = root.style.getPropertyPriority('--primary')
+    if (dark) root.classList.add('dark')
+    else root.classList.remove('dark')
+    if (typeof theme.primary === 'string') root.style.setProperty('--primary', theme.primary)
+    return () => {
+      if (previousDark) root.classList.add('dark')
+      else root.classList.remove('dark')
+      if (previousPrimary) root.style.setProperty('--primary', previousPrimary, previousPriority)
+      else root.style.removeProperty('--primary')
+    }
+  }, [dark, theme.primary])
+  useEffect(() => {
     if (!panelBrand?.favicon || typeof document === 'undefined') return
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (!link) {
@@ -52,7 +67,7 @@ export function Shell({
 
   return (
     <div
-      className={`min-h-screen bg-background text-foreground md:grid md:grid-cols-[16rem_minmax(0,1fr)] ${dark ? 'dark' : ''}`}
+      className="min-h-screen bg-background text-foreground md:grid md:grid-cols-[16rem_minmax(0,1fr)]"
       style={style}
     >
       <button

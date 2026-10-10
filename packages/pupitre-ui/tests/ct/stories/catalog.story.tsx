@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { catalogFixtures } from '@rikology/pupitre/catalog'
-import type { PupitrePageProps } from '@rikology/pupitre/catalog'
+import type { ActionDescriptor, PupitrePageProps, TableData } from '@rikology/pupitre/catalog'
 import { defineRegistry, PupitreRenderer, setFetch, setRouter } from '@rikology/pupitre-react'
 import { ActionModal } from '@rikology/pupitre-react'
+import { Shell } from '../../../src/components/Shell.js'
+import { Modal } from '../../../src/components/Modal.js'
 import { components } from '../../../src/components.js'
 import { ConfirmDialog } from '../../../src/components/ConfirmDialog.js'
 const actionDescriptor = {
@@ -42,10 +44,15 @@ function RouterLog() {
         put: (
           url: string,
           data: unknown,
-          options?: { onError?: (errors: Record<string, string>) => void }
+          options?: {
+            onError?: (errors: Record<string, string>) => void
+            onSuccess?: () => void
+          }
         ) => {
           logRouterCall({ method: 'put', url, data })
-          if (url.endsWith('/422')) options?.onError?.({ title: 'Required' })
+          if (url.endsWith('/focus-422')) options?.onError?.({ 'items.0.check': 'Required' })
+          else if (url.endsWith('/422')) options?.onError?.({ title: 'Required' })
+          else options?.onSuccess?.()
         },
         post: (url: string, data: unknown) => logRouterCall({ method: 'post', url, data }),
         on: () => () => {},
@@ -95,9 +102,13 @@ export function FixtureStory({
 function RepeaterFixture({
   initialItems = [],
   itemLabel = 'Item',
+  grid,
+  addLabel = 'Add item',
 }: {
   initialItems?: Array<{ _key: string; sku: string }>
   itemLabel?: unknown
+  grid?: number
+  addLabel?: string
 }) {
   const page: PupitrePageProps['page'] = {
     key: 'ct:repeater',
@@ -109,7 +120,7 @@ function RepeaterFixture({
       elements: {
         repeat: {
           type: 'Repeater',
-          props: { descriptor: { name: 'items', minItems: 0, addLabel: 'Add item' } },
+          props: { descriptor: { name: 'items', minItems: 0, addLabel, grid } },
           repeat: { statePath: '/data/items', key: '_key' },
           children: ['item'],
           on: {
@@ -341,7 +352,14 @@ function standalonePage(
   spec: NonNullable<PupitrePageProps['page']['spec']>,
   state: Record<string, unknown>,
   errors?: Record<string, unknown>,
-  upload?: (field: string, files: File[]) => Promise<unknown>
+  upload?: (field: string, files: File[]) => Promise<unknown>,
+  options?: {
+    data?: PupitrePageProps['data']
+    runAction?: (
+      action: ActionDescriptor,
+      options?: { ids?: Array<string | number> }
+    ) => Promise<void>
+  }
 ) {
   const page: PupitrePageProps['page'] = {
     key,
@@ -359,8 +377,9 @@ function standalonePage(
         page={page}
         pupitre={panel}
         registry={registry}
-        runAction={async () => {}}
+        runAction={options?.runAction ?? (async () => {})}
         upload={upload ?? (async () => ({}))}
+        data={options?.data}
         toast={noopToast}
         errors={errors}
         onStore={(store) => {
@@ -640,5 +659,403 @@ export function DirtyFailureStory() {
       },
     } as never,
     { data: { title: 'Draft' }, errors: {}, meta: {} }
+  )
+}
+export function RepeaterLayoutStory() {
+  return (
+    <RepeaterFixture
+      initialItems={[
+        { _key: 'first', sku: 'A-100' },
+        { _key: 'second', sku: 'B-200' },
+      ]}
+      grid={2}
+      addLabel="Add SKU"
+    />
+  )
+}
+
+export function KeyValueInvalidStory() {
+  return standalonePage(
+    'key-value-invalid',
+    {
+      root: 'metadata',
+      elements: {
+        metadata: {
+          type: 'KeyValue',
+          props: {
+            name: 'metadata',
+            label: 'Metadata',
+            reorderable: true,
+            value: { $bindState: '/data/metadata' },
+          },
+        },
+      },
+    } as never,
+    { data: { metadata: { alpha: '1', beta: '2', gamma: '3' } } }
+  )
+}
+
+export function TableContractStory() {
+  const action: ActionDescriptor = {
+    name: 'publish',
+    label: 'Publish selected',
+    kind: 'direct',
+    url: '/posts/publish',
+    method: 'post',
+    enabled: true,
+    keyBindings: ['ctrl+p'],
+  }
+  const tableData: TableData = {
+    rows: [
+      {
+        key: 7,
+        cells: { status: 'Ready', title: 'This title wraps onto more than one line' },
+        actions: [
+          {
+            name: 'view',
+            label: 'View',
+            variant: 'link',
+            kind: 'link',
+            url: '/posts/7',
+            enabled: true,
+          },
+          {
+            name: 'edit',
+            label: 'Edit',
+            variant: 'button',
+            kind: 'direct',
+            url: '/edit',
+            enabled: true,
+          },
+          {
+            name: 'inspect',
+            label: 'Inspect',
+            icon: 'eye',
+            variant: 'iconButton',
+            kind: 'direct',
+            url: '/inspect',
+            enabled: true,
+          },
+        ],
+        selectable: true,
+      },
+    ],
+    meta: { total: 1, perPage: 10, currentPage: 1, lastPage: 1, from: 1, to: 1 },
+    query: {},
+  }
+  return standalonePage(
+    'table-contract',
+    {
+      root: 'table',
+      elements: {
+        table: {
+          type: 'DataTable',
+          props: {
+            descriptor: {
+              id: 'posts',
+              url: '/posts',
+              columns: [
+                {
+                  name: 'status',
+                  label: 'Status',
+                  type: 'text',
+                  sortable: false,
+                  searchable: false,
+                  props: { badge: true, colors: { Ready: 'rgb(1, 2, 3)' } },
+                },
+                {
+                  name: 'title',
+                  label: 'Title',
+                  type: 'text',
+                  sortable: false,
+                  searchable: false,
+                  wrap: true,
+                  props: {},
+                },
+              ],
+              filters: [],
+              filtersLayout: 'above',
+              perPageOptions: [10],
+              searchable: false,
+              searchDebounce: 0,
+              selectable: true,
+              bulkActions: [action],
+              layout: 'table',
+            },
+          },
+        },
+      },
+    } as never,
+    { data: {}, errors: {}, meta: {} },
+    undefined,
+    undefined,
+    {
+      data: tableData,
+      runAction: async (descriptor, options) => {
+        const calls = (window as Window & { __ctActions?: unknown[] }).__ctActions ?? []
+        calls.push({ action: descriptor.name, ids: options?.ids })
+        ;(window as Window & { __ctActions?: unknown[] }).__ctActions = calls
+      },
+    }
+  )
+}
+
+export function SectionFieldContractStory() {
+  return standalonePage(
+    'section-field-contract',
+    {
+      root: 'section',
+      elements: {
+        section: {
+          type: 'Section',
+          props: { heading: 'Details', icon: 'settings' },
+          children: ['checkbox', 'toggle', 'actions'],
+        },
+        checkbox: {
+          type: 'Checkbox',
+          props: { name: 'active', label: 'Active', inline: true, value: true },
+        },
+        toggle: {
+          type: 'Toggle',
+          props: {
+            name: 'enabled',
+            label: 'Enabled',
+            inline: true,
+            onColor: 'rgb(10, 20, 30)',
+            offColor: 'rgb(40, 50, 60)',
+            value: { $bindState: '/data/enabled' },
+          },
+        },
+        actions: {
+          type: 'Actions',
+          props: {
+            actions: [
+              {
+                name: 'link-action',
+                label: 'Open',
+                kind: 'direct',
+                url: '/open',
+                enabled: true,
+                variant: 'link',
+              },
+              {
+                name: 'icon-action',
+                label: 'Inspect header',
+                icon: 'eye',
+                kind: 'direct',
+                url: '/inspect',
+                enabled: true,
+                variant: 'iconButton',
+              },
+            ],
+          },
+        },
+      },
+    } as never,
+    { data: { enabled: true } }
+  )
+}
+
+export function NestedNamesStory() {
+  return standalonePage(
+    'nested-names',
+    {
+      root: 'repeat',
+      elements: {
+        repeat: {
+          type: 'Repeater',
+          props: { descriptor: { name: 'items', minItems: 0 } },
+          repeat: { statePath: '/data/items', key: '_key' },
+          children: ['item'],
+        },
+        item: {
+          type: 'RepeaterItem',
+          props: { index: { $index: true }, itemLabel: 'Fields' },
+          children: ['check', 'choices', 'radio', 'toggle', 'tags', 'hidden'],
+        },
+        check: {
+          type: 'Checkbox',
+          props: { name: 'check', label: 'Check', value: { $bindItem: 'check' } },
+        },
+        choices: {
+          type: 'CheckboxList',
+          props: {
+            name: 'choices',
+            label: 'Choices',
+            options: [{ value: 'a', label: 'A' }],
+            value: { $bindItem: 'choices' },
+          },
+        },
+        radio: {
+          type: 'Radio',
+          props: {
+            name: 'radio',
+            label: 'Radio',
+            options: [{ value: 'a', label: 'A' }],
+            value: { $bindItem: 'radio' },
+          },
+        },
+        toggle: {
+          type: 'Toggle',
+          props: { name: 'toggle', label: 'Toggle', value: { $bindItem: 'toggle' } },
+        },
+        tags: {
+          type: 'Tags',
+          props: { name: 'tags', label: 'Tags', value: { $bindItem: 'tags' } },
+        },
+        hidden: { type: 'Hidden', props: { name: 'hidden', value: { $bindItem: 'hidden' } } },
+      },
+    } as never,
+    {
+      data: {
+        items: [
+          {
+            _key: 'one',
+            check: false,
+            choices: [],
+            radio: 'a',
+            toggle: false,
+            tags: [],
+            hidden: 'x',
+          },
+        ],
+      },
+    }
+  )
+}
+
+export function ThemeShellStory({ darkMode = 'dark' }: { darkMode?: 'dark' | 'light' | 'system' }) {
+  return (
+    <Shell
+      panel={{
+        id: 'Theme',
+        path: '/admin',
+        brand: { name: 'Theme', favicon: '/test-favicon.ico' },
+        theme: { darkMode, primary: 'rgb(12, 34, 56)' },
+        features: {},
+      }}
+      user={null}
+      nav={[]}
+      breadcrumbs={[]}
+      title="Theme"
+      headerActions={[]}
+      currentUrl="/admin"
+    >
+      <Modal open heading="Portal dialog" onClose={() => {}}>
+        Dialog content
+      </Modal>
+    </Shell>
+  )
+}
+
+export function UploadSaveStory() {
+  return standalonePage(
+    'upload-save',
+    {
+      root: 'form',
+      elements: {
+        form: {
+          type: 'Form',
+          props: { method: 'put', url: '/posts/1', submitLabel: 'Save', dirtyGuard: false },
+          children: ['cover'],
+        },
+        cover: {
+          type: 'FileUpload',
+          props: {
+            name: 'cover',
+            label: 'Cover',
+            value: { $bindState: '/data/cover' },
+            descriptor: {
+              name: 'cover',
+              uploadUrl: '/upload',
+              deleteUrl: '/upload',
+              multiple: false,
+              image: false,
+              previewable: false,
+              downloadable: false,
+              reorderable: false,
+            },
+          },
+        },
+      },
+    } as never,
+    { data: { cover: null }, meta: {} },
+    undefined,
+    async () => ({ key: 'saved-file.png', name: 'saved-file.png', size: 1, mime: 'image/png' })
+  )
+}
+
+export function SearchDebounceStory() {
+  return standalonePage(
+    'search-debounce',
+    {
+      root: 'table',
+      elements: {
+        table: {
+          type: 'DataTable',
+          props: {
+            descriptor: {
+              id: 'search',
+              url: '/search',
+              columns: [],
+              filters: [],
+              filtersLayout: 'above',
+              perPageOptions: [10],
+              searchable: true,
+              searchDebounce: 150,
+              selectable: false,
+              bulkActions: [],
+              layout: 'table',
+            },
+          },
+        },
+      },
+    } as never,
+    { data: {}, meta: {} },
+    undefined,
+    undefined,
+    {
+      data: {
+        rows: [],
+        meta: { total: 0, perPage: 10, currentPage: 1, lastPage: 1, from: 0, to: 0 },
+        query: {},
+      },
+    }
+  )
+}
+export function NestedFormFocusStory() {
+  return standalonePage(
+    'nested-form-focus',
+    {
+      root: 'form',
+      elements: {
+        form: {
+          type: 'Form',
+          props: {
+            method: 'put',
+            url: '/admin/1/focus-422',
+            submitLabel: 'Submit',
+            dirtyGuard: false,
+          },
+          children: ['repeat'],
+        },
+        repeat: {
+          type: 'Repeater',
+          props: { descriptor: { name: 'items', minItems: 0 } },
+          repeat: { statePath: '/data/items', key: '_key' },
+          children: ['item'],
+        },
+        item: {
+          type: 'RepeaterItem',
+          props: { index: { $index: true }, itemLabel: 'Fields' },
+          children: ['check'],
+        },
+        check: {
+          type: 'Checkbox',
+          props: { name: 'check', label: 'Check', value: { $bindItem: 'check' } },
+        },
+      },
+    } as never,
+    { data: { items: [{ _key: 'one', check: false }] }, meta: {} }
   )
 }

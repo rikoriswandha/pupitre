@@ -137,5 +137,5 @@ cd apps/example && cp .env.example .env && node ace migration:fresh --seed && np
 ## 11. Debugging
 
 - `node ace pupitre:routes` — menampilkan route dan namanya.
-- `node ace pupitre:inspect` dan `PUPITRE_DEBUG=1` — fitur M3, belum tersedia di M1.
+- `node ace pupitre:inspect` — fitur M3, belum tersedia di M1.
 - Di client: `window.__pupitre` (hanya dev) mengekspos store dan spec aktif.

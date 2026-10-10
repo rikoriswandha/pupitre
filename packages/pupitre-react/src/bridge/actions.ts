@@ -212,8 +212,16 @@ export function submitForm(
       mapErrors(store, errors)
       const first = Object.keys(errors)[0]
       if (first === '_form') toast({ type: 'error', title: String(errors[first]) })
-      else if (first && typeof document !== 'undefined')
-        document.getElementsByName(first)[0]?.focus()
+      else if (first && typeof document !== 'undefined') {
+        const field = document.getElementsByName(first)[0]
+        const compositeControl =
+          field instanceof HTMLInputElement && field.getAttribute('aria-hidden') === 'true'
+            ? field.parentElement?.querySelector<HTMLElement>(
+                '[role="checkbox"], [role="radio"], [role="switch"]'
+              )
+            : null
+        ;(compositeControl ?? field)?.focus()
+      }
     },
     onFinish: () => store.set('/meta/submitting', false),
   })

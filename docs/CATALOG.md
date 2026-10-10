@@ -122,8 +122,8 @@ Didaftarkan di catalog dan diimplementasikan oleh bridge `pupitre-react`:
 | `submitForm` | `{ formId? }` | kumpulkan `/data` → `router[method](url)` |
 | `openAction` | `{ action: ActionDescriptor, ids? }` | sesuai `kind` |
 | `runAction` | `{ url, method, ids? }` | `direct` tanpa dialog |
-| `evaluate` | `{ field }` | M3 (WP31): `POST /_pupitre/evaluate` → `set` hasilnya. Di M1 compiler tidak pernah memancarkannya; handler client hanya memberi peringatan dev |
-| `fetchOptions` | `{ field, q, page }` | M2 (WP25): `GET /_pupitre/options` → `/options/<field>`; sama, belum dipancarkan di M1 |
+| `evaluate` | — | M3; not part of the M1 catalog or client runtime |
+| `fetchOptions` | — | M2; not part of the M1 catalog or client runtime |
 | `upload` | `{ field, files }` | `POST /_pupitre/upload` |
 | `toast` | `{ type, title, body? }` | tampilkan toast lokal |
 | `copy` | `{ text }` | clipboard |

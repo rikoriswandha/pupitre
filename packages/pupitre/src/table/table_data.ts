@@ -50,8 +50,17 @@ async function formatCell(
     }
   }
   if (column.kind === 'image') {
+    if (Array.isArray(value)) {
+      if (!options.resolveFileUrl) return value
+      return Promise.all(
+        value.map(async (item) => {
+          if (typeof item !== 'string' || !item) return item
+          return (await options.resolveFileUrl!(item, column)) ?? item
+        })
+      )
+    }
     if (typeof value !== 'string' || !value) return value
-    return options.resolveFileUrl ? await options.resolveFileUrl(value, column) : value
+    return options.resolveFileUrl ? ((await options.resolveFileUrl(value, column)) ?? value) : value
   }
   if (column.kind !== 'text') return value
   const context = { locale: options.locale, timezone: options.timezone }
@@ -115,7 +124,12 @@ export async function buildTableData(
       if (typeof key !== 'string' && typeof key !== 'number') {
         throw new Error('Table rows require a Lucid primary key')
       }
-      const url = table.recordUrl === false ? undefined : options.rowUrl(record)
+      const url =
+        table.recordUrl === false
+          ? undefined
+          : typeof table.recordUrl === 'function'
+            ? table.recordUrl({ record })
+            : options.rowUrl(record)
       return {
         key,
         cells,

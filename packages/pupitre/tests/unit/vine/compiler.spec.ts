@@ -137,6 +137,30 @@ test.group('Vine compiler', () => {
     assert.deepEqual(errorFields(error), ['cover'])
     assert.include(errorMessages(error).join(' '), 'not uploaded for this field')
   })
+  test('accepts persisted upload keys inside repeater rows after session ownership is pruned', async ({
+    assert,
+  }) => {
+    const nodes = [
+      schema
+        .repeater('items')
+        .schema([schema.fileUpload('attachment')])
+        .toDefinition(),
+    ] as SchemaNodeDefinition[]
+    const ctx = {
+      session: { get: () => [] },
+      pupitre: { panel: { resources: [{ slug: 'posts', definition: { form: nodes } }] } },
+    } as unknown as HttpContext
+    const record = {
+      serialize: () => ({ items: [{ attachment: 'posts/items/attachment/persisted.png' }] }),
+    } as unknown as LucidRow
+    assert.deepEqual(
+      await compileValidator(nodes).validate(
+        { items: [{ attachment: 'posts/items/attachment/persisted.png' }] },
+        { ...options, ctx, record }
+      ),
+      { items: [{ attachment: 'posts/items/attachment/persisted.png' }] }
+    )
+  })
 
   test('does not dehydrate disabled fields unless explicitly enabled', async ({ assert }) => {
     const output = await compileValidator([

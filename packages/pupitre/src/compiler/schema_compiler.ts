@@ -11,8 +11,9 @@ import type { StateModel, Option, RepeaterDescriptor } from '../../catalog/index
 import type {
   SchemaNodeDefinition,
   FieldDefinitionUnion,
-  RepeaterFieldDefinition,
+  SchemaNodeBuilder,
   SchemaNamespace,
+  RepeaterFieldDefinition,
 } from '../definition/schema.js'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import {
@@ -29,7 +30,7 @@ import { sanitizeHtml } from '../sanitize.js'
 import { evaluateClosure, liftClosure } from './closure_lifter.js'
 import { type SpecCache, type StaticSlot } from './cache.js'
 import { E_PUPITRE_INVALID_SPEC, E_PUPITRE_UNLIFTABLE_CLOSURE } from '../errors.js'
-import { schema as schemaFactory } from '../builder/schema/schema.js'
+import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
 
 type Element = {
   type: string
@@ -64,7 +65,16 @@ type BuildContext = {
   numericFields: Record<string, true>
 }
 function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeDefinition[] {
-  return typeof value === 'function' ? value(schemaFactory as SchemaNamespace) : (value ?? [])
+  if (typeof value !== 'function') return value ?? []
+  const children = value(schemaFactory as SchemaNamespace) as unknown as (
+    SchemaNodeDefinition | SchemaNodeBuilder
+  )[]
+  return children.map((child) => {
+    const builder = child as SchemaNodeBuilder
+    return typeof builder.toDefinition === 'function'
+      ? getComponentDefinition(builder)
+      : (child as SchemaNodeDefinition)
+  })
 }
 const fieldType: Record<string, string> = {
   text: 'Text',
@@ -286,8 +296,11 @@ async function addField(
       defaultItems: [],
     } as unknown as RepeaterDescriptor
     const statePath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
-    if (typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static')
-      addStatic(build, templateId, 'itemLabel', definition.itemLabel)
+    if (typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static') {
+      const error = new E_PUPITRE_UNLIFTABLE_CLOSURE()
+      error.message = `Cannot lift itemLabel for repeater "${path}"`
+      throw error
+    }
     // Item operations (remove/move/clone/collapse) need the runtime index and the
     // absolute array path, which json-render action params cannot express inside
     // nested repeat scopes; the Repeater UI performs them through its bound value.
@@ -568,11 +581,12 @@ async function formatEntryValue(
     return formatMoney(value as number | string, context, { currency: String(entry.money) })
   if (entry.limit) return truncate(value, Number(entry.limit))
   if (entry.html && typeof value === 'string') return sanitizeHtml(value)
-  if (entry.kind === 'imageEntry' && typeof value === 'string' && options.resolveFileUrl)
-    return options.resolveFileUrl(value, {
-      kind: 'fileUpload',
-      name: String(entry.name),
-    } as FieldDefinitionUnion)
+  if (entry.kind === 'imageEntry' && options.resolveFileUrl) {
+    const field = { kind: 'fileUpload', name: String(entry.name) } as FieldDefinitionUnion
+    const resolve = async (key: unknown) =>
+      typeof key === 'string' ? ((await options.resolveFileUrl!(key, field)) ?? key) : key
+    return Array.isArray(value) ? Promise.all(value.map(resolve)) : resolve(value)
+  }
   if (entry.kind === 'repeatableEntry' && Array.isArray(value)) {
     const entries = Array.isArray(entry.schema) ? (entry.schema as Record<string, unknown>[]) : []
     return Promise.all(

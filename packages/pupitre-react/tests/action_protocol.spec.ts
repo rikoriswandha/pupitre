@@ -11,7 +11,8 @@ import { setRouter } from '../src/bridge/inertia.js'
 import type { RouterLike } from '../src/bridge/inertia.js'
 import type { ActionDescriptor, ActionResult } from '@rikology/pupitre/catalog'
 import { ensureCatalogVersion, isSafeNewTabUrl } from '../src/page/Pupitre.js'
-
+import { defineRegistry, getRegistryHandlers } from '../src/registry/defineRegistry.js'
+import { exposePupitreDevContext } from '../src/renderer/PupitreRenderer.js'
 function fakeRouter(calls: Array<{ method: string; args: unknown[] }>): RouterLike {
   const record =
     (method: string) =>
@@ -70,20 +71,44 @@ test('confirm cancellation sends no request and confirmation submits ids', async
     restoreFetch()
   }
 })
-test('catalog major mismatch triggers one browser reload', async ({ assert }) => {
+test('catalog mismatch persists its reload guard and toasts on the next mismatch', async ({
+  assert,
+}) => {
+  const version = '912345.0'
+  const key = `pupitre:catalog-reloaded:${version}`
+  window.sessionStorage.removeItem(key)
   const reload = window.location.reload
   let reloads = 0
+  let notice: string | undefined
   Object.defineProperty(window.location, 'reload', {
     configurable: true,
     value: () => reloads++,
   })
   try {
-    ensureCatalogVersion('9.0')
-    ensureCatalogVersion('9.0')
+    ensureCatalogVersion(version, (title) => (notice = title))
     assert.equal(reloads, 1)
+    assert.equal(window.sessionStorage.getItem(key), '1')
+    ensureCatalogVersion(version, (title) => (notice = title))
+    assert.equal(reloads, 1)
+    assert.equal(notice, 'Reload required')
   } finally {
+    window.sessionStorage.removeItem(key)
     Object.defineProperty(window.location, 'reload', { configurable: true, value: reload })
   }
+})
+test('development context exposure is enabled only by the isDev gate', ({ assert }) => {
+  const target = {} as Window
+  const context = { store: {} as never, page: {} as never }
+  exposePupitreDevContext(target, false, context)
+  assert.isUndefined((target as Window & { __pupitre?: unknown }).__pupitre)
+  exposePupitreDevContext(target, true, context)
+  assert.deepEqual((target as Window & { __pupitre?: unknown }).__pupitre, context)
+})
+test('registry does not expose unavailable evaluate or fetchOptions actions', ({ assert }) => {
+  const { registry } = defineRegistry({} as never)
+  const handlers = getRegistryHandlers(registry) as unknown as Record<string, unknown>
+  assert.notProperty(handlers, 'evaluate')
+  assert.notProperty(handlers, 'fetchOptions')
 })
 test('new-tab actions allow only HTTP(S) and relative URLs', ({ assert }) => {
   assert.isTrue(isSafeNewTabUrl('https://example.test/path'))

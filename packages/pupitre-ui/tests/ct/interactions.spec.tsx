@@ -1,24 +1,33 @@
 import { test, expect } from '@playwright/experimental-ct-react'
 import {
-  DirtyFailureStory,
   ActionStory,
   ConfirmStory,
-  FormStory,
-  DataTableStory,
-  RepeaterItemLabelStory,
-  RepeaterStory,
-  SelectStory,
-  TabsStory,
-  UploadStory,
-  RichEditorStory,
   CustomFilterStory,
+  DataTableStory,
+  DirtyFailureStory,
+  FormStory,
+  KeyValueInvalidStory,
   KeyValueStory,
   LiveBlurStory,
   NativeClearableSelectStory,
   NumericSelectStory,
   PersistedUploadStory,
   RepeaterErrorStory,
+  RepeaterItemLabelStory,
+  RepeaterLayoutStory,
+  RepeaterStory,
+  RichEditorStory,
+  SectionFieldContractStory,
+  SelectStory,
+  TableContractStory,
+  TabsStory,
   TextSuffixStory,
+  ThemeShellStory,
+  UploadSaveStory,
+  NestedNamesStory,
+  UploadStory,
+  NestedFormFocusStory,
+  SearchDebounceStory,
 } from './stories/catalog.story.js'
 
 test('Select updates its bound state', async ({ mount, page }) => {
@@ -220,14 +229,12 @@ test('repeater errors and field ids resolve to the matching item', async ({ moun
   await expect(view.locator('[id="items.1.sku-error"]')).toBeVisible()
 })
 
-test('custom filter is seeded from URL and applies only on submit', async ({ mount, page }) => {
-  page.on('console', (m) => console.log('BROWSER', m.text()))
+test('custom filter is seeded from URL and applies only on submit', async ({ mount }) => {
   const view = await mount(<CustomFilterStory />)
   expect(await view.evaluate(() => window.location.search)).toContain(
     'filters%5Brange%5D%5Bterm%5D=seeded'
   )
   const term = view.getByLabel('Term')
-  console.log('CTFILTER', await view.innerHTML())
   await expect(term).toHaveValue('seeded')
   await term.fill('draft')
   const calls = view.getByTestId('router-calls')
@@ -254,4 +261,221 @@ test('dirty guard baseline remains dirty after a 422 validation response', async
   await view.getByRole('button', { name: 'Save' }).click()
   await expect(view.getByText('Required')).toBeVisible()
   await expect(form).toHaveAttribute('data-dirty', 'true')
+})
+test('FileUpload clears a newly uploaded value after a successful same-page save without deleting the blob', async ({
+  mount,
+  page,
+}) => {
+  let deletes = 0
+  await page.route('**/upload', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      deletes++
+      await route.fulfill({ status: 204 })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        key: 'saved-file.png',
+        url: '/saved-file.png',
+        name: 'saved-file.png',
+        size: 1,
+        mime: 'image/png',
+      }),
+    })
+  })
+  const view = await mount(<UploadSaveStory />)
+  await view.locator('input[type="file"]').setInputFiles({
+    name: 'cover.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('x'),
+  })
+  await expect(view.getByText('saved-file.png', { exact: true })).toBeVisible()
+  await view.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(view.locator('form')).not.toHaveAttribute('data-dirty', 'true')
+  await view.getByRole('button', { name: 'Remove saved-file.png' }).click()
+  const cover = await view.evaluate(() =>
+    (
+      window as Window & { __ctPupitreStore?: { get(path: string): unknown } }
+    ).__ctPupitreStore?.get('/data/cover')
+  )
+  expect(cover).toBeNull()
+  await expect(view.getByText('saved-file.png', { exact: true })).toHaveCount(0)
+  expect(deletes).toBe(0)
+})
+
+test('KeyValue add, move, and remove do not write invalid duplicate-key rows', async ({
+  mount,
+}) => {
+  const view = await mount(<KeyValueInvalidStory />)
+  const inputs = view.locator('input')
+  await inputs.nth(2).fill('alpha')
+  await view.getByRole('button', { name: 'Move alpha up' }).last().click()
+  await inputs.nth(6).fill('delta')
+  await inputs.nth(7).fill('4')
+  await view.getByRole('button', { name: 'Add' }).click()
+  await inputs.nth(4).fill('')
+  await view.getByRole('button', { name: 'Remove', exact: true }).last().click()
+  const value = await view.evaluate(() =>
+    (
+      window as Window & { __ctPupitreStore?: { get(path: string): unknown } }
+    ).__ctPupitreStore?.get('/data/metadata')
+  )
+  expect(value).toEqual({ alpha: '1', beta: '2', gamma: '3' })
+})
+
+test('table cells honor badge and wrap descriptors; row action variants are rendered', async ({
+  mount,
+}) => {
+  const view = await mount(<TableContractStory />)
+  const badge = view.getByText('Ready')
+  await expect(badge).toHaveCSS('background-color', 'rgb(1, 2, 3)')
+  await expect(badge).toHaveClass(/rounded-full/)
+  await expect(view.getByText('This title wraps onto more than one line')).toHaveClass(
+    /whitespace-normal/
+  )
+  await expect(view.getByRole('button', { name: 'View' })).toHaveClass(/underline/)
+  await expect(view.getByRole('button', { name: 'Edit' })).toHaveClass(/border/)
+})
+
+test('bulk key bindings run against selected rows and are disabled without a selection', async ({
+  mount,
+  page,
+}) => {
+  const view = await mount(<TableContractStory />)
+  const action = view.getByRole('button', { name: 'Publish selected' })
+  await expect(action).toBeDisabled()
+  await page.keyboard.press('Control+P')
+  expect(
+    await page.evaluate(() => (window as Window & { __ctActions?: unknown[] }).__ctActions)
+  ).toBeUndefined()
+  await view.getByRole('checkbox', { name: 'Select row 7' }).check()
+  await expect(action).toBeEnabled()
+  await page.keyboard.press('Control+P')
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window & { __ctActions?: unknown[] }).__ctActions?.length)
+    )
+    .toBe(1)
+  expect(
+    await page.evaluate(() => (window as Window & { __ctActions?: unknown[] }).__ctActions)
+  ).toEqual([{ action: 'publish', ids: [7] }])
+})
+
+test('Section icon and Checkbox/Toggle inline and color props are rendered', async ({
+  mount,
+  page,
+}) => {
+  const view = await mount(<SectionFieldContractStory />)
+  await expect(view.getByRole('heading', { name: 'Details' }).locator('svg')).toBeVisible()
+  await expect(view.getByRole('checkbox', { name: 'Active' }).locator('xpath=..')).toHaveClass(
+    /inline-flex/
+  )
+  const toggle = view.getByRole('switch', { name: 'Enabled' })
+  await expect(toggle).toHaveCSS('background-color', 'rgb(10, 20, 30)')
+  await expect(toggle.locator('xpath=..')).toHaveClass(/inline-flex/)
+  await page.evaluate(() =>
+    (
+      window as Window & { __ctPupitreStore?: { set(path: string, value: unknown): void } }
+    ).__ctPupitreStore?.set('/data/enabled', false)
+  )
+  await expect(toggle).toHaveCSS('background-color', 'rgb(40, 50, 60)')
+  await expect(view.getByRole('button', { name: 'Open' })).toHaveClass(/underline/)
+  await expect(view.getByRole('button', { name: 'Inspect header' })).toBeVisible()
+})
+
+test('repeater grid controls field layout and its configured add label is shown', async ({
+  mount,
+}) => {
+  const view = await mount(<RepeaterLayoutStory />)
+  await expect(view.getByRole('button', { name: 'Add SKU' })).toBeVisible()
+  await expect(view.locator('[data-repeater-fields]').first()).toHaveAttribute(
+    'style',
+    /grid-template-columns: repeat\(2/
+  )
+})
+
+test('nested Checkbox, CheckboxList, Radio, Toggle, Tags, and Hidden names use absolute binding paths', async ({
+  mount,
+}) => {
+  const view = await mount(<NestedNamesStory />)
+  for (const field of ['check', 'choices', 'radio', 'toggle', 'tags', 'hidden']) {
+    await expect(view.locator(`[name="items.0.${field}"]`).first()).toHaveCount(1)
+  }
+})
+
+test('dark theme applies to document and portaled Modal; favicon updates and theme is restored', async ({
+  mount,
+  page,
+}) => {
+  const initialPrimary = await page.evaluate(() =>
+    document.documentElement.style.getPropertyValue('--primary')
+  )
+  const view = await mount(<ThemeShellStory />)
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  expect(
+    await page.evaluate(() => document.documentElement.style.getPropertyValue('--primary'))
+  ).toBe('rgb(12, 34, 56)')
+  await expect(page.getByRole('dialog', { name: 'Portal dialog' })).toBeVisible()
+  expect(
+    await page
+      .getByRole('dialog', { name: 'Portal dialog' })
+      .evaluate((dialog) => Boolean(dialog.closest('.dark')))
+  ).toBe(true)
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', /test-favicon\.ico/)
+  await view.unmount()
+  await expect(page.locator('html')).not.toHaveClass(/dark/)
+  expect(
+    await page.evaluate(() => document.documentElement.style.getPropertyValue('--primary'))
+  ).toBe(initialPrimary)
+})
+
+test('system dark mode follows prefers-color-scheme changes', async ({ mount, page }) => {
+  await page.emulateMedia({ colorScheme: 'light' })
+  const view = await mount(<ThemeShellStory darkMode="system" />)
+  await expect(page.locator('html')).not.toHaveClass(/dark/)
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect(page.locator('html')).toHaveClass(/dark/)
+  expect(
+    await page
+      .getByRole('dialog', { name: 'Portal dialog' })
+      .evaluate((dialog) => Boolean(dialog.closest('.dark')))
+  ).toBe(true)
+  await view.unmount()
+})
+
+test('custom filter submits its embedded form on Enter', async ({ mount }) => {
+  const view = await mount(<CustomFilterStory />)
+  const calls = view.getByTestId('router-calls')
+  await view.getByLabel('Term').fill('submitted-by-enter')
+  await view.getByLabel('Term').press('Enter')
+  await expect(calls).toContainText('filters%5Brange%5D%5Bterm%5D=submitted-by-enter')
+})
+
+test('DataTable search debounce submits once without re-arming', async ({ mount, page }) => {
+  const view = await mount(<SearchDebounceStory />)
+  const calls = view.getByTestId('router-calls')
+  await view.getByLabel('Search').fill('debounced')
+  await expect(calls).toContainText('q=debounced', { timeout: 2_000 })
+  await page.waitForTimeout(400)
+  expect(JSON.parse((await calls.textContent()) ?? '[]')).toHaveLength(1)
+})
+
+test('DataTable Enter cancels its pending search debounce', async ({ mount, page }) => {
+  const view = await mount(<SearchDebounceStory />)
+  const calls = view.getByTestId('router-calls')
+  const search = view.getByLabel('Search')
+  await search.fill('entered')
+  await search.press('Enter')
+  await expect(calls).toContainText('q=entered')
+  await page.waitForTimeout(400)
+  expect(JSON.parse((await calls.textContent()) ?? '[]')).toHaveLength(1)
+})
+test('submitForm focuses the nested absolute name reported by first-error validation', async ({
+  mount,
+}) => {
+  const view = await mount(<NestedFormFocusStory />)
+  await view.getByRole('button', { name: 'Submit' }).click()
+  await expect(view.getByRole('checkbox', { name: 'Check' })).toBeFocused()
 })

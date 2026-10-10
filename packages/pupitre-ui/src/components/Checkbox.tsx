@@ -38,11 +38,11 @@ export function Checkbox({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        <div className="flex items-start gap-2">
+        <div className={props.inline ? 'inline-flex items-center gap-2' : 'flex items-start gap-2'}>
           <BaseCheckbox.Root
             {...props.extraAttributes}
             id={id}
-            name={props.name}
+            name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
             checked={!!value}
             onCheckedChange={(next) => setValue(next === true)}
             required={props.required}

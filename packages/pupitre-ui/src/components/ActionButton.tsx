@@ -32,17 +32,27 @@ export function ActionButton({
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [action, ids, record, runAction])
+  const variant = action.variant ?? 'button'
   return (
     <Button
       type="button"
+      aria-label={variant === 'iconButton' ? action.label : undefined}
+      title={variant === 'iconButton' ? action.label : undefined}
       disabled={!action.enabled}
       variant={
-        action.color === 'danger' ? 'destructive' : action.color === 'gray' ? 'outline' : 'default'
+        variant === 'link'
+          ? 'ghost'
+          : action.color === 'danger'
+            ? 'destructive'
+            : action.color === 'gray'
+              ? 'outline'
+              : 'default'
       }
+      className={variant === 'link' ? 'text-primary underline-offset-4 hover:underline' : undefined}
       onClick={() => void runAction(action, { ids, record })}
     >
       {action.icon && <Icon name={action.icon} className="size-4" />}
-      {action.label}
+      {variant === 'iconButton' ? <span className="sr-only">{action.label}</span> : action.label}
     </Button>
   )
 }

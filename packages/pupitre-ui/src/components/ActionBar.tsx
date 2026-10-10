@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ActionDescriptor } from '@rikology/pupitre/catalog'
 import { useRunAction } from '@rikology/pupitre-react'
-
+import { Icon } from '../icons.js'
 export type ActionBarProps = {
   props: { actions: ActionDescriptor[]; label?: string | null; disabled?: boolean }
   children?: ReactNode
@@ -24,15 +24,22 @@ export function ActionBar({ props, children, emit, loading = false }: ActionBarP
     <button
       key={action.name}
       type="button"
+      aria-label={action.variant === 'iconButton' ? action.label : undefined}
+      title={action.variant === 'iconButton' ? action.label : undefined}
       disabled={loading || props.disabled}
-      className="inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+      className={`inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 ${action.variant === 'link' ? 'border-transparent bg-transparent px-0 text-primary underline-offset-4 hover:bg-transparent hover:underline' : ''}`}
       onClick={async () => {
         await runAction(action)
         emit('action', { action: action.name })
       }}
       data-action={action.name}
     >
-      {action.label}
+      {action.icon && <Icon name={action.icon} className="size-4" />}
+      {action.variant === 'iconButton' ? (
+        <span className="sr-only">{action.label}</span>
+      ) : (
+        action.label
+      )}
     </button>
   )
 

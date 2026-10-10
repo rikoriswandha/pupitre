@@ -109,7 +109,7 @@ export function Tags({ props, bindings }: Runtime) {
           <Input
             {...props.extraAttributes}
             id={id}
-            name={props.name}
+            name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
             value={draft}
             onBlur={() => commitValue()}
             onChange={(event) => setDraft(event.currentTarget.value)}

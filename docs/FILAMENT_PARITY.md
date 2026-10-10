@@ -102,7 +102,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 
 | Filament v4 | Pupitre | Target | Status |
 | --- | --- | --- | --- |
-| `TextColumn` (searchable, sortable, limit, wrap, description, badge, money, dateTime, since, copyable, url) | `t.text`, `t.badge` | M1 | ✅ |
+| `TextColumn` (searchable, sortable, limit, wrap, description, badge, money, dateTime, since, copyable, url) | `t.text` (termasuk `.wrap()`, `.badge()`) | M1 | ✅ |
 | `IconColumn`, `ImageColumn` (circular, stacked), `ColorColumn` | `t.icon`, `t.image`, `t.color` | M1 | ✅ |
 | `ToggleColumn`, `SelectColumn`, `TextInputColumn`, `CheckboxColumn` (inline edit) | padanan | M3 | ⬜ |
 | `ViewColumn` / custom | `t.custom()`, `t.fragment()` | M1 | ✅ |
@@ -117,7 +117,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Reorderable | `.reorderable()` | M3 | ⬜ |
 | Polling | `.poll()` | M3 | ⬜ |
 | Column toggles, `toggleable(hiddenByDefault)` | sama (localStorage) | M3 | ⬜ |
-| Striped, `recordUrl`, `recordClasses`, click action | `.striped()`, `.recordUrl()`, `.rowClass()` | M1 | 🟨 (striped + recordUrl ✅; rowClass belum) |
+| Striped, `recordUrl`, `recordClasses`, click action | `.striped()`, `.recordUrl(fn)`; `rowClass()` tidak tersedia | M1 / M3 | 🟨 (`striped` dan `recordUrl(fn)` ✅; `rowClass` M3) |
 | Grid/card layout (`contentGrid`, `Split`, `Stack`) | `t.layout.grid()` | M3 | ⬜ |
 | Empty state | `.emptyState()` | M1 | ✅ |
 | Bulk actions, `deselectRecordsAfterCompletion`, `selectCurrentPageOnly` | `actions.bulk()`, `.deselectAfter()` | M1 | ✅ |
@@ -136,7 +136,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `url()`, `openUrlInNewTab()` | sama | M1 | ✅ |
 | `visible`, `hidden`, `disabled`, `authorize` | `.visible()`, `.can()` | M1 | ✅ |
 | `successNotification`, `failureNotification`, `successRedirectUrl` | `notify.*`, `.after(redirect)` | M1 | ✅ |
-| `keyBindings` | sama | M1 | ✅ |
+| `keyBindings` | action header/bulk; tidak di row context | M1 | 🟨 |
 | `ActionGroup` dropdown, `button/link/iconButton` | `action.group()`, `.variant()` | M1 | ✅ |
 | `extraModalFooterActions`, `modalSubmitAction(false)` | `.modal({ footerActions })`, `.modalSubmit(false)` | M3 | ⬜ |
 | Wizard di modal | schema wizard | M3 | ⬜ |

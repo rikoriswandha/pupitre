@@ -45,10 +45,19 @@ export function isSafeNewTabUrl(url: string): boolean {
   return /^https?:\/\//i.test(url) || !/^[a-z][a-z\d+.-]*:/i.test(url)
 }
 const catalogReloaded: Record<string, true> = {}
-export function ensureCatalogVersion(version: string): void {
+export function ensureCatalogVersion(
+  version: string,
+  reloadRequired?: (title: string) => void
+): void {
   if (major(version) !== major(catalogVersion)) {
-    if (catalogReloaded[version]) return
+    const key = `pupitre:catalog-reloaded:${version}`
+    const session = typeof window === 'undefined' ? undefined : window.sessionStorage
+    if (session?.getItem(key) || catalogReloaded[version]) {
+      reloadRequired?.('Reload required')
+      return
+    }
     catalogReloaded[version] = true
+    session?.setItem(key, '1')
     if (typeof window !== 'undefined') window.location.reload()
   }
 }
@@ -120,8 +129,8 @@ export function PupitreContent({
     for (const toast of takePendingActionToasts()) pushToast(toast)
   }, [page.key, pushToast])
   useEffect(() => {
-    ensureCatalogVersion(page.catalogVersion)
-  }, [page.catalogVersion])
+    ensureCatalogVersion(page.catalogVersion, (title) => pushToast({ type: 'error', title }))
+  }, [page.catalogVersion, pushToast])
   useEffect(() => {
     const timeout = setTimeout(() => {
       for (const flash of panel.flash) pushToast(flash)

@@ -6,6 +6,7 @@ import {
   closeTestApp,
   createTestApp,
   denyPolicyAbility,
+  failFixtureAfterCreate,
   failFixtureAfterSave,
   fixtureHookEventsSnapshot,
   resetFixtureHooks,
@@ -98,6 +99,110 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       await closeTestApp(fixture)
     }
   })
+  test('keeps record values and URLs distinct across cache-enabled controller renders', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      const first = await Post.create({
+        title: 'Cache first record',
+        slug: 'cache-first-record',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const second = await Post.create({
+        title: 'Cache second record',
+        slug: 'cache-second-record',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const firstResponse = await inertia(fixture.baseUrl, `/admin/posts/${first.id}/edit`)
+      const secondResponse = await inertia(fixture.baseUrl, `/admin/posts/${second.id}/edit`)
+      const firstPage = await responseProps(firstResponse)
+      const secondPage = await responseProps(secondResponse)
+      assert.equal(
+        (firstPage.page.state.data as Record<string, unknown>).title,
+        'Cache first record'
+      )
+      assert.equal(
+        (secondPage.page.state.data as Record<string, unknown>).title,
+        'Cache second record'
+      )
+      assert.equal(firstPage.page.spec.elements.root?.props.url, `/admin/posts/${first.id}`)
+      assert.equal(secondPage.page.spec.elements.root?.props.url, `/admin/posts/${second.id}`)
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+  test('JSON store, update and destroy responses do not leave session flash messages', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      const values = {
+        title: 'JSON flash isolation',
+        slug: 'json-flash-isolation',
+        status: 'draft',
+      }
+      const created = await inertia(fixture.baseUrl, '/admin/posts', 'POST', values, '', true)
+      assert.equal(created.status, 200)
+      const createResult = actionResult.parse(await created.json())
+      const id = Number(createResult.redirect?.match(/posts\/(\d+)\/edit$/)?.[1])
+      assert.isNumber(id)
+      let cookie = sessionCookie(created)
+      const noFlashAfterCreate = await inertia(
+        fixture.baseUrl,
+        '/admin/posts',
+        'GET',
+        undefined,
+        cookie
+      )
+      const afterCreateProps = await responseProps(noFlashAfterCreate)
+      assert.deepEqual(afterCreateProps.pupitre.flash, [])
+
+      const updated = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'PUT',
+        { ...values, title: 'Updated JSON flash isolation' },
+        cookie,
+        true
+      )
+      assert.equal(updated.status, 200, await updated.text())
+      cookie = sessionCookie(updated) || cookie
+      const noFlashAfterUpdate = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}/edit`,
+        'GET',
+        undefined,
+        cookie
+      )
+      const afterUpdateProps = await responseProps(noFlashAfterUpdate)
+      assert.deepEqual(afterUpdateProps.pupitre.flash, [])
+
+      const destroyed = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'DELETE',
+        undefined,
+        cookie,
+        true
+      )
+      assert.equal(destroyed.status, 200, await destroyed.text())
+      cookie = sessionCookie(destroyed) || cookie
+      const noFlashAfterDestroy = await inertia(
+        fixture.baseUrl,
+        '/admin/posts',
+        'GET',
+        undefined,
+        cookie
+      )
+      const afterDestroyProps = await responseProps(noFlashAfterDestroy)
+      assert.deepEqual(afterDestroyProps.pupitre.flash, [])
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
 
   test('preloads relations used by dotted table columns', async ({ assert }) => {
     const fixture = await createTestApp()
@@ -108,14 +213,24 @@ test.group('Pupitre CRUD HTTP runtime', () => {
         slug: 'relation-cell',
         status: 'draft',
         categoryId: category.id,
+        metadata: { title: 'JSON dotted value' },
         tenantId: 1,
       })
       const response = await inertia(fixture.baseUrl, '/admin/posts?q=Relation%20cell')
       const props = (await responseProps(response)) as {
-        data?: { rows: { cells: Record<string, unknown> }[] }
+        data?: {
+          rows: {
+            cells: Record<string, unknown>
+            actions: { name: string; keyBindings?: string[] }[]
+          }[]
+        }
       }
+      assert.isUndefined(
+        props.data?.rows[0]?.actions.find((action) => action.name === 'archive')?.keyBindings
+      )
       assert.equal(response.status, 200)
       assert.equal(props.data?.rows[0]?.cells['category.name'], 'Preloaded category')
+      assert.equal(props.data?.rows[0]?.cells['metadata.title'], 'JSON dotted value')
     } finally {
       await closeTestApp(fixture)
     }
@@ -192,6 +307,15 @@ test.group('Pupitre CRUD HTTP runtime', () => {
     const fixture = await createTestApp()
     try {
       resetFixtureHooks()
+      failFixtureAfterCreate()
+      const failedCreate = await inertia(fixture.baseUrl, '/admin/posts', 'POST', {
+        title: 'Rollback custom create handler',
+        slug: 'rollback-custom-create-handler',
+        status: 'draft',
+      })
+      assert.equal(failedCreate.status, 500)
+      assert.isNull(await Post.query().where('slug', 'rollback-custom-create-handler').first())
+      failFixtureAfterCreate(false)
       const invalid = await inertia(fixture.baseUrl, '/admin/posts', 'POST', {}, '', true)
       const invalidText = await invalid.text()
       assert.equal(invalid.status, 422, invalidText)

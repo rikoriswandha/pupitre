@@ -1,4 +1,4 @@
-import { useContext, useState, type ReactNode } from 'react'
+import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import { RepeaterContext } from './Repeater.js'
 import { Button } from '../primitives/index.js'
 
@@ -12,6 +12,16 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
   const [collapsed, setCollapsed] = useState(props.collapsed === true)
   const index = typeof props.index === 'number' ? props.index : 0
   const label = typeof props.itemLabel === 'string' ? props.itemLabel : `Item ${index + 1}`
+  const gridStyle = (
+    typeof context.grid === 'number'
+      ? { gridTemplateColumns: `repeat(${Math.max(1, context.grid)}, minmax(0, 1fr))` }
+      : Object.fromEntries(
+          Object.entries(context.grid ?? {}).map(([key, count]) => [
+            `--grid-${key}`,
+            String(Math.max(1, Math.min(12, Math.floor(count)))),
+          ])
+        )
+  ) as CSSProperties
   return (
     <article className="min-w-0 rounded-md border border-border bg-card">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -74,7 +84,19 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
           </Button>
         </div>
       </header>
-      {!collapsed && <div className="space-y-4 p-4">{children}</div>}
+      {!collapsed && (
+        <div
+          data-repeater-fields
+          className={
+            context.grid === undefined
+              ? 'space-y-4 p-4'
+              : 'grid min-w-0 gap-4 p-4 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]'
+          }
+          style={gridStyle}
+        >
+          {children}
+        </div>
+      )}
     </article>
   )
 }

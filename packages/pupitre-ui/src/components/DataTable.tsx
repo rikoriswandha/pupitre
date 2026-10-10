@@ -1,6 +1,6 @@
-import { createElement, useRef } from 'react'
-import { useEffect, useState } from 'react'
+import { createElement, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { matchesKeyBinding } from '../primitives/key_bindings.js'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { ColumnDef } from '@tanstack/react-table'
 import type {
@@ -11,6 +11,7 @@ import type {
   TableRow,
 } from '@rikology/pupitre/catalog'
 import { useRunAction, useTable } from '@rikology/pupitre-react'
+import { Icon } from '../icons.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
 
 export type DataTableProps = {
@@ -218,13 +219,16 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   const truncated = limit !== undefined && text.length > limit ? `${text.slice(0, limit)}…` : text
   const content =
     typeof url === 'string' && url ? (
-      <a className="text-primary hover:underline" href={url}>
+      <a
+        className={`text-primary hover:underline ${column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}`}
+        href={url}
+      >
         {truncated}
       </a>
     ) : (
       <span
         title={limit !== undefined && text.length > limit ? text : undefined}
-        className={column.props.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}
+        className={column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}
       >
         {truncated}
       </span>
@@ -271,6 +275,7 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
   const querySearch = tableState.query.q
   const searchTable = tableState.search
   const lastSubmittedSearch = useRef(String(querySearch ?? ''))
+  const searchTimer = useRef<number | undefined>(undefined)
   useEffect(() => {
     const value = typeof querySearch === 'string' ? querySearch : ''
     setSearch(value)
@@ -283,14 +288,17 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
       search === lastSubmittedSearch.current
     )
       return
-    const timer = window.setTimeout(
+    searchTimer.current = window.setTimeout(
       () => {
+        searchTimer.current = undefined
         lastSubmittedSearch.current = search
         searchTable(search)
       },
       Math.max(0, descriptor.searchDebounce)
     )
-    return () => window.clearTimeout(timer)
+    return () => {
+      if (searchTimer.current !== undefined) window.clearTimeout(searchTimer.current)
+    }
   }, [descriptor.searchable, descriptor.searchDebounce, search, querySearch, searchTable])
 
   const columns: ColumnDef<TableRow>[] = descriptor.columns.map((column) => ({
@@ -317,6 +325,30 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
   })
   const meta = tableData?.meta
   const selected = tableState.selected
+  const bulkActions = descriptor.bulkActions.filter((action) => action.enabled)
+  useEffect(() => {
+    if (bulkActions.length === 0 || selected.length === 0) return
+    const handler = (event: KeyboardEvent) => {
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          (target instanceof HTMLInputElement && !['checkbox', 'radio'].includes(target.type)))
+      )
+        return
+      const action = bulkActions.find((item) =>
+        (item.keyBindings ?? []).some((binding) => matchesKeyBinding(event, binding))
+      )
+      if (!action) return
+      event.preventDefault()
+      void runAction(action, { ids: selected })
+      emit('action', { action: action.name, ids: selected })
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [bulkActions, selected, runAction, emit])
   const selectableRows = rows.filter((row) => row.selectable)
   const allSelected =
     selectableRows.length > 0 && selectableRows.every((row) => selected.includes(row.key))
@@ -361,14 +393,25 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
       <button
         key={action.name}
         type="button"
+        aria-label={action.variant === 'iconButton' ? action.label : undefined}
+        title={action.variant === 'iconButton' ? action.label : undefined}
         disabled={!action.enabled || loading || props.disabled}
-        className="text-primary underline-offset-4 hover:underline disabled:opacity-50"
+        className={
+          action.variant === 'link'
+            ? 'text-primary underline-offset-4 hover:underline disabled:opacity-50'
+            : 'inline-flex min-h-8 items-center gap-2 rounded-md border border-input px-2 text-sm disabled:opacity-50'
+        }
         onClick={async () => {
           await runAction(action, { ids: [row.key], record: row.cells })
           emit('action', { action: action.name, id: row.key })
         }}
       >
-        {action.label}
+        {action.icon && <Icon name={action.icon} className="size-4" />}
+        {action.variant === 'iconButton' ? (
+          <span className="sr-only">{action.label}</span>
+        ) : (
+          action.label
+        )}
       </button>
     )
     return (
@@ -521,7 +564,12 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
               value={search}
               onChange={(event) => setSearch(event.currentTarget.value)}
               onKeyDown={(event) => {
-                if (event.key === 'Enter') tableState.search(search)
+                if (event.key === 'Enter') {
+                  if (searchTimer.current !== undefined) window.clearTimeout(searchTimer.current)
+                  searchTimer.current = undefined
+                  lastSubmittedSearch.current = search
+                  tableState.search(search)
+                }
               }}
             />
           </label>
@@ -580,25 +628,35 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
           </details>
         )}
       </div>
-      {selected.length > 0 && descriptor.bulkActions.length > 0 && (
+      {bulkActions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/50 p-2 text-sm">
           <span>{selected.length} selected</span>
-          {descriptor.bulkActions
-            .filter((action) => action.enabled)
-            .map((action) => (
-              <button
-                key={action.name}
-                type="button"
-                disabled={loading || props.disabled}
-                className="rounded-md border px-3 py-1 hover:bg-background disabled:opacity-50"
-                onClick={async () => {
-                  await runAction(action, { ids: selected })
-                  emit('action', { action: action.name, ids: selected })
-                }}
-              >
-                {action.label}
-              </button>
-            ))}
+          {bulkActions.map((action) => (
+            <button
+              key={action.name}
+              type="button"
+              aria-label={action.variant === 'iconButton' ? action.label : undefined}
+              disabled={loading || props.disabled || selected.length === 0}
+              className={
+                action.variant === 'link'
+                  ? 'text-primary underline-offset-4 hover:underline disabled:opacity-50'
+                  : 'rounded-md border px-3 py-1 hover:bg-background disabled:opacity-50'
+              }
+              onClick={async () => {
+                await runAction(action, { ids: selected })
+                emit('action', { action: action.name, ids: selected })
+              }}
+            >
+              {action.variant === 'iconButton' ? (
+                <>
+                  {action.icon && <Icon name={action.icon} className="size-4" />}
+                  <span className="sr-only">{action.label}</span>
+                </>
+              ) : (
+                action.label
+              )}
+            </button>
+          ))}
         </div>
       )}
       {tableData?.groups && tableData.groups.length > 0 && (

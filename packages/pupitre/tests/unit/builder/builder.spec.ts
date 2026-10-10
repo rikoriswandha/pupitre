@@ -156,4 +156,12 @@ test.group('resource and builder DSL', () => {
     })
     void (undefined as typeof compileFieldValidator)
   })
+  test('omits unsupported schema methods from builder proxies', ({ assert }) => {
+    const date = schema.date('createdAt') as unknown as Record<string, unknown>
+    const color = schema.color('color') as unknown as Record<string, unknown>
+    const checkboxList = schema.checkboxList('roles') as unknown as Record<string, unknown>
+    assert.isUndefined(date.native)
+    assert.isUndefined(color.format)
+    assert.isUndefined(checkboxList.searchable)
+  })
 })

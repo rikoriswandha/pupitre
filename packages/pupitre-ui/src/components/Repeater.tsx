@@ -7,6 +7,7 @@ type RepeaterMetadata = {
   minItems: number
   maxItems?: number
   addLabel?: string
+  grid?: number | Record<string, number>
   reorderable: boolean
   cloneable: boolean
   collapsible: boolean
@@ -20,6 +21,7 @@ type RepeaterContextValue = {
   cloneable: boolean
   collapsible: boolean
   move: (index: number, direction: 'up' | 'down') => void
+  grid?: number | Record<string, number>
   clone: (index: number) => void
   remove: (index: number) => void
 }
@@ -41,6 +43,12 @@ function readDescriptor(value: unknown): RepeaterMetadata | undefined {
       'maxItems' in value && typeof value.maxItems === 'number' ? value.maxItems : undefined,
     addLabel:
       'addLabel' in value && typeof value.addLabel === 'string' ? value.addLabel : undefined,
+    grid:
+      'grid' in value &&
+      (typeof value.grid === 'number' ||
+        (value.grid !== null && typeof value.grid === 'object' && !Array.isArray(value.grid)))
+        ? (value.grid as RepeaterMetadata['grid'])
+        : undefined,
     reorderable: 'reorderable' in value && value.reorderable === true,
     cloneable: 'cloneable' in value && value.cloneable === true,
     collapsible: 'collapsible' in value && value.collapsible === true,
@@ -109,6 +117,7 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
   }
   const context: RepeaterContextValue = {
     minItems: min,
+    grid: descriptor?.grid,
     maxItems: max,
     itemCount,
     reorderable: descriptor?.reorderable ?? false,

@@ -18,7 +18,7 @@ export function Hidden({ props, bindings }: Runtime) {
   return (
     <input
       type="hidden"
-      name={props.name}
+      name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
       value={
         typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value ?? '')
       }

@@ -39,11 +39,13 @@ export function Toggle({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        <div className="inline-flex items-center gap-3 text-sm">
+        <div
+          className={props.inline ? 'inline-flex items-center gap-3 text-sm' : 'grid gap-2 text-sm'}
+        >
           <BaseSwitch.Root
             {...props.extraAttributes}
             id={id}
-            name={props.name}
+            name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
             checked={checked}
             onCheckedChange={(next) => setValue(next === true)}
             required={props.required}
@@ -53,7 +55,12 @@ export function Toggle({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className="relative h-6 w-11 rounded-full bg-muted-foreground/40 transition-colors data-[checked]:bg-primary data-[disabled]:opacity-50"
+            className="relative h-6 w-11 rounded-full bg-muted-foreground/40 transition-colors data-[disabled]:opacity-50"
+            style={{
+              backgroundColor: checked
+                ? (props.onColor ?? undefined)
+                : (props.offColor ?? undefined),
+            }}
           >
             <BaseSwitch.Thumb className="block size-5 translate-x-0.5 rounded-full bg-white transition-transform data-[checked]:translate-x-5" />
           </BaseSwitch.Root>

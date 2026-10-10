@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
 import type { FileUploadDescriptor, UploadResponse } from '@rikology/pupitre/catalog'
-import { useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
 
 export type FileUploadProps = {
   props: {
@@ -35,6 +35,15 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   const [workingFile, setWorkingFile] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string>()
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadResponse>>({})
+  const dirty = useStateValue('/meta/dirty')
+  const wasDirty = useRef(false)
+  useEffect(() => {
+    if (dirty === true) wasDirty.current = true
+    else if (dirty === false && wasDirty.current) {
+      setUploadedFiles({})
+      wasDirty.current = false
+    }
+  }, [dirty])
   const [dragOver, setDragOver] = useState(false)
   const keys = keysOf(value)
   const canChoose =
@@ -102,7 +111,8 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   async function removeFile(key: string) {
     setLocalError(undefined)
     const next = descriptor.multiple ? keys.filter((existing) => existing !== key) : null
-    if (!uploadedFiles[key]) {
+    const persistedKeys = keysOf(props.value)
+    if (persistedKeys.includes(key) || !uploadedFiles[key]) {
       setValue(next)
       emit('change', next)
       return

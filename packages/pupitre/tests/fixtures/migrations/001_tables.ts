@@ -39,6 +39,7 @@ export async function up(database: Database) {
     table.integer('views_count').notNullable().defaultTo(0)
     table.integer('author_id').unsigned().nullable().references('id').inTable('users')
     table.integer('category_id').unsigned().nullable().references('id').inTable('categories')
+    table.json('metadata').nullable()
     table.json('items').nullable()
     table.string('cover').nullable()
     table.string('private_cover').nullable()

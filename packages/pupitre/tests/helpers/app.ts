@@ -86,6 +86,7 @@ export class PostPolicy {
 }
 const fixtureHookEvents: string[] = []
 let failAfterSave = false
+let failAfterCreate = false
 
 export function fixtureHookEventsSnapshot() {
   return [...fixtureHookEvents]
@@ -94,10 +95,15 @@ export function fixtureHookEventsSnapshot() {
 export function resetFixtureHooks() {
   fixtureHookEvents.length = 0
   failAfterSave = false
+  failAfterCreate = false
 }
 
 export function failFixtureAfterSave(value = true) {
   failAfterSave = value
+}
+
+export function failFixtureAfterCreate(value = true) {
+  failAfterCreate = value
 }
 
 export const fixtureArchiveAction = action('archive')
@@ -110,6 +116,7 @@ export const fixtureArchiveAction = action('archive')
   })
   .after(({ refresh }) => refresh.table())
   .deselectAfter()
+  .keyBindings(['mod+shift+a'])
 
 export const fixtureBulkArchiveAction = actions
   .bulk('bulk-archive')
@@ -145,7 +152,10 @@ export const fixturePostResource = defineResource(Post)
     return { ...data, tenantId: 1 }
   })
   .beforeCreate(() => fixtureHookEvents.push('beforeCreate'))
-  .afterCreate(() => fixtureHookEvents.push('afterCreate'))
+  .afterCreate(() => {
+    fixtureHookEvents.push('afterCreate')
+    if (failAfterCreate) throw new Error('fixture afterCreate failure')
+  })
   .mutateBeforeSave((data) => {
     fixtureHookEvents.push('mutateBeforeSave')
     return data
@@ -167,7 +177,9 @@ export const fixturePostResource = defineResource(Post)
       ]),
       schema.fileUpload('privateCover').visibility('private').image().maxSize('2mb'),
       schema.richEditor('body'),
-      schema.repeater('items').schema([schema.fileUpload('attachment').image().maxSize('2mb')]),
+      schema
+        .repeater('items')
+        .schema((fields) => [fields.fileUpload('attachment').image().maxSize('2mb')]),
     ])
   )
   .table((definition) =>
@@ -175,6 +187,7 @@ export const fixturePostResource = defineResource(Post)
       .columns([
         table.text('title').sortable().searchable(),
         table.text('category.name'),
+        table.text('metadata.title'),
         table.badge('status'),
         table.image('cover'),
       ])
