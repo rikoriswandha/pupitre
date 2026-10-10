@@ -15,6 +15,7 @@ export const actionDescriptor = z.object({
   name: z.string(),
   label: z.string(),
   icon: z.string().optional(),
+  variant: z.enum(['button', 'link', 'iconButton']).optional(),
   color: z.enum(['primary', 'secondary', 'success', 'warning', 'danger', 'gray']).optional(),
   kind: z.enum(['link', 'direct', 'confirm', 'form']),
   url: z.string(),
@@ -36,6 +37,7 @@ export const actionDescriptor = z.object({
     .object({
       heading: z.string().optional(),
       description: z.string().optional(),
+      icon: z.string().optional(),
       width: z.enum(['sm', 'md', 'lg', 'xl', '2xl', 'full']).optional(),
       slideOver: z.boolean().optional(),
       submitLabel: z.string().optional(),
@@ -267,6 +269,14 @@ export const jsonPatchOp = z.discriminatedUnion('op', [
 ])
 export type JsonPatchOp = z.infer<typeof jsonPatchOp>
 export const patchResponse = z.object({ patch: z.array(jsonPatchOp) })
+export const actionResult = z.object({
+  flash: z.array(flashMessage),
+  redirect: z.string().optional(),
+  reload: z.boolean().optional(),
+  patch: z.array(jsonPatchOp).optional(),
+  deselect: z.boolean().optional(),
+})
+export type ActionResult = z.infer<typeof actionResult>
 export type PatchResponse = z.infer<typeof patchResponse>
 
 export const elementSchema = z.object({
@@ -376,6 +386,7 @@ export const pageProps = z.object({
       brand,
       theme: themeVars,
       features: panelFeatures,
+      logoutUrl: z.string().optional(),
     }),
     user: z
       .object({

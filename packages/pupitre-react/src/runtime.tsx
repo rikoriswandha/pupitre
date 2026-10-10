@@ -4,11 +4,14 @@ import type { StateStore } from '@json-render/core'
 import type { PupitreFunctions } from './registry/defineRegistry.js'
 import type { ToastMessage } from './shell/types.js'
 
+import type { PupitreRegistry } from './registry/defineRegistry.js'
 export type RuntimeContextValue = {
   store: StateStore
   page: PupitrePageProps['page']
   data: PupitrePageProps['data']
   panel: PupitrePageProps['pupitre']
+  registry: PupitreRegistry
+  handlers: Record<string, (params: Record<string, unknown>) => Promise<unknown> | unknown>
   functions: PupitreFunctions & Record<string, unknown>
   runAction: (
     descriptor: ActionDescriptor,

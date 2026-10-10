@@ -99,6 +99,8 @@ export type {
   ActionContextName,
   ActionHandleContext,
   ActionVisibilityContext,
+  ActionAfterContext,
+  NotificationBuilder,
 } from './src/definition/action.js'
 export { pages } from './src/builder/pages.js'
 export type { PageBuilder } from './src/builder/pages.js'

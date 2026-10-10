@@ -467,7 +467,7 @@ export const catalogFixtures = {
     elements: {
       root: {
         type: 'TextEntry',
-        props: { label: 'Title', value: { $state: '/meta/record/title' } },
+        props: { label: 'Title', value: { $state: '/meta/record/title' }, html: false },
       },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },

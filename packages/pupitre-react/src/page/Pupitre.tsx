@@ -1,12 +1,17 @@
-/* eslint-disable @unicorn/filename-case */
 import { useCallback, useEffect, useState } from 'react'
 import { usePage as useInertiaPage } from '@inertiajs/react'
-import type { ActionDescriptor, PupitrePageProps } from '@rikology/pupitre/catalog'
-import { findUploadDescriptor, uploadFiles } from '../bridge/actions.js'
+import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
+import {
+  findUploadDescriptor,
+  handleActionResult as applyActionResult,
+  submitAction,
+  uploadFiles,
+} from '../bridge/actions.js'
 import { catalogVersion } from '@rikology/pupitre/catalog'
 import { t } from '../i18n.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
 import type { ToastMessage } from '../shell/types.js'
+import { ActionConfirm } from '../renderer/ActionConfirm.js'
 import { PupitreRenderer } from '../renderer/PupitreRenderer.js'
 import { ActionModal } from '../renderer/ActionModal.js'
 import { getRouter } from '../bridge/inertia.js'
@@ -16,6 +21,12 @@ export type PupitreProps = { registry: PupitreRegistry }
 let toastId = 0
 function major(version: string): string {
   return version.split('.')[0] ?? ''
+}
+export function ensureCatalogVersion(version: string, toast: () => void): void {
+  if (major(version) !== major(catalogVersion)) {
+    queueMicrotask(toast)
+    getRouter().reload()
+  }
 }
 function useInertiaPropsSafely(): InertiaPupitreProps | null {
   try {
@@ -42,6 +53,10 @@ function PupitreContent({
   props: InertiaPupitreProps
 }) {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const [optimisticData, setOptimisticData] = useState<{
+    base: PupitrePageProps['data']
+    value: unknown
+  } | null>(null)
   const [confirm, setConfirm] = useState<{
     action: ActionDescriptor
     ids?: Array<string | number>
@@ -58,14 +73,28 @@ function PupitreContent({
   }, [])
   const page = props.page
   const panel = props.pupitre
+  const handleActionResult = useCallback(
+    (result: ActionResult) =>
+      applyActionResult(result, {
+        data: props.data,
+        pageKind: page.kind,
+        toast: pushToast,
+        setData: (value) =>
+          setOptimisticData({ base: props.data, value: value as PupitrePageProps['data'] }),
+      }),
+    [page.kind, props.data, pushToast]
+  )
+  const data =
+    optimisticData && optimisticData.base === props.data
+      ? (optimisticData.value as PupitrePageProps['data'])
+      : props.data
   useEffect(() => {
     if (typeof document !== 'undefined') document.title = page.title
   }, [page])
   useEffect(() => {
-    if (major(page.catalogVersion) !== major(catalogVersion)) {
-      queueMicrotask(() => pushToast({ type: 'warning', title: t('Reload required') }))
-      getRouter().reload()
-    }
+    ensureCatalogVersion(page.catalogVersion, () =>
+      pushToast({ type: 'warning', title: t('Reload required') })
+    )
   }, [page, pushToast])
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -85,28 +114,29 @@ function PupitreContent({
         else getRouter().visit(action.url)
       } else if (action.kind === 'confirm') setConfirm({ action, ids: options.ids })
       else if (action.kind === 'form') setFormAction({ action, ids: options.ids })
-      else getRouter()[action.method ?? 'post'](action.url, { ids: options.ids })
+      else {
+        try {
+          const response = await submitAction(action.url, { ids: options.ids })
+          if (response.result) handleActionResult(response.result)
+          else {
+            const first = response.errors ? Object.values(response.errors)[0] : undefined
+            pushToast({
+              type: 'error',
+              title: String(
+                Array.isArray(first)
+                  ? first[0]
+                  : (first ?? response.message ?? 'Unable to perform action.')
+              ),
+            })
+          }
+        } catch {
+          pushToast({ type: 'error', title: 'Unable to perform action.' })
+        }
+      }
     },
-    []
+    [handleActionResult, pushToast]
   )
   const closeAction = useCallback(() => setFormAction(null), [])
-  const submitConfirm = () => {
-    if (!confirm) return
-    const { action, ids } = confirm
-    getRouter()[action.method ?? 'post'](
-      action.url,
-      { ids },
-      {
-        onSuccess: () => setConfirm(null),
-        onError: (errors: Record<string, string>) =>
-          pushToast({ type: 'error', title: String(errors._form ?? 'Unable to perform action.') }),
-        onHttpException: (response: { status: number }) => {
-          if (response.status === 403)
-            pushToast({ type: 'error', title: 'You are not allowed to perform this action.' })
-        },
-      }
-    )
-  }
   const ShellComponent = registry.shell.Shell
   const Toaster = registry.shell.Toaster
   const NotFound = registry.shell.NotFound
@@ -116,7 +146,7 @@ function PupitreContent({
   const content = page.spec ? (
     <PupitreRenderer
       page={page}
-      data={props.data}
+      data={data}
       errors={props.errors}
       pupitre={panel}
       registry={registry}
@@ -146,18 +176,14 @@ function PupitreContent({
       {content}
     </ShellComponent>
   )
-  const Confirm = registry.shell.ConfirmDialog
   const modal = confirm ? (
-    <Confirm
-      open
-      heading={confirm.action.confirm?.heading ?? confirm.action.label}
-      description={confirm.action.confirm?.description}
-      submitLabel={confirm.action.confirm?.submitLabel}
-      cancelLabel={confirm.action.confirm?.cancelLabel}
-      destructive={confirm.action.confirm?.destructive}
-      icon={confirm.action.confirm?.icon}
-      onConfirm={submitConfirm}
+    <ActionConfirm
+      action={confirm.action}
+      ids={confirm.ids}
+      registry={registry.shell}
+      onResult={handleActionResult}
       onCancel={() => setConfirm(null)}
+      toast={pushToast}
     />
   ) : null
   const actionModal = formAction ? (
@@ -169,6 +195,7 @@ function PupitreContent({
       pupitre={panel}
       close={closeAction}
       toast={pushToast}
+      onResult={handleActionResult}
     />
   ) : null
   return (

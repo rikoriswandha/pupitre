@@ -9,7 +9,7 @@ import { useBoundValue, useFieldError } from '../src/hooks/index.js'
 import { ActionModal } from '../src/renderer/ActionModal.js'
 import type { RouterLike } from '../src/bridge/inertia.js'
 import { setRouter } from '../src/bridge/inertia.js'
-
+import { setFetch } from '../src/bridge/actions.js'
 function installDom() {
   const dom = new Window()
   const global = globalThis as unknown as Record<string, unknown>
@@ -86,6 +86,18 @@ test('action form GET renders a separate form store and validation keeps the mod
   const container = dom.document.createElement('div')
   dom.document.body.append(container)
   const root = createRoot(container as unknown as Element)
+  let responseStatus = 422
+  let responsePayload: Record<string, unknown> = { errors: { title: ['Invalid title'] } }
+  let submission: { url: string; init: RequestInit } | undefined
+  const restoreFetch = setFetch(async (url, init) => {
+    submission = { url: String(url), init: init ?? {} }
+    return {
+      ok: responseStatus === 200,
+      status: responseStatus,
+      json: async () => responsePayload,
+    } as Response
+  })
+  const toasts: string[] = []
   const calls: Array<{ method: string; args: unknown[] }> = []
   const record =
     (method: string) =>
@@ -105,27 +117,24 @@ test('action form GET renders a separate form store and validation keeps the mod
   Object.defineProperty(globalThis, 'fetch', {
     configurable: true,
     writable: true,
-    value: async (_url: string | URL | Request, init?: RequestInit) => {
-      if (!init?.method || init.method === 'GET')
-        return {
-          ok: true,
-          json: async () => ({
-            spec: {
-              root: 'field',
-              elements: {
-                field: {
-                  type: 'Text',
-                  props: { name: 'title', value: { $bindState: '/data/title' } },
-                },
-              },
+    value: async () => ({
+      ok: true,
+      json: async () => ({
+        spec: {
+          root: 'field',
+          elements: {
+            field: {
+              type: 'Text',
+              props: { name: 'title', value: { $bindState: '/data/title' } },
             },
-            state: { data: { title: 'Draft' } },
-            catalogVersion: '0.1',
-          }),
-        }
-      return { ok: true, json: async () => ({}) }
-    },
+          },
+        },
+        state: { data: { title: 'Draft' } },
+        catalogVersion: '0.1',
+      }),
+    }),
   })
+  dom.document.cookie = 'XSRF-TOKEN=abc%2B123'
   try {
     await act(async () =>
       root.render(
@@ -136,7 +145,8 @@ test('action form GET renders a separate form store and validation keeps the mod
           runtimeRegistry={registry}
           pupitre={pupitre}
           close={() => {}}
-          toast={() => {}}
+          toast={(toast) => toasts.push(toast.title)}
+          onResult={() => {}}
         />
       )
     )
@@ -148,16 +158,32 @@ test('action form GET renders a separate form store and validation keeps the mod
     await act(async () =>
       (container.querySelector('button') as unknown as HTMLButtonElement).click()
     )
-    assert.equal(calls[0]?.method, 'post')
-    assert.equal(calls[0]?.args[0], action.url)
-    assert.deepEqual(calls[0]?.args[1], { data: { title: 'Draft' }, ids: [7] })
-    const options = calls[0]?.args[2] as { onError: (errors: Record<string, string>) => void }
-    await act(async () => options.onError({ title: 'Invalid title' }))
+    assert.equal(submission?.url, action.url)
+    assert.equal(submission?.init.method, 'POST')
+    assert.equal(submission?.init.credentials, 'same-origin')
+    assert.deepEqual(JSON.parse(String(submission?.init.body)), {
+      data: { title: 'Draft' },
+      ids: [7],
+    })
+    const headers = submission?.init.headers as Record<string, string>
+    assert.equal(headers.Accept, 'application/json')
+    assert.equal(headers['Content-Type'], 'application/json')
+    assert.equal(headers['X-Requested-With'], 'XMLHttpRequest')
+    assert.equal(headers['X-Pupitre-Action'], '1')
+    assert.equal(headers['X-XSRF-TOKEN'], 'abc+123')
     assert.equal(container.querySelector('[role="alert"]')?.textContent, 'Invalid title')
+    assert.exists(container.querySelector('[data-testid="modal"]'))
+    responseStatus = 403
+    responsePayload = { message: 'Forbidden action' }
+    await act(async () =>
+      (container.querySelector('button') as unknown as HTMLButtonElement).click()
+    )
+    assert.deepEqual(toasts, ['Forbidden action'])
     assert.exists(container.querySelector('[data-testid="modal"]'))
   } finally {
     await act(async () => root.unmount())
     restoreRouter()
+    restoreFetch()
     Object.defineProperty(globalThis, 'fetch', {
       configurable: true,
       writable: true,

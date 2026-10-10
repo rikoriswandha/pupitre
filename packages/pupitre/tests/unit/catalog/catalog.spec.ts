@@ -3,6 +3,7 @@ import { test } from '@japa/runner'
 import type { JsonRenderSpec } from '../../../catalog/index.js'
 import {
   actionDescriptor,
+  actionResult,
   actionFormResponse,
   assertRegistryComplete,
   catalogFixtures,
@@ -92,6 +93,13 @@ test.group('catalog wire schemas', () => {
         .success
     )
     assert.isTrue(
+      actionResult.safeParse({
+        flash: [{ type: 'success', title: 'Saved' }],
+        patch: [{ op: 'replace', path: '/rows', value: [] }],
+        deselect: true,
+      }).success
+    )
+    assert.isTrue(
       tableDescriptor.safeParse(catalogFixtures.DataTable.elements.root.props.descriptor).success
     )
     assert.isTrue(
@@ -127,7 +135,14 @@ test.group('catalog wire schemas', () => {
     assert.isTrue(
       pageProps.safeParse({
         pupitre: {
-          panel: { id: 'admin', path: '/admin', brand: { name: 'Acme' }, theme: {}, features: {} },
+          panel: {
+            id: 'admin',
+            path: '/admin',
+            brand: { name: 'Acme' },
+            theme: {},
+            features: {},
+            logoutUrl: '/logout',
+          },
           user: null,
           tenant: null,
           nav: [],

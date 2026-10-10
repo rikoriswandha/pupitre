@@ -9,6 +9,9 @@ import { PupitreRenderer } from '../src/renderer/PupitreRenderer.js'
 import type { PupitreRendererProps } from '../src/renderer/PupitreRenderer.js'
 import type { PupitrePageProps } from '@rikology/pupitre/catalog'
 import type { StateStore } from '@json-render/core'
+import { SpecRenderer } from '../src/renderer/SpecRenderer.js'
+import { RuntimeContext } from '../src/runtime.js'
+import { createPupitreStore } from '../src/renderer/store.js'
 
 function installDom() {
   const dom = new Window()
@@ -143,6 +146,64 @@ test.group('Pupitre renderer store lifecycle', () => {
         )
       )
       assert.equal(store?.get('/data/title'), 'Second record')
+    } finally {
+      await act(async () => root.unmount())
+      dom.happyDOM.abort()
+    }
+  })
+  test('renders a sub-spec with isolated state and reports only its changes', async ({ assert }) => {
+    const dom = installDom()
+    const container = dom.document.createElement('div')
+    dom.document.body.append(container)
+    const root = createRoot(container as unknown as Element)
+    const parent = createPupitreStore({ data: { title: 'Parent' } })
+    const page = makePage('sub-spec', 'Sub-spec', { data: { title: 'Parent' } })
+    const changes: unknown[] = []
+    try {
+      await act(async () =>
+        root.render(
+          <RuntimeContext.Provider
+            value={{
+              store: parent.store,
+              page,
+              data: undefined,
+              panel: {} as never,
+              registry: runtimeRegistry,
+              handlers: {},
+              functions: runtimeRegistry.functions,
+              runAction: async () => {},
+              submitForm: () => {},
+              upload: async () => [],
+              toast: () => {},
+            }}
+          >
+            <SpecRenderer
+              spec={{
+                root: 'field',
+                state: { data: { title: 'Sub-spec' } },
+                elements: {
+                  field: {
+                    type: 'Text',
+                    props: { name: 'Sub title', value: { $bindState: '/data/title' } },
+                  },
+                },
+              }}
+              onStateChange={(state) => changes.push(state)}
+            />
+          </RuntimeContext.Provider>
+        )
+      )
+      const input = container.querySelector('input')
+      assert.exists(input)
+      assert.equal(input?.value, 'Sub-spec')
+      await act(async () => {
+        if (!input) return
+        input.value = 'Changed sub-spec'
+        input.dispatchEvent(new dom.Event('input', { bubbles: true }))
+        input.dispatchEvent(new dom.Event('change', { bubbles: true }))
+      })
+      assert.equal(parent.store.get('/data/title'), 'Parent')
+      assert.equal((changes.at(-1) as { data?: { title?: string } } | undefined)?.data?.title, 'Changed sub-spec')
     } finally {
       await act(async () => root.unmount())
       dom.happyDOM.abort()

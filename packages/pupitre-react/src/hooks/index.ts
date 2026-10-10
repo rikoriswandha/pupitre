@@ -5,6 +5,7 @@ import type {
   TableDescriptor,
   UploadResponse,
 } from '@rikology/pupitre/catalog'
+import { registerTableSelectionClearer } from '../bridge/actions.js'
 import { currentUrl, getRouter, type RouterLike } from '../bridge/inertia.js'
 import { useRuntime } from '../runtime.js'
 
@@ -134,6 +135,7 @@ export function useTable(descriptor: TableDescriptor) {
   const { data } = useRuntime()
   const [selected, setSelected] = useState<Array<string | number>>([])
   const [isLoading, setIsLoading] = useState(false)
+  useEffect(() => registerTableSelectionClearer(() => setSelected([])), [])
   const query = Object.fromEntries(currentUrl().searchParams.entries())
   const setQuery = useCallback((partial: Record<string, unknown>) => {
     const params = currentUrl().searchParams
@@ -152,7 +154,18 @@ export function useTable(descriptor: TableDescriptor) {
     })
   }, [])
   const setFilter = useCallback(
-    (name: string, value: unknown) => setQuery({ [`filters[${name}]`]: value }),
+    (name: string, value: unknown) => {
+      const params = currentUrl().searchParams
+      const prefix = `filters[${name}]`
+      const updates: Record<string, unknown> = {}
+      for (const key of params.keys())
+        if (key === prefix || key.startsWith(`${prefix}[`)) updates[key] = ''
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        for (const [key, fieldValue] of Object.entries(value))
+          updates[`${prefix}[${key}]`] = fieldValue
+      } else updates[prefix] = value
+      setQuery(updates)
+    },
     [setQuery]
   )
   const resetFilters = useCallback(() => {

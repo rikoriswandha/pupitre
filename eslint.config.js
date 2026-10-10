@@ -63,6 +63,8 @@ export default configPkg(
       'react/no-children-prop': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      // docs/DEVELOPMENT.md §7: React components live in PascalCase.tsx files.
+      '@unicorn/filename-case': ['error', { cases: { snakeCase: true, pascalCase: true } }],
     },
   },
   {

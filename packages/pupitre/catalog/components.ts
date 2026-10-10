@@ -212,7 +212,7 @@ export const components = {
     descriptor: fileUploadDescriptor,
   }),
   Repeater: container(
-    { descriptor: repeaterDescriptor },
+    { descriptor: repeaterDescriptor, value: dynamic(z.array(z.unknown())).optional() },
     'Repeater emits add, remove, move, clone, and collapse events.'
   ),
   RepeaterItem: container(
@@ -316,6 +316,7 @@ export const components = {
     color: str.optional(),
     icon: str.optional(),
     placeholder: str.optional(),
+    html: bool.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
   IconEntry: leaf({

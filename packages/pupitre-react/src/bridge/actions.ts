@@ -1,5 +1,5 @@
 import type { StateStore } from '@json-render/core'
-import { fileUploadDescriptor } from '@rikology/pupitre/catalog'
+import { actionResult, fileUploadDescriptor } from '@rikology/pupitre/catalog'
 import type {
   ActionDescriptor,
   FileUploadDescriptor,
@@ -7,8 +7,153 @@ import type {
   PupitrePageProps,
   UploadResponse,
 } from '@rikology/pupitre/catalog'
-import { getRouter } from './inertia.js'
+import type { ActionResult } from '@rikology/pupitre/catalog'
 import { mapErrors } from './errors.js'
+import { currentUrl, getRouter } from './inertia.js'
+import type { ToastMessage } from '../shell/types.js'
+import type { JsonPatchOp } from '@rikology/pupitre/catalog'
+type FetchLike = typeof fetch
+let activeFetch: FetchLike = (...args) => globalThis.fetch(...args)
+export function setFetch(fetcher: FetchLike): () => void {
+  const previous = activeFetch
+  activeFetch = fetcher
+  return () => {
+    activeFetch = previous
+  }
+}
+function xsrfToken(): string {
+  if (typeof document === 'undefined') return ''
+  const cookie = document.cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith('XSRF-TOKEN='))
+  if (!cookie) return ''
+  try {
+    return decodeURIComponent(cookie.slice('XSRF-TOKEN='.length))
+  } catch {
+    return cookie.slice('XSRF-TOKEN='.length)
+  }
+}
+export async function submitAction(
+  url: string,
+  body: { data?: Record<string, unknown>; ids?: Array<string | number> }
+): Promise<{
+  status: number
+  result?: ActionResult
+  errors?: Record<string, unknown>
+  message?: string
+}> {
+  const response = await activeFetch(url, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-Pupitre-Action': '1',
+      'X-XSRF-TOKEN': xsrfToken(),
+    },
+    body: JSON.stringify(body),
+  })
+  const payload: unknown = await response.json().catch(() => ({}))
+  if (response.status === 200) {
+    const parsed = actionResult.safeParse(payload)
+    return parsed.success
+      ? { status: response.status, result: parsed.data }
+      : { status: response.status, message: 'Invalid action response.' }
+  }
+  if (response.status === 422 && payload && typeof payload === 'object' && 'errors' in payload) {
+    const errors = payload.errors
+    if (errors && typeof errors === 'object' && !Array.isArray(errors))
+      return { status: response.status, errors: errors as Record<string, unknown> }
+  }
+  if (
+    (response.status === 403 || response.status === 404) &&
+    payload &&
+    typeof payload === 'object' &&
+    'message' in payload
+  ) {
+    const message = payload.message
+    if (typeof message === 'string') return { status: response.status, message }
+  }
+  return { status: response.status, message: `Unable to perform action (${response.status}).` }
+}
+const tableSelectionClearers = new Set<() => void>()
+export function registerTableSelectionClearer(clear: () => void): () => void {
+  tableSelectionClearers.add(clear)
+  return () => tableSelectionClearers.delete(clear)
+}
+export function clearTableSelections(): void {
+  for (const clear of tableSelectionClearers) clear()
+}
+export function handleActionResult(
+  result: ActionResult,
+  options: {
+    data: unknown
+    pageKind: PupitrePageProps['page']['kind']
+    toast: (message: Omit<ToastMessage, 'id'>) => void
+    setData: (data: unknown) => void
+  }
+): void {
+  for (const flash of result.flash) options.toast(flash)
+  if (result.deselect) clearTableSelections()
+  if (result.patch) options.setData(applyJsonPatch(options.data, result.patch))
+  if (result.redirect) {
+    const current = currentUrl()
+    const destination = new URL(result.redirect, current)
+    if (destination.href === current.href) getRouter().reload()
+    else getRouter().visit(result.redirect)
+    return
+  }
+  if (result.patch) {
+    getRouter().reload({ only: ['data'] })
+    return
+  }
+  if (result.reload) {
+    if (options.pageKind === 'list') getRouter().reload({ only: ['data'] })
+    else getRouter().reload()
+  }
+}
+export function applyJsonPatch<T>(value: T, patch: JsonPatchOp[]): T {
+  const root = structuredClone(value) as unknown
+  const parts = (path: string) =>
+    path
+      .split('/')
+      .slice(1)
+      .map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'))
+  const getParent = (path: string) => {
+    const keys = parts(path)
+    const key = keys.pop()
+    let parent = root as Record<string, unknown>
+    for (const part of keys) parent = parent[part] as Record<string, unknown>
+    return { parent, key: key ?? '' }
+  }
+  for (const op of patch) {
+    const { parent, key } = getParent(op.path)
+    if (op.op === 'remove') {
+      if (Array.isArray(parent)) parent.splice(Number(key), 1)
+      else delete parent[key]
+    } else if (op.op === 'move' || op.op === 'copy') {
+      const from = getParent(op.from)
+      const item = Array.isArray(from.parent)
+        ? from.parent[Number(from.key)]
+        : from.parent[from.key]
+      if (op.op === 'move') {
+        if (Array.isArray(from.parent)) from.parent.splice(Number(from.key), 1)
+        else delete from.parent[from.key]
+      }
+      if (Array.isArray(parent)) parent.splice(key === '-' ? parent.length : Number(key), 0, item)
+      else parent[key] = item
+    } else if (op.op === 'add' && Array.isArray(parent)) {
+      parent.splice(key === '-' ? parent.length : Number(key), 0, op.value)
+    } else if (op.op === 'test') {
+      const current = Array.isArray(parent) ? parent[Number(key)] : parent[key]
+      if (JSON.stringify(current) !== JSON.stringify(op.value))
+        throw new Error(`JSON patch test failed at ${op.path}.`)
+    } else if ('value' in op) parent[key] = op.value
+  }
+  return root as T
+}
 
 export function visit(params: Record<string, unknown>): void {
   const router = getRouter()
@@ -65,10 +210,21 @@ export type ActionModalState = {
 export async function fetchActionForm(
   action: ActionDescriptor
 ): Promise<ActionModalState['response']> {
-  const response = await fetch(action.url, {
+  const response = await activeFetch(action.url, {
     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
   })
-  if (!response.ok) throw new Error(`Unable to load action form (${response.status}).`)
+  if (!response.ok) {
+    const payload: unknown = await response.json().catch(() => null)
+    if (
+      (response.status === 403 || response.status === 404) &&
+      payload &&
+      typeof payload === 'object' &&
+      'message' in payload &&
+      typeof payload.message === 'string'
+    )
+      throw new Error(payload.message)
+    throw new Error(`Unable to load action form (${response.status}).`)
+  }
   return (await response.json()) as ActionModalState['response']
 }
 export function findUploadDescriptor(
@@ -112,8 +268,12 @@ export async function uploadFiles(
   }
   return results
 }
-export function runAction(params: Record<string, unknown>): void {
-  const url = String(params.url ?? '')
-  const method = (params.method as 'get' | 'post' | 'put' | 'patch' | 'delete') ?? 'post'
-  getRouter()[method](url, { ids: params.ids as Array<string | number> | undefined })
+export async function runAction(params: Record<string, unknown>): Promise<void> {
+  await submitAction(String(params.url ?? ''), {
+    data:
+      params.data && typeof params.data === 'object'
+        ? (params.data as Record<string, unknown>)
+        : undefined,
+    ids: params.ids as Array<string | number> | undefined,
+  })
 }

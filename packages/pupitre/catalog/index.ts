@@ -13,6 +13,7 @@ export {
 export { pupitreCatalog, assertRegistryComplete } from './registry.js'
 export { catalogFixtures } from './fixtures.js'
 export {
+  actionResult,
   actionDescriptor,
   actionFormResponse,
   brand,
@@ -42,6 +43,7 @@ export {
   uploadResponse,
 } from './wire.js'
 export type {
+  ActionResult,
   ActionDescriptor,
   ActionFormResponse,
   Brand,

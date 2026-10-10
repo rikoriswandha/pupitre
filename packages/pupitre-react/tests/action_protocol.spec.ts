@@ -1,0 +1,169 @@
+import { ActionConfirm } from '../src/renderer/ActionConfirm.js'
+import type { ConfirmDialogProps, ShellRegistry } from '../src/shell/types.js'
+import { test } from '@japa/runner'
+import {
+  handleActionResult,
+  registerTableSelectionClearer,
+  setFetch,
+  submitAction,
+} from '../src/bridge/actions.js'
+import { setRouter } from '../src/bridge/inertia.js'
+import type { RouterLike } from '../src/bridge/inertia.js'
+import type { ActionDescriptor, ActionResult } from '@rikology/pupitre/catalog'
+import { ensureCatalogVersion } from '../src/page/Pupitre.js'
+
+function fakeRouter(calls: Array<{ method: string; args: unknown[] }>): RouterLike {
+  const record =
+    (method: string) =>
+    (...args: unknown[]) =>
+      calls.push({ method, args })
+  return {
+    visit: record('visit'),
+    reload: record('reload'),
+    get: record('get'),
+    post: record('post'),
+    put: record('put'),
+    patch: record('patch'),
+    delete: record('delete'),
+  } as unknown as RouterLike
+}
+test('confirm cancellation sends no request and confirmation submits ids', async ({ assert }) => {
+  let submissions = 0
+  let submittedBody = ''
+  let confirmed = false
+  let closed = false
+  const restoreFetch = setFetch(async (_url, init) => {
+    submissions++
+    submittedBody = String(init?.body)
+    return { status: 200, json: async () => ({ flash: [] }) } as Response
+  })
+  const props = {
+    action: {
+      name: 'archive',
+      label: 'Archive',
+      kind: 'confirm',
+      url: '/posts/archive',
+      enabled: true,
+    } as ActionDescriptor,
+    ids: [8, 9],
+    registry: { ConfirmDialog: () => null } as unknown as ShellRegistry,
+    onResult: () => {
+      confirmed = true
+    },
+    onCancel: () => {
+      closed = true
+    },
+    toast: () => {},
+  }
+  try {
+    const cancelDialog = ActionConfirm(props).props as ConfirmDialogProps
+    cancelDialog.onCancel()
+    assert.equal(submissions, 0)
+    const confirmDialog = ActionConfirm(props).props as ConfirmDialogProps
+    await confirmDialog.onConfirm()
+    assert.equal(submissions, 1)
+    assert.deepEqual(JSON.parse(submittedBody), { ids: [8, 9] })
+    assert.isTrue(confirmed)
+    assert.isTrue(closed)
+  } finally {
+    restoreFetch()
+  }
+})
+test('catalog major mismatch warns and performs a full reload', async ({ assert }) => {
+  const calls: Array<{ method: string; args: unknown[] }> = []
+  const restoreRouter = setRouter(fakeRouter(calls))
+  let warned = false
+  try {
+    ensureCatalogVersion('9.0', () => {
+      warned = true
+    })
+    assert.equal(calls[0]?.method, 'reload')
+    assert.deepEqual(calls[0]?.args[0], undefined)
+    await Promise.resolve()
+    assert.isTrue(warned)
+  } finally {
+    restoreRouter()
+  }
+})
+
+test('action submissions consume ActionResult and send selected ids as JSON', async ({
+  assert,
+}) => {
+  let init: RequestInit | undefined
+  const restoreFetch = setFetch(async (_input, request) => {
+    init = request
+    return {
+      status: 200,
+      json: async () => ({ flash: [{ type: 'success', title: 'Saved' }], patch: [] }),
+    } as Response
+  })
+  try {
+    const response = await submitAction('/posts/actions/publish', { ids: [1, 'two'] })
+    assert.equal(response.status, 200)
+    assert.deepEqual(response.result?.flash, [{ type: 'success', title: 'Saved' }])
+    assert.equal(init?.method, 'POST')
+    assert.equal(init?.credentials, 'same-origin')
+    assert.deepEqual(JSON.parse(String(init?.body)), { ids: [1, 'two'] })
+  } finally {
+    restoreFetch()
+  }
+})
+
+test('ActionResult patch refreshes top-level data, redirects navigate, and deselect clears selection', ({
+  assert,
+}) => {
+  const calls: Array<{ method: string; args: unknown[] }> = []
+  const restoreRouter = setRouter(fakeRouter(calls))
+  let selected = true
+  const unregister = registerTableSelectionClearer(() => {
+    selected = false
+  })
+  const toasts: string[] = []
+  let data: unknown = { rows: [{ id: 1 }], query: {} }
+  try {
+    const result: ActionResult = {
+      flash: [{ type: 'success', title: 'Updated' }],
+      patch: [{ op: 'replace', path: '/rows', value: [{ id: 2 }] }],
+      deselect: true,
+    }
+    handleActionResult(result, {
+      data,
+      pageKind: 'list',
+      toast: (message) => toasts.push(message.title),
+      setData: (next) => {
+        data = next
+      },
+    })
+    assert.deepEqual(data, { rows: [{ id: 2 }], query: {} })
+    assert.deepEqual(toasts, ['Updated'])
+    assert.isFalse(selected)
+    assert.equal(calls[0]?.method, 'reload')
+    assert.deepEqual(calls[0]?.args[0], { only: ['data'] })
+
+    handleActionResult(
+      { flash: [], redirect: 'http://localhost/posts/2' },
+      {
+        data,
+        pageKind: 'list',
+        toast: () => {},
+        setData: () => {},
+      }
+    )
+    assert.equal(calls[1]?.method, 'visit')
+    assert.equal(calls[1]?.args[0], 'http://localhost/posts/2')
+    handleActionResult(
+      { flash: [], reload: true },
+      { data, pageKind: 'list', toast: () => {}, setData: () => {} }
+    )
+    assert.deepEqual(calls[2]?.args[0], { only: ['data'] })
+    handleActionResult(
+      { flash: [], reload: true },
+      { data, pageKind: 'view', toast: () => {}, setData: () => {} }
+    )
+    assert.equal(calls[3]?.method, 'reload')
+    assert.isUndefined(calls[3]?.args[0])
+  } finally {
+    unregister()
+    restoreRouter()
+  }
+})

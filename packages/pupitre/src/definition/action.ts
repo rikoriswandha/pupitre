@@ -4,17 +4,26 @@ import type { SchemaNodeBuilder } from './schema.js'
 export type ActionColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'gray'
 export type ActionContextName = 'record' | 'bulk' | 'header'
 export type ActionVisibilityContext = { record: unknown; ctx?: HttpContext }
+export interface NotificationBuilder {
+  body(value: string): this
+  send(): unknown
+}
 export type ActionHandleContext = {
   record?: unknown
   records?: readonly unknown[]
   data?: Record<string, unknown>
   ctx?: HttpContext
   notify?: {
-    success(message: string): unknown
-    error(message: string): unknown
-    warning(message: string): unknown
-    info(message: string): unknown
+    success(title: string): NotificationBuilder
+    danger(title: string): NotificationBuilder
+    error(title: string): NotificationBuilder
+    warning(title: string): NotificationBuilder
+    info(title: string): NotificationBuilder
   }
+}
+export type ActionAfterContext = ActionHandleContext & {
+  redirect: { back(): unknown; to(url: string): unknown }
+  refresh: { table(): unknown }
 }
 export type ActionDefinition = {
   name: string
@@ -50,7 +59,7 @@ export type ActionDefinition = {
     ctx?: HttpContext
   }) => Record<string, unknown> | Promise<Record<string, unknown>>
   handle?: (args: ActionHandleContext) => unknown | Promise<unknown>
-  after?: (args: ActionHandleContext) => unknown | Promise<unknown>
+  after?: (args: ActionAfterContext) => unknown | Promise<unknown>
   url?: string | ((args: { record: unknown; ctx?: HttpContext }) => string)
   openUrlInNewTab?: boolean
   keyBindings?: readonly string[]

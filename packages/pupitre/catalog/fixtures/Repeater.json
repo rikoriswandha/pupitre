@@ -4,6 +4,9 @@
     "root": {
       "type": "Repeater",
       "props": {
+        "value": {
+          "$bindState": "/data/items"
+        },
         "descriptor": {
           "name": "items",
           "minItems": 0,

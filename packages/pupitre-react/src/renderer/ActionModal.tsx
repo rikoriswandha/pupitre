@@ -1,9 +1,8 @@
-/* eslint-disable @unicorn/filename-case */
 import { useEffect, useState } from 'react'
 import type { StateStore } from '@json-render/core'
-import type { ActionDescriptor, PupitrePageProps } from '@rikology/pupitre/catalog'
-import { getRouter } from '../bridge/inertia.js'
-import { fetchActionForm } from '../bridge/actions.js'
+import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
+import { fetchActionForm, submitAction } from '../bridge/actions.js'
+import { mapErrors } from '../bridge/errors.js'
 import type { ShellRegistry } from '../shell/types.js'
 import { PupitreRenderer } from './PupitreRenderer.js'
 import type { PupitreRendererProps } from './PupitreRenderer.js'
@@ -16,6 +15,7 @@ export type ActionModalController = {
   pupitre: PupitrePageProps['pupitre']
   close: () => void
   toast: PupitreRendererProps['toast']
+  onResult: (result: ActionResult) => void
 }
 export function ActionModal({
   action,
@@ -25,8 +25,9 @@ export function ActionModal({
   pupitre,
   close,
   toast,
+  onResult,
 }: ActionModalController) {
-  const [response, setResponse] = useState<{
+  const [formResponse, setFormResponse] = useState<{
     spec: PupitrePageProps['page']['spec']
     state: Record<string, unknown>
     catalogVersion: string
@@ -39,7 +40,7 @@ export function ActionModal({
     // The initial loading state is true; setting it here would synchronously rerender on mount.
     fetchActionForm(action)
       .then((result) => {
-        if (active) setResponse(result)
+        if (active) setFormResponse(result)
       })
       .catch((error: unknown) => {
         if (active) {
@@ -59,52 +60,44 @@ export function ActionModal({
   }, [action, close, toast])
   const Modal = registry.Modal
   if (!Modal) return null
-  const onSubmit = () => {
+  const onSubmit = async () => {
     const data = (modalStore?.get('/data') ?? {}) as Record<string, unknown>
     setLoading(true)
-    getRouter().post(
-      action.url,
-      { data, ids },
-      {
-        preserveState: true,
-        preserveScroll: true,
-        headers: {
-          'Accept': 'application/json',
-          'X-Pupitre-Action': '1',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        onError: (responseErrors: Record<string, string>) => {
-          const mapped: Record<string, unknown> = responseErrors
-          setErrors(mapped)
-          if (mapped._form) toast({ type: 'error', title: String(mapped._form) })
-          else if (mapped.status === '403')
-            toast({ type: 'error', title: 'You are not allowed to perform this action.' })
-        },
-        onHttpException: (exception: { status: number }) => {
-          if (exception.status === 403)
-            toast({ type: 'error', title: 'You are not allowed to perform this action.' })
-        },
-        onSuccess: () => close(),
-        onFinish: () => setLoading(false),
+    setErrors({})
+    if (modalStore) modalStore.set('/errors', {})
+    try {
+      const actionResponse = await submitAction(action.url, { data, ids })
+      if (actionResponse.status === 200 && actionResponse.result) {
+        onResult(actionResponse.result)
+        close()
+      } else if (actionResponse.status === 422 && actionResponse.errors) {
+        setErrors(actionResponse.errors)
+        if (modalStore) mapErrors(modalStore, actionResponse.errors)
+      } else {
+        toast({ type: 'error', title: actionResponse.message ?? 'Unable to perform action.' })
       }
-    )
+    } catch {
+      toast({ type: 'error', title: 'Unable to perform action.' })
+    } finally {
+      setLoading(false)
+    }
   }
   const onStore = (store: StateStore) => setModalStore(store)
   return (
     <Modal
-      open={Boolean(response)}
+      open={Boolean(formResponse)}
       onClose={close}
       heading={action.modal?.heading ?? action.label}
       description={action.modal?.description}
       width={action.modal?.width}
       slideOver={action.modal?.slideOver}
       footer={
-        <button type="button" onClick={onSubmit} disabled={loading || !response}>
+        <button type="button" onClick={onSubmit} disabled={loading || !formResponse}>
           {action.modal?.submitLabel ?? action.label}
         </button>
       }
     >
-      {response && (
+      {formResponse && (
         <PupitreRenderer
           page={
             {
@@ -112,10 +105,10 @@ export function ActionModal({
               kind: 'custom',
               title: action.label,
               breadcrumbs: [],
-              spec: response.spec,
-              state: response.state as never,
+              spec: formResponse.spec,
+              state: formResponse.state as never,
               actions: { header: [] },
-              catalogVersion: response.catalogVersion,
+              catalogVersion: formResponse.catalogVersion,
             } as PupitrePageProps['page']
           }
           pupitre={pupitre}
@@ -127,7 +120,7 @@ export function ActionModal({
           onStore={onStore}
         />
       )}
-      {loading && !response ? <span role="status">Loading…</span> : null}
+      {loading && !formResponse ? <span role="status">Loading…</span> : null}
     </Modal>
   )
 }
