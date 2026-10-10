@@ -1,0 +1,106 @@
+import { configPkg, RULES_LIST } from '@adonisjs/eslint-config'
+import reactPlugin from 'eslint-plugin-react'
+import reactHooksPlugin from 'eslint-plugin-react-hooks'
+
+/**
+ * Package boundaries from docs/ARCHITECTURE.md §1. Each entry restricts what
+ * a workspace may import; violations fail `npm run lint`.
+ */
+const restrict = (group, extra = []) => ({
+  'no-restricted-imports': ['error', { patterns: [{ group }, ...extra] }],
+})
+
+/**
+ * Client packages may only reach the server package through its zod-only catalog.
+ */
+const onlyCatalogFromCore = [
+  {
+    regex: '^@rikology/pupitre(?!/catalog$)(/.*)?$',
+    message: 'client packages may only import @rikology/pupitre/catalog',
+  },
+]
+
+const reactFiles = [
+  'packages/pupitre-react/**/*.{ts,tsx}',
+  'packages/pupitre-ui/**/*.{ts,tsx}',
+  'apps/example/inertia/**/*.{ts,tsx}',
+]
+
+export default configPkg(
+  {
+    ignores: [
+      '**/build/**',
+      '**/tmp/**',
+      '**/node_modules/**',
+      '**/.adonisjs/**',
+      '**/public/assets/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
+      'docs/**',
+    ],
+  },
+  {
+    files: ['**/*.tsx'],
+    languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
+  },
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    languageOptions: {
+      parserOptions: { experimentalDecorators: true, emitDecoratorMetadata: true },
+    },
+    rules: RULES_LIST,
+  },
+  ...[reactPlugin.configs.flat.recommended, reactHooksPlugin.configs.flat.recommended].map(
+    (config) => ({ ...config, files: reactFiles })
+  ),
+  {
+    files: reactFiles,
+    settings: { react: { version: '19.0' } },
+    rules: {
+      'react/react-in-jsx-scope': 'off',
+      'react/prop-types': 'off',
+      'react/self-closing-comp': 'error',
+      'react/no-children-prop': 'off',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
+  {
+    files: ['packages/pupitre/**/*.ts'],
+    rules: restrict([
+      'react',
+      'react-dom',
+      'react/*',
+      'react-dom/*',
+      '@inertiajs/*',
+      '@json-render/react',
+      '@rikology/pupitre-react',
+      '@rikology/pupitre-ui',
+    ]),
+  },
+  {
+    // Catalog is shared by server, React and future non-React renderers: zod only.
+    files: ['packages/pupitre/catalog/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { regex: '^(?!zod$|zod/|\\.{1,2}/).*', message: 'catalog may only import zod' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/pupitre-react/**/*.{ts,tsx}'],
+    rules: restrict(
+      ['@adonisjs/*', '@vinejs/*', 'luxon', '@rikology/pupitre-ui'],
+      onlyCatalogFromCore
+    ),
+  },
+  {
+    files: ['packages/pupitre-ui/**/*.{ts,tsx}'],
+    rules: restrict(['@adonisjs/*', '@vinejs/*', '@json-render/*'], onlyCatalogFromCore),
+  }
+)

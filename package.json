@@ -1,0 +1,49 @@
+{
+  "name": "pupitre-monorepo",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=11.0.0"
+  },
+  "workspaces": [
+    "packages/pupitre",
+    "packages/pupitre-react",
+    "packages/pupitre-ui",
+    "apps/example"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/pupitre -w packages/pupitre-react -w packages/pupitre-ui",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "npm test --workspaces --if-present",
+    "test:pg": "DB=pg npm test --workspaces --if-present",
+    "verify:exports": "node tools/verify-exports/index.mjs",
+    "e2e": "npm run e2e -w apps/example"
+  },
+  "devDependencies": {
+    "@adonisjs/eslint-config": "^3.1.0",
+    "@adonisjs/prettier-config": "^1.5.0",
+    "@adonisjs/tsconfig": "^2.0.0",
+    "@types/node": "~26.6.2",
+    "eslint": "^10.11.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "eslint-plugin-react": {
+      "eslint": "$eslint"
+    }
+  },
+  "prettier": "@adonisjs/prettier-config",
+  "allowScripts": {
+    "@swc/core": true,
+    "better-sqlite3": true,
+    "esbuild": true,
+    "fsevents": true
+  }
+}

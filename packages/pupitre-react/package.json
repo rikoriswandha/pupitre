@@ -1,0 +1,69 @@
+{
+  "name": "@rikology/pupitre-react",
+  "version": "0.1.0-beta.0",
+  "description": "React client runtime for Pupitre: generic Inertia page, json-render renderer, Inertia bridge",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "author": "Riko Riswandha",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rikoriswandha/pupitre.git",
+    "directory": "packages/pupitre-react"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "files": [
+    "build",
+    "CHANGELOG.md",
+    "!build/bin",
+    "!build/tests"
+  ],
+  "exports": {
+    ".": {
+      "@rikology/source": "./src/index.ts",
+      "types": "./build/src/index.d.ts",
+      "default": "./build/src/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true})\"",
+    "typecheck": "tsc --noEmit",
+    "quick:test": "node --conditions=@rikology/source --import=@poppinss/ts-exec --enable-source-maps bin/test.ts",
+    "test": "npm run quick:test",
+    "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json",
+    "build": "npm run compile",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@json-render/core": "0.21.0",
+    "@json-render/react": "0.21.0",
+    "zustand": "^5.0.15"
+  },
+  "peerDependencies": {
+    "@inertiajs/react": "^3.4.0",
+    "@rikology/pupitre": "^0.1.0-beta.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@inertiajs/core": "^3.9.1",
+    "@inertiajs/react": "^3.9.1",
+    "@japa/assert": "^4.2.0",
+    "@japa/runner": "^5.3.0",
+    "@poppinss/ts-exec": "^1.5.0",
+    "@rikology/pupitre": "^0.1.0-beta.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "happy-dom": "^20.14.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsdown": "^0.23.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "prettier": "@adonisjs/prettier-config"
+}
