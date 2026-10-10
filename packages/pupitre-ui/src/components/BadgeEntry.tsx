@@ -12,7 +12,9 @@ const badgeColors: Record<string, string> = {
 
 export function BadgeEntry({ props = {} }: { props?: EntryProps }) {
   const text =
-    props.value == null || props.value === '' ? (props.placeholder ?? '—') : String(props.value)
+    props.value === null || props.value === undefined || props.value === ''
+      ? (props.placeholder ?? '—')
+      : String(props.value)
   return (
     <EntryShell label={props.label} columnSpan={props.columnSpan}>
       <Badge className={badgeColors[props.color ?? 'gray'] ?? 'bg-muted text-foreground'}>

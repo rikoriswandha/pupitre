@@ -1,4 +1,5 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense } from 'react'
 import type { ReactNode } from 'react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
 import { useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'

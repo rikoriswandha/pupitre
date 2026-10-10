@@ -151,7 +151,9 @@ test.group('Pupitre renderer store lifecycle', () => {
       dom.happyDOM.abort()
     }
   })
-  test('renders a sub-spec with isolated state and reports only its changes', async ({ assert }) => {
+  test('renders a sub-spec with isolated state and reports only its changes', async ({
+    assert,
+  }) => {
     const dom = installDom()
     const container = dom.document.createElement('div')
     dom.document.body.append(container)
@@ -203,7 +205,10 @@ test.group('Pupitre renderer store lifecycle', () => {
         input.dispatchEvent(new dom.Event('change', { bubbles: true }))
       })
       assert.equal(parent.store.get('/data/title'), 'Parent')
-      assert.equal((changes.at(-1) as { data?: { title?: string } } | undefined)?.data?.title, 'Changed sub-spec')
+      assert.equal(
+        (changes.at(-1) as { data?: { title?: string } } | undefined)?.data?.title,
+        'Changed sub-spec'
+      )
     } finally {
       await act(async () => root.unmount())
       dom.happyDOM.abort()

@@ -1,14 +1,17 @@
+import { createElement } from 'react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { ColumnDef } from '@tanstack/react-table'
 import type {
   ColumnDescriptor,
+  JsonRenderSpec,
   TableData,
   TableDescriptor,
   TableRow,
 } from '@rikology/pupitre/catalog'
 import { useRunAction, useTable } from '@rikology/pupitre-react'
+import { SpecRenderer } from '@rikology/pupitre-react'
 
 export type DataTableProps = {
   props: { descriptor: TableDescriptor; label?: string | null; disabled?: boolean }
@@ -20,7 +23,7 @@ export type DataTableProps = {
 }
 
 function displayValue(value: unknown): string {
-  if (value == null) return ''
+  if (value === null || value === undefined) return ''
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   if (typeof value === 'string' || typeof value === 'number') return String(value)
   try {
@@ -30,6 +33,51 @@ function displayValue(value: unknown): string {
   }
 }
 
+function isSubSpec(value: unknown): value is JsonRenderSpec {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'root' in value &&
+    typeof value.root === 'string' &&
+    'elements' in value &&
+    value.elements !== null &&
+    typeof value.elements === 'object'
+  )
+}
+
+function DataTableCell({ value, column }: { value: unknown; column: ColumnDescriptor }) {
+  const cell =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : undefined
+  const raw = cell && 'value' in cell ? cell.value : value
+  if ((column.type === 'custom' || column.type === 'fragment') && isSubSpec(raw))
+    return createElement(SpecRenderer, { spec: raw })
+  return renderCellValue(value, column)
+}
+
+function CustomFilter({
+  filter,
+  setFilter,
+}: {
+  filter: TableDescriptor['filters'][number]
+  setFilter: (name: string, value: unknown) => void
+}) {
+  const spec = filter.form?.spec
+  if (!spec) return null
+  return (
+    <div className="min-w-36" key={filter.name}>
+      <span className="text-sm">{filter.label}</span>
+      {createElement(SpecRenderer, {
+        spec: spec as JsonRenderSpec,
+        onStateChange: (state) => {
+          const data = state.data
+          setFilter(filter.name, data && typeof data === 'object' ? data : (data ?? ''))
+        },
+      })}
+    </div>
+  )
+}
 function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   const cell =
     value && typeof value === 'object' && !Array.isArray(value)
@@ -142,7 +190,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
       {typeof description === 'string' && description && (
         <span className="text-xs text-muted-foreground">{description}</span>
       )}
-      {column.props.copyable && text && (
+      {column.props.copyable === true && text && (
         <button
           type="button"
           className="text-xs text-muted-foreground underline"
@@ -169,23 +217,19 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
   )
   const [draggedKey, setDraggedKey] = useState<string | number | null>(null)
 
+  const querySearch = tableState.query.q
+  const searchTable = tableState.search
   useEffect(() => {
-    setSearch(typeof tableState.query.q === 'string' ? tableState.query.q : '')
-  }, [tableState.query.q])
+    setSearch(typeof querySearch === 'string' ? querySearch : '')
+  }, [querySearch])
   useEffect(() => {
-    if (!descriptor.searchable || search === (tableState.query.q ?? '')) return
+    if (!descriptor.searchable || search === (querySearch ?? '')) return
     const timer = window.setTimeout(
-      () => tableState.search(search),
+      () => searchTable(search),
       Math.max(0, descriptor.searchDebounce)
     )
     return () => window.clearTimeout(timer)
-  }, [
-    descriptor.searchable,
-    descriptor.searchDebounce,
-    search,
-    tableState.query.q,
-    tableState.search,
-  ])
+  }, [descriptor.searchable, descriptor.searchDebounce, search, querySearch, searchTable])
 
   const columns: ColumnDef<TableRow>[] = descriptor.columns.map((column) => ({
     id: column.name,
@@ -193,8 +237,10 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
     header: column.label,
     enableSorting: column.sortable,
     enableHiding: Boolean(column.toggleable),
-    cell: ({ getValue }) => renderCellValue(getValue<unknown>(), column),
+    cell: ({ getValue }) => <DataTableCell value={getValue<unknown>()} column={column} />,
   }))
+  // TanStack returns a mutable table instance; this render path uses its documented APIs directly.
+  // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table exposes a mutable instance for its documented rendering APIs.
   const table = useReactTable({
     data: rows,
     columns,
@@ -226,7 +272,13 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
     emit('column', { column })
   }
   function reorderRow(target: TableRow) {
-    if (!descriptor.reorderable || draggedKey == null || draggedKey === target.key) return
+    if (
+      !descriptor.reorderable ||
+      draggedKey === null ||
+      draggedKey === undefined ||
+      draggedKey === target.key
+    )
+      return
     const order = rows.map((row) => row.key)
     const from = order.indexOf(draggedKey)
     const to = order.indexOf(target.key)
@@ -273,6 +325,8 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
   }
   function renderFilter(filter: TableDescriptor['filters'][number]) {
     const current = tableState.query[`filters[${filter.name}]`] ?? ''
+    if (filter.type === 'custom' && filter.form?.spec)
+      return <CustomFilter filter={filter} setFilter={tableState.setFilter} key={filter.name} />
     if (filter.type === 'select')
       return (
         <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>

@@ -1,9 +1,9 @@
 import { Menu } from '@base-ui/react/menu'
+import { useVisit } from '@rikology/pupitre-react'
 import type { ShellProps } from '@rikology/pupitre-react'
 import { useState } from 'react'
 import { Icon } from '../icons.js'
 import { ActionButton } from './ActionButton.js'
-
 export function Shell({
   panel,
   user,
@@ -15,13 +15,14 @@ export function Shell({
   children,
 }: ShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const panelId = typeof panel['id'] === 'string' ? panel['id'] : 'Pupitre'
-  const panelPath = typeof panel['path'] === 'string' ? panel['path'] : '/'
-  const panelBrand = panel['brand'] as { name?: string; logo?: string } | undefined
-  const userName = typeof user?.['name'] === 'string' ? user['name'] : ''
-  const userEmail = typeof user?.['email'] === 'string' ? user['email'] : ''
-  const userAvatar = typeof user?.['avatarUrl'] === 'string' ? user['avatarUrl'] : undefined
-  const logoutUrl = typeof user?.['logoutUrl'] === 'string' ? user['logoutUrl'] : undefined
+  const visit = useVisit()
+  const panelId = panel.id || 'Pupitre'
+  const panelPath = panel.path || '/'
+  const panelBrand = panel.brand
+  const userName = user?.name ?? ''
+  const userEmail = user?.email ?? ''
+  const userAvatar = user?.avatarUrl
+  const logoutUrl = panel.logoutUrl
 
   return (
     <div className="min-h-screen bg-background text-foreground md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
@@ -151,9 +152,7 @@ export function Shell({
                     {logoutUrl && (
                       <Menu.Item
                         className="flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-muted focus:bg-muted"
-                        onClick={() => {
-                          window.location.assign(logoutUrl)
-                        }}
+                        onClick={() => visit(logoutUrl, { method: 'post' })}
                       >
                         <Icon name="log-out" className="size-4" />
                         Log out

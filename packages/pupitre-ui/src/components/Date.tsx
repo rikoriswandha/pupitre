@@ -24,7 +24,7 @@ export function Date({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -35,13 +35,14 @@ export function Date({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label != null && (
+        {props.label !== null && props.label !== undefined && (
           <Label htmlFor={id}>
             {props.label}
             {props.required && <span aria-hidden="true"> *</span>}
           </Label>
         )}
         <Input
+          aria-label={props.label ?? id}
           {...props.extraAttributes}
           id={id}
           name={id}

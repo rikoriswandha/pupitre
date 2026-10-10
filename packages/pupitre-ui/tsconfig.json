@@ -7,5 +7,5 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "customConditions": ["@rikology/source"]
   },
-  "exclude": ["build", "node_modules"]
+  "exclude": ["build", "node_modules", "tests/ct", "playwright", "playwright-ct.config.ts"]
 }

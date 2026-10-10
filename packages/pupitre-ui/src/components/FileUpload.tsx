@@ -81,7 +81,9 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         emit('change', descriptor.multiple ? nextKeys : response.key)
       }
     } catch (cause) {
-      setLocalError(`${activeFile ? `${activeFile}: ` : ''}${cause instanceof Error ? cause.message : 'File upload failed.'}`)
+      setLocalError(
+        `${activeFile ? `${activeFile}: ` : ''}${cause instanceof Error ? cause.message : 'File upload failed.'}`
+      )
     } finally {
       setWorking(false)
       setWorkingFile(null)

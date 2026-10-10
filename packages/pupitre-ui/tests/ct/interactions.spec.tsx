@@ -1,163 +1,91 @@
 import { test, expect } from '@playwright/experimental-ct-react'
-import { catalogFixtures } from '@rikology/pupitre/catalog'
-import { components } from '../../src/components.js'
-import { defineRegistry, PupitreRenderer } from '@rikology/pupitre-react'
-import { Modal } from '../../src/components/Modal.js'
+import {
+  ActionStory,
+  ConfirmStory,
+  DataTableStory,
+  RepeaterStory,
+  SelectStory,
+  TabsStory,
+  UploadStory,
+  RichEditorStory,
+} from './stories/catalog.story.js'
 
-const registry = defineRegistry(components)
-const panel = {
-  panel: { id: 'admin', path: '/admin', brand: { name: 'Admin' }, theme: {}, features: {} },
-  user: null,
-  tenant: null,
-  nav: [],
-  flash: [],
-  locale: 'en',
-  timezone: 'UTC',
-} as const
-
-function Fixture({
-  name,
-  upload = async () => ({}),
-}: {
-  name: keyof typeof catalogFixtures
-  upload?: (field: string, files: File[]) => Promise<unknown>
-}) {
-  const fixture = catalogFixtures[name]
-  const page = {
-    key: `interaction:${name}`,
-    kind: 'custom' as const,
-    title: String(name),
-    breadcrumbs: [],
-    spec: fixture,
-    state: fixture.state ?? {},
-    actions: { header: [] },
-    catalogVersion: '0.1',
-  }
-  return (
-    <PupitreRenderer
-      page={page}
-      pupitre={panel}
-      registry={registry}
-      runAction={async () => {}}
-      submitForm={() => {}}
-      upload={upload}
-      toast={() => {}}
-    />
-  )
-}
-
-function OpenModal({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal open heading="Modal title" onClose={onClose}>
-      <p>Modal content</p>
-    </Modal>
-  )
-}
-
-function RepeaterRuntime() {
-  const page = {
-    key: 'interaction:repeater',
-    kind: 'custom' as const,
-    title: 'Repeater',
-    breadcrumbs: [],
-    spec: {
-      root: 'repeat',
-      state: {
-        data: {
-          items: [
-            { _key: 'one', sku: 'First' },
-            { _key: 'two', sku: 'Second' },
-          ],
-        },
-      },
-      elements: {
-        repeat: {
-          type: 'Repeater',
-          props: { descriptor: { name: 'items', minItems: 0, addLabel: 'Add item' } },
-          repeat: { statePath: '/data/items', key: '_key' },
-          children: ['item'],
-          on: {
-            add: [
-              {
-                action: 'pushState',
-                params: { statePath: '/data/items', value: { _key: '$id', sku: '' } },
-              },
-            ],
-          },
-        },
-        item: {
-          type: 'RepeaterItem',
-          props: { index: { $index: true }, itemLabel: 'Item' },
-          children: ['sku'],
-          on: {
-            remove: [
-              {
-                action: 'removeState',
-                params: { statePath: '/data/items', index: { $index: true } },
-              },
-            ],
-          },
-        },
-        sku: { type: 'Text', props: { name: 'sku', label: 'SKU', value: { $bindItem: 'sku' } } },
-      },
-    },
-    state: {
-      data: {
-        items: [
-          { _key: 'one', sku: 'First' },
-          { _key: 'two', sku: 'Second' },
-        ],
-      },
-    },
-    actions: { header: [] },
-    catalogVersion: '0.1',
-  }
-  return (
-    <PupitreRenderer
-      page={page as never}
-      pupitre={panel}
-      registry={registry}
-      runAction={async () => {}}
-      submitForm={() => {}}
-      upload={async () => ({})}
-      toast={() => {}}
-    />
-  )
-}
-
-test('Select changes its selected option', async ({ mount }) => {
-  const view = await mount(<Fixture name="Select" />)
+test('Select updates its bound state', async ({ mount, page }) => {
+  const view = await mount(<SelectStory />)
   const select = view.getByRole('combobox')
   await select.click()
-  await view.getByRole('option', { name: 'Draft' }).click()
+  await page.getByRole('option', { name: 'Draft' }).click()
   await expect(select).toContainText('Draft')
   await expect(view.locator('input[name="status"]')).toHaveValue('draft')
 })
 
-test('Tabs switch the visible panel while retaining panel content', async ({ mount }) => {
-  const view = await mount(<Fixture name="Tabs" />)
-  const tab = view.getByRole('tab').nth(1)
-  await tab.click()
-  await expect(tab).toHaveAttribute('aria-selected', 'true')
+test('Repeater adds two rows and retains the second typed value after removing the first', async ({
+  mount,
+}) => {
+  const view = await mount(<RepeaterStory />)
+  await view.getByRole('button', { name: 'Add item' }).click()
+  await view.getByRole('button', { name: 'Add item' }).click()
+  const inputs = view.locator('input')
+  await expect(inputs).toHaveCount(2)
+  await inputs.nth(0).fill('first typed')
+  await inputs.nth(1).fill('second typed')
+  await view.getByRole('button', { name: 'Remove' }).first().click()
+  await expect(view.locator('input')).toHaveCount(1)
+  await expect(view.locator('input').first()).toHaveValue('second typed')
 })
 
-test('Modal close control invokes its callback', async ({ mount }) => {
-  let closed = false
-  const view = await mount(
-    <OpenModal
-      onClose={() => {
-        closed = true
-      }}
-    />
-  )
-  await view.getByRole('button', { name: 'Close dialog' }).click()
-  await expect.poll(() => closed).toBe(true)
+test('DataTable header sorting reloads only data with the selected sort', async ({ mount }) => {
+  const view = await mount(<DataTableStory />)
+  await view.getByRole('button', { name: 'Title' }).click()
+  const calls = view.getByTestId('router-calls')
+  await expect
+    .poll(async () => JSON.parse((await calls.textContent()) ?? '[]').length)
+    .toBeGreaterThan(0)
+  const first = JSON.parse((await calls.textContent()) ?? '[]')[0]
+  expect(first.only).toEqual(['data'])
+  expect(first.data.sort).toBe('title')
 })
 
-test('FileUpload posts selected files to the descriptor URL', async ({ mount, page }) => {
-  let uploaded = false
+test('Tabs switch to the other panel', async ({ mount }) => {
+  const view = await mount(<TabsStory />)
+  const tabs = view.getByRole('tab')
+  await tabs.nth(1).click()
+  await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true')
+  await expect(view.getByRole('textbox', { name: 'Media content' })).toHaveValue('Media panel')
+  await expect(view.getByRole('textbox', { name: 'Details content' })).toBeHidden()
+})
+
+test('form action loads a modal, posts data with the action header, and closes on success', async ({
+  mount,
+  page,
+}) => {
+  const view = await mount(<ActionStory />)
+  await expect(page.getByText('Title')).toBeVisible()
+  await page
+    .getByRole('button', { name: 'Edit' })
+    .evaluate((button) => (button as HTMLButtonElement).click())
+  await expect(view.getByTestId('modal-open')).toHaveText('false')
+  const calls = JSON.parse((await view.getByTestId('router-calls').textContent()) ?? '[]')
+  const post = calls.find((call: { method: string }) => call.method === 'POST')
+  expect(post.url).toBe('/actions/edit')
+  expect(post.headers['x-pupitre-action']).toBe('1')
+  expect(post.body).toEqual({ data: { title: 'Example', items: [{ sku: 'ABC' }] } })
+})
+
+test('ConfirmDialog cancel sends no request', async ({ mount, page }) => {
+  await mount(<ConfirmStory />)
+  await page
+    .getByRole('button', { name: 'Cancel' })
+    .evaluate((button) => (button as HTMLButtonElement).click())
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as Window & { __ctConfirmRequests?: number }).__ctConfirmRequests)
+    )
+    .toBe(0)
+})
+
+test('FileUpload shows the uploaded image preview', async ({ mount, page }) => {
   await page.route('**/upload', async (route) => {
-    uploaded = true
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -170,19 +98,22 @@ test('FileUpload posts selected files to the descriptor URL', async ({ mount, pa
       }),
     })
   })
-  const view = await mount(<Fixture name="FileUpload" />)
+  const view = await mount(<UploadStory />)
   await view
     .locator('input[type="file"]')
     .setInputFiles({ name: 'file.png', mimeType: 'image/png', buffer: Buffer.from('png') })
-  await expect.poll(() => uploaded).toBe(true)
+  await expect(view.getByRole('link', { name: 'Preview' })).toHaveAttribute('href', '/file.png')
+  await expect(view.locator('img')).toBeVisible()
 })
 
-test('Repeater add/remove does not lose a typed value in the retained item', async ({ mount }) => {
-  const view = await mount(<RepeaterRuntime />)
-  const inputs = view.locator('input')
-  await inputs.nth(1).fill('typed value')
-  await view.getByRole('button', { name: 'Add item' }).click()
-  await expect(inputs).toHaveCount(3)
-  await view.getByRole('button', { name: 'Remove' }).first().click()
-  await expect(view.locator('input').nth(0)).toHaveValue('typed value')
+test('RichEditor requests its separate tiptap chunks only after mounting', async ({
+  mount,
+  page,
+}) => {
+  const requests: string[] = []
+  page.on('request', (request) => requests.push(request.url()))
+  const tiptapChunk = () => requests.some((url) => /\/assets\/dist-[^/?]+\.js/.test(url))
+  expect(tiptapChunk()).toBe(false)
+  await mount(<RichEditorStory />)
+  await expect.poll(tiptapChunk).toBe(true)
 })

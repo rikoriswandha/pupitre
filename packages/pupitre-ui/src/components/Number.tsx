@@ -25,7 +25,7 @@ export function Number({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -36,14 +36,16 @@ export function Number({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label != null && (
+        {props.label !== null && props.label !== undefined && (
           <Label htmlFor={id}>
             {props.label}
             {props.required && <span aria-hidden="true"> *</span>}
           </Label>
         )}
         <BaseNumberField.Root
-          value={value === '' || value == null ? null : globalThis.Number(value)}
+          value={
+            value === '' || value === null || value === undefined ? null : globalThis.Number(value)
+          }
           onValueChange={(next) => setValue(next ?? '')}
           min={props.min}
           max={props.max}
@@ -55,6 +57,7 @@ export function Number({ props, bindings }: Runtime) {
           <BaseNumberField.Group className="flex items-center gap-2 rounded-md border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
             {props.prefix && <span className="text-sm text-muted-foreground">{props.prefix}</span>}
             <BaseNumberField.Input
+              aria-label={props.label ?? id}
               {...props.extraAttributes}
               id={id}
               name={id}
@@ -65,12 +68,14 @@ export function Number({ props, bindings }: Runtime) {
               className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             <BaseNumberField.Decrement
+              aria-controls={id}
               aria-label="Decrease value"
               className="rounded border border-input px-2 text-sm"
             >
               −
             </BaseNumberField.Decrement>
             <BaseNumberField.Increment
+              aria-controls={id}
               aria-label="Increase value"
               className="rounded border border-input px-2 text-sm"
             >

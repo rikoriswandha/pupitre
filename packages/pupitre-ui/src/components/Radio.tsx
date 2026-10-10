@@ -27,7 +27,7 @@ export function Radio({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -45,7 +45,7 @@ export function Radio({ props, bindings }: Runtime) {
           aria-describedby={describedBy}
           aria-invalid={!!error}
         >
-          {props.label != null && (
+          {props.label !== null && props.label !== undefined && (
             <legend className="text-sm font-medium">
               {props.label}
               {props.required && <span aria-hidden="true"> *</span>}
@@ -54,7 +54,7 @@ export function Radio({ props, bindings }: Runtime) {
           <RadioGroup
             {...props.extraAttributes}
             name={props.name}
-            value={value == null ? undefined : String(value)}
+            value={value === null || value === undefined ? undefined : String(value)}
             onValueChange={(next) =>
               setValue(options.find((option) => String(option.value) === next)?.value ?? next)
             }

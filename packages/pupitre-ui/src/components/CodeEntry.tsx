@@ -5,7 +5,7 @@ export function CodeEntry({ props = {} }: { props?: EntryProps }) {
   const value =
     typeof props.value === 'string'
       ? props.value
-      : props.value == null
+      : props.value === null || props.value === undefined
         ? ''
         : JSON.stringify(props.value, null, 2)
   return (

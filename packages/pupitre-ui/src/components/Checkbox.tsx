@@ -25,7 +25,7 @@ export function Checkbox({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:

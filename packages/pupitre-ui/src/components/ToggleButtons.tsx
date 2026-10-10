@@ -43,7 +43,7 @@ export function ToggleButtons({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -54,7 +54,7 @@ export function ToggleButtons({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label != null && (
+        {props.label !== null && props.label !== undefined && (
           <p id={`${id}-label`} className="text-sm font-medium">
             {props.label}
             {props.required && <span aria-hidden="true"> *</span>}

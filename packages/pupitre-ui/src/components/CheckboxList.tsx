@@ -20,9 +20,10 @@ export function CheckboxList({ props, bindings }: Runtime) {
   const options = Array.isArray(props.options) ? props.options : []
   const selected = Array.isArray(value) ? value : []
   function update(optionValue: string | number, checked: boolean | 'indeterminate') {
-    const next = checked === true
-      ? [...selected.filter((item) => item !== optionValue), optionValue]
-      : selected.filter((item) => item !== optionValue)
+    const next =
+      checked === true
+        ? [...selected.filter((item) => item !== optionValue), optionValue]
+        : selected.filter((item) => item !== optionValue)
     setValue(next)
   }
   const error = useFieldError(props.error, bindings?.value)
@@ -33,7 +34,7 @@ export function CheckboxList({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -52,7 +53,7 @@ export function CheckboxList({ props, bindings }: Runtime) {
           aria-describedby={describedBy}
           aria-invalid={!!error}
         >
-          {props.label != null && (
+          {props.label !== null && props.label !== undefined && (
             <legend className="text-sm font-medium">
               {props.label}
               {props.required && <span aria-hidden="true"> *</span>}

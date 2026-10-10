@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigationGuard, useSetState, useStateValue, useSubmitForm, useVisit } from '@rikology/pupitre-react'
-import { Button, cn } from '../primitives/index.js'
+import {
+  useNavigationGuard,
+  useSetState,
+  useStateValue,
+  useSubmitForm,
+  useVisit,
+} from '@rikology/pupitre-react'
+import { Button } from '../primitives/index.js'
+import { cn } from '../primitives/index.js'
 
 type Props = Record<string, unknown>
 type RuntimeProps = {
@@ -17,9 +24,6 @@ export function Form({ props, children, emit, bindings, loading = false }: Runti
   const setState = useSetState()
   const submitForm = useSubmitForm()
   const formData = useStateValue('/data')
-  const keyBindings = Array.isArray(props.keyBindings)
-    ? props.keyBindings.filter((binding): binding is string => typeof binding === 'string')
-    : []
   const [initialState, setInitialState] = useState(() => JSON.stringify(formData))
   const dirty = JSON.stringify(formData) !== initialState
   useNavigationGuard(
@@ -36,6 +40,9 @@ export function Form({ props, children, emit, bindings, loading = false }: Runti
     setState('/meta/dirty', dirty)
   }, [dirty, setState])
   useEffect(() => {
+    const keyBindings = Array.isArray(props.keyBindings)
+      ? props.keyBindings.filter((binding): binding is string => typeof binding === 'string')
+      : []
     if (keyBindings.length === 0) return
     const matches = (event: KeyboardEvent, binding: string) => {
       const parts = binding
@@ -72,7 +79,7 @@ export function Form({ props, children, emit, bindings, loading = false }: Runti
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [formData, keyBindings, setState, submitForm])
+  }, [formData, props.keyBindings, setState, submitForm])
   const cancel = () => {
     emit?.('cancel')
     if (typeof props.cancelUrl === 'string') visit(props.cancelUrl)

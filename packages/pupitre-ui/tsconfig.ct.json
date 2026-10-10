@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "../../",
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["node"]
+  },
+  "include": [
+    "playwright-ct.config.ts",
+    "playwright/**/*.tsx",
+    "playwright/**/*.ts",
+    "tests/ct/**/*.tsx",
+    "tests/ct/**/*.ts"
+  ],
+  "exclude": ["build", "node_modules"]
+}

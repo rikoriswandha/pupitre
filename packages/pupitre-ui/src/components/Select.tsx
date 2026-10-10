@@ -30,7 +30,7 @@ export function Select({ props, bindings }: Runtime) {
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
-    props.columnSpan == null
+    props.columnSpan === null || props.columnSpan === undefined
       ? undefined
       : {
           gridColumn:
@@ -41,7 +41,7 @@ export function Select({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label != null && (
+        {props.label !== null && props.label !== undefined && (
           <Label htmlFor={id}>
             {props.label}
             {props.required && <span aria-hidden="true"> *</span>}
@@ -65,6 +65,7 @@ export function Select({ props, bindings }: Runtime) {
           readOnly={props.readOnly}
         >
           <BaseSelect.Trigger
+            aria-label={props.label ?? id}
             {...props.extraAttributes}
             id={id}
             aria-required={props.required}

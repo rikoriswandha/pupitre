@@ -45,7 +45,7 @@
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true})\"",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.ct.json",
     "quick:test": "node --conditions=@rikology/source --import=@poppinss/ts-exec --enable-source-maps bin/test.ts",
     "test": "npm run quick:test && playwright test -c playwright-ct.config.ts",
     "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/styles.css','build/src/styles.css')\"",
