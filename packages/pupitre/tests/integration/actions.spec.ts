@@ -37,7 +37,7 @@ test.group('action integration', (group) => {
       `before:${another.id}`,
       `after:${another.id}`,
     ])
-    assert.deepEqual(await Post.query().count('* as total').pojo(), [{ total: 0 }])
+    assert.lengthOf(await Post.all(), 0)
   })
 
   test('rolls back records when an after-delete hook fails', async ({ assert }) => {
@@ -50,8 +50,6 @@ test.group('action integration', (group) => {
 
     await assert.rejects(() => executeBuiltinDelete(resource, [post], ctx), /hook failed/)
 
-    assert.deepEqual(await Post.query().where('id', post.id).count('* as total').pojo(), [
-      { total: 1 },
-    ])
+    assert.exists(await Post.find(post.id))
   })
 })

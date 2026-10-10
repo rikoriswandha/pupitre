@@ -22,6 +22,13 @@ export function setFetch(fetcher: FetchLike): () => void {
     activeFetch = previous
   }
 }
+let pendingActionToasts: Omit<ToastMessage, 'id'>[] = []
+
+export function takePendingActionToasts(): Omit<ToastMessage, 'id'>[] {
+  const pending = pendingActionToasts
+  pendingActionToasts = []
+  return pending
+}
 function xsrfToken(): string {
   if (typeof document === 'undefined') return ''
   const cookie = document.cookie
@@ -100,14 +107,18 @@ export function handleActionResult(
     setData: (data: unknown) => void
   }
 ): void {
-  for (const flash of result.flash) options.toast(flash)
+  const current = currentUrl()
+  const destination = result.redirect ? new URL(result.redirect, current) : null
+  const navigates = destination !== null && destination.href !== current.href
+  for (const flash of result.flash) {
+    if (navigates) pendingActionToasts.push(flash)
+    else options.toast(flash)
+  }
   if (result.deselect) clearTableSelections()
   if (result.patch) options.setData(applyJsonPatch(options.data, result.patch))
-  if (result.redirect) {
-    const current = currentUrl()
-    const destination = new URL(result.redirect, current)
+  if (destination) {
     if (destination.href === current.href) getRouter().reload()
-    else getRouter().visit(result.redirect)
+    else getRouter().visit(destination.href)
     return
   }
   if (result.patch) {

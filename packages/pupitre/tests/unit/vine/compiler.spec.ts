@@ -208,6 +208,41 @@ test.group('Vine compiler', () => {
       )
     )
   })
+  test('compares option values by string and returns each option canonical value', async ({
+    assert,
+  }) => {
+    const validator = compileValidator([
+      field(schema.select('categoryId').options({ '1': 'One', '2': 'Two' })),
+      field(schema.radio('radio').options({ '1': 'One' })),
+      field(schema.toggleButtons('buttons').options({ '1': 'One' })),
+      field(schema.checkboxList('checked').options({ '1': 'One' })),
+      field(schema.toggleButtons('multiple').options({ '1': 'One' }).multiple()),
+    ])
+
+    assert.deepEqual(
+      await validator.validate(
+        { categoryId: 1, radio: 1, buttons: 1, checked: [1], multiple: [1] },
+        options
+      ),
+      {
+        categoryId: '1',
+        radio: '1',
+        buttons: '1',
+        checked: ['1'],
+        multiple: ['1'],
+      }
+    )
+
+    const error = await captureError(() => validator.validate({ categoryId: 3 }, options))
+    assert.deepEqual(errorFields(error), ['categoryId'])
+  })
+
+  test('uses numeric values from array options as canonical values', async ({ assert }) => {
+    const validator = compileValidator([
+      field(schema.select('categoryId').options([{ value: 1, label: 'One' }])),
+    ])
+    assert.deepEqual(await validator.validate({ categoryId: '1' }, options), { categoryId: 1 })
+  })
 
   test('reports nested repeater errors with numeric index paths and strips _key', async ({
     assert,
@@ -275,6 +310,17 @@ test.group('Vine compiler', () => {
       )
     )
     assert.deepEqual(errorFields(error), ['createdAt'])
+  })
+  test('preserves null date, dateTime and time values', async ({ assert }) => {
+    const validator = compileValidator([
+      field(schema.date('date')),
+      field(schema.dateTime('dateTime')),
+      field(schema.time('time')),
+    ])
+    assert.deepEqual(
+      await validator.validate({ date: null, dateTime: null, time: null }, options),
+      { date: null, dateTime: null, time: null }
+    )
   })
 
   test('sanitizes rich editor values after validation', async ({ assert }) => {

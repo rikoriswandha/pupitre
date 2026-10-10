@@ -14,15 +14,22 @@ export default defineConfig({
     ...devices['Desktop Chrome'],
   },
   webServer: {
-    command: 'node e2e/setup-db.mjs && node ace serve --hmr',
+    command:
+      'npm --prefix ../.. run build && NODE_ENV=development node e2e/setup-db.mjs && node ace build --ignore-ts-errors && cd build && NODE_OPTIONS= node bin/server.js',
     cwd: import.meta.dirname,
     timeout: 120_000,
     url: 'http://localhost:3391/login',
     env: {
       NODE_OPTIONS: '--conditions=@rikology/source',
       PORT: '3391',
-      DB_DATABASE: 'tmp/pupitre-e2e.sqlite',
-      NODE_ENV: 'development',
+      HOST: 'localhost',
+      LOG_LEVEL: 'error',
+      APP_KEY: 'pupitre-e2e-key-that-is-long-enough-for-tests',
+      APP_URL: 'http://localhost:3391',
+      SESSION_DRIVER: 'cookie',
+      DB_DATABASE: `${import.meta.dirname}/tmp/pupitre-e2e.sqlite`,
+      TZ: 'UTC',
+      NODE_ENV: 'production',
     },
   },
 })

@@ -92,9 +92,30 @@ function timeIsValid(value: string): boolean {
   return Number(hours) < 24 && Number(minutes) < 60 && Number(seconds) < 60
 }
 function normalizeOptions(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value
+  if (Array.isArray(value))
+    return value.map((option) =>
+      option && typeof option === 'object' && 'value' in option ? option.value : option
+    )
   if (value && typeof value === 'object') return Object.keys(value)
   return []
+}
+
+function stringComparableEnum(options: unknown[]) {
+  return vine
+    .any()
+    .use(
+      vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
+        if (!options.some((option) => String(option) === String(value))) {
+          vineField.report('The selected {{ field }} is invalid', 'enum', vineField)
+        }
+      })()
+    )
+    .transform((value: unknown) => options.find((option) => String(option) === String(value)))
+}
+
+function stringComparableEnumArray(options: unknown[]) {
+  const item = options.length ? stringComparableEnum(options) : vine.any()
+  return vine.array(item)
 }
 
 function addRules(schema: any, field: FieldDefinitionUnion): any {
@@ -215,18 +236,20 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
       break
     case 'select':
     case 'radio':
-      schema = vine.enum(normalizeOptions(field.options) as [any, ...any[]])
+      schema = stringComparableEnum(normalizeOptions(field.options))
       break
-    case 'multiSelect':
+    case 'multiSelect': {
+      const allowed = normalizeOptions(field.options)
+      const item = allowed.length ? vine.enum(allowed as [any, ...any[]]) : vine.any()
+      schema = vine.array(item)
+      break
+    }
     case 'checkboxList':
+      schema = stringComparableEnumArray(normalizeOptions(field.options))
+      break
     case 'toggleButtons': {
-      if (field.kind === 'toggleButtons' && !field.multiple) {
-        schema = vine.enum(normalizeOptions(field.options) as [any, ...any[]])
-      } else {
-        const allowed = normalizeOptions(field.options)
-        const item = allowed.length ? vine.enum(allowed as [any, ...any[]]) : vine.any()
-        schema = vine.array(item)
-      }
+      const allowed = normalizeOptions(field.options)
+      schema = field.multiple ? stringComparableEnumArray(allowed) : stringComparableEnum(allowed)
       break
     }
     case 'tags':
@@ -267,7 +290,9 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
               vineField.report('The {{ field }} field must be a valid date', 'date', vineField)
           })()
         )
-        .transform((value: string) => DateTime.fromISO(value, { zone: 'UTC' }))
+        .transform((value: string | null) =>
+          value === null ? null : DateTime.fromISO(value, { zone: 'UTC' })
+        )
       break
     case 'time':
       schema = vine.string().use(

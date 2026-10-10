@@ -33,6 +33,11 @@ const table: TableDefinition = {
 }
 
 const pgOnly = process.env.DB !== 'pg'
+/** Case-insensitive search SQL differs per dialect: ILIKE on PostgreSQL, lower() LIKE elsewhere. */
+const searchSql = (column: string) =>
+  process.env.DB === 'pg'
+    ? new RegExp(`${column}\\W*\\s+ilike`, 'i')
+    : new RegExp(`lower\\(.*${column}.*\\) like`, 'i')
 
 test.group('table query', (group) => {
   group.each.setup(async () => {
@@ -83,9 +88,11 @@ test.group('table query', (group) => {
     const db = await setupDatabase()
     const params = applyTableQuery(db.modelQuery(Post) as never, table, { q: 'ADA' })
     const sql = params.query.toSQL()
-    assert.match(sql.sql, /lower\(.*title.*\) like/i)
+    assert.match(sql.sql, searchSql('title'))
     assert.match(sql.sql, /exists/i)
-    assert.deepEqual(sql.bindings, ['%ada%', '%ada%'])
+    // ILIKE keeps the term as typed; the lower() LIKE fallback lowercases it.
+    const term = process.env.DB === 'pg' ? '%ADA%' : '%ada%'
+    assert.deepEqual(sql.bindings, [term, term])
     const rows = await params.query.exec()
     assert.deepEqual(
       rows.map((row) => (row as Post).slug),
@@ -114,7 +121,7 @@ test.group('table query', (group) => {
       defaultSort: undefined,
     }
     const result = applyTableQuery(db.modelQuery(Post) as never, mappedTable, { q: 'Ada' })
-    assert.match(result.query.toSQL().sql, /lower\(.*full_name.*\) like/i)
+    assert.match(result.query.toSQL().sql, searchSql('full_name'))
     const rows = await result.query.exec()
     assert.deepEqual(
       rows.map((row) => (row as Post).slug),

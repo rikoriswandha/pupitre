@@ -16,12 +16,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # Package builds first: hosts resolve published entry points (e.g. pupitre-ui styles.css) from build/.
+      - run: npm run build
       - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
         working-directory: apps/example
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
       - run: npm run verify:exports
 
   test-pg:
@@ -45,7 +46,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run quick:test -w packages/pupitre
+      - run: DB=pg npm run quick:test -w packages/pupitre
 
   e2e:
     runs-on: ubuntu-latest
@@ -58,6 +59,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - run: npm run build
       - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
         working-directory: apps/example
       - run: npm run e2e

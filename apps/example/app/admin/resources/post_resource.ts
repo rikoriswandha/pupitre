@@ -19,11 +19,14 @@ const publish = action('publish')
   }))
   .handle(async ({ record, data }) => {
     const post = record as Post
-    post.status = 'published'
-    post.publishedAt = DateTime.fromISO(String(data?.publishedAt ?? DateTime.now().toISO()), {
-      setZone: true,
-    }).toUTC()
-    await post.save()
+    await Post.transaction(async (trx) => {
+      post.useTransaction(trx)
+      post.status = 'published'
+      post.publishedAt = DateTime.fromISO(String(data?.publishedAt ?? DateTime.now().toISO()), {
+        setZone: true,
+      }).toUTC()
+      await post.save()
+    })
   })
   .after(({ refresh }) => {
     refresh.table()
@@ -37,13 +40,12 @@ export default defineResource(Post)
   .navigation({ group: 'Content', sort: 1 })
   .recordTitle('title')
   .policy(PostPolicy)
-  .fill((record) => ({ ...record.serialize(), categoryId: String(record.categoryId) }))
+  .fill((record) => ({ ...record.serialize() }))
   .mutateBeforeCreate((data, ctx) => ({
     ...data,
     categoryId: Number(data.categoryId),
     authorId: ctx.auth.user!.id,
   }))
-  .mutateBeforeSave((data) => ({ ...data, categoryId: Number(data.categoryId) }))
   .form((s) => [
     s
       .section('Post details')

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { usePage as useInertiaPage } from '@inertiajs/react'
 import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
 import {
   findUploadDescriptor,
   handleActionResult as applyActionResult,
   submitAction,
+  takePendingActionToasts,
   uploadFiles,
 } from '../bridge/actions.js'
 import { catalogVersion } from '@rikology/pupitre/catalog'
@@ -20,6 +21,23 @@ import { PageActionsContext } from '../runtime.js'
 type InertiaPupitreProps = PupitrePageProps & { errors?: Record<string, string> }
 export type PupitreProps = { registry: PupitreRegistry }
 let toastId = 0
+const emptyToasts: ToastMessage[] = []
+let toastState: ToastMessage[] = []
+const toastListeners = new Set<() => void>()
+
+function subscribeToasts(listener: () => void) {
+  toastListeners.add(listener)
+  return () => toastListeners.delete(listener)
+}
+
+function getToasts() {
+  return typeof window === 'undefined' ? emptyToasts : toastState
+}
+
+function updateToasts(update: (current: ToastMessage[]) => ToastMessage[]) {
+  toastState = update(toastState)
+  for (const listener of toastListeners) listener()
+}
 function major(version: string): string {
   return version.split('.')[0] ?? ''
 }
@@ -58,7 +76,7 @@ export function PupitreContent({
   registry: PupitreRegistry
   props: InertiaPupitreProps
 }) {
-  const [toasts, setToasts] = useState<ToastMessage[]>([])
+  const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => emptyToasts)
   const [optimisticData, setOptimisticData] = useState<{
     base: PupitrePageProps['data']
     value: unknown
@@ -72,11 +90,12 @@ export function PupitreContent({
     ids?: Array<string | number>
   } | null>(null)
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
-    setToasts((current) => [...current, { ...toast, id: String(++toastId) }])
+    updateToasts((current) => [...current, { ...toast, id: String(++toastId) }])
   }, [])
-  const dismiss = useCallback((id: string) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id))
-  }, [])
+  const dismiss = useCallback(
+    (id: string) => updateToasts((current) => current.filter((toast) => toast.id !== id)),
+    []
+  )
   const page = props.page
   const panel = props.pupitre
   const handleActionResult = useCallback(
@@ -97,6 +116,9 @@ export function PupitreContent({
   useEffect(() => {
     if (typeof document !== 'undefined') document.title = page.title
   }, [page])
+  useEffect(() => {
+    for (const toast of takePendingActionToasts()) pushToast(toast)
+  }, [page.key, pushToast])
   useEffect(() => {
     ensureCatalogVersion(page.catalogVersion)
   }, [page.catalogVersion])
