@@ -103,6 +103,13 @@ export default class UploadController {
     const prefix =
       safeDirectory(configuredDirectory || `${resourceSlug}/${fieldDirectory}`) || resourceSlug
     const key = `${prefix}/${randomUUID()}.${sniffed.ext}`
+    const sessionUploads = context.session.get('pupitre.uploads')
+    const currentUploads = Array.isArray(sessionUploads) ? sessionUploads : []
+    if (currentUploads.length >= 50)
+      return ctx.response.status(429).json({
+        message:
+          'Upload session limit reached. Save the form or remove an uploaded file before uploading more.',
+      })
     const visibility = field.kind === 'fileUpload' ? (field.visibility ?? 'public') : 'public'
     const storage = createPupitreStorage(
       field.kind === 'fileUpload' ? field.disk : field.fileAttachmentsDisk
@@ -137,7 +144,7 @@ export default class UploadController {
         ? {}
         : { recordId: String(recordId) }),
     })
-    context.session.put('pupitre.uploads', uploads.slice(-50))
+    context.session.put('pupitre.uploads', uploads)
 
     return ctx.response.ok({
       key,

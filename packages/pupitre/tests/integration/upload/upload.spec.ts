@@ -155,6 +155,55 @@ test.group('Pupitre upload HTTP runtime', () => {
     }
   })
 
+  test('rejects uploads at the session cap without evicting existing ownership', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      let cookie = ''
+      const keys: string[] = []
+      for (let index = 0; index < 50; index += 1) {
+        const response = await upload(
+          fixture.baseUrl,
+          uploadFields(),
+          png,
+          `cover-${index}.png`,
+          'image/png',
+          cookie
+        )
+        assert.equal(response.status, 200, JSON.stringify(response.body))
+        cookie = response.cookie
+        keys.push(response.body.key as string)
+      }
+
+      const rejected = await upload(
+        fixture.baseUrl,
+        uploadFields(),
+        png,
+        'overflow.png',
+        'image/png',
+        cookie
+      )
+      assert.equal(rejected.status, 429)
+      assert.include(rejected.body.message as string, 'Upload session limit reached')
+      assert.isTrue(await storedFile(fixture.storagePath, keys[0]!))
+
+      const removed = await fetch(`${fixture.baseUrl}/admin/_pupitre/upload`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cookie': cookie,
+        },
+        body: JSON.stringify({ key: keys[0] }),
+      })
+      assert.equal(removed.status, 204)
+      assert.isFalse(await storedFile(fixture.storagePath, keys[0]!))
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
   test('denies update uploads and removes replaced files only after a successful record update', async ({
     assert,
   }) => {
@@ -235,6 +284,54 @@ test.group('Pupitre upload HTTP runtime', () => {
       await closeTestApp(fixture)
     }
   })
+  test('prunes rich-editor attachment ownership when its field is saved', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const post = await Post.create({
+        title: 'Rich editor upload',
+        slug: `rich-editor-${Date.now()}`,
+        status: 'draft',
+        tenantId: 1,
+      })
+      const attachment = await upload(
+        fixture.baseUrl,
+        uploadFields('body', 'posts', { record: String(post.id) })
+      )
+      assert.equal(attachment.status, 200, JSON.stringify(attachment.body))
+      const key = attachment.body.key as string
+      const saved = await fetch(`${fixture.baseUrl}/admin/posts/${post.id}`, {
+        method: 'PUT',
+        redirect: 'manual',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cookie': attachment.cookie,
+          'X-Pupitre-Action': '1',
+        },
+        body: JSON.stringify({
+          title: post.title,
+          slug: post.slug,
+          status: 'draft',
+          body: `<p><img src="${attachment.body.url}"></p>`,
+        }),
+      })
+      assert.equal(saved.status, 200, await saved.text())
+      const ownershipCheck = await fetch(`${fixture.baseUrl}/admin/_pupitre/upload`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Cookie': attachment.cookie,
+        },
+        body: JSON.stringify({ key }),
+      })
+      assert.equal(ownershipCheck.status, 403)
+      assert.isTrue(await storedFile(fixture.storagePath, key))
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
   test('prunes only consumed repeater uploads and cleans up files when a row attachment is replaced', async ({
     assert,
   }) => {

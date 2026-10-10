@@ -190,6 +190,7 @@ export const repeaterDescriptor = z.object({
   reorderable: z.boolean(),
   collapsible: z.boolean(),
   collapsed: z.boolean().optional(),
+  cloneable: z.boolean().optional(),
   addLabel: z.string().optional(),
   grid: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
   defaultItems: z.array(z.record(z.string(), z.unknown())).optional(),

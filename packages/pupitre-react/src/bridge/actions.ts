@@ -105,6 +105,7 @@ export function handleActionResult(
     pageKind: PupitrePageProps['page']['kind']
     toast: (message: Omit<ToastMessage, 'id'>) => void
     setData: (data: unknown) => void
+    onNavigationComplete?: () => void
   }
 ): void {
   const current = currentUrl()
@@ -118,7 +119,10 @@ export function handleActionResult(
   if (result.patch) options.setData(applyJsonPatch(options.data, result.patch))
   if (destination) {
     if (destination.href === current.href) getRouter().reload()
-    else getRouter().visit(destination.href)
+    else
+      getRouter().visit(destination.href, {
+        onSuccess: () => options.onNavigationComplete?.(),
+      })
     return
   }
   if (result.patch) {

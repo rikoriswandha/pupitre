@@ -38,6 +38,12 @@ async function initializeDatabase() {
   if (process.env.DB === 'pg') {
     const url = process.env.DATABASE_URL
     if (!url) throw new Error('DATABASE_URL is required when DB=pg')
+    // The fixture tables are dropped and recreated so schema changes apply on a
+    // reused database; refuse anything that does not look like a test database.
+    const databaseName = new URL(url).pathname.slice(1)
+    if (!/test/i.test(databaseName)) {
+      throw new Error(`Refusing to reset "${databaseName}": DB=pg needs a *test* database`)
+    }
     database = new Database(
       {
         connection: 'pg',
@@ -46,6 +52,9 @@ async function initializeDatabase() {
       silentLogger as never,
       emitter as never
     )
+    for (const table of ['posts', 'categories', 'users']) {
+      await database.connection().schema.dropTableIfExists(table)
+    }
   } else {
     const tmpDir = join(import.meta.dirname, '..', '..', 'tmp')
     await mkdir(tmpDir, { recursive: true })

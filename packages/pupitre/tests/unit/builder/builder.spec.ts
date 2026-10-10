@@ -149,6 +149,16 @@ test.group('resource and builder DSL', () => {
     void schema.date('createdAt').displayFormat
     // @ts-expect-error date week-start configuration is not implemented in M1
     void schema.date('createdAt').weekStartsOn
+    // @ts-expect-error date native rendering is not implemented in M1
+    void schema.date('createdAt').native
+    // @ts-expect-error dateTime native rendering is not implemented in M1
+    void schema.dateTime('publishedAt').native
+    // @ts-expect-error time native rendering is not implemented in M1
+    void schema.time('startsAt').native
+    // @ts-expect-error checkbox-list search UI is not implemented in M1
+    void schema.checkboxList('roles').searchable
+    // @ts-expect-error color format is not implemented in M1
+    void schema.color('brand').format
     defineResource(Post).table((t) => {
       // @ts-expect-error table row class callbacks are not implemented in M1
       void t.rowClass

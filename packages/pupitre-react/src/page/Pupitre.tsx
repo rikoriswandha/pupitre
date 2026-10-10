@@ -115,6 +115,9 @@ export function PupitreContent({
         toast: pushToast,
         setData: (value) =>
           setOptimisticData({ base: props.data, value: value as PupitrePageProps['data'] }),
+        onNavigationComplete: () => {
+          for (const toast of takePendingActionToasts()) pushToast(toast)
+        },
       }),
     [page.kind, props.data, pushToast]
   )
@@ -125,9 +128,6 @@ export function PupitreContent({
   useEffect(() => {
     if (typeof document !== 'undefined') document.title = page.title
   }, [page])
-  useEffect(() => {
-    for (const toast of takePendingActionToasts()) pushToast(toast)
-  }, [page.key, pushToast])
   useEffect(() => {
     ensureCatalogVersion(page.catalogVersion, (title) => pushToast({ type: 'error', title }))
   }, [page.catalogVersion, pushToast])

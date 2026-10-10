@@ -984,6 +984,25 @@ export function UploadSaveStory() {
     async () => ({ key: 'saved-file.png', name: 'saved-file.png', size: 1, mime: 'image/png' })
   )
 }
+export function DefaultToggleStory() {
+  return standalonePage(
+    'default-toggle',
+    {
+      root: 'toggle',
+      elements: {
+        toggle: {
+          type: 'Toggle',
+          props: {
+            name: 'enabled',
+            label: 'Enabled',
+            value: { $bindState: '/data/enabled' },
+          },
+        },
+      },
+    } as never,
+    { data: { enabled: true } }
+  )
+}
 
 export function SearchDebounceStory() {
   return standalonePage(

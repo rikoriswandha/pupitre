@@ -261,22 +261,17 @@ function hasNestedCondition(node: Node, root = true): boolean {
         ['===', '!==', '==', '!=', '>', '>=', '<', '<='].includes(node.operator ?? '')))
   )
     return true
-  return Object.values(node).some((value) => {
-    if (Array.isArray(value))
-      return value.some(
-        (child) =>
-          child &&
-          typeof child === 'object' &&
-          'type' in child &&
-          hasNestedCondition(child as Node, false)
-      )
-    return (
-      value &&
-      typeof value === 'object' &&
-      'type' in value &&
-      hasNestedCondition(value as Node, false)
-    )
-  })
+  const children =
+    node.type === 'ConditionalExpression'
+      ? [node.consequent, node.alternate]
+      : Object.values(node).flatMap((value) => (Array.isArray(value) ? value : [value]))
+  return children.some(
+    (child) =>
+      child &&
+      typeof child === 'object' &&
+      'type' in child &&
+      hasNestedCondition(child as Node, false)
+  )
 }
 
 export function liftClosure(

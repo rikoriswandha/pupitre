@@ -111,8 +111,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   async function removeFile(key: string) {
     setLocalError(undefined)
     const next = descriptor.multiple ? keys.filter((existing) => existing !== key) : null
-    const persistedKeys = keysOf(props.value)
-    if (persistedKeys.includes(key) || !uploadedFiles[key]) {
+    if (!uploadedFiles[key]) {
       setValue(next)
       emit('change', next)
       return

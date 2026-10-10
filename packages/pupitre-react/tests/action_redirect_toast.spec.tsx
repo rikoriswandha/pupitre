@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client'
 import { Window } from 'happy-dom'
 import type { ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
 import { defineRegistry } from '../src/registry/defineRegistry.js'
-import { handleActionResult } from '../src/bridge/actions.js'
+import { handleActionResult, takePendingActionToasts } from '../src/bridge/actions.js'
 import { setRouter } from '../src/bridge/inertia.js'
 import type { RouterLike } from '../src/bridge/inertia.js'
 import { PupitreContent } from '../src/page/Pupitre.js'
@@ -66,10 +66,11 @@ const pupitre = {
   timezone: 'UTC',
 } as unknown as PupitrePageProps['pupitre']
 
-function pageProps(key: string) {
+function pageProps(key: string, url = '/admin/posts') {
   return {
     page: {
       key,
+      url,
       kind: 'list',
       title: 'Posts',
       breadcrumbs: [],
@@ -81,46 +82,56 @@ function pageProps(key: string) {
   } as unknown as PupitrePageProps
 }
 
-test('redirecting ActionResult flash appears once after the page changes', async ({ assert }) => {
+test('redirect flash drains on a same-key URL visit and does not leak to later pages', async ({
+  assert,
+}) => {
   const { dom, restore } = installDom()
+  dom.window.history.replaceState({}, '', '/admin/posts?q=foo')
   const container = dom.document.createElement('div')
   dom.document.body.append(container)
   const root = createRoot(container as unknown as Element)
+  const toasts: Array<{ type: string; title: string }> = []
   const visits: string[] = []
   const restoreRouter = setRouter({
-    visit: (url: string) => visits.push(url),
+    visit: (url: string, options?: { onSuccess?: () => void }) => {
+      visits.push(url)
+      options?.onSuccess?.()
+    },
   } as unknown as RouterLike)
 
   try {
+    const key = 'admin:posts:list::'
     await act(async () =>
-      root.render(<PupitreContent registry={registry} props={pageProps('edit')} />)
+      root.render(
+        <PupitreContent registry={registry} props={pageProps(key, '/admin/posts?q=foo')} />
+      )
     )
     await act(async () =>
       handleActionResult(
         {
-          flash: [{ type: 'success', title: 'Deleted' }],
+          flash: [{ type: 'success', title: 'Deleted 3 posts' }],
           redirect: '/admin/posts',
         } as ActionResult,
         {
           data: {},
-          pageKind: 'edit',
+          pageKind: 'list',
           toast: () => assert.fail('redirect toast was shown before navigation'),
           setData: () => {},
+          onNavigationComplete: () => toasts.push(...takePendingActionToasts()),
         }
       )
     )
     assert.deepEqual(visits, ['http://localhost/admin/posts'])
+    await act(async () =>
+      root.render(<PupitreContent registry={registry} props={pageProps(key, '/admin/posts')} />)
+    )
+    assert.deepEqual(toasts, [{ type: 'success', title: 'Deleted 3 posts' }])
+    assert.deepEqual(takePendingActionToasts(), [])
 
     await act(async () =>
-      root.render(<PupitreContent registry={registry} props={pageProps('list')} />)
+      root.render(<PupitreContent registry={registry} props={pageProps('admin:posts:edit:4:')} />)
     )
-    assert.equal(container.querySelectorAll('[role="status"][data-toast-id]').length, 1)
-    assert.equal(container.querySelector('[role="status"]')?.textContent, 'Deleted')
-
-    await act(async () =>
-      root.render(<PupitreContent registry={registry} props={pageProps('list')} />)
-    )
-    assert.equal(container.querySelectorAll('[role="status"][data-toast-id]').length, 1)
+    assert.deepEqual(takePendingActionToasts(), [])
   } finally {
     await act(async () => root.unmount())
     restoreRouter()

@@ -114,6 +114,24 @@ test.group('schema compiler', () => {
     assert.deepEqual(item?.props.itemLabel, { $template: 'SKU ${sku}' })
     assert.deepEqual(item?.props.index, { $index: true })
   })
+  test('lifts repeater item-label ternaries with comparison tests', async ({ assert }) => {
+    const compiled = await compileForm(
+      [
+        node(
+          schema
+            .repeater('items')
+            .schema([schema.number('qty')])
+            .itemLabel(({ get }) => ((get('qty') as number) > 0 ? 'In stock' : 'Empty'))
+        ),
+      ],
+      { ...options, data: { items: [{ qty: 1 }] } }
+    )
+    assert.deepEqual(compiled.spec.elements['f.items.item']?.props.itemLabel, {
+      $cond: { $item: 'qty', gt: 0 },
+      $then: 'In stock',
+      $else: 'Empty',
+    })
+  })
   test('rejects repeater item labels that cannot be lifted into item scope', async ({ assert }) => {
     let failure: unknown
     try {
@@ -176,6 +194,21 @@ test.group('schema compiler', () => {
     assert.deepEqual(
       liftClosure(({ get }: typeof getter) => get('status') === 'published', 'visible', scope),
       { kind: 'expression', value: { $state: '/data/status', eq: 'published' } }
+    )
+    assert.deepEqual(
+      liftClosure(
+        ({ get }: typeof getter) => (get('type') === 'company' ? 'Company name' : 'Full name'),
+        'label',
+        scope
+      ),
+      {
+        kind: 'expression',
+        value: {
+          $cond: { $state: '/data/type', eq: 'company' },
+          $then: 'Company name',
+          $else: 'Full name',
+        },
+      }
     )
     assert.deepEqual(
       liftClosure(({ get }: typeof getter) => get('a') && get('b') !== 'x', 'visible', scope),

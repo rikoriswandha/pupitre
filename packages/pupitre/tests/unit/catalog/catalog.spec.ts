@@ -124,6 +124,30 @@ test.group('catalog wire schemas', () => {
     assert.isTrue(
       repeaterDescriptor.safeParse(catalogFixtures.Repeater.elements.root.props.descriptor).success
     )
+    const repeater = repeaterDescriptor.parse({
+      name: 'items',
+      minItems: 1,
+      maxItems: 8,
+      reorderable: true,
+      collapsible: true,
+      collapsed: false,
+      cloneable: true,
+      addLabel: 'Add item',
+      grid: { sm: 1, lg: 2 },
+      defaultItems: [{ sku: 'A-100' }],
+    })
+    assert.deepEqual(repeater, {
+      name: 'items',
+      minItems: 1,
+      maxItems: 8,
+      reorderable: true,
+      collapsible: true,
+      collapsed: false,
+      cloneable: true,
+      addLabel: 'Add item',
+      grid: { sm: 1, lg: 2 },
+      defaultItems: [{ sku: 'A-100' }],
+    })
     assert.isTrue(
       fileUploadDescriptor.safeParse(catalogFixtures.FileUpload.elements.root.props.descriptor)
         .success

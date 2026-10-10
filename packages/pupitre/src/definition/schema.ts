@@ -513,7 +513,6 @@ export interface SelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'select' }>
 > {
   options(value: Record<string, unknown> | readonly unknown[]): this
-  native(value?: boolean): this
   clearable(value?: boolean): this
   multiple(value?: boolean): this
   in(value: readonly unknown[]): this
@@ -523,7 +522,6 @@ export interface MultiSelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'multiSelect' }>
 > {
   options(value: Record<string, unknown> | readonly unknown[]): this
-  native(value?: boolean): this
   clearable(value?: boolean): this
   in(value: readonly unknown[]): this
   exists(value: NonNullable<ValidationRules['exists']>): this
@@ -533,7 +531,6 @@ export interface DateBuilder extends FieldBuilderBase<DateFieldDefinition> {
   maxDate(value: string): this
   timezone(value: string): this
   seconds(value?: boolean): this
-  native(value?: boolean): this
 }
 export interface RepeaterBuilder extends FieldBuilderBase<RepeaterFieldDefinition> {
   schema(
@@ -577,7 +574,6 @@ export interface CheckboxBuilder extends FieldBuilderBase<CheckboxFieldDefinitio
 export interface CheckboxListBuilder extends FieldBuilderBase<CheckboxListFieldDefinition> {
   options(value: Record<string, unknown> | readonly unknown[]): this
   columns(value: number): this
-  searchable(value?: boolean): this
 }
 export interface RadioBuilder extends FieldBuilderBase<RadioFieldDefinition> {
   options(value: Record<string, unknown> | readonly unknown[]): this
@@ -598,8 +594,7 @@ export interface ToggleButtonsBuilder extends FieldBuilderBase<ToggleButtonsFiel
   icons(value: Record<string, string>): this
   colors(value: Record<string, string>): this
 }
-export interface ColorBuilder extends FieldBuilderBase<ColorFieldDefinition> {
-  format(value: 'hex' | 'rgb' | 'hsl'): this
+export interface ColorBuilder extends Omit<FieldBuilderBase<ColorFieldDefinition>, 'format'> {
   presets(value: readonly string[]): this
 }
 export interface TagsBuilder extends FieldBuilderBase<TagsFieldDefinition> {

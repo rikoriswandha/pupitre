@@ -43,7 +43,12 @@ function setRedirectFlash(ctx: HttpContext, flash: unknown) {
     setPupitreFlash(ctx, flash)
 }
 
-function pruneUploads(ctx: HttpContext, resourceSlug: string, consumed: Map<string, string>) {
+function pruneUploads(
+  ctx: HttpContext,
+  resourceSlug: string,
+  consumed: Map<string, string>,
+  richEditorFields: Set<string>
+) {
   const uploads = (ctx.session.get('pupitre.uploads') ?? []) as {
     resource: string
     key: string
@@ -52,7 +57,11 @@ function pruneUploads(ctx: HttpContext, resourceSlug: string, consumed: Map<stri
   ctx.session.put(
     'pupitre.uploads',
     uploads.filter(
-      (upload) => !(upload.resource === resourceSlug && consumed.get(upload.key) === upload.field)
+      (upload) =>
+        !(
+          upload.resource === resourceSlug &&
+          (consumed.get(upload.key) === upload.field || richEditorFields.has(upload.field))
+        )
     )
   )
 }
@@ -82,6 +91,36 @@ function uploadFields(nodes: SchemaNodeDefinition[], prefix = ''): UploadField[]
             })
           : node.schema
       if (Array.isArray(schema)) fields.push(...uploadFields(schema, path))
+    }
+  }
+  return fields
+}
+
+function richEditorFieldNames(nodes: SchemaNodeDefinition[], prefix = ''): string[] {
+  const fields: string[] = []
+  for (const node of nodes) {
+    const path =
+      node.kind === 'repeater' || node.kind === 'fileUpload' || node.kind === 'richEditor'
+        ? [prefix, node.name].filter(Boolean).join('.')
+        : prefix
+    if (node.kind === 'richEditor') fields.push(path)
+    if ('children' in node && Array.isArray(node.children))
+      fields.push(...richEditorFieldNames(node.children, path))
+    if (node.kind === 'repeater') {
+      const schema =
+        typeof node.schema === 'function'
+          ? (
+              node.schema(schemaFactory as never) as unknown as (
+                SchemaNodeDefinition | SchemaNodeBuilder
+              )[]
+            ).map((child) => {
+              const builder = child as SchemaNodeBuilder
+              return typeof builder.toDefinition === 'function'
+                ? getComponentDefinition(builder)
+                : (child as SchemaNodeDefinition)
+            })
+          : node.schema
+      if (Array.isArray(schema)) fields.push(...richEditorFieldNames(schema, path))
     }
   }
   return fields
@@ -492,7 +531,17 @@ export default class ResourceController {
       await target.definition.hooks.afterSave?.(record, ctx, trx)
       return record
     })
-    pruneUploads(ctx, target.slug, consumedUploads(uploadFields(target.definition.form), validated))
+    const submittedRichEditorFields = new Set(
+      richEditorFieldNames(target.definition.form).filter((field) =>
+        valuesAt(validated, field).some((value) => value !== undefined)
+      )
+    )
+    pruneUploads(
+      ctx,
+      target.slug,
+      consumedUploads(uploadFields(target.definition.form), validated),
+      submittedRichEditorFields
+    )
     const redirectTo = target.definition.pages.create?.redirectTo ?? 'edit'
     const savedId = recordValue(saved, keyName(target.model)) as string | number
     const redirect =
@@ -543,7 +592,17 @@ export default class ResourceController {
       savedRecord.useTransaction(trx)
       await target.definition.hooks.afterSave?.(savedRecord, ctx, trx)
     })
-    pruneUploads(ctx, target.slug, consumedUploads(fileFields, validated))
+    const submittedRichEditorFields = new Set(
+      richEditorFieldNames(target.definition.form).filter((field) =>
+        valuesAt(validated, field).some((value) => value !== undefined)
+      )
+    )
+    pruneUploads(
+      ctx,
+      target.slug,
+      consumedUploads(fileFields, validated),
+      submittedRichEditorFields
+    )
     for (const field of fileFields) {
       await cleanupReplacedFiles(
         field,

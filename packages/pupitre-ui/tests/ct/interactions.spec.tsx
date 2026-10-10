@@ -24,11 +24,26 @@ import {
   TextSuffixStory,
   ThemeShellStory,
   UploadSaveStory,
+  DefaultToggleStory,
   NestedNamesStory,
   UploadStory,
   NestedFormFocusStory,
   SearchDebounceStory,
 } from './stories/catalog.story.js'
+
+test('Toggle defaults to a primary checked track and keeps the horizontal layout', async ({
+  mount,
+}) => {
+  const view = await mount(<DefaultToggleStory />)
+  const toggle = view.getByRole('switch', { name: 'Enabled' })
+  await expect(toggle).toHaveAttribute('data-checked', '')
+  expect((await toggle.getAttribute('class')) ?? '').toContain('data-[checked]:bg-primary')
+  const wrapperClass = (await toggle.locator('..').getAttribute('class')) ?? ''
+  expect(wrapperClass).toContain('inline-flex')
+  expect(wrapperClass).toContain('items-center')
+  expect(wrapperClass).toContain('gap-3')
+  expect(wrapperClass).not.toContain('grid')
+})
 
 test('Select updates its bound state', async ({ mount, page }) => {
   const view = await mount(<SelectStory />)
@@ -303,6 +318,38 @@ test('FileUpload clears a newly uploaded value after a successful same-page save
   expect(cover).toBeNull()
   await expect(view.getByText('saved-file.png', { exact: true })).toHaveCount(0)
   expect(deletes).toBe(0)
+})
+
+test('FileUpload sends DELETE when removing an upload before saving', async ({ mount, page }) => {
+  let deletes = 0
+  await page.route('**/upload', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      deletes += 1
+      await route.fulfill({ status: 204 })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        key: 'unsaved-file.png',
+        url: '/unsaved-file.png',
+        name: 'unsaved-file.png',
+        size: 1,
+        mime: 'image/png',
+      }),
+    })
+  })
+  const view = await mount(<UploadSaveStory />)
+  await view.locator('input[type="file"]').setInputFiles({
+    name: 'unsaved-file.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('x'),
+  })
+  await expect(view.getByText('unsaved-file.png', { exact: true })).toBeVisible()
+  await view.getByRole('button', { name: 'Remove unsaved-file.png' }).click()
+  await expect.poll(() => deletes).toBe(1)
+  await expect(view.getByText('unsaved-file.png', { exact: true })).toHaveCount(0)
 })
 
 test('KeyValue add, move, and remove do not write invalid duplicate-key rows', async ({
