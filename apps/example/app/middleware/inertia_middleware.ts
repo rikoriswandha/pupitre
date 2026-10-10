@@ -13,6 +13,7 @@ export default class InertiaMiddleware extends BaseInertiaMiddleware {
      * In that case, we must always assume that HttpContext is not fully hydrated
      * with all the properties
      */
+    ctx.view.share({ cspNonce: ctx.response.nonce })
     const { auth, request } = ctx as Partial<HttpContext>
 
     const theme: 'light' | 'dark' =

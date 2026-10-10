@@ -6,21 +6,18 @@ const shieldConfig = defineConfig({
    * to learn more.
    */
   csp: {
-    /**
-     * Enable the Content-Security-Policy header.
-     */
-    enabled: false,
-
-    /**
-     * Per-resource CSP directives.
-     */
-    directives: {},
-
-    /**
-     * Report violations without blocking resources.
-     */
+    enabled: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", '@nonce'],
+      styleSrc: process.env.NODE_ENV === 'production' ? ["'self'", '@nonce'] : ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'", 'ws:', 'http:'],
+    },
     reportOnly: false,
   },
+
 
   /**
    * Configure CSRF protection options. Refer documentation

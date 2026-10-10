@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="csp-nonce" nonce="{{ cspNonce }}" />
     <title data-inertia>
       AdonisJS
     </title>
 
-    @viteReactRefresh()
-    @vite(['inertia/app.tsx'])
+    @viteReactRefresh({ nonce: cspNonce })
+    @vite(['inertia/app.tsx'], { nonce: cspNonce })
     @inertiaHead()
     @stack('dumper')
   </head>

@@ -1,0 +1,4 @@
+import { defineRegistry } from '@rikology/pupitre-react'
+import { components } from '@rikology/pupitre-ui'
+
+export const registry = defineRegistry(components)

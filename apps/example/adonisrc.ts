@@ -1,7 +1,9 @@
+import { indexPolicies } from '@adonisjs/bouncer'
 import { indexPages } from '@adonisjs/inertia'
 import { indexEntities } from '@adonisjs/core/generators'
 import { defineConfig } from '@adonisjs/core/app'
 import { generateRegistry } from '@tuyau/core/hooks'
+import { indexAdmin } from '@rikology/pupitre/hooks'
 
 export default defineConfig({
   /*
@@ -30,6 +32,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/commands'),
     () => import('@adonisjs/session/commands'),
     () => import('@adonisjs/inertia/commands'),
+    () => import('@rikology/pupitre/commands')
   ],
 
   /*
@@ -58,7 +61,10 @@ export default defineConfig({
     () => import('@adonisjs/cors/cors_provider'),
     () => import('@adonisjs/inertia/inertia_provider'),
     () => import('@adonisjs/auth/auth_provider'),
+    () => import('@adonisjs/bouncer/bouncer_provider'),
+    () => import('@adonisjs/drive/drive_provider'),
     () => import('#providers/api_provider'),
+    () => import('@rikology/pupitre/pupitre_provider')
   ],
 
   /*
@@ -73,6 +79,7 @@ export default defineConfig({
     () => import('#start/routes'),
     () => import('#start/kernel'),
     () => import('#start/validator'),
+    () => import('#start/pupitre')
   ],
 
   /*
@@ -131,7 +138,9 @@ export default defineConfig({
         transformers: { enabled: true, withSharedProps: true },
       }),
       indexPages({ framework: 'react' }),
+      indexPolicies(),
       generateRegistry(),
+      indexAdmin()
     ],
     buildStarting: [() => import('@adonisjs/vite/build_hook')],
   },

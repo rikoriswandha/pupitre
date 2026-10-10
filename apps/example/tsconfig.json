@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "./",
     "jsx": "react",
-    "outDir": "./build"
+    "outDir": "./build",
+    "customConditions": ["@rikology/source"]
   },
   "references": [{ "path": "./tsconfig.inertia.json" }]
 }

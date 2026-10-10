@@ -1,0 +1,29 @@
+import { actions, defineResource, pages, table } from '@rikology/pupitre'
+import User from '#models/user'
+import UserPolicy from '#policies/user_policy'
+
+export default defineResource(User)
+  .slug('users')
+  .label('User')
+  .pluralLabel('Users')
+  .icon('users')
+  .navigation({ group: 'Administration', sort: 1 })
+  .recordTitle('email')
+  .policy(UserPolicy)
+  .form((s) => [
+    s.section('Account').components([
+      s.text('fullName').label('Full name').maxLength(160),
+      s.email('email').required().maxLength(254).unique({ ignoreRecord: true }),
+      s.text('timezone').label('Timezone').placeholder('Asia/Jakarta'),
+    ]),
+  ])
+  .table((t) => t
+    .columns([
+      table.text('fullName').label('Name').searchable().sortable(),
+      table.text('email').searchable().sortable(),
+      table.text('timezone').label('Timezone'),
+    ])
+    .defaultSort('email', 'asc'))
+  .infolist((s) => [s.textEntry('fullName').label('Name'), s.textEntry('email'), s.textEntry('timezone')])
+  .actions({ header: [actions.create()], row: [actions.edit(), actions.view()], bulk: [actions.delete()] })
+  .pages({ list: pages.list(), create: pages.create().redirectTo('edit'), edit: pages.edit(), view: pages.view() })
