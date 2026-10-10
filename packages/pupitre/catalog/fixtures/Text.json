@@ -1,0 +1,33 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Text",
+      "props": {
+        "name": "title",
+        "label": "Title",
+        "value": {
+          "$bindState": "/data/title"
+        },
+        "error": {
+          "$state": "/errors/title"
+        },
+        "type": "text",
+        "placeholder": "Enter a title"
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

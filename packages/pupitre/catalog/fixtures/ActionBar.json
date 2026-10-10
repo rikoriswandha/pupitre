@@ -1,0 +1,32 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "ActionBar",
+      "props": {
+        "actions": [
+          {
+            "name": "create",
+            "label": "Create",
+            "kind": "link",
+            "url": "/posts/create",
+            "enabled": true
+          }
+        ]
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

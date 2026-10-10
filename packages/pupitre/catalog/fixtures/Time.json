@@ -1,0 +1,27 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Time",
+      "props": {
+        "name": "opensAt",
+        "value": {
+          "$bindState": "/data/opensAt"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

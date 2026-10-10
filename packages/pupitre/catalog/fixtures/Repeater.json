@@ -1,0 +1,58 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Repeater",
+      "props": {
+        "descriptor": {
+          "name": "items",
+          "minItems": 0,
+          "reorderable": true,
+          "collapsible": true,
+          "cloneable": true,
+          "addLabel": "Add item",
+          "itemLabel": "Item ${/data/items/0/sku}",
+          "defaultItems": []
+        }
+      },
+      "children": [
+        "item"
+      ]
+    },
+    "child": {
+      "type": "Text",
+      "props": {
+        "name": "sku",
+        "label": "SKU",
+        "value": {
+          "$bindItem": "sku"
+        }
+      }
+    },
+    "item": {
+      "type": "RepeaterItem",
+      "props": {
+        "index": {
+          "$index": true
+        },
+        "itemLabel": "Item ${/data/items/0/sku}"
+      },
+      "children": [
+        "child"
+      ]
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

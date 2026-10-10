@@ -24,8 +24,9 @@ export async function getCommand(metaData: CommandMetaData) {
   if (!command) {
     return null
   }
-  const { default: commandConstructor } = await import(
-    new URL(command.filePath, import.meta.url).href
-  )
+  const commandPath = import.meta.url.endsWith('/main.ts')
+    ? command.filePath.replace(/\.js$/, '.ts')
+    : command.filePath
+  const { default: commandConstructor } = await import(new URL(commandPath, import.meta.url).href)
   return commandConstructor
 }

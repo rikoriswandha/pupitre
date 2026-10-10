@@ -1,1 +1,54 @@
-{ "commands": [], "version": 1 }
+{
+  "commands": [
+    {
+      "commandName": "pupitre:install",
+      "description": "Install Pupitre host files and configuration",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "panel",
+          "flagName": "panel",
+          "required": false,
+          "type": "string",
+          "description": "Panel identifier",
+          "default": "admin"
+        },
+        {
+          "name": "path",
+          "flagName": "path",
+          "required": false,
+          "type": "string",
+          "description": "Panel URL prefix",
+          "default": "/admin"
+        },
+        {
+          "name": "auth",
+          "flagName": "auth",
+          "required": false,
+          "type": "string",
+          "description": "Authentication guard",
+          "default": "web"
+        }
+      ],
+      "args": [],
+      "options": {},
+      "filePath": "install.js"
+    },
+    {
+      "commandName": "pupitre:routes",
+      "description": "List routes registered by Pupitre, grouped by panel",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [],
+      "args": [],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "routes.js"
+    }
+  ],
+  "version": 1
+}

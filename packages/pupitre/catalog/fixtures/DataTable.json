@@ -1,0 +1,47 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "DataTable",
+      "props": {
+        "descriptor": {
+          "id": "posts",
+          "url": "/posts",
+          "columns": [
+            {
+              "name": "title",
+              "label": "Title",
+              "type": "text",
+              "sortable": true,
+              "searchable": true,
+              "props": {}
+            }
+          ],
+          "filters": [],
+          "filtersLayout": "dropdown",
+          "perPageOptions": [
+            25
+          ],
+          "searchable": true,
+          "searchDebounce": 300,
+          "selectable": false,
+          "bulkActions": [],
+          "layout": "table"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

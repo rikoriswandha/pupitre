@@ -1,0 +1,22 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Divider",
+      "props": {}
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

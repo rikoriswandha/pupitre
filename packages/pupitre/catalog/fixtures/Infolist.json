@@ -1,0 +1,35 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Infolist",
+      "props": {},
+      "children": [
+        "child"
+      ]
+    },
+    "child": {
+      "type": "Text",
+      "props": {
+        "name": "sku",
+        "label": "SKU",
+        "value": {
+          "$bindState": "/data/title"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

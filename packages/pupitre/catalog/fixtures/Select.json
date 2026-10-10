@@ -1,0 +1,33 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Select",
+      "props": {
+        "name": "status",
+        "value": {
+          "$bindState": "/data/status"
+        },
+        "options": [
+          {
+            "value": "draft",
+            "label": "Draft"
+          }
+        ]
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

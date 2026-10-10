@@ -1,0 +1,24 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Html",
+      "props": {
+        "content": "<p>Safe content</p>"
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

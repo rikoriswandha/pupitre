@@ -1,0 +1,27 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Tags",
+      "props": {
+        "name": "tags",
+        "value": {
+          "$bindState": "/data/tags"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

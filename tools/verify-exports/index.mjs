@@ -23,6 +23,9 @@ const shapeChecks = {
     assert.equal(typeof mod.configure, 'function')
     assert.equal(typeof mod.stubsRoot, 'string')
   },
+  '@rikology/pupitre/hooks': (mod) => {
+    assert.equal(typeof mod.indexAdmin, 'function')
+  },
   '@rikology/pupitre/catalog': (mod) => {
     assert.match(mod.catalogVersion, /^\d+\.\d+$/)
   },

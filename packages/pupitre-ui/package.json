@@ -27,14 +27,28 @@
       "@rikology/source": "./src/index.ts",
       "types": "./build/src/index.d.ts",
       "default": "./build/src/index.js"
+    },
+    "./components": {
+      "@rikology/source": "./src/components.ts",
+      "types": "./build/src/components.d.ts",
+      "default": "./build/src/components.js"
+    },
+    "./components/*": {
+      "@rikology/source": "./src/components/*.tsx",
+      "types": "./build/src/components/*.d.ts",
+      "default": "./build/src/components/*.js"
+    },
+    "./styles.css": {
+      "@rikology/source": "./src/styles.css",
+      "default": "./build/src/styles.css"
     }
   },
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true})\"",
     "typecheck": "tsc --noEmit",
     "quick:test": "node --conditions=@rikology/source --import=@poppinss/ts-exec --enable-source-maps bin/test.ts",
-    "test": "npm run quick:test",
-    "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json",
+    "test": "npm run quick:test && playwright test -c playwright-ct.config.ts",
+    "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json && node -e \"require('node:fs').copyFileSync('src/styles.css','build/src/styles.css')\"",
     "build": "npm run compile",
     "prepublishOnly": "npm run build"
   },

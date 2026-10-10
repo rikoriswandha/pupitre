@@ -1,0 +1,25 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "CodeEntry",
+      "props": {
+        "label": "Payload",
+        "value": "{}"
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Split",
+      "props": {
+        "from": "md",
+        "ratio": 0.5
+      },
+      "children": [
+        "child"
+      ]
+    },
+    "child": {
+      "type": "Text",
+      "props": {
+        "name": "sku",
+        "label": "SKU",
+        "value": {
+          "$bindState": "/data/title"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

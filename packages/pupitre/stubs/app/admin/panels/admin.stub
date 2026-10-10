@@ -1,0 +1,12 @@
+{{{
+  exports({ to: app.makePath('app/admin/panels/admin.ts') })
+}}}
+import { definePanel } from '@rikology/pupitre'
+import { resources } from '#generated/admin'
+import { middleware } from '#start/kernel'
+
+export default definePanel('{{panel}}')
+  .path('{{path}}')
+  .guard('{{auth}}')
+  .middleware([middleware.auth({ guards: ['{{auth}}'] })])
+  .resources(resources)

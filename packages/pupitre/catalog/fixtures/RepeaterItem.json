@@ -1,0 +1,40 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "RepeaterItem",
+      "props": {
+        "index": {
+          "$index": true
+        },
+        "itemLabel": "Item ${/data/items/0/sku}"
+      },
+      "children": [
+        "child"
+      ]
+    },
+    "child": {
+      "type": "Text",
+      "props": {
+        "name": "sku",
+        "label": "SKU",
+        "value": {
+          "$bindItem": "sku"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "RichEditor",
+      "props": {
+        "name": "content",
+        "value": {
+          "$bindState": "/data/content"
+        },
+        "toolbar": [
+          "bold",
+          "italic"
+        ]
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

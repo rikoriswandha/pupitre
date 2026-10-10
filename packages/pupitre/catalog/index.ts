@@ -1,4 +1,89 @@
-/**
- * Catalog contract version. `major.minor` of the `@rikology/pupitre` package.
- */
-export const catalogVersion = '0.1'
+export { catalogVersion } from './version.js'
+export { dynamic, jsonRenderExpression, jsonRenderValue, visibilitySchema } from './expressions.js'
+export { actions } from './actions.js'
+export {
+  components,
+  catalogEvents,
+  repeaterItemEvents,
+  repeaterEvents,
+  dataTableEvents,
+  actionBarEvents,
+  formEvents,
+} from './components.js'
+export { pupitreCatalog, assertRegistryComplete } from './registry.js'
+export { catalogFixtures } from './fixtures.js'
+export {
+  actionDescriptor,
+  actionFormResponse,
+  brand,
+  breadcrumb,
+  columnDescriptor,
+  elementSchema,
+  fileUploadDescriptor,
+  filterDescriptor,
+  flashMessage,
+  formDescriptor,
+  formSpec,
+  jsonPatchOp,
+  jsonRenderSpec,
+  navGroup,
+  navItem,
+  option,
+  pageProps,
+  panelFeatures,
+  patchResponse,
+  repeaterDescriptor,
+  stateModel,
+  tableData,
+  tableDescriptor,
+  tableMeta,
+  tableRow,
+  themeVars,
+  uploadResponse,
+} from './wire.js'
+export type {
+  ActionDescriptor,
+  ActionFormResponse,
+  Brand,
+  Breadcrumb,
+  ColumnDescriptor,
+  FileUploadDescriptor,
+  FilterDescriptor,
+  FlashMessage,
+  FormDescriptor,
+  JsonPatchOp,
+  JsonRenderSpec,
+  NavGroup,
+  NavItem,
+  Option,
+  PanelFeatures,
+  PatchResponse,
+  PupitrePageProps,
+  RepeaterDescriptor,
+  StateModel,
+  TableData,
+  TableDescriptor,
+  TableMeta,
+  TableRow,
+  ThemeVars,
+  UploadResponse,
+} from './wire.js'
+
+export const computedFunctionNames = [
+  'concat',
+  'add',
+  'sub',
+  'mul',
+  'div',
+  'sum',
+  'count',
+  'formatNumber',
+  'formatDate',
+  'pluck',
+  'join',
+  'upper',
+  'lower',
+  'truncate',
+  'coalesce',
+] as const
+export type ComputedFunctionName = (typeof computedFunctionNames)[number]

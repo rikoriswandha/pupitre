@@ -1,0 +1,27 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "TextEntry",
+      "props": {
+        "label": "Title",
+        "value": {
+          "$state": "/meta/record/title"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

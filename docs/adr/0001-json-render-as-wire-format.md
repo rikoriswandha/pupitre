@@ -1,6 +1,6 @@
 # ADR-0001: json-render sebagai wire format dan renderer
 
-- Status: Proposed (menjadi Accepted setelah SPIKE_M0 GO)
+- Status: Accepted (SPIKE_M0 K1–K5 lulus; suite regresi di `packages/pupitre-react/tests/spike/`)
 - Tanggal: 2026-10-10
 
 ## Konteks

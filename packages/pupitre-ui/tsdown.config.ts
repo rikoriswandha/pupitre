@@ -1,7 +1,13 @@
 import { defineConfig } from 'tsdown'
 
 export default defineConfig({
-  entry: ['./src/index.ts'],
+  entry: [
+    './src/index.ts',
+    './src/components.ts',
+    './src/components/*.tsx',
+    './src/primitives/index.tsx',
+    './src/icons.tsx',
+  ],
   outDir: './build/src',
   clean: false,
   format: 'esm',

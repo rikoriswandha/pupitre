@@ -1,0 +1,28 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Textarea",
+      "props": {
+        "name": "body",
+        "value": {
+          "$bindState": "/data/body"
+        },
+        "rows": 4
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

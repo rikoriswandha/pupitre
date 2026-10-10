@@ -1,0 +1,24 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Actions",
+      "props": {
+        "actions": []
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{{{
+  exports({ to: app.configPath('pupitre.ts') })
+}}}
+import { defineConfig } from '@rikology/pupitre'
+
+export default defineConfig({
+  path: '{{path}}',
+  cache: { dev: false },
+  timezone: 'UTC',
+  storage: { disk: 'uploads' },
+})

@@ -81,12 +81,13 @@
     "quick:test": "node --conditions=@rikology/source --import=@poppinss/ts-exec --enable-source-maps bin/test.ts",
     "test": "c8 npm run quick:test",
     "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json",
-    "postcompile": "copyfiles \"stubs/**/*.stub\" build && copyfiles \"commands/commands.json\" build",
+    "postcompile": "copyfiles \"stubs/**/*.stub\" build && copyfiles \"commands/commands.json\" build && node --import=@poppinss/ts-exec scripts/generate_commands_manifest.ts",
     "build": "npm run compile",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@json-render/core": "0.21.0",
+    "acorn": "^8.19.0",
     "file-type": "^22.1.1",
     "sanitize-html": "^2.18.0",
     "zod": "^4.3.6"

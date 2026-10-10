@@ -145,16 +145,25 @@ Tetap memakai **bentuk spec yang sama** (flat `root`+`elements`, ekspresi `$stat
 
 ## 7. Hasil
 
-> Diisi saat spike selesai.
+Kriteria di bawah ini dijalankan sebagai suite regresi Japa di `packages/pupitre-react/tests/spike/`.
 
 | Kriteria | Hasil | Bukti | Catatan |
 | --- | --- | --- | --- |
-| K1 | | | |
-| K2 | | | |
-| K3 | | | |
-| K4 | | | |
-| K5 | | | |
+| K1 | LULUS | `k1_repeater.spec.tsx`: “binds absolute item paths, computes subtotal, and preserves form identity as state changes”; “push and remove mutate target item without losing retained item values”; “nested repeater bindings and item visibility/index expressions resolve”; “reordering keeps repeat-key identity and collapsed data remains keyed by item key”. | Absolute `bindings.value`, subtotal `$computed: mul`, perubahan kuantitas tanpa remount Form, built-in `pushState` (`_key: '$id'`), `removeState`, reorder dengan identitas `_key`, nested bind + push, serta error hanya pada item 0. `visible` memakai `$item` dan `$index`; helper test `useFieldError` memetakan binding `/data/...` ke error `/errors/...`; collapsed state memakai `/ui/repeater/items/<_key>/collapsed`. |
+| K2 | LULUS | `k2_state.spec.tsx`: “same page key preserves user data; a different key initializes the new record”; “422 field errors map to /errors without mutating /data”. | Props reload dengan key sama mempertahankan draft; key berbeda membuat store baru. 422 memetakan `items.0.sku` ke `/errors/items/0/sku` dan `/data` tetap utuh. |
+| K3 | LULUS | `k3_watch.spec.tsx`: “watch stays quiet on mount, runs sequential actions on change, writes async result without remount”. | Tidak ada eksekusi saat mount; dua handler tercatat berurutan (`first`, `second`); handler async mengisi `/data/slug`; Form tidak remount. Uji round-trip `evaluate` bukan bagian M1: rekomendasi M3 adalah `fetch` JSON ke endpoint, membaca cookie `XSRF-TOKEN` untuk header CSRF Shield, lalu menerapkan `set` ke store. Jangan memakai `router.post` Inertia untuk respons JSON. |
+| K4 | LULUS | `k4_registry.spec.tsx`: “a Base UI component uses useBoundProp through the json-render registry”; assertion tipe `@ts-expect-error` menolak props yang tak sesuai schema. `npm ls @json-render/shadcn '@radix-ui/*' --all` menghasilkan `(empty)`. | Komponen Base UI dari `@base-ui/react/input` berhasil terikat dengan `useBoundProp`; `@base-ui/react@1.9.0`. Tidak ada `@json-render/shadcn` maupun package `@radix-ui/*` dalam dependency tree. |
+| K5 | LULUS | `k5_ssr.spec.tsx`: “M0 K5 SSR: renderer tree renders to string in Node without registering happy-dom”. Pencarian `window\\.|document\\.` pada `node_modules/@json-render/react/dist/index.mjs` tidak menemukan kecocokan. | `renderToString` tidak throw; tidak terlihat akses `window`/`document` pada tingkat modul renderer yang diperiksa. |
 
-Versi: `@json-render/core@`, `@json-render/react@`, `@adonisjs/core@`, `@adonisjs/inertia@`, `@inertiajs/react@`, `shadcn@`, commit json-render: ``.
+Versi: `@json-render/core@0.21.0`, `@json-render/react@0.21.0`, `@adonisjs/core@7.6.0`, `@adonisjs/inertia@5.0.1`, `@inertiajs/react@3.9.1`, `@base-ui/react@1.9.0`; shadcn tidak dipasang/diperlukan untuk spike Base UI ini. Metadata npm paket json-render tidak menerbitkan `gitHead`; identitas yang dapat direproduksi adalah versi tarball `0.21.0` (`https://registry.npmjs.org/@json-render/react/-/react-0.21.0.tgz`).
 
-Keputusan: **GO / FALLBACK**. Jawaban Q1–Q6: …
+Keputusan: **GO**.
+
+Jawaban Q1–Q6:
+
+1. **Q1:** Error per item dapat dipetakan dari `bindings.value` absolut, misalnya `/data/items/0/sku` → `/errors/items/0/sku`; helper field lokal mengambil error pada path hasil pemetaan. Prop `error` template tetap dapat ditiadakan oleh compiler di dalam repeat.
+2. **Q2:** `evaluate` adalah pekerjaan M3; gunakan `fetch` JSON dengan token cookie `XSRF-TOKEN` untuk header CSRF Shield, lalu tulis patch ke store.
+3. **Q3:** `page.key` cukup: sesudah redirect save pada record yang sama key tidak berubah dan `/data` dipertahankan; record/key berbeda membuat store baru. Props reload memperbarui metadata/error/options, bukan menimpa data form.
+4. **Q4:** Named slots statis tersedia pada spec/catalog, tetapi spike ini tidak menguji rendering Tabs/Wizard; jangan menganggap hasil Q4 sebagai kriteria yang sudah dieksekusi. Tabs Pupitre dapat memakai children datar sesuai kontrak M1.
+5. **Q5:** Adapter Zustand milik Pupitre berbasis `createStoreAdapter` berhasil dipakai dengan controlled `StateProvider`; `@json-render/zustand` tidak terpasang. Pertahankan adapter sendiri agar lifecycle/reset halaman tetap dimiliki runtime Pupitre.
+6. **Q6:** `visible` menerima kondisi `$item` dan `$index` di elemen repeat. Nilai collapsed per item dapat di-key pada `/ui/repeater/<id>/<key>`; renderer tidak menciptakan/mengelola jalur UI domain tersebut secara otomatis, sehingga Repeater Pupitre yang mengelolanya.

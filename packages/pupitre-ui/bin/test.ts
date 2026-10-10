@@ -4,7 +4,7 @@ import { configure, processCLIArgs, run } from '@japa/runner'
 processCLIArgs(process.argv.splice(2))
 
 configure({
-  files: ['tests/**/*.spec.ts', 'tests/**/*.spec.tsx'],
+  files: ['tests/**/*.spec.ts', 'tests/unit/**/*.spec.tsx'],
   plugins: [assert()],
 })
 

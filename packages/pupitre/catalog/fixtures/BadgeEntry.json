@@ -1,0 +1,26 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "BadgeEntry",
+      "props": {
+        "label": "Status",
+        "value": "Published",
+        "color": "success"
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

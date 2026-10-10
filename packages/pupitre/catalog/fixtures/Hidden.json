@@ -1,0 +1,27 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Hidden",
+      "props": {
+        "name": "token",
+        "value": {
+          "$bindState": "/data/token"
+        }
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

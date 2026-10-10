@@ -1,0 +1,26 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "IconEntry",
+      "props": {
+        "label": "Status",
+        "value": "check",
+        "icon": "check"
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}

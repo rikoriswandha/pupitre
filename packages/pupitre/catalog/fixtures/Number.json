@@ -1,0 +1,28 @@
+{
+  "root": "root",
+  "elements": {
+    "root": {
+      "type": "Number",
+      "props": {
+        "name": "quantity",
+        "value": {
+          "$bindState": "/data/quantity"
+        },
+        "min": 1
+      }
+    }
+  },
+  "state": {
+    "data": {
+      "title": "Example",
+      "items": [
+        {
+          "sku": "ABC"
+        }
+      ]
+    },
+    "errors": {
+      "title": "Required"
+    }
+  }
+}
