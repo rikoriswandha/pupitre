@@ -17,8 +17,7 @@ pupitreTest('publishedAt appears immediately when status changes', async ({ admi
   expect(requests).toHaveLength(0)
   const saved = page.waitForResponse(
     (response) =>
-      response.request().method() === 'PUT' &&
-      new URL(response.url()).pathname === '/admin/posts/3'
+      response.request().method() === 'PUT' && new URL(response.url()).pathname === '/admin/posts/3'
   )
   await page.getByRole('button', { name: 'Save' }).click()
   await saved

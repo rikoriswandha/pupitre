@@ -36,6 +36,7 @@ export default configPkg(
       '**/public/assets/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      '**/coverage/**',
       'docs/**',
     ],
   },

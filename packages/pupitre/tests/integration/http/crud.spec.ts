@@ -10,6 +10,7 @@ import {
   fixtureHookEventsSnapshot,
   resetFixtureHooks,
   Post,
+  Category,
   User,
 } from '../../helpers/app.js'
 
@@ -87,8 +88,61 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       assert.equal(view.status, 200)
       const viewProps = await responseProps(view)
       assert.equal(viewProps.page.kind, 'view')
+      assert.deepEqual(
+        viewProps.page.breadcrumbs.slice(-2).map((crumb) => crumb.label),
+        ['HTTP row', 'View']
+      )
       const missing = await inertia(fixture.baseUrl, '/admin/posts/999999/edit')
       assert.equal(missing.status, 404)
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('preloads relations used by dotted table columns', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const category = await Category.create({ name: 'Preloaded category' })
+      await Post.create({
+        title: 'Relation cell',
+        slug: 'relation-cell',
+        status: 'draft',
+        categoryId: category.id,
+        tenantId: 1,
+      })
+      const response = await inertia(fixture.baseUrl, '/admin/posts?q=Relation%20cell')
+      const props = (await responseProps(response)) as {
+        data?: { rows: { cells: Record<string, unknown> }[] }
+      }
+      assert.equal(response.status, 200)
+      assert.equal(props.data?.rows[0]?.cells['category.name'], 'Preloaded category')
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('enforces a panel guard without a route auth middleware', async ({ assert }) => {
+    const fixture = await createTestApp({ panelGuard: 'web' })
+    try {
+      const response = await fetch(`${fixture.baseUrl}/admin/posts`, {
+        headers: { Accept: 'text/html' },
+        redirect: 'manual',
+      })
+      assert.notEqual(response.status, 200)
+      assert.oneOf(response.status, [302, 401, 403])
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('fails closed when a configured policy has no initialized Bouncer', async ({ assert }) => {
+    const fixture = await createTestApp({ withoutBouncer: true })
+    try {
+      const response = await fetch(`${fixture.baseUrl}/admin/posts`, {
+        headers: { Accept: 'application/json' },
+      })
+      assert.equal(response.status, 500)
+      assert.include(await response.text(), 'initialize middleware')
     } finally {
       await closeTestApp(fixture)
     }
@@ -106,6 +160,27 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       const props = await responseProps(response)
       assert.equal(props.pupitre.user?.id, user.id)
       assert.equal(props.pupitre.user?.name, 'Fixture Admin')
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+  test('uses slug as the registered route identity and honors breadcrumb settings', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp({ resourceSlug: 'articles', breadcrumbs: false })
+    try {
+      const post = await Post.create({
+        title: 'Record title label',
+        slug: 'record-title-label',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const response = await inertia(fixture.baseUrl, '/admin/articles')
+      assert.equal(response.status, 200)
+      const page = await inertia(fixture.baseUrl, `/admin/articles/${post.id}`)
+      const props = await responseProps(page)
+      assert.equal(page.status, 200)
+      assert.deepEqual(props.page.breadcrumbs, [])
     } finally {
       await closeTestApp(fixture)
     }

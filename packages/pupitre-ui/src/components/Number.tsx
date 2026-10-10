@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field'
+import { useLiveField } from './use_live_field.js'
 import { Field, FieldError, Label } from '../primitives/index.js'
 
 type Props = Infer<typeof components.Number.props>
@@ -16,10 +17,13 @@ type Runtime = {
 }
 
 export function Number({ props, bindings }: Runtime) {
-  const [value, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [value, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
   const error = useFieldError(props.error, bindings?.value)
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
@@ -46,7 +50,7 @@ export function Number({ props, bindings }: Runtime) {
           value={
             value === '' || value === null || value === undefined ? null : globalThis.Number(value)
           }
-          onValueChange={(next) => setValue(next ?? '')}
+          onValueChange={(next) => changeValue(next ?? '')}
           min={props.min}
           max={props.max}
           step={props.step}
@@ -65,6 +69,7 @@ export function Number({ props, bindings }: Runtime) {
               aria-required={props.required}
               aria-describedby={describedBy}
               aria-invalid={!!error}
+              onBlur={() => commitValue()}
               className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             <BaseNumberField.Decrement

@@ -6,4 +6,3 @@ import Post from '#models/post'
 export default class Category extends CategorySchema {
   @hasMany(() => Post) declare posts: HasMany<typeof Post>
 }
-

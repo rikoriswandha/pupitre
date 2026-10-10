@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Label } from '../primitives/index.js'
+import { useLiveField } from './use_live_field.js'
 
 type Props = Infer<typeof components.Textarea.props>
 type Runtime = {
@@ -15,10 +16,13 @@ type Runtime = {
 }
 
 export function Textarea({ props, bindings }: Runtime) {
-  const [value, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [value, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
   const error = useFieldError(props.error, bindings?.value)
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
@@ -47,7 +51,8 @@ export function Textarea({ props, bindings }: Runtime) {
           id={id}
           name={id}
           value={value ?? ''}
-          onChange={(event) => setValue(event.currentTarget.value)}
+          onChange={(event) => changeValue(event.currentTarget.value)}
+          onBlur={() => commitValue()}
           rows={props.rows ?? 4}
           maxLength={props.maxLength}
           placeholder={props.placeholder}

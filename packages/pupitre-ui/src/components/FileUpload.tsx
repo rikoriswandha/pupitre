@@ -42,8 +42,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     !props.readOnly &&
     !loading &&
     !working &&
-    (descriptor.multiple || keys.length === 0) &&
-    (descriptor.maxFiles === undefined || keys.length < descriptor.maxFiles)
+    (!descriptor.multiple || descriptor.maxFiles === undefined || keys.length < descriptor.maxFiles)
 
   async function uploadFiles(files: FileList | null) {
     if (!files?.length) return
@@ -102,10 +101,20 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
 
   async function removeFile(key: string) {
     setLocalError(undefined)
+    const next = descriptor.multiple ? keys.filter((existing) => existing !== key) : null
+    if (!uploadedFiles[key]) {
+      setValue(next)
+      emit('change', next)
+      return
+    }
     setWorking(true)
     try {
       await uploadApi.remove(key)
-      const next = descriptor.multiple ? keys.filter((existing) => existing !== key) : null
+      setUploadedFiles((current) => {
+        const remaining = { ...current }
+        delete remaining[key]
+        return remaining
+      })
       setValue(next)
       emit('change', next)
     } catch (cause) {

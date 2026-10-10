@@ -13,9 +13,10 @@ export type SpecRendererProps = {
   spec: JsonRenderSpec
   state?: Record<string, unknown>
   onStateChange?: (state: Record<string, unknown>) => void
+  embeddedSubmit?: () => void
 }
 
-export function SpecRenderer({ spec, state, onStateChange }: SpecRendererProps) {
+export function SpecRenderer({ spec, state, onStateChange, embeddedSubmit }: SpecRendererProps) {
   const runtime = useRuntime()
   const [local] = useState(() =>
     createPupitreStore(structuredClone(state ?? spec.state ?? {}) as Record<string, unknown>)
@@ -42,7 +43,12 @@ export function SpecRenderer({ spec, state, onStateChange }: SpecRendererProps) 
     const handler = localHandlers[action]
     if (handler) handlers[action] = handler
   }
-  const context: RuntimeContextValue = { ...runtime, store }
+  const context: RuntimeContextValue = {
+    ...runtime,
+    store,
+    embedded: embeddedSubmit ? true : runtime.embedded,
+    submitForm: embeddedSubmit ?? runtime.submitForm,
+  }
 
   return (
     <RuntimeContextProvider value={context}>
@@ -51,6 +57,7 @@ export function SpecRenderer({ spec, state, onStateChange }: SpecRendererProps) 
         store={store}
         handlers={handlers}
         functions={runtime.functions as Record<string, ComputedFunction>}
+        directives={runtime.registry.directives}
       >
         <Renderer spec={spec as never} registry={runtime.registry.registry} />
       </JSONUIProvider>

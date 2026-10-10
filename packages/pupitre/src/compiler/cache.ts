@@ -1,12 +1,13 @@
 import { hash, stableJson } from '../definition/shared.js'
 
 export type StaticSlot = {
-  elementId: string
   prop: string
+  elementId: string
   evaluate: (
     data: Record<string, unknown>,
     record: Record<string, unknown> | null,
-    ctx?: unknown
+    ctx?: unknown,
+    request?: unknown
   ) => unknown | Promise<unknown>
 }
 export type CachedSpec<TSpec = unknown> = { spec: TSpec; slots: StaticSlot[] }

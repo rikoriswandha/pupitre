@@ -181,17 +181,7 @@ test.group('Pupitre upload HTTP runtime', () => {
       const record = String(post.id)
       const first = await upload(fixture.baseUrl, uploadFields('cover', 'posts', { record }))
       assert.equal(first.status, 200, JSON.stringify(first.body))
-      const second = await upload(
-        fixture.baseUrl,
-        uploadFields('cover', 'posts', { record }),
-        png,
-        'replacement.png',
-        'image/png',
-        first.cookie
-      )
-      assert.equal(second.status, 200, JSON.stringify(second.body))
       const firstKey = first.body.key as string
-      const secondKey = second.body.key as string
       const assigned = await fetch(`${fixture.baseUrl}/admin/posts/${post.id}`, {
         method: 'PUT',
         redirect: 'manual',
@@ -208,6 +198,16 @@ test.group('Pupitre upload HTTP runtime', () => {
         }),
       })
       assert.equal(assigned.status, 302, await assigned.text())
+      const second = await upload(
+        fixture.baseUrl,
+        uploadFields('cover', 'posts', { record }),
+        png,
+        'replacement.png',
+        'image/png',
+        first.cookie
+      )
+      assert.equal(second.status, 200, JSON.stringify(second.body))
+      const secondKey = second.body.key as string
       const updated = await fetch(`${fixture.baseUrl}/admin/posts/${post.id}`, {
         method: 'PUT',
         redirect: 'manual',
@@ -215,19 +215,68 @@ test.group('Pupitre upload HTTP runtime', () => {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Cookie': second.cookie,
+          'X-Pupitre-Action': '1',
         },
         body: JSON.stringify({
           title: post.title,
           slug: post.slug,
           status: post.status,
           cover: secondKey,
+          body: '<p>Rich editor content</p>',
         }),
       })
-      assert.equal(updated.status, 302, await updated.text())
+      assert.equal(updated.status, 200, await updated.text())
+      const persisted = await Post.findOrFail(post.id)
+      assert.equal(persisted.cover, secondKey)
       assert.isFalse(await storedFile(fixture.storagePath, firstKey))
       assert.isTrue(await storedFile(fixture.storagePath, secondKey))
     } finally {
       allowPolicyAbilities()
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('resolves image URLs in list cells and image entries', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const uploaded = await upload(fixture.baseUrl, uploadFields())
+      assert.equal(uploaded.status, 200)
+      const key = uploaded.body.key as string
+      await Post.create({
+        title: 'Resolved image record',
+        slug: `resolved-image-${Date.now()}`,
+        status: 'draft',
+        cover: key,
+        tenantId: 1,
+      })
+      const headers = {
+        'Accept': 'text/html, application/xhtml+xml',
+        'X-Inertia': 'true',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-Inertia-Version': '1',
+      }
+      const listResponse = await fetch(`${fixture.baseUrl}/admin/posts?q=Resolved%20image`, {
+        headers,
+      })
+      const list = (await listResponse.json()) as {
+        props: { data: { rows: { cells: Record<string, unknown> }[] } }
+      }
+      assert.equal(listResponse.status, 200)
+      assert.equal(list.props.data.rows[0]?.cells.cover, uploaded.body.url)
+
+      const record = await Post.query().where('cover', key).firstOrFail()
+      const viewResponse = await fetch(`${fixture.baseUrl}/admin/posts/${record.id}`, { headers })
+      const view = (await viewResponse.json()) as {
+        props: {
+          page: {
+            spec: { elements: Record<string, { type: string; props: Record<string, unknown> }> }
+          }
+        }
+      }
+      assert.equal(viewResponse.status, 200)
+      assert.equal(view.props.page.spec.elements['f.cover']?.type, 'ImageEntry')
+      assert.equal(view.props.page.spec.elements['f.cover']?.props.value, uploaded.body.url)
+    } finally {
       await closeTestApp(fixture)
     }
   })

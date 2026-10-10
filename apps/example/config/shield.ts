@@ -10,14 +10,16 @@ const shieldConfig = defineConfig({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", '@nonce'],
-      styleSrc: process.env.NODE_ENV === 'production' ? ["'self'", '@nonce'] : ["'self'", "'unsafe-inline'"],
+      styleSrc:
+        process.env.NODE_ENV === 'production'
+          ? ["'self'", '@nonce']
+          : ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
       fontSrc: ["'self'", 'data:'],
       connectSrc: ["'self'", 'ws:', 'http:'],
     },
     reportOnly: false,
   },
-
 
   /**
    * Configure CSRF protection options. Refer documentation

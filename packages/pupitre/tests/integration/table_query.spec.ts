@@ -93,6 +93,35 @@ test.group('table query', (group) => {
     )
   })
 
+  test('maps camelCase related search attributes to database column names', async ({ assert }) => {
+    const { users } = await seed({
+      users: [{ name: 'Grace', fullName: 'Ada Lovelace', email: 'mapped@example.test' }],
+    })
+    await seed({
+      posts: [
+        {
+          title: 'Mapped relation',
+          slug: 'mapped-relation',
+          status: 'draft',
+          authorId: users[0].id,
+        },
+      ],
+    })
+    const db = await setupDatabase()
+    const mappedTable: TableDefinition = {
+      ...table,
+      columns: [{ kind: 'text', name: 'author.fullName', searchable: true, sortable: true }],
+      defaultSort: undefined,
+    }
+    const result = applyTableQuery(db.modelQuery(Post) as never, mappedTable, { q: 'Ada' })
+    assert.match(result.query.toSQL().sql, /lower\(.*full_name.*\) like/i)
+    const rows = await result.query.exec()
+    assert.deepEqual(
+      rows.map((row) => (row as Post).slug),
+      ['mapped-relation']
+    )
+  })
+
   test('applies single and multiple select filters; ignores unknown names', async ({ assert }) => {
     const db = await setupDatabase()
     const single = applyTableQuery(db.modelQuery(Post) as never, table, {

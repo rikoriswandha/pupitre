@@ -220,7 +220,6 @@ export const catalogFixtures = {
             collapsible: true,
             cloneable: true,
             addLabel: 'Add item',
-            itemLabel: 'Item ${/data/items/0/sku}',
             defaultItems: [],
           },
         },
@@ -229,7 +228,7 @@ export const catalogFixtures = {
       child: { type: 'Text', props: { name: 'sku', label: 'SKU', value: { $bindItem: 'sku' } } },
       item: {
         type: 'RepeaterItem',
-        props: { index: { $index: true }, itemLabel: 'Item ${/data/items/0/sku}' },
+        props: { index: { $index: true }, itemLabel: { $template: 'Item ${sku}' } },
         children: ['child'],
       },
     },
@@ -240,7 +239,7 @@ export const catalogFixtures = {
     elements: {
       root: {
         type: 'RepeaterItem',
-        props: { index: { $index: true }, itemLabel: 'Item ${/data/items/0/sku}' },
+        props: { index: { $index: true }, itemLabel: { $template: 'Item ${sku}' } },
         children: ['child'],
       },
       child: { type: 'Text', props: { name: 'sku', label: 'SKU', value: { $bindItem: 'sku' } } },
@@ -423,7 +422,27 @@ export const catalogFixtures = {
                 props: {},
               },
             ],
-            filters: [],
+            filters: [
+              {
+                type: 'custom',
+                name: 'advanced',
+                label: 'Advanced',
+                form: {
+                  spec: {
+                    $raw: {
+                      root: 'search',
+                      elements: {
+                        search: {
+                          type: 'Text',
+                          props: { name: 'term', value: { $bindState: '/data/term' } },
+                        },
+                      },
+                      state: { data: { term: 'seeded' } },
+                    },
+                  },
+                },
+              },
+            ],
             filtersLayout: 'dropdown',
             perPageOptions: [25],
             searchable: true,

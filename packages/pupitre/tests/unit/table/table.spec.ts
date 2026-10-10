@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import { schema } from '../../../index.js'
 import { DateTime, Settings } from 'luxon'
 import { tableDescriptor, tableData } from '../../../catalog/wire.js'
 import type { TableDefinition } from '../../../src/definition/table.js'
@@ -34,7 +35,7 @@ const table: TableDefinition = {
   filtersLayout: 'slideover',
   searchDebounce: 250,
   paginated: [10, 25, 'all'],
-  striped: false,
+  striped: true,
   defaultSort: { column: 'title', direction: 'asc' },
 }
 
@@ -68,6 +69,34 @@ test.group('table compiler', () => {
     assert.deepEqual(descriptor.perPageOptions, [10, 25, 'all'])
     assert.isTrue(descriptor.selectable)
     assert.equal(descriptor.layout, 'table')
+    assert.isTrue(descriptor.striped)
+  })
+
+  test('wraps custom filter sub-specs in $raw without changing catalog output', async ({
+    assert,
+  }) => {
+    const nested = {
+      root: 'search',
+      elements: {
+        search: { type: 'Text', props: { value: { $bindState: '/data/term' } } },
+      },
+    }
+    const descriptor = await compileTable(
+      {
+        ...table,
+        filters: table.filters.map((filter, index) =>
+          index === 3 ? { ...filter, form: [schema.text('term').toDefinition() as never] } : filter
+        ),
+      },
+      {
+        url: '/admin/posts',
+        id: 'posts',
+        bulkActions: [],
+        compileFilterForm: async () => nested as never,
+      }
+    )
+    assert.deepEqual(descriptor.filters[3]?.form?.spec, { $raw: nested })
+    assert.snapshot(descriptor.filters[3]).match()
   })
 })
 

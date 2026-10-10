@@ -134,7 +134,7 @@ export async function compileActionDescriptor(
         : action.builtin === 'delete' && action.context === 'record'
           ? 'delete'
           : 'post',
-    enabled,
+    enabled: enabled && (/^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url)),
     ...(action.icon ? { icon: action.icon } : {}),
     ...(action.variant ? { variant: action.variant } : {}),
     ...(action.color ? { color: action.color } : {}),
@@ -270,9 +270,9 @@ export async function executeBuiltinDelete<Model extends object>(
   await Model.transaction(async (trx) => {
     for (const record of records) {
       record.useTransaction(trx)
-      await resource.hooks.beforeDelete?.(record as Model, ctx)
+      await resource.hooks.beforeDelete?.(record as Model, ctx, trx)
       await record.delete()
-      await resource.hooks.afterDelete?.(record as Model, ctx)
+      await resource.hooks.afterDelete?.(record as Model, ctx, trx)
     }
   })
 }

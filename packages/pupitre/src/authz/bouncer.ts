@@ -3,7 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { ResourceRuntime } from '../manager.js'
 import type { PolicyClass } from '../definition/resource.js'
-import { E_PUPITRE_FORBIDDEN } from '../errors.js'
+import { E_PUPITRE_BOUNCER_NOT_INITIALIZED, E_PUPITRE_FORBIDDEN } from '../errors.js'
 import type { PupitreConfig } from '../define_config.js'
 
 const warnedResources = new Set<string>()
@@ -46,18 +46,17 @@ export async function authorizeResource(
   const config = (await app.container.make('pupitre.config').catch(() => undefined)) as
     PupitreConfig | undefined
   const policy = await policyFor(resource, config)
-  if (!policy || !bouncerContext.bouncer) {
+  if (!policy) {
     const identity = `${resource.definition.model}:${resource.slug}`
     if (!warnedResources.has(identity)) {
       warnedResources.add(identity)
       ctx.logger
         .child({ module: 'pupitre' })
-        .warn(
-          `No authorization policy or Bouncer context for resource "${resource.slug}"; allowing access`
-        )
+        .warn(`No authorization policy for resource "${resource.slug}"; allowing access`)
     }
     return true
   }
+  if (!bouncerContext.bouncer) throw new E_PUPITRE_BOUNCER_NOT_INITIALIZED()
   const bouncer = bouncerContext.bouncer as unknown as {
     with(policy: PolicyClass): { allows(ability: string, record?: LucidRow): Promise<boolean> }
   }

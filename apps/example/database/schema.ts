@@ -23,7 +23,22 @@ export class CategorySchema extends BaseModel {
 }
 
 export class PostSchema extends BaseModel {
-  static $columns = ['authorId', 'body', 'categoryId', 'cover', 'createdAt', 'id', 'isFeatured', 'items', 'publishedAt', 'slug', 'status', 'title', 'updatedAt', 'viewsCount'] as const
+  static $columns = [
+    'authorId',
+    'body',
+    'categoryId',
+    'cover',
+    'createdAt',
+    'id',
+    'isFeatured',
+    'items',
+    'publishedAt',
+    'slug',
+    'status',
+    'title',
+    'updatedAt',
+    'viewsCount',
+  ] as const
   $columns = PostSchema.$columns
   @column()
   declare authorId: number
@@ -56,7 +71,15 @@ export class PostSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'timezone', 'updatedAt'] as const
+  static $columns = [
+    'createdAt',
+    'email',
+    'fullName',
+    'id',
+    'password',
+    'timezone',
+    'updatedAt',
+  ] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

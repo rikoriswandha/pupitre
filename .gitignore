@@ -11,3 +11,4 @@ tmp/
 *.log
 playwright-report/
 test-results/
+packages/pupitre-ui/playwright/.cache/

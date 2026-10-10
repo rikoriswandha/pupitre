@@ -19,7 +19,9 @@ export function DateTime({ props, bindings }: Runtime) {
   const [value, setValue] = useBoundValue<string | null>(props.value ?? null, bindings?.value)
   const error = useFieldError(props.error, bindings?.value)
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)

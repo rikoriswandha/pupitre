@@ -23,21 +23,28 @@ export function ToggleButtons({ props, bindings }: Runtime) {
   const error = useFieldError(props.error, bindings?.value)
   const options = Array.isArray(props.options) ? props.options : []
   const selected = (option: string | number) =>
-    props.multiple ? Array.isArray(value) && value.includes(option) : value === option
+    props.multiple
+      ? Array.isArray(value) && value.some((item) => String(item) === String(option))
+      : String(value) === String(option)
   const toggle = (option: string | number) => {
     if (!props.multiple) {
-      setValue(option)
+      setValue(options.find((entry) => String(entry.value) === String(option))?.value ?? option)
       return
     }
     const selectedValues = Array.isArray(value) ? value : []
     setValue(
       selected(option)
-        ? selectedValues.filter((item) => item !== option)
-        : [...selectedValues, option]
+        ? selectedValues.filter((item) => String(item) !== String(option))
+        : [
+            ...selectedValues.filter((item) => String(item) !== String(option)),
+            options.find((entry) => String(entry.value) === String(option))?.value ?? option,
+          ]
     )
   }
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)

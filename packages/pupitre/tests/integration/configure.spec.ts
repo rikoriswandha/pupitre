@@ -5,13 +5,14 @@ import { test } from '@japa/runner'
 import Configure from '@adonisjs/core/commands/configure'
 import { AppFactory } from '@adonisjs/core/factories/app'
 import { configure } from '../../configure.js'
-
 const hostFiles = [
   'config/pupitre.ts',
   'start/pupitre.ts',
   'app/admin/panels/admin.ts',
   'inertia/pages/pupitre.tsx',
   'inertia/admin/registry.ts',
+  'vite.config.ts',
+  'inertia/css/app.css',
 ]
 
 test.group('Pupitre configure', () => {
@@ -54,6 +55,12 @@ export default defineConfig({
 })
 `
       )
+      await mkdir(join(root, 'inertia/css'), { recursive: true })
+      await writeFile(
+        join(root, 'vite.config.ts'),
+        `import { defineConfig } from 'vite'\n\nexport default defineConfig({ plugins: [] })\n`
+      )
+      await writeFile(join(root, 'inertia/css/app.css'), '@import "tailwindcss";\n')
       await writeFile(
         join(root, 'start/kernel.ts'),
         `import router from '@adonisjs/core/services/router'\n\nexport { router }\n`
@@ -79,8 +86,22 @@ export default defineConfig({
         { logger: cliLogger } as unknown as CommandArgs[3],
         {} as CommandArgs[4]
       )
+      const codemods = await command.createCodemods()
+      const installedPackages: { name: string; isDevDependency: boolean }[][] = []
+      codemods.installPackages = async (packages) => {
+        installedPackages.push(packages)
+        return true
+      }
+      command.createCodemods = async () => codemods
 
       await configure(command)
+      assert.deepEqual(installedPackages[0], [
+        { name: '@rikology/pupitre-react', isDevDependency: false },
+        { name: '@rikology/pupitre-ui', isDevDependency: false },
+        { name: 'tailwindcss', isDevDependency: true },
+        { name: '@tailwindcss/vite', isDevDependency: true },
+      ])
+
       const watchedFiles = [
         'adonisrc.ts',
         'package.json',
@@ -99,6 +120,10 @@ export default defineConfig({
       assert.equal((rcFile.match(/@rikology\/pupitre\/hooks/g) ?? []).length, 1)
       const packageJson = JSON.parse(first.find(([path]) => path === 'package.json')![1])
       assert.equal(packageJson.imports['#admin/*'], './app/admin/*.js')
+      const css = first.find(([path]) => path === 'inertia/css/app.css')![1]
+      assert.equal(css.split("@import '@rikology/pupitre-ui/styles.css';").length - 1, 1)
+      const vite = first.find(([path]) => path === 'vite.config.ts')![1]
+      assert.equal(vite.match(/tailwindcss\(\)/g)?.length, 1)
 
       await configure(command)
       const second = await Promise.all(

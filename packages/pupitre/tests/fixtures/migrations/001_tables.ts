@@ -19,6 +19,7 @@ export async function up(database: Database) {
   await createIfMissing(database, 'users', (table) => {
     table.increments('id')
     table.string('name').notNullable()
+    table.string('full_name').nullable()
     table.string('email').notNullable().unique()
     table.timestamps(true, true)
   })

@@ -52,6 +52,7 @@ export type CompileContext = {
   cache?: { key: string; store: SpecCache } | null
 }
 export type CompiledSchema = { spec: JsonRenderSpec; state: StateModel; catalogVersion: string }
+type SlotRequest = { options: CompileContext; form?: FormDescriptor }
 type BuildContext = {
   elements: Record<string, Element>
   state: Record<string, unknown>
@@ -60,6 +61,7 @@ type BuildContext = {
   tabState: Record<string, string>
   options: CompileContext
   data: Record<string, unknown>
+  numericFields: Record<string, true>
 }
 function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeDefinition[] {
   return typeof value === 'function' ? value(schemaFactory as SchemaNamespace) : (value ?? [])
@@ -203,6 +205,14 @@ function addStatic(
     },
   })
 }
+function addValueSlot(
+  build: BuildContext,
+  elementId: string,
+  prop: string,
+  evaluate: StaticSlot['evaluate']
+): void {
+  build.slots.push({ elementId, prop, evaluate })
+}
 
 function applyVisibility(
   node: Record<string, unknown>,
@@ -213,7 +223,11 @@ function applyVisibility(
   const hidden = typeof node.hidden === 'function'
   const closure = hidden ? node.hidden : node.visible
   if (typeof closure !== 'function') return
-  const result = liftClosure(closure, 'visible', { pathPrefix: '/data', inRepeater })
+  const result = liftClosure(closure, 'visible', {
+    pathPrefix: '/data',
+    inRepeater,
+    numericFields: build.numericFields,
+  })
   if (result.kind === 'static') addStatic(build, id, '@visible', closure, { invert: hidden })
   else
     build.elements[id].visible = hidden
@@ -256,6 +270,7 @@ async function addField(
         ? liftClosure(definition.itemLabel, 'label', {
             pathPrefix: `/data/${pointer(path)}`,
             inRepeater: true,
+            numericFields: build.numericFields,
           })
         : undefined
     const descriptor = {
@@ -268,41 +283,28 @@ async function addField(
       cloneable: definition.cloneable ?? false,
       addLabel: definition.addLabel,
       grid: definition.grid,
-      itemLabel:
-        liftedLabel && liftedLabel.kind !== 'static' ? liftedLabel.value : definition.itemLabel,
-      defaultItems: Array.isArray(getPath(build.data, path)) ? getPath(build.data, path) : [],
+      defaultItems: [],
     } as unknown as RepeaterDescriptor
     const statePath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
-    const itemPath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
-    const itemMoveValue = inRepeater ? { $item: node.name } : { $state: statePath }
+    if (typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static')
+      addStatic(build, templateId, 'itemLabel', definition.itemLabel)
+    // Item operations (remove/move/clone/collapse) need the runtime index and the
+    // absolute array path, which json-render action params cannot express inside
+    // nested repeat scopes; the Repeater UI performs them through its bound value.
     build.elements[templateId] = {
       type: 'RepeaterItem',
-      on: {
-        remove: [
-          { action: 'removeState', params: { statePath: itemPath, index: { $index: true } } },
-        ],
-        clone: [
-          {
-            action: 'pushState',
-            params: { statePath: itemPath, value: { $item: '', _key: '$id' } },
-          },
-        ],
-        move: [{ action: 'setState', params: { statePath: itemPath, value: itemMoveValue } }],
-        collapse: [
-          {
-            action: 'setState',
-            params: {
-              statePath: `/ui/repeater/${pointer(path)}/collapsed`,
-              value: {
-                $cond: { $state: `/ui/repeater/${pointer(path)}/collapsed` },
-                $then: false,
-                $else: true,
-              },
-            },
-          },
-        ],
+      props: {
+        index: { $index: true },
+        ...(definition.itemLabel !== undefined &&
+        (typeof definition.itemLabel !== 'function' || liftedLabel?.kind !== 'static')
+          ? {
+              itemLabel:
+                liftedLabel && liftedLabel.kind !== 'static'
+                  ? liftedLabel.value
+                  : definition.itemLabel,
+            }
+          : {}),
       },
-      props: { index: { $index: true } },
       children: templateChildren,
     }
     const repeatValue = inRepeater ? { $bindItem: node.name } : { $bindState: statePath }
@@ -318,6 +320,10 @@ async function addField(
       },
     }
     build.elements[id] = repeater
+    addValueSlot(build, id, 'descriptor', (data) => ({
+      ...descriptor,
+      defaultItems: Array.isArray(getPath(data, path)) ? getPath(data, path) : [],
+    }))
     return id
   }
   const type = fieldType[node.kind]
@@ -341,10 +347,11 @@ async function addField(
   if (node.readOnly !== undefined) props.readOnly = node.readOnly
   if (node.columnSpan !== undefined) props.columnSpan = node.columnSpan
   if (node.extraAttributes !== undefined) props.extraAttributes = node.extraAttributes
-  // Date inputs show wall-clock values and send ISO with the zone's offset back
-  // (ADR-0009); they need the resolved zone (component > panel/user).
   if (node.kind === 'date' || node.kind === 'dateTime' || node.kind === 'time')
-    props.timezone = node.timezone ?? build.options.timezone
+    addValueSlot(build, id, 'timezone', (_data, _record, _ctx, request) => {
+      const current = request as SlotRequest | undefined
+      return node.timezone ?? current?.options.timezone ?? build.options.timezone
+    })
   const excluded = new Set([
     'kind',
     'name',
@@ -416,6 +423,7 @@ async function addField(
     const lifted = liftClosure(closure, prop === 'placeholder' ? 'content' : prop, {
       pathPrefix: '/data',
       inRepeater,
+      numericFields: build.numericFields,
     })
     if (lifted.kind === 'static') addStatic(build, id, prop, closure)
     else props[prop] = lifted.value
@@ -425,6 +433,7 @@ async function addField(
     const lifted = liftClosure(node.afterStateUpdated, 'afterStateUpdated', {
       pathPrefix: '/data',
       inRepeater,
+      numericFields: build.numericFields,
     })
     if (lifted.kind === 'static') {
       const error = new E_PUPITRE_UNLIFTABLE_CLOSURE()
@@ -497,10 +506,16 @@ async function addNode(
     if (node.kind === 'placeholder' || node.kind === 'html') {
       const closure = node.content
       if (typeof closure === 'function') {
-        const lifted = liftClosure(closure, 'content', { pathPrefix: '/data', inRepeater })
-        if (lifted.kind === 'static')
-          addStatic(build, id, 'content', closure, { sanitize: node.kind === 'html' })
-        else props.content = lifted.value
+        if (node.kind === 'html') addStatic(build, id, 'content', closure, { sanitize: true })
+        else {
+          const lifted = liftClosure(closure, 'content', {
+            pathPrefix: '/data',
+            inRepeater,
+            numericFields: build.numericFields,
+          })
+          if (lifted.kind === 'static') addStatic(build, id, 'content', closure)
+          else props.content = lifted.value
+        }
       } else if (node.kind === 'html' && typeof props.content === 'string')
         props.content = sanitizeHtml(props.content)
     }
@@ -513,10 +528,8 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
   const entry = node as unknown as Record<string, unknown>
   const path = String(entry.name ?? '')
   const id = `f.${path}`
-  const value = getPath(build.options.record ?? {}, path)
   const props: Record<string, unknown> = {
     label: typeof entry.label === 'string' || entry.label === null ? entry.label : headline(path),
-    value: await formatEntryValue(entry, value, build.options),
   }
   for (const [key, prop] of Object.entries(entry))
     if (
@@ -525,9 +538,19 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
       typeof prop !== 'function'
     )
       props[key] = prop
-  if (typeof entry.url === 'function') addStatic(build, id, 'url', entry.url as Function)
+  addValueSlot(build, id, 'value', async (_data, record, _ctx, request) => {
+    const current = request as SlotRequest | undefined
+    return formatEntryValue(entry, getPath(record ?? {}, path), current?.options ?? build.options)
+  })
   if (entry.kind === 'badgeEntry' && entry.colors && typeof entry.colors === 'object')
-    props.color = (entry.colors as Record<string, unknown>)[String(value)]
+    addValueSlot(
+      build,
+      id,
+      'color',
+      (_data, record) =>
+        (entry.colors as Record<string, unknown>)[String(getPath(record ?? {}, path))]
+    )
+  if (typeof entry.url === 'function') addStatic(build, id, 'url', entry.url as Function)
   build.elements[id] = { type: infolistType[String(entry.kind)], props }
   return id
 }
@@ -633,12 +656,25 @@ async function compile(
     }
     const spec = structuredClone({ ...cached.spec, state })
     for (const slot of cached.slots) {
-      const value = await slot.evaluate(data, options.record ?? null, options.ctx)
+      const value = await slot.evaluate(data, options.record ?? null, options.ctx, {
+        options,
+        form,
+      })
       if (slot.prop === '@visible') spec.elements[slot.elementId]!.visible = value as never
       else spec.elements[slot.elementId]!.props[slot.prop] = value
     }
     validateOutput(spec)
     return { spec, state, catalogVersion }
+  }
+  const numericFields: Record<string, true> = {}
+  const pending = [...nodes]
+  while (pending.length) {
+    const current = pending.pop()!
+    if (current.kind === 'number') numericFields[current.name] = true
+    if (current.kind === 'repeater')
+      pending.push(...repeaterChildren((current as RepeaterFieldDefinition).schema))
+    if ('children' in current && Array.isArray(current.children))
+      pending.push(...(current.children as SchemaNodeDefinition[]))
   }
   const build: BuildContext = {
     elements: {},
@@ -648,10 +684,17 @@ async function compile(
     tabState: {},
     options,
     data,
+    numericFields,
   }
   const children: string[] = []
   for (const node of nodes) children.push(await addNode(node, build))
-  build.elements.root = { type: rootType, props: rootType === 'Form' ? { ...form } : {}, children }
+  build.elements.root = { type: rootType, props: {}, children }
+  if (form)
+    for (const [key, value] of Object.entries(form))
+      addValueSlot(build, 'root', key, (_data, _record, _ctx, request) => {
+        const current = request as SlotRequest | undefined
+        return current?.form?.[key as keyof FormDescriptor] ?? value
+      })
   const ui =
     build.state.ui && typeof build.state.ui === 'object'
       ? (build.state.ui as Record<string, unknown>)
@@ -663,11 +706,20 @@ async function compile(
     ui: { tabs: build.tabState, ...ui },
   }
   const baseSpec = { root: 'root', elements: build.elements, state } as JsonRenderSpec
-  if (cacheOption)
-    cacheOption.store.set(cacheOption.key, { spec: structuredClone(baseSpec), slots: build.slots })
+  if (cacheOption) {
+    const cacheSpec = structuredClone({
+      ...baseSpec,
+      state: {
+        ...state,
+        data: {},
+        meta: { record: null, dirty: false, submitting: false },
+      },
+    })
+    cacheOption.store.set(cacheOption.key, { spec: cacheSpec, slots: build.slots })
+  }
   const spec = structuredClone(baseSpec)
   for (const slot of build.slots) {
-    const value = await slot.evaluate(data, options.record ?? null, options.ctx)
+    const value = await slot.evaluate(data, options.record ?? null, options.ctx, { options, form })
     if (slot.prop === '@visible') spec.elements[slot.elementId]!.visible = value as never
     else spec.elements[slot.elementId]!.props[slot.prop] = value
   }

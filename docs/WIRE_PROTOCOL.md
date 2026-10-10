@@ -2,7 +2,7 @@
 
 Kontrak antara `@rikology/pupitre` (server) dan `@rikology/pupitre-react` (client). Semua bentuk di sini dikunci oleh Zod di `@rikology/pupitre/catalog` dan diuji snapshot di kedua sisi. Perubahan apa pun di dokumen ini wajib menaikkan `catalogVersion`.
 
-Format spec mengikuti `@json-render/core` 0.21 (flat `root` + `elements`, ekspresi `$state`/`$bindState`/`$cond`/`$template`/`$computed`, `visible`, `watch`, `repeat`). Pupitre tidak menambah sintaks ekspresi baru.
+Format spec mengikuti `@json-render/core` 0.21 (flat `root` + `elements`, ekspresi `$state`/`$bindState`/`$cond`/`$template`/`$computed`, `visible`, `watch`, `repeat`). Pupitre tidak menambah sintaks ekspresi; `$raw` adalah wrapper escape khusus untuk sub-spec di prop descriptor, bukan ekspresi state.
 
 ## 1. Props halaman Inertia
 
@@ -59,9 +59,11 @@ Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeate
 
 - ID elemen: `f.<path>` untuk field (`f.items.sku` untuk field di dalam repeater template), `l.<n>` untuk layout, `a.<name>` untuk action di dalam form, `root` untuk `Form`/`Infolist`.
 - Field selalu punya `props.name` (path tanpa prefix) dan `props.value: { $bindState: '/data/<path>' }` (atau `$bindItem` di dalam repeat), `props.error: { $state: '/errors/<path>' }`.
-- Repeater: elemen `Repeater` dengan `props.descriptor: RepeaterDescriptor`, `props.value` terikat ke array (`$bindState` di level atas, `$bindItem` saat bersarang), `repeat: { statePath, key: '_key' }`, dan satu anak template `RepeaterItem` (`props.index: { $index: true }`) yang anak-anaknya adalah field item. Tiap item di state membawa `_key` (ditambahkan compiler; item baru memakai `pushState` dengan `_key: '$id'`); VineJS membuang `_key` saat validasi. Tambah item = event `add` → `pushState`; hapus/pindah/klon/collapse dikerjakan komponen UI lewat nilai array yang terikat, karena param action json-render tidak bisa menyatakan path array induk di dalam scope repeat bersarang. Lihat [SPIKE_M0.md](./SPIKE_M0.md) §7.
+- Repeater: elemen `Repeater` dengan `props.descriptor: RepeaterDescriptor`, `props.value` terikat ke array (`$bindState` di level atas, `$bindItem` saat bersarang), `repeat: { statePath, key: '_key' }`, dan satu anak template `RepeaterItem` (`props.index: { $index: true }`, opsional `props.itemLabel` dievaluasi dalam scope item) yang anak-anaknya adalah field item. Tiap item di state membawa `_key` (ditambahkan compiler; item baru memakai `pushState` dengan `_key: '$id'`); VineJS membuang `_key` saat validasi. Tambah item = event `add` → `pushState`; hapus/pindah/klon/collapse dikerjakan komponen UI lewat nilai array yang terikat, karena param action json-render tidak bisa menyatakan path array induk di dalam scope repeat bersarang. Lihat [SPIKE_M0.md](./SPIKE_M0.md) §7.
 - Tabs: elemen `Tabs` dengan `props.tabs` dan `props.active: { $bindState: '/ui/tabs/<id>' }`, anak-anaknya elemen `Tab` (urutan sama dengan `props.tabs`); semua panel tetap ter-mount, yang tidak aktif disembunyikan. Named slots tidak dipakai karena nama slot harus statis di catalog (SPIKE Q4).
 - `watch` dipasang pada elemen field yang `.live()` dan punya `afterStateUpdated`: `{ '/data/<path>': [{ action: 'setState', params: { statePath, value: <ekspresi terangkat> } }] }`. Closure yang tidak bisa diangkat ke `setState` + `$state`/`$computed` ditolak saat compile (`E_PUPITRE_UNLIFTABLE_CLOSURE`) sampai `live({ server: true })` + `evaluate` tersedia di M3 (WP31).
+
+Sub-spec yang tertanam di prop descriptor memakai `{ $raw: spec }` agar `$bindState`/`$template` di dalamnya tidak dievaluasi terhadap store halaman luar; renderer membuka wrapper sebelum spec diteruskan ke komponen. Hanya gunakan pada batas sub-spec, bukan pada ekspresi komponen biasa.
 
 ## 4. Action descriptor
 

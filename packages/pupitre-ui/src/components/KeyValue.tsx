@@ -1,8 +1,9 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Button, Field, FieldError, Input } from '../primitives/index.js'
+import { useLiveField } from './use_live_field.js'
 
 type Props = Infer<typeof components.KeyValue.props>
 type Runtime = {
@@ -13,40 +14,54 @@ type Runtime = {
   bindings?: Record<string, string | undefined>
   loading?: boolean
 }
-type Entry = { key: string; value: string }
+type Entry = { id: string; key: string; value: string }
 
 export function KeyValue({ props, bindings }: Runtime) {
-  const [value, setValue] = useBoundValue(props.value ?? {}, bindings?.value)
-  const [newEntry, setNewEntry] = useState<Entry>({ key: '', value: '' })
-  const error = useFieldError(props.error, bindings?.value)
-  const entries: Entry[] =
-    value && typeof value === 'object' && !Array.isArray(value)
-      ? Object.entries(value).map(([key, item]) => ({ key, value: String(item ?? '') }))
+  const initial = props.value ?? {}
+  const [boundValue, setValue] = useBoundValue(initial, bindings?.value)
+  const [, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
+  const initialRows =
+    initial && typeof initial === 'object' && !Array.isArray(initial)
+      ? Object.entries(initial).map(([key, item], index) => ({
+          id: `row-${index}`,
+          key,
+          value: String(item ?? ''),
+        }))
       : []
+  const [entries, setEntries] = useState<Entry[]>(initialRows)
+  const nextId = useRef(initialRows.length)
+  const [newEntry, setNewEntry] = useState<Entry>({ id: 'new', key: '', value: '' })
+  const error = useFieldError(props.error, bindings?.value)
   function update(index: number, field: keyof Entry, next: string) {
     const nextEntries = entries.map((entry, i) => ({
+      ...entry,
       key: i === index && field === 'key' ? next : entry.key,
       value: i === index && field === 'value' ? next : entry.value,
     }))
-    setValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
+    setEntries(nextEntries)
+    const keys = nextEntries.map((entry) => entry.key.trim())
+    if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
+    changeValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
   }
   function addEntry() {
-    if (!newEntry.key.trim()) return
-    setValue({
-      ...Object.fromEntries(entries.map(({ key, value: item }) => [key, item])),
-      [newEntry.key]: newEntry.value,
-    })
-    setNewEntry({ key: '', value: '' })
+    if (!newEntry.key.trim() || entries.some((entry) => entry.key === newEntry.key)) return
+    const nextEntries = [...entries, { ...newEntry, id: `row-${nextId.current++}` }]
+    setEntries(nextEntries)
+    changeValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
+    setNewEntry({ id: 'new', key: '', value: '' })
   }
   function moveEntry(index: number, direction: -1 | 1) {
     const nextEntries = [...entries]
     const destination = index + direction
     if (destination < 0 || destination >= nextEntries.length) return
     ;[nextEntries[index], nextEntries[destination]] = [nextEntries[destination], nextEntries[index]]
-    setValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
+    setEntries(nextEntries)
+    changeValue(Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item])))
   }
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
@@ -71,7 +86,7 @@ export function KeyValue({ props, bindings }: Runtime) {
         )}
         <div className="grid gap-2">
           {entries.map((entry, index) => (
-            <div key={`${index}-${entry.key}`} className="flex gap-2">
+            <div key={entry.id} className="flex gap-2">
               <Input
                 {...props.extraAttributes}
                 aria-label={props.keyLabel ?? 'Key'}
@@ -83,6 +98,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                 disabled={props.disabled || props.readOnly}
                 placeholder={props.keyPlaceholder}
                 onChange={(event) => update(index, 'key', event.currentTarget.value)}
+                onBlur={() => commitValue()}
                 className="min-w-0 flex-1"
               />
               <Input
@@ -96,6 +112,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                 disabled={props.disabled || props.readOnly}
                 placeholder={props.valuePlaceholder}
                 onChange={(event) => update(index, 'value', event.currentTarget.value)}
+                onBlur={() => commitValue()}
                 className="min-w-0 flex-1"
               />
               {props.reorderable && (
@@ -126,15 +143,13 @@ export function KeyValue({ props, bindings }: Runtime) {
                   variant="outline"
                   disabled={props.disabled}
                   aria-label={`Remove ${entry.key}`}
-                  onClick={() =>
-                    setValue(
-                      Object.fromEntries(
-                        entries
-                          .filter((_, i) => i !== index)
-                          .map(({ key, value: item }) => [key, item])
-                      )
+                  onClick={() => {
+                    const nextEntries = entries.filter((_, i) => i !== index)
+                    setEntries(nextEntries)
+                    changeValue(
+                      Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item]))
                     )
-                  }
+                  }}
                 >
                   Remove
                 </Button>

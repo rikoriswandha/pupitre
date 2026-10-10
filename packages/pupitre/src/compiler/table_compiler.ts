@@ -114,7 +114,7 @@ export async function compileTable(
   for (const filter of table.filters) {
     const form =
       filter.kind === 'custom' && filter.form?.length
-        ? { form: { spec: await options.compileFilterForm(filter.form) } }
+        ? { form: { spec: { $raw: await options.compileFilterForm(filter.form) } as never } }
         : {}
     if (filter.kind === 'select') {
       filters.push({
@@ -157,6 +157,7 @@ export async function compileTable(
     searchable: table.columns.some((column) => column.kind !== 'fragment' && column.searchable),
     searchDebounce: table.searchDebounce,
     selectable: options.bulkActions.length > 0,
+    striped: table.striped,
     bulkActions: options.bulkActions,
     ...(emptyState ? { emptyState } : {}),
     layout: 'table',

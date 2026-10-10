@@ -12,9 +12,10 @@ import { buildPageProps } from '../page_props.js'
 import { isPupitreActionRequest, actionJson, errorJson, setPupitreFlash } from '../responses.js'
 import type { ResourceRuntime } from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
-import type { FieldDefinitionUnion } from '../../definition/schema.js'
+import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../../definition/schema.js'
 import { resolveFileUrl, cleanupReplacedFiles } from '../../storage/index.js'
 import type { UploadField } from '../../storage/index.js'
+import { findUploadField } from '../../storage/upload_validation.js'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import { createSpecCacheKey, SpecCache } from '../../compiler/cache.js'
 import type { PupitreConfig } from '../../define_config.js'
@@ -30,6 +31,31 @@ async function resource(ctx: HttpContext): Promise<ResourceRuntime> {
   const result = manager.findResource(ctx.pupitre.panel.id, ctx.params.slug)
   if (!result) throw new Error(`Unknown Pupitre resource "${ctx.params.slug}"`)
   return result
+}
+
+function setRedirectFlash(ctx: HttpContext, flash: unknown) {
+  if (!isPupitreActionRequest(ctx) && ctx.request.accepts(['json', 'html']) !== 'json')
+    setPupitreFlash(ctx, flash)
+}
+
+function pruneUploads(ctx: HttpContext, resourceSlug: string) {
+  const uploads = (ctx.session.get('pupitre.uploads') ?? []) as { resource: string }[]
+  ctx.session.put(
+    'pupitre.uploads',
+    uploads.filter((upload) => upload.resource !== resourceSlug)
+  )
+}
+
+function uploadFields(nodes: SchemaNodeDefinition[]): UploadField[] {
+  const fields: UploadField[] = []
+  for (const node of nodes) {
+    if (node.kind === 'fileUpload') fields.push(node as UploadField)
+    if ('children' in node && Array.isArray(node.children))
+      fields.push(...uploadFields(node.children))
+    if (node.kind === 'repeater' && Array.isArray(node.schema))
+      fields.push(...uploadFields(node.schema as SchemaNodeDefinition[]))
+  }
+  return fields
 }
 
 function keyName(model: LucidModel): string {
@@ -96,10 +122,14 @@ async function schemaContext(
       upload: `${ctx.pupitre.panel.path}/_pupitre/upload`,
       delete: `${ctx.pupitre.panel.path}/_pupitre/upload`,
     },
-    resolveFileUrl: (key: string, field: FieldDefinitionUnion) =>
-      field.kind === 'fileUpload' || field.kind === 'richEditor'
-        ? resolveFileUrl(key, field)
-        : Promise.resolve(null),
+    resolveFileUrl: (key: string, field: FieldDefinitionUnion) => {
+      const uploadField = findUploadField(target.definition.form, field.name)
+      return uploadField
+        ? resolveFileUrl(key, uploadField)
+        : field.kind === 'fileUpload'
+          ? resolveFileUrl(key, field as UploadField)
+          : Promise.resolve(null)
+    },
     cache,
   }
 }
@@ -183,11 +213,19 @@ export default class ResourceController {
       elements: { table: { type: 'DataTable', props: { descriptor } } },
     } as JsonRenderSpec
     const scopedQuery = target.model.query()
+    for (const column of table.columns) {
+      if (column.kind !== 'fragment' && column.name.includes('.'))
+        scopedQuery.preload(column.name.split('.')[0]! as never)
+    }
     target.definition.scope?.(scopedQuery, ctx)
     const queryResult = applyTableQuery(scopedQuery, table, ctx.request.qs(), {
       ctx,
       tabs: pageConfig?.tabs,
     })
+    for (const column of table.columns) {
+      if (column.kind !== 'fragment' && column.name.includes('.'))
+        queryResult.query.preload(column.name.split('.')[0]! as never)
+    }
     let rows: LucidRow[]
     let meta: {
       total: number
@@ -230,8 +268,15 @@ export default class ResourceController {
       locale: ctx.pupitre.locale,
       timezone: ctx.pupitre.timezone,
       normalized: queryResult.normalized,
-      rowActions: (record) => compileActions(ctx, target, definition.actions?.row ?? [], record),
       rowUrl: (record) => rowUrls.get(record),
+      rowActions: (record) => compileActions(ctx, target, definition.actions?.row ?? [], record),
+      resolveFileUrl: (key, column) => {
+        const field =
+          column.kind === 'fragment'
+            ? undefined
+            : findUploadField(target.definition.form, column.name)
+        return field ? resolveFileUrl(key, field) : Promise.resolve(null)
+      },
     })
     return render(
       ctx,
@@ -282,7 +327,7 @@ export default class ResourceController {
 
   async edit(ctx: HttpContext) {
     const target = await resource(ctx)
-    await ensureAuthorized(ctx, target, 'update')
+    await ensureAuthorized(ctx, target, 'viewAny')
     const record = await findRecord(ctx, target)
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'update', record)
@@ -312,6 +357,9 @@ export default class ResourceController {
         state: compiled.state,
         title: String(data[target.definition.recordTitle ?? keyName(target.model)] ?? target.label),
         recordId: id,
+        recordLabel: String(
+          data[target.definition.recordTitle ?? keyName(target.model)] ?? target.label
+        ),
         headerActions: actions,
       }),
       pageConfig.component
@@ -320,7 +368,7 @@ export default class ResourceController {
 
   async view(ctx: HttpContext) {
     const target = await resource(ctx)
-    await ensureAuthorized(ctx, target, 'view')
+    await ensureAuthorized(ctx, target, 'viewAny')
     const record = await findRecord(ctx, target)
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'view', record)
@@ -341,6 +389,10 @@ export default class ResourceController {
             target.label
         ),
         recordId: id,
+        recordLabel: String(
+          recordValue(record, target.definition.recordTitle ?? keyName(target.model)) ??
+            target.label
+        ),
         headerActions: actions,
       }),
       target.definition.pages.view?.component
@@ -364,18 +416,20 @@ export default class ResourceController {
       throw error
     }
     const saved = await target.model.transaction(async (trx) => {
-      let data = (await target.definition.hooks.mutateBeforeCreate?.(validated, ctx)) ?? validated
-      data = (await target.definition.hooks.mutateBeforeSave?.(data, null, ctx)) ?? data
-      await target.definition.hooks.beforeCreate?.(data, ctx)
-      await target.definition.hooks.beforeSave?.(null, data, ctx)
+      let data =
+        (await target.definition.hooks.mutateBeforeCreate?.(validated, ctx, trx)) ?? validated
+      data = (await target.definition.hooks.mutateBeforeSave?.(data, null, ctx, trx)) ?? data
+      await target.definition.hooks.beforeCreate?.(data, ctx, trx)
+      await target.definition.hooks.beforeSave?.(null, data, ctx, trx)
       const record = target.definition.handlers.create
-        ? await target.definition.handlers.create(data, ctx)
+        ? await target.definition.handlers.create(data, ctx, trx)
         : await target.model.create(data, { client: trx })
       ;(record as LucidRow).useTransaction(trx)
-      await target.definition.hooks.afterCreate?.(record, ctx)
-      await target.definition.hooks.afterSave?.(record, ctx)
+      await target.definition.hooks.afterCreate?.(record, ctx, trx)
+      await target.definition.hooks.afterSave?.(record, ctx, trx)
       return record
     })
+    pruneUploads(ctx, target.slug)
     const redirectTo = target.definition.pages.create?.redirectTo ?? 'edit'
     const savedId = recordValue(saved, keyName(target.model)) as string | number
     const redirect =
@@ -384,15 +438,15 @@ export default class ResourceController {
         : redirectTo === 'view'
           ? target.urls.view(savedId)
           : target.urls.edit(savedId)
-    setPupitreFlash(ctx, [{ type: 'success', title: 'Created' }])
-    if (isPupitreActionRequest(ctx))
-      return actionJson(ctx, { flash: [{ type: 'success', title: 'Created' }], redirect })
+    const flash = [{ type: 'success' as const, title: 'Created' }]
+    setRedirectFlash(ctx, flash)
+    if (isPupitreActionRequest(ctx)) return actionJson(ctx, { flash, redirect })
     return ctx.response.redirect(redirect)
   }
 
   async update(ctx: HttpContext) {
     const target = await resource(ctx)
-    await ensureAuthorized(ctx, target, 'update')
+    await ensureAuthorized(ctx, target, 'viewAny')
     const record = await findRecord(ctx, target)
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'update', record)
@@ -410,49 +464,43 @@ export default class ResourceController {
       if (handleActionValidation(ctx, error)) return
       throw error
     }
-    const fileFields = target.definition.form.filter(
-      (field): field is UploadField => field.kind === 'fileUpload' || field.kind === 'richEditor'
-    )
+    const fileFields = uploadFields(target.definition.form)
     const oldValues = new Map(
       fileFields.map((field) => [field.name, recordValue(record, field.name)])
     )
     await target.model.transaction(async (trx) => {
       const data =
-        (await target.definition.hooks.mutateBeforeSave?.(validated, record, ctx)) ?? validated
-      await target.definition.hooks.beforeSave?.(record, data, ctx)
+        (await target.definition.hooks.mutateBeforeSave?.(validated, record, ctx, trx)) ?? validated
+      await target.definition.hooks.beforeSave?.(record, data, ctx, trx)
       record.useTransaction(trx)
       const saved = target.definition.handlers.update
-        ? ((await target.definition.handlers.update(record, data, ctx)) as LucidRow)
+        ? ((await target.definition.handlers.update(record, data, ctx, trx)) as LucidRow)
         : ((await record.merge(data).save()) as LucidRow)
       saved.useTransaction(trx)
-      await target.definition.hooks.afterSave?.(saved, ctx)
+      await target.definition.hooks.afterSave?.(saved, ctx, trx)
     })
+    pruneUploads(ctx, target.slug)
     for (const field of fileFields) {
       await cleanupReplacedFiles(field, oldValues.get(field.name), recordValue(record, field.name))
     }
-    setPupitreFlash(ctx, [{ type: 'success', title: 'Saved' }])
+    const flash = [{ type: 'success' as const, title: 'Saved' }]
+    setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx))
-      return actionJson(ctx, {
-        flash: [{ type: 'success', title: 'Saved' }],
-        redirect: target.urls.edit(ctx.params.id),
-      })
+      return actionJson(ctx, { flash, redirect: target.urls.edit(ctx.params.id) })
     return ctx.response.redirect(target.urls.edit(ctx.params.id))
   }
 
   async destroy(ctx: HttpContext) {
     const target = await resource(ctx)
-    await ensureAuthorized(ctx, target, 'delete')
+    await ensureAuthorized(ctx, target, 'viewAny')
     const record = await findRecord(ctx, target)
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'delete', record)
     await executeBuiltinDelete(target.definition, [record], ctx)
-    setPupitreFlash(ctx, [{ type: 'success', title: 'Deleted' }])
+    const flash = [{ type: 'success' as const, title: 'Deleted' }]
+    setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx))
-      return actionJson(ctx, {
-        flash: [{ type: 'success', title: 'Deleted' }],
-        redirect: target.urls.list,
-        deselect: true,
-      })
+      return actionJson(ctx, { flash, redirect: target.urls.list, deselect: true })
     return ctx.response.redirect(target.urls.list)
   }
 }

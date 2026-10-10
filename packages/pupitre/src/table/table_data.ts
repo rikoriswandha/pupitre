@@ -16,7 +16,7 @@ export type TableDataOptions = {
   rowActions(record: LucidRow): Promise<ActionDescriptor[]>
   rowUrl(record: LucidRow): string | undefined
   normalized: Record<string, unknown>
-  resolveFileUrl?: (key: string) => Promise<string | null>
+  resolveFileUrl?: (key: string, column: TableColumnDefinition) => Promise<string | null>
 }
 
 function valueAt(serialized: Record<string, unknown>, path: string): unknown {
@@ -51,7 +51,7 @@ async function formatCell(
   }
   if (column.kind === 'image') {
     if (typeof value !== 'string' || !value) return value
-    return options.resolveFileUrl ? await options.resolveFileUrl(value) : value
+    return options.resolveFileUrl ? await options.resolveFileUrl(value, column) : value
   }
   if (column.kind !== 'text') return value
   const context = { locale: options.locale, timezone: options.timezone }

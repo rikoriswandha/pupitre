@@ -1,5 +1,7 @@
 import { test } from '@japa/runner'
 import { renderToString } from 'react-dom/server'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { createPupitreStore } from '../src/renderer/store.js'
 import { mapErrors } from '../src/bridge/errors.js'
 import { setRouter } from '../src/bridge/inertia.js'
@@ -95,7 +97,9 @@ test.group('Pupitre React bridge', () => {
     const calls: Array<{ method: string; args: unknown[] }> = []
     const restoreRouter = setRouter(fakeRouter(calls))
     const location = globalThis.window as unknown as { happyDOM: { setURL(url: string): void } }
-    location.happyDOM.setURL('http://localhost/admin/posts?q=notes&filters%5Bstatus%5D=draft')
+    location.happyDOM.setURL(
+      'http://localhost/admin/posts?page=3&perPage=10&q=notes&filters%5Bstatus%5D=draft'
+    )
     let controls: ReturnType<typeof useTable> | undefined
     const runtime = {
       store: createPupitreStore({}).store,
@@ -129,7 +133,8 @@ test.group('Pupitre React bridge', () => {
       controls?.sort('title')
       controls?.setFilter('status', 'published')
       controls?.resetFilters()
-      const [sorted, filtered, reset] = visited()
+      controls?.setPerPage(50)
+      const [sorted, filtered, reset, perPage] = visited()
       assert.equal(sorted?.pathname, '/admin/posts')
       assert.equal(sorted?.searchParams.get('sort'), 'title')
       assert.equal(sorted?.searchParams.get('filters[status]'), 'draft')
@@ -137,12 +142,55 @@ test.group('Pupitre React bridge', () => {
       assert.equal(filtered?.searchParams.get('q'), 'notes')
       assert.isNull(reset?.searchParams.get('filters[status]'))
       assert.equal(reset?.searchParams.get('q'), 'notes')
+      assert.isNull(filtered?.searchParams.get('page'))
+      assert.equal(perPage?.searchParams.get('page'), '1')
     } finally {
       restoreRouter()
       location.happyDOM.setURL('about:blank')
     }
   })
 
+  test('table selection is cleared on query changes', async ({ assert }) => {
+    const calls: Array<{ method: string; args: unknown[] }> = []
+    const restoreRouter = setRouter(fakeRouter(calls))
+    const location = globalThis.window as unknown as { happyDOM: { setURL(url: string): void } }
+    location.happyDOM.setURL('http://localhost/admin/posts?page=1')
+    let controls: ReturnType<typeof useTable> | undefined
+    const runtime = {
+      store: createPupitreStore({}).store,
+      page,
+      data: { rows: [], query: {} },
+      panel: {},
+      functions: {},
+      runAction: async () => {},
+      submitForm: () => {},
+      upload: async () => [],
+      toast: () => {},
+    } as unknown as RuntimeContextValue
+    const container = document.createElement('div')
+    const root = createRoot(container)
+    function Consumer() {
+      controls = useTable(tableDescriptor)
+      return <output>{controls.selected.join(',')}</output>
+    }
+    try {
+      await act(async () => {
+        root.render(
+          <RuntimeContext.Provider value={runtime}>
+            <Consumer />
+          </RuntimeContext.Provider>
+        )
+      })
+      await act(async () => controls?.setSelected([1, 2]))
+      assert.equal(container.textContent, '1,2')
+      await act(async () => controls?.setPage(2))
+      assert.equal(container.textContent, '')
+    } finally {
+      await act(async () => root.unmount())
+      restoreRouter()
+      location.happyDOM.setURL('about:blank')
+    }
+  })
   test('renders the Pupitre page without touching browser globals on the server', ({ assert }) => {
     assert.doesNotThrow(() => renderToString(<Pupitre registry={{} as never} />))
   })

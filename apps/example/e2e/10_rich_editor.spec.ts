@@ -20,8 +20,7 @@ pupitreTest('rich editor persists formatted sanitized HTML', async ({ admin, pag
   })
   const saved = page.waitForResponse(
     (response) =>
-      response.request().method() === 'PUT' &&
-      new URL(response.url()).pathname === '/admin/posts/1'
+      response.request().method() === 'PUT' && new URL(response.url()).pathname === '/admin/posts/1'
   )
   await page.getByRole('button', { name: 'Save' }).click()
   await saved

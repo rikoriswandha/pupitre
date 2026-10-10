@@ -5,5 +5,5 @@
     "declaration": true,
     "noEmit": false
   },
-  "exclude": ["build", "node_modules", "bin", "tests", "tsdown.config.ts"]
+  "exclude": ["build", "node_modules", "bin", "tests", "playwright", "playwright-ct.config.ts", "scripts", "tsdown.config.ts"]
 }

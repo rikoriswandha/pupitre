@@ -1,24 +1,10 @@
+import { kebab, pluralize } from '../definition/shared.js'
 import type { IndexGenerator } from '@adonisjs/assembler/index_generator'
-import type { FileBuffer } from '@adonisjs/assembler'
-import type { VirtualFileSystem } from '@adonisjs/assembler'
+import type { FileBuffer, VirtualFileSystem } from '@adonisjs/assembler'
 
 interface IndexAdminOptions {
   source?: string
   output?: string
-}
-
-function toKebabCase(value: string) {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[^a-zA-Z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .toLowerCase()
-}
-
-function pluralize(value: string) {
-  if (/(s|x|z|ch|sh)$/.test(value)) return `${value}es`
-  if (/[^aeiou]y$/.test(value)) return `${value.slice(0, -1)}ies`
-  return `${value}s`
 }
 
 function resourceKey(filePath: string) {
@@ -26,7 +12,7 @@ function resourceKey(filePath: string) {
     .split('/')
     .pop()!
     .replace(/\.(?:[cm]?[jt]sx?)$/, '')
-  return pluralize(toKebabCase(filename.replace(/_resource$/, '')))
+  return pluralize(kebab(filename.replace(/_resource$/i, '')))
 }
 
 function panelKey(filePath: string) {

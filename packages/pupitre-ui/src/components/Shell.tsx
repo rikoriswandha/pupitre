@@ -1,7 +1,8 @@
 import { Menu } from '@base-ui/react/menu'
 import { useVisit } from '@rikology/pupitre-react'
 import type { ShellProps } from '@rikology/pupitre-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Icon } from '../icons.js'
 import { ActionButton } from './ActionButton.js'
 export function Shell({
@@ -15,17 +16,45 @@ export function Shell({
   children,
 }: ShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [dark, setDark] = useState(false)
   const visit = useVisit()
   const panelId = panel.id || 'Pupitre'
   const panelPath = panel.path || '/'
   const panelBrand = panel.brand
+  const theme = panel.theme ?? {}
+  const darkMode = theme.darkMode ?? 'system'
   const userName = user?.name ?? ''
   const userEmail = user?.email ?? ''
   const userAvatar = user?.avatarUrl
   const logoutUrl = panel.logoutUrl
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const update = () => setDark(darkMode === 'dark' || (darkMode === 'system' && media.matches))
+    update()
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [darkMode])
+  useEffect(() => {
+    if (!panelBrand?.favicon || typeof document === 'undefined') return
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (!link) {
+      link = document.createElement('link')
+      link.rel = 'icon'
+      document.head.append(link)
+    }
+    link.href = panelBrand.favicon
+  }, [panelBrand?.favicon])
+  const style = Object.fromEntries(
+    Object.entries(theme)
+      .filter(([key]) => key.startsWith('--') || key === 'primary')
+      .map(([key, value]) => [key === 'primary' ? '--primary' : key, value])
+  ) as CSSProperties
 
   return (
-    <div className="min-h-screen bg-background text-foreground md:grid md:grid-cols-[16rem_minmax(0,1fr)]">
+    <div
+      className={`min-h-screen bg-background text-foreground md:grid md:grid-cols-[16rem_minmax(0,1fr)] ${dark ? 'dark' : ''}`}
+      style={style}
+    >
       <button
         type="button"
         className="fixed left-3 top-3 z-40 inline-flex size-10 items-center justify-center rounded-md border border-border bg-background md:hidden"

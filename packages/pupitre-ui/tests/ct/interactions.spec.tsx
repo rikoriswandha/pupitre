@@ -1,14 +1,24 @@
 import { test, expect } from '@playwright/experimental-ct-react'
 import {
+  DirtyFailureStory,
   ActionStory,
   ConfirmStory,
   FormStory,
   DataTableStory,
+  RepeaterItemLabelStory,
   RepeaterStory,
   SelectStory,
   TabsStory,
   UploadStory,
   RichEditorStory,
+  CustomFilterStory,
+  KeyValueStory,
+  LiveBlurStory,
+  NativeClearableSelectStory,
+  NumericSelectStory,
+  PersistedUploadStory,
+  RepeaterErrorStory,
+  TextSuffixStory,
 } from './stories/catalog.story.js'
 
 test('Select updates its bound state', async ({ mount, page }) => {
@@ -33,6 +43,12 @@ test('Repeater adds two rows and retains the second typed value after removing t
   await view.getByRole('button', { name: 'Remove' }).first().click()
   await expect(view.locator('input')).toHaveCount(1)
   await expect(view.locator('input').first()).toHaveValue('second typed')
+})
+
+test('Repeater item label templates resolve in each item scope', async ({ mount }) => {
+  const view = await mount(<RepeaterItemLabelStory />)
+  await expect(view.getByRole('heading', { name: 'SKU A-100' })).toBeVisible()
+  await expect(view.getByRole('heading', { name: 'SKU B-200' })).toBeVisible()
 })
 
 test('DataTable header sorting visits the sorted URL and refetches only data', async ({
@@ -135,4 +151,107 @@ test('Form submit button sends the bound data with the form method and url', asy
     url: '/admin/posts/4',
     data: { title: 'Published title' },
   })
+})
+test('KeyValue key edits retain input focus', async ({ mount }) => {
+  const view = await mount(<KeyValueStory />)
+  const key = view.getByRole('textbox', { name: 'Metadata' }).first()
+  await key.fill('alpha-renamed')
+  await expect(key).toBeFocused()
+})
+
+test('Select matches a numeric record value to its string option', async ({ mount }) => {
+  const view = await mount(<NumericSelectStory />)
+  await expect(view.getByRole('combobox')).toContainText('One')
+})
+
+test('FileUpload clears persisted values locally and permits single-file replacement', async ({
+  mount,
+  page,
+}) => {
+  await page.route('**/upload', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        key: 'new-file.png',
+        url: '/new-file.png',
+        name: 'new-file.png',
+        size: 1,
+        mime: 'image/png',
+      }),
+    })
+  })
+  const view = await mount(<PersistedUploadStory />)
+  await view.getByRole('button', { name: 'Remove persisted-cover.png' }).click()
+  await expect(view.getByText('persisted-cover.png')).toHaveCount(0)
+  await expect(view.getByText(/Upload removal failed/)).toHaveCount(0)
+  const input = view.locator('input[type="file"]')
+  await expect(input).toBeEnabled()
+  await input.setInputFiles({
+    name: 'replacement.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from('x'),
+  })
+  await expect(view.getByText('new-file.png')).toBeVisible()
+})
+
+test('live onBlur fields update bound state only after blur', async ({ mount }) => {
+  const view = await mount(<LiveBlurStory />)
+  const input = view.getByLabel('Search')
+  await input.fill('match')
+  await expect(view.getByText('Matched')).toHaveCount(0)
+  await input.blur()
+  const boundValue = await view.evaluate(() =>
+    (
+      window as Window & { __ctPupitreStore?: { get(path: string): unknown } }
+    ).__ctPupitreStore?.get('/data/search')
+  )
+  expect(boundValue).toBe('match')
+  await expect(view.getByText('Matched')).toBeVisible()
+})
+
+test('repeater errors and field ids resolve to the matching item', async ({ mount }) => {
+  const view = await mount(<RepeaterErrorStory />)
+  const fields = view.getByLabel('SKU')
+  await expect(fields).toHaveCount(2)
+  await expect(fields.nth(0)).toHaveAttribute('id', 'items.0.sku')
+  await expect(fields.nth(1)).toHaveAttribute('id', 'items.1.sku')
+  await expect(view.getByText('Invalid SKU')).toHaveCount(1)
+  await expect(view.locator('[id="items.1.sku-error"]')).toBeVisible()
+})
+
+test('custom filter is seeded from URL and applies only on submit', async ({ mount, page }) => {
+  page.on('console', (m) => console.log('BROWSER', m.text()))
+  const view = await mount(<CustomFilterStory />)
+  expect(await view.evaluate(() => window.location.search)).toContain(
+    'filters%5Brange%5D%5Bterm%5D=seeded'
+  )
+  const term = view.getByLabel('Term')
+  console.log('CTFILTER', await view.innerHTML())
+  await expect(term).toHaveValue('seeded')
+  await term.fill('draft')
+  const calls = view.getByTestId('router-calls')
+  await expect(calls).toHaveText('[]')
+  await view.getByRole('button', { name: 'Apply' }).click()
+  await expect(calls).toContainText('filters%5Brange%5D%5Bterm%5D=draft')
+})
+test('Select supports the native clearable mode', async ({ mount }) => {
+  const view = await mount(<NativeClearableSelectStory />)
+  const select = view.getByLabel('Category', { exact: true })
+  await expect(select).toHaveValue('1')
+  await view.getByRole('button', { name: 'Clear Category' }).click()
+  await expect(select).toHaveValue('')
+})
+
+test('Text renders its suffix', async ({ mount }) => {
+  const view = await mount(<TextSuffixStory />)
+  await expect(view.getByText('.ts')).toBeVisible()
+})
+test('dirty guard baseline remains dirty after a 422 validation response', async ({ mount }) => {
+  const view = await mount(<DirtyFailureStory />)
+  const form = view.locator('form')
+  await view.getByLabel('Title').fill('Unsaved title')
+  await view.getByRole('button', { name: 'Save' }).click()
+  await expect(view.getByText('Required')).toBeVisible()
+  await expect(form).toHaveAttribute('data-dirty', 'true')
 })

@@ -37,14 +37,6 @@ export const actions = {
     }),
     description: 'Run an action endpoint directly.',
   },
-  evaluate: {
-    params: z.object({ field: z.string() }),
-    description: 'Evaluate a server-backed reactive field.',
-  },
-  fetchOptions: {
-    params: z.object({ field: z.string(), q: z.string(), page: z.number().int().positive() }),
-    description: 'Fetch dynamic select options.',
-  },
   upload: {
     params: z.object({ field: z.string(), files: z.array(z.unknown()) }),
     description: 'Upload files for a field.',

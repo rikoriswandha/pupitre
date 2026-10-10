@@ -32,7 +32,7 @@ export default defineConfig({
     () => import('@adonisjs/lucid/commands'),
     () => import('@adonisjs/session/commands'),
     () => import('@adonisjs/inertia/commands'),
-    () => import('@rikology/pupitre/commands')
+    () => import('@rikology/pupitre/commands'),
   ],
 
   /*
@@ -64,7 +64,7 @@ export default defineConfig({
     () => import('@adonisjs/bouncer/bouncer_provider'),
     () => import('@adonisjs/drive/drive_provider'),
     () => import('#providers/api_provider'),
-    () => import('@rikology/pupitre/pupitre_provider')
+    () => import('@rikology/pupitre/pupitre_provider'),
   ],
 
   /*
@@ -79,7 +79,7 @@ export default defineConfig({
     () => import('#start/routes'),
     () => import('#start/kernel'),
     () => import('#start/validator'),
-    () => import('#start/pupitre')
+    () => import('#start/pupitre'),
   ],
 
   /*
@@ -140,7 +140,7 @@ export default defineConfig({
       indexPages({ framework: 'react' }),
       indexPolicies(),
       generateRegistry(),
-      indexAdmin()
+      indexAdmin(),
     ],
     buildStarting: [() => import('@adonisjs/vite/build_hook')],
   },

@@ -4,33 +4,38 @@ import type { ActionDefinition } from './action.js'
 import type { ComponentDefinition } from './schema.js'
 import type { TableDefinition } from './table.js'
 import type { PageDefinition } from './page.js'
+import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
+
 export type PolicyClass = abstract new (...args: never[]) => object
 export type ResourceData = Record<string, unknown>
-export type ResourceHooks<Model extends object> = {
+export type ResourceHooks<Model extends object, Trx = TransactionClientContract> = {
   fill?: (record: Model, ctx: HttpContext) => ResourceData | Promise<ResourceData>
   mutateBeforeCreate?: (
     data: ResourceData,
-    ctx: HttpContext
+    ctx: HttpContext,
+    trx: Trx
   ) => ResourceData | void | Promise<ResourceData | void>
   mutateBeforeSave?: (
     data: ResourceData,
     record: Model | null,
-    ctx: HttpContext
+    ctx: HttpContext,
+    trx: Trx
   ) => ResourceData | void | Promise<ResourceData | void>
-  beforeCreate?: (data: ResourceData, ctx: HttpContext) => unknown | Promise<unknown>
-  afterCreate?: (record: Model, ctx: HttpContext) => unknown | Promise<unknown>
+  beforeCreate?: (data: ResourceData, ctx: HttpContext, trx: Trx) => unknown | Promise<unknown>
+  afterCreate?: (record: Model, ctx: HttpContext, trx: Trx) => unknown | Promise<unknown>
   beforeSave?: (
     record: Model | null,
     data: ResourceData,
-    ctx: HttpContext
+    ctx: HttpContext,
+    trx: Trx
   ) => unknown | Promise<unknown>
-  afterSave?: (record: Model, ctx: HttpContext) => unknown | Promise<unknown>
-  beforeDelete?: (record: Model, ctx: HttpContext) => unknown | Promise<unknown>
-  afterDelete?: (record: Model, ctx: HttpContext) => unknown | Promise<unknown>
+  afterSave?: (record: Model, ctx: HttpContext, trx: Trx) => unknown | Promise<unknown>
+  beforeDelete?: (record: Model, ctx: HttpContext, trx: Trx) => unknown | Promise<unknown>
+  afterDelete?: (record: Model, ctx: HttpContext, trx: Trx) => unknown | Promise<unknown>
 }
-export type ResourceHandlers<Model extends object> = {
-  create?: (data: ResourceData, ctx: HttpContext) => Promise<Model>
-  update?: (record: Model, data: ResourceData, ctx: HttpContext) => Promise<Model>
+export type ResourceHandlers<Model extends object, Trx = TransactionClientContract> = {
+  create?: (data: ResourceData, ctx: HttpContext, trx: Trx) => Promise<Model>
+  update?: (record: Model, data: ResourceData, ctx: HttpContext, trx: Trx) => Promise<Model>
 }
 export type ResourceDefinition<Model extends object = object> = {
   model: string

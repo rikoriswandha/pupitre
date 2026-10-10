@@ -21,7 +21,7 @@ export function ActionConfirm({
   const Confirm = registry.ConfirmDialog
   const onConfirm: ConfirmDialogProps['onConfirm'] = async () => {
     try {
-      const response = await submitAction(action.url, { ids })
+      const response = await submitAction(action.url, { ids }, action.method)
       if (response.result) {
         onResult(response.result)
         onCancel()

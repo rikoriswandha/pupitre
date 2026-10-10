@@ -23,10 +23,15 @@ let toastId = 0
 function major(version: string): string {
   return version.split('.')[0] ?? ''
 }
-export function ensureCatalogVersion(version: string, toast: () => void): void {
+export function isSafeNewTabUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url) || !/^[a-z][a-z\d+.-]*:/i.test(url)
+}
+const catalogReloaded: Record<string, true> = {}
+export function ensureCatalogVersion(version: string): void {
   if (major(version) !== major(catalogVersion)) {
-    queueMicrotask(toast)
-    getRouter().reload()
+    if (catalogReloaded[version]) return
+    catalogReloaded[version] = true
+    if (typeof window !== 'undefined') window.location.reload()
   }
 }
 function useInertiaPropsSafely(): InertiaPupitreProps | null {
@@ -93,10 +98,8 @@ export function PupitreContent({
     if (typeof document !== 'undefined') document.title = page.title
   }, [page])
   useEffect(() => {
-    ensureCatalogVersion(page.catalogVersion, () =>
-      pushToast({ type: 'warning', title: t('Reload required') })
-    )
-  }, [page, pushToast])
+    ensureCatalogVersion(page.catalogVersion)
+  }, [page.catalogVersion])
   useEffect(() => {
     const timeout = setTimeout(() => {
       for (const flash of panel.flash) pushToast(flash)
@@ -110,14 +113,14 @@ export function PupitreContent({
     ) => {
       if (!action.enabled) return
       if (action.kind === 'link') {
-        if (action.openInNewTab && typeof window !== 'undefined')
+        if (action.openInNewTab && typeof window !== 'undefined' && isSafeNewTabUrl(action.url))
           window.open(action.url, '_blank', 'noopener,noreferrer')
         else getRouter().visit(action.url)
       } else if (action.kind === 'confirm') setConfirm({ action, ids: options.ids })
       else if (action.kind === 'form') setFormAction({ action, ids: options.ids })
       else {
         try {
-          const response = await submitAction(action.url, { ids: options.ids })
+          const response = await submitAction(action.url, { ids: options.ids }, action.method)
           if (response.result) handleActionResult(response.result)
           else {
             const first = response.errors ? Object.values(response.errors)[0] : undefined

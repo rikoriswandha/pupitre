@@ -106,6 +106,57 @@ test.group('Pupitre HTTP actions', (group) => {
     }
   })
 
+  test('uses the submitted page URL as the default redirect, with a safe fallback', async ({
+    assert,
+  }) => {
+    const fixture = sharedFixture
+    const post = await createPost()
+    const pageUrl = `/admin/posts?status=draft&page=2`
+    const result = await jsonRequest(fixture.baseUrl, `/admin/posts/${post.id}/actions/publish`, {
+      method: 'POST',
+      body: { data: { reason: 'ready' } },
+      headers: { 'X-Pupitre-Action': '1', 'X-Pupitre-Url': pageUrl },
+    })
+    assert.equal(result.response.status, 200)
+    assert.equal(result.body.redirect, pageUrl)
+
+    const unsafe = await jsonRequest(fixture.baseUrl, `/admin/posts/${post.id}/actions/publish`, {
+      method: 'POST',
+      body: { data: { reason: 'again' } },
+      headers: { 'X-Pupitre-Action': '1', 'X-Pupitre-Url': '//evil.example/' },
+    })
+    assert.equal(unsafe.response.status, 200)
+    assert.equal(unsafe.body.redirect, '/admin/posts')
+    assert.notEqual(unsafe.body.redirect, `/admin/posts/${post.id}/actions/publish`)
+  })
+
+  test('keeps JSON action flash out of the session', async ({ assert }) => {
+    const fixture = sharedFixture
+    const user = await User.create({
+      name: 'Flash admin',
+      email: `flash-${Date.now()}@example.test`,
+    })
+    const cookie = await fixture.loginAs(user)
+    const post = await createPost()
+    const action = await jsonRequest(fixture.baseUrl, `/admin/posts/${post.id}/actions/publish`, {
+      method: 'POST',
+      body: { data: { reason: 'ready' } },
+      headers: { 'X-Pupitre-Action': '1', 'Cookie': cookie },
+    })
+    assert.equal(action.response.status, 200)
+    assert.deepEqual(action.body.flash, [{ type: 'success', title: 'Published' }])
+    const next = await fetch(`${fixture.baseUrl}/admin/posts`, {
+      headers: {
+        'Accept': 'text/html, application/xhtml+xml',
+        'X-Inertia': 'true',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Cookie': cookie,
+      },
+    })
+    const page = (await next.json()) as { props: { pupitre: { flash: unknown[] } } }
+    assert.deepEqual(page.props.pupitre.flash, [])
+  })
+
   test('runs valid row and bulk actions and returns ActionResult', async ({ assert }) => {
     const fixture = sharedFixture
     try {

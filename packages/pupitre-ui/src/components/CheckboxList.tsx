@@ -20,15 +20,19 @@ export function CheckboxList({ props, bindings }: Runtime) {
   const options = Array.isArray(props.options) ? props.options : []
   const selected = Array.isArray(value) ? value : []
   function update(optionValue: string | number, checked: boolean | 'indeterminate') {
+    const canonical =
+      options.find((option) => String(option.value) === String(optionValue))?.value ?? optionValue
     const next =
       checked === true
-        ? [...selected.filter((item) => item !== optionValue), optionValue]
-        : selected.filter((item) => item !== optionValue)
+        ? [...selected.filter((item) => String(item) !== String(optionValue)), canonical]
+        : selected.filter((item) => String(item) !== String(optionValue))
     setValue(next)
   }
   const error = useFieldError(props.error, bindings?.value)
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
@@ -78,7 +82,7 @@ export function CheckboxList({ props, bindings }: Runtime) {
                     id={optionId}
                     name={props.name}
                     value={String(option.value)}
-                    checked={selected.includes(option.value)}
+                    checked={selected.some((item) => String(item) === String(option.value))}
                     disabled={option.disabled || props.disabled}
                     readOnly={props.readOnly}
                     onCheckedChange={(checked) => update(option.value, checked)}

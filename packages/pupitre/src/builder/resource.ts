@@ -78,50 +78,27 @@ export type ResourceBuilder<M extends ResourceModel> = {
     value: (record: ModelInstance<M>, ctx: HttpContext) => ResourceData | Promise<ResourceData>
   ): ResourceBuilder<M>
   mutateBeforeCreate(
-    value: (
-      data: ResourceData,
-      ctx: HttpContext
-    ) => ResourceData | void | Promise<ResourceData | void>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['mutateBeforeCreate']>
   ): ResourceBuilder<M>
   mutateBeforeSave(
-    value: (
-      data: ResourceData,
-      record: ModelInstance<M> | null,
-      ctx: HttpContext
-    ) => ResourceData | void | Promise<ResourceData | void>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['mutateBeforeSave']>
   ): ResourceBuilder<M>
   beforeCreate(
-    value: (data: ResourceData, ctx: HttpContext) => unknown | Promise<unknown>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['beforeCreate']>
   ): ResourceBuilder<M>
   afterCreate(
-    value: (record: ModelInstance<M>, ctx: HttpContext) => unknown | Promise<unknown>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['afterCreate']>
   ): ResourceBuilder<M>
-  beforeSave(
-    value: (
-      record: ModelInstance<M> | null,
-      data: ResourceData,
-      ctx: HttpContext
-    ) => unknown | Promise<unknown>
-  ): ResourceBuilder<M>
-  afterSave(
-    value: (record: ModelInstance<M>, ctx: HttpContext) => unknown | Promise<unknown>
-  ): ResourceBuilder<M>
+  beforeSave(value: NonNullable<ResourceHooks<ModelInstance<M>>['beforeSave']>): ResourceBuilder<M>
+  afterSave(value: NonNullable<ResourceHooks<ModelInstance<M>>['afterSave']>): ResourceBuilder<M>
   beforeDelete(
-    value: (record: ModelInstance<M>, ctx: HttpContext) => unknown | Promise<unknown>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['beforeDelete']>
   ): ResourceBuilder<M>
   afterDelete(
-    value: (record: ModelInstance<M>, ctx: HttpContext) => unknown | Promise<unknown>
+    value: NonNullable<ResourceHooks<ModelInstance<M>>['afterDelete']>
   ): ResourceBuilder<M>
-  create(
-    value: (data: ResourceData, ctx: HttpContext) => Promise<ModelInstance<M>>
-  ): ResourceBuilder<M>
-  update(
-    value: (
-      record: ModelInstance<M>,
-      data: ResourceData,
-      ctx: HttpContext
-    ) => Promise<ModelInstance<M>>
-  ): ResourceBuilder<M>
+  create(value: NonNullable<ResourceHandlers<ModelInstance<M>>['create']>): ResourceBuilder<M>
+  update(value: NonNullable<ResourceHandlers<ModelInstance<M>>['update']>): ResourceBuilder<M>
   toDefinition(): ResourceDefinition<ModelInstance<M>>
   readonly definition: ResourceDefinition<ModelInstance<M>>
   toJSON(): string

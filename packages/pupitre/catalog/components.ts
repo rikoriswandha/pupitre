@@ -13,6 +13,12 @@ const str = dynamic(z.string())
 const nullableStr = dynamic(z.string().nullable())
 const bool = dynamic(z.boolean())
 const num = dynamic(z.number())
+const liveProp = z
+  .union([
+    z.boolean(),
+    z.object({ onBlur: z.boolean().optional(), debounce: z.number().nonnegative().optional() }),
+  ])
+  .optional()
 const common = {
   name: z.string().optional(),
   label: nullableStr.optional(),
@@ -66,6 +72,7 @@ export const catalogEvents = {
 export const components = {
   Text: leaf({
     ...valueProps(z.string().nullable()),
+    live: liveProp,
     type: z.enum(['text', 'email', 'password', 'url', 'tel']).optional(),
     placeholder: str.optional(),
     prefix: str.optional(),
@@ -80,6 +87,7 @@ export const components = {
   }),
   Textarea: leaf({
     ...valueProps(z.string().nullable()),
+    live: liveProp,
     rows: num.optional(),
     autosize: bool.optional(),
     maxLength: num.optional(),
@@ -87,6 +95,7 @@ export const components = {
   }),
   Number: leaf({
     ...valueProps(z.number().nullable()),
+    live: liveProp,
     min: num.optional(),
     max: num.optional(),
     step: num.optional(),
@@ -181,6 +190,7 @@ export const components = {
   }),
   Tags: leaf({
     ...valueProps(z.array(z.string())),
+    live: liveProp,
     suggestions: dynamic(z.array(z.string())).optional(),
     separator: str.optional(),
     maxTags: num.optional(),
@@ -189,6 +199,7 @@ export const components = {
   KeyValue: leaf({
     ...valueProps(z.record(z.string(), z.string())),
     keyLabel: str.optional(),
+    live: liveProp,
     valueLabel: str.optional(),
     addable: bool.optional(),
     deletable: bool.optional(),

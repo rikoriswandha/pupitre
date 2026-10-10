@@ -72,7 +72,7 @@ export function ActionModal({
     setErrors({})
     if (modalStore) modalStore.set('/errors', {})
     try {
-      const actionResponse = await submitAction(action.url, { data, ids })
+      const actionResponse = await submitAction(action.url, { data, ids }, action.method)
       if (actionResponse.status === 200 && actionResponse.result) {
         onResult(actionResponse.result)
         close()

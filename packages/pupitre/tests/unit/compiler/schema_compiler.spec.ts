@@ -50,6 +50,25 @@ test.group('schema compiler', () => {
     assert.equal(compiled.state.data && typeof compiled.state.data, 'object')
   })
 
+  test('places repeater item label expressions in the item template scope', async ({ assert }) => {
+    const compiled = await compileForm(
+      [
+        node(
+          schema
+            .repeater('items')
+            .schema([schema.text('sku')])
+            .itemLabel(({ get }) => `SKU ${get('sku')}`)
+        ),
+      ],
+      { ...options, data: { items: [{ sku: 'A' }, { sku: 'B' }] } }
+    )
+    const repeater = compiled.spec.elements['f.items']
+    const item = compiled.spec.elements['f.items.item']
+    assert.notProperty((repeater?.props.descriptor ?? {}) as object, 'itemLabel')
+    assert.deepEqual(item?.props.itemLabel, { $template: 'SKU ${sku}' })
+    assert.deepEqual(item?.props.index, { $index: true })
+  })
+
   test('compiles options and field bindings with catalog-valid element types', async ({
     assert,
   }) => {
@@ -118,6 +137,94 @@ test.group('schema compiler', () => {
     assert.equal(
       liftClosure(({ get }: typeof getter) => slugify(get('title')), 'afterStateUpdated', scope)
         .kind,
+      'static'
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => get('a') || get('b') === 'yes', 'visible', scope),
+      {
+        kind: 'expression',
+        value: { $or: [{ $state: '/data/a' }, { $state: '/data/b', eq: 'yes' }] },
+      }
+    )
+  })
+  test('lifts boolean expressions for value props and keeps ambiguous values static', ({
+    assert,
+  }) => {
+    const scope = { pathPrefix: '/data', inRepeater: false }
+    const getter = { get: (_path: string): unknown => 1 }
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => get('status') === 'published', 'disabled', scope),
+      {
+        kind: 'expression',
+        value: { $cond: { $state: '/data/status', eq: 'published' }, $then: true, $else: false },
+      }
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => get('enabled'), 'disabled', scope),
+      {
+        kind: 'expression',
+        value: { $cond: { $state: '/data/enabled' }, $then: true, $else: false },
+      }
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => get('enabled') === true, 'label', scope),
+      {
+        kind: 'expression',
+        value: { $cond: { $state: '/data/enabled', eq: true }, $then: true, $else: false },
+      }
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => `Hello ${get('name')}`, 'content', scope),
+      { kind: 'expression', value: { $template: 'Hello ${/data/name}' } }
+    )
+    assert.equal(
+      liftClosure(({ get }: typeof getter) => get('name') || 'New', 'label', scope).kind,
+      'static'
+    )
+    assert.equal(
+      liftClosure(({ get }: typeof getter) => get('a') && get('b'), 'content', scope).kind,
+      'static'
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => (get('qty') as number) + 2, 'content', {
+        ...scope,
+        numericFields: { qty: true },
+      }),
+      {
+        kind: 'computed',
+        value: { $computed: 'add', args: { a: { $state: '/data/qty' }, b: 2 } },
+      }
+    )
+    assert.deepEqual(
+      liftClosure(({ get }: typeof getter) => 'Hello ' + (get('name') as string), 'content', scope),
+      {
+        kind: 'computed',
+        value: {
+          $computed: 'concat',
+          args: { values: ['Hello ', { $state: '/data/name' }] },
+        },
+      }
+    )
+    assert.deepEqual(
+      liftClosure(
+        ({ get }: typeof getter) => (get('qty') as number) + (get('price') as number),
+        'content',
+        { ...scope, numericFields: { qty: true, price: true } }
+      ),
+      {
+        kind: 'computed',
+        value: {
+          $computed: 'add',
+          args: { a: { $state: '/data/qty' }, b: { $state: '/data/price' } },
+        },
+      }
+    )
+    assert.equal(
+      liftClosure(
+        ({ get }: typeof getter) => (get('name') as string) + (get('suffix') as string),
+        'content',
+        scope
+      ).kind,
       'static'
     )
   })
@@ -191,10 +298,18 @@ test.group('schema compiler', () => {
     })
   })
 
-  test('cache specs are cloned and evaluate static closures for each record', async ({
+  test('cache keeps record, URL and timezone values per request with one spec build', async ({
     assert,
   }) => {
     const cache = new SpecCache()
+    let builds = 0
+    const store = {
+      get: (key: string) => cache.get(key),
+      set: (key: string, value: Parameters<typeof cache.set>[1]) => {
+        builds++
+        cache.set(key, value)
+      },
+    } as SpecCache
     const nodes = [
       node(
         schema
@@ -203,25 +318,53 @@ test.group('schema compiler', () => {
             ({ record }: { record: Record<string, unknown> | null }) => `Hello ${record?.name}`
           )
       ),
+      node(schema.dateTime('scheduleAt')),
+      node(schema.repeater('items').schema([schema.text('sku')])),
+      node(schema.textEntry('name')),
+      node(schema.textEntry('createdAt').dateTime('yyyy-MM-dd HH:mm')),
     ]
+    const key = 'admin:posts:edit:en:hash'
     const first = await compileForm(nodes, {
       ...options,
-      cache: { key: 'admin:posts:create:en:hash', store: cache },
-      record: { name: 'Ada' },
+      form: { ...options.form, method: 'put', url: '/posts/1', cancelUrl: '/posts/1' },
+      timezone: 'Asia/Jakarta',
+      cache: { key, store },
+      record: { name: 'Ada', createdAt: '2025-01-01T00:00:00Z', items: [{ sku: 'A' }] },
     })
-    const cached = cache.get('admin:posts:create:en:hash')
+    const cached = cache.get(key)
+    const cachedSpec = cached?.spec as typeof first.spec | undefined
     const second = await compileForm(nodes, {
       ...options,
-      cache: { key: 'admin:posts:create:en:hash', store: cache },
-      record: { name: 'Grace' },
+      form: { ...options.form, method: 'put', url: '/posts/2', cancelUrl: '/posts/2' },
+      timezone: 'America/Los_Angeles',
+      cache: { key, store },
+      record: { name: 'Grace', createdAt: '2025-01-02T00:00:00Z', items: [{ sku: 'B' }] },
     })
-    assert.equal(first.spec.elements['l.0']?.props.content, 'Hello Ada')
-    assert.equal(second.spec.elements['l.0']?.props.content, 'Hello Grace')
-    assert.notStrictEqual(second.spec, cached?.spec)
-    assert.equal(
-      cached?.spec && (cached.spec as typeof first.spec).elements['l.0']?.props.content,
-      undefined
+    assert.equal(builds, 1)
+    assert.deepEqual(cachedSpec?.state?.data, {})
+    const cachedMeta = cachedSpec?.state?.meta
+    const cachedRecord =
+      cachedMeta && typeof cachedMeta === 'object' && 'record' in cachedMeta
+        ? cachedMeta.record
+        : undefined
+    assert.isNull(cachedRecord)
+    assert.equal(first.spec.elements.root?.props.url, '/posts/1')
+    assert.equal(second.spec.elements.root?.props.url, '/posts/2')
+    assert.equal(second.spec.elements.root?.props.cancelUrl, '/posts/2')
+    assert.equal(first.spec.elements['f.name']?.props.value, 'Ada')
+    assert.equal(second.spec.elements['f.name']?.props.value, 'Grace')
+    assert.equal(first.spec.elements['f.scheduleAt']?.props.timezone, 'Asia/Jakarta')
+    assert.equal(second.spec.elements['f.scheduleAt']?.props.timezone, 'America/Los_Angeles')
+    assert.deepEqual(
+      (second.spec.elements['f.items']?.props.descriptor as { defaultItems: unknown[] })
+        .defaultItems,
+      [{ sku: 'B' }]
     )
+    assert.equal(second.spec.elements['l.0']?.props.content, 'Hello Grace')
+    assert.equal(second.spec.elements['f.createdAt']?.props.value, '2025-01-01 16:00')
+    assert.notStrictEqual(second.spec, cachedSpec)
+    assert.equal(cachedSpec?.elements.root?.props.url, undefined)
+    assert.equal(cachedSpec?.elements['f.name']?.props.value, undefined)
   })
 
   test('renders formatted infolist date entries in the requested timezone', async ({ assert }) => {
@@ -243,6 +386,89 @@ test.group('schema compiler', () => {
       record: { publishedAt: '2024-10-27T01:30:00Z' },
     })
     assert.equal(compiled.spec.elements['f.publishedAt']?.props.value, '2024-10-27 02:30 GMT+1')
+  })
+  test('snapshots every compiler-emitted catalog component and complete view entries', async ({
+    assert,
+  }) => {
+    const nodes = [
+      schema.text('text'),
+      schema.email('email'),
+      schema.password('password'),
+      schema.number('number'),
+      schema.textarea('textarea'),
+      schema.hidden('hidden'),
+      schema.select('select').options({ one: 'One' }),
+      schema.multiSelect('multi').options({ one: 'One' }),
+      schema.checkbox('checkbox'),
+      schema.checkboxList('checklist').options({ one: 'One' }),
+      schema.radio('radio').options({ one: 'One' }),
+      schema.toggle('toggle'),
+      schema.toggleButtons('buttons').options({ one: 'One' }),
+      schema.date('date'),
+      schema.dateTime('dateTime'),
+      schema.time('time'),
+      schema.color('color'),
+      schema.tags('tags'),
+      schema.keyValue('keyValue'),
+      schema.richEditor('richEditor'),
+      schema.fileUpload('fileUpload'),
+      schema.repeater('repeater').schema([schema.text('item')]),
+      schema
+        .grid()
+        .columns(2)
+        .components([schema.text('gridText')]),
+      schema.section('Section').components([schema.text('sectionText')]),
+      schema.fieldset('Fieldset').components([schema.text('fieldsetText')]),
+      schema.tabs([schema.tab('Details').components([schema.text('tabText')])]),
+      schema.group('Group').components([schema.text('groupText')]),
+      schema.split(schema.text('splitText')),
+      schema.placeholder('placeholder').content('Static placeholder'),
+      schema.html('<strong>Safe HTML</strong>'),
+      schema.divider(),
+      schema.view('HostWidget', { title: 'Widget' }),
+      schema.fragment([schema.text('fragmentText')]),
+    ].map(node)
+    const compiled = await compileForm(nodes, {
+      ...options,
+      uploadUrls: { upload: '/upload', delete: '/upload' },
+    })
+    assert.snapshot(compiled.spec).match()
+
+    const record = {
+      text: 'Hello',
+      icon: true,
+      image: 'uploads/image.png',
+      color: '#123456',
+      metadata: { key: 'value' },
+      history: [{ title: 'Change' }],
+      source: 'const x = 1',
+      status: 'published',
+    }
+    const view = await compileInfolist(
+      [
+        schema.textEntry('text'),
+        schema.iconEntry('icon').boolean(),
+        schema.imageEntry('image'),
+        schema.colorEntry('color'),
+        schema.keyValueEntry('metadata'),
+        schema.repeatableEntry('history'),
+        schema.codeEntry('source'),
+        schema.badgeEntry('status'),
+      ].map(node),
+      { locale: 'en', timezone: 'Asia/Jakarta', record }
+    )
+    assert.snapshot(view.spec).match()
+  })
+  test('sanitizes Html closures server-side instead of lifting them', async ({ assert }) => {
+    const html = schema.html().content(({ get }: { get(path: string): string }) => get('body'))
+    const compiled = await compileForm([node(html)], {
+      ...options,
+      data: { body: '<img src=x onerror="alert(1)"><script>alert(2)</script>' },
+    })
+    const content = compiled.spec.elements['l.0']?.props.content
+    assert.isString(content)
+    assert.notInclude(content, 'onerror')
+    assert.notInclude(content, '<script')
   })
 })
 

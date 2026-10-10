@@ -10,7 +10,10 @@ pupitreTest('publish action updates its row without a full reload', async ({ adm
   page.on('load', () => reloads.push(page.url()))
   await admin.openAction('Publish', row)
   await expect(page.getByRole('dialog')).toBeVisible()
-  await page.getByRole('button', { name: /publish/i }).last().click()
+  await page
+    .getByRole('button', { name: /publish/i })
+    .last()
+    .click()
   await admin.expectToast('published')
   await expect(row.getByText('published', { exact: true })).toBeVisible()
   expect(reloads).toHaveLength(0)

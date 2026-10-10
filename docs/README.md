@@ -52,4 +52,10 @@ Ditanyakan setelah draf pertama dan dijawab; dokumen sudah mencerminkannya:
 - Item repeater membawa `_key` di state (dibuang VineJS); operasi per item selain tambah dikerjakan komponen UI (lihat CATALOG §3).
 - `afterStateUpdated` yang tidak bisa diangkat ke `setState` + ekspresi ditolak saat compile (`E_PUPITRE_UNLIFTABLE_CLOSURE`) sampai evaluasi server tersedia di M3.
 - `refresh.table()` menghasilkan `ActionResult.reload` (bukan patch).
+- Hook resource dan handler kustom menerima transaksi Lucid sebagai argumen terakhir setelah `ctx` (`create(data, ctx, trx)`, `update(record, data, ctx, trx)`, `beforeSave(record, data, ctx, trx)`, …), sehingga tulisan handler ikut di-rollback bila hook setelahnya gagal.
+- Submit action mengirim `X-Pupitre-Url` (URL halaman) sebagai dasar `redirect.back()`; method HTTP mengikuti `ActionDescriptor.method` (delete record = `DELETE`). Flash JSON hanya lewat `ActionResult`, tidak juga ke session.
+- Field `disabled` tidak di-dehydrate kecuali `.dehydrated(true)`; field opsional yang dikosongkan disimpan sebagai `null`; `time` disimpan sebagai jam dinding `HH:mm[:ss]`; `date` tidak digeser timezone.
+- Kunci `fileUpload` yang dikirim harus sama dengan nilai tersimpan atau berasal dari unggahan sesi yang sama (resource + field).
+- Resource dengan policy tetapi tanpa Bouncer terinisialisasi gagal tertutup (`E_PUPITRE_BOUNCER_NOT_INITIALIZED`); `.guard(name)` panel memaksa autentikasi dengan guard itu.
+- Cache spec hanya menyimpan bagian yang tidak bergantung record/user/timezone; nilai record, URL form, prop timezone, dan closure statis diterapkan per request.
 - Versi yang dipakai: `@adonisjs/inertia` 5 (Inertia v3), `@base-ui/react` 1.9, `@tanstack/react-table` 8.21 (lihat tabel dependensi di IMPLEMENTATION_PLAN).

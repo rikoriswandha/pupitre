@@ -140,6 +140,7 @@ exports[`table compiler > compiles and validates the Post table descriptor 1`] =
   "searchDebounce": 250,
   "searchable": true,
   "selectable": true,
+  "striped": true,
   "tabs": [
     {
       "key": "all",
@@ -151,5 +152,28 @@ exports[`table compiler > compiles and validates the Post table descriptor 1`] =
     },
   ],
   "url": "/admin/posts",
+}`
+
+exports[`table compiler > wraps custom filter sub-specs in $raw without changing catalog output 1`] = `{
+  "form": {
+    "spec": {
+      "$raw": {
+        "elements": {
+          "search": {
+            "props": {
+              "value": {
+                "$bindState": "/data/term",
+              },
+            },
+            "type": "Text",
+          },
+        },
+        "root": "search",
+      },
+    },
+  },
+  "label": "Author",
+  "name": "author",
+  "type": "custom",
 }`
 

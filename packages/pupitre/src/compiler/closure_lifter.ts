@@ -31,6 +31,7 @@ type Node = {
 type Scope = {
   pathPrefix: string
   inRepeater: boolean
+  numericFields?: Record<string, true>
   getNames?: Record<string, true>
   setNames?: Record<string, true>
 }
@@ -155,6 +156,7 @@ function lift(node: Node, scope: Scope): Lifted | null {
     return { value: { ...(arg.value as object), not: true }, computed: false }
   }
   if (node.type === 'LogicalExpression') {
+    if (node.operator !== '&&' && node.operator !== '||') return null
     if (!node.left || !node.right) return null
     const left = lift(node.left, scope)
     const right = lift(node.right, scope)
@@ -188,6 +190,33 @@ function lift(node: Node, scope: Scope): Lifted | null {
       if ('$state' in rightSide || '$item' in rightSide)
         return { value: { ...rightSide, [compare[operator]!]: left.value }, computed: false }
       return null
+    }
+    if (operator === '+') {
+      const leftString =
+        node.left.type === 'TemplateLiteral' ||
+        (node.left.type === 'Literal' && typeof node.left.value === 'string')
+      const rightString =
+        node.right.type === 'TemplateLiteral' ||
+        (node.right.type === 'Literal' && typeof node.right.value === 'string')
+      if (leftString || rightString)
+        return {
+          value: { $computed: 'concat', args: { values: [left.value, right.value] } },
+          computed: true,
+        }
+      if (!(
+        (node.left.type === 'Literal' && typeof node.left.value === 'number') ||
+        (getCall(node.left, scope) &&
+          typeof node.left.arguments?.[0]?.value === 'string' &&
+          scope.numericFields?.[String(node.left.arguments[0].value)])
+      ))
+        return null
+      if (!(
+        (node.right.type === 'Literal' && typeof node.right.value === 'number') ||
+        (getCall(node.right, scope) &&
+          typeof node.right.arguments?.[0]?.value === 'string' &&
+          scope.numericFields?.[String(node.right.arguments[0].value)])
+      ))
+        return null
     }
     const fn: Record<string, string> = { '*': 'mul', '+': 'add', '-': 'sub', '/': 'div' }
     const functionName = fn[operator]
@@ -257,9 +286,25 @@ export function liftClosure(
     }
     return { kind: 'expression', value: updates }
   }
+  if (purpose !== 'visible' && body.type === 'LogicalExpression') return { kind: 'static' }
   const result = lift(body, closureScope)
   if (!result) return { kind: 'static' }
-  return { kind: result.computed ? 'computed' : 'expression', value: result.value }
+  if (purpose === 'visible')
+    return { kind: result.computed ? 'computed' : 'expression', value: result.value }
+  const value =
+    result.value && typeof result.value === 'object'
+      ? (result.value as Record<string, unknown>)
+      : {}
+  const comparisonKeys = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'not']
+  const isCondition =
+    purpose === 'disabled' ||
+    '$and' in value ||
+    '$or' in value ||
+    comparisonKeys.some((key) => key in value)
+  return {
+    kind: result.computed ? 'computed' : 'expression',
+    value: isCondition ? { $cond: value, $then: true, $else: false } : result.value,
+  }
 }
 
 export function evaluateClosure(

@@ -5,10 +5,22 @@ export default class PostPolicy {
     return user.email === 'admin@example.com'
   }
 
-  viewAny(_user: User) { return true }
-  view(_user: User) { return true }
-  create(_user: User) { return true }
-  update(_user: User) { return true }
-  delete(user: User) { return this.isAdmin(user) }
-  publish(user: User) { return this.isAdmin(user) }
+  viewAny(_user: User) {
+    return true
+  }
+  view(_user: User) {
+    return true
+  }
+  create(_user: User) {
+    return true
+  }
+  update(_user: User) {
+    return true
+  }
+  delete(user: User) {
+    return this.isAdmin(user)
+  }
+  publish(user: User) {
+    return this.isAdmin(user)
+  }
 }

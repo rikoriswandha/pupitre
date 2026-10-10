@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Button, Field, FieldError, Input, Label } from '../primitives/index.js'
+import { useLiveField } from './use_live_field.js'
 
 type Props = Infer<typeof components.Tags.props>
 type Runtime = {
@@ -15,7 +16,8 @@ type Runtime = {
 }
 
 export function Tags({ props, bindings }: Runtime) {
-  const [value, setValue] = useBoundValue(props.value ?? [], bindings?.value)
+  const [boundValue, setValue] = useBoundValue(props.value ?? [], bindings?.value)
+  const [value, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
   const [draft, setDraft] = useState('')
   const error = useFieldError(props.error, bindings?.value)
   const tags = Array.isArray(value)
@@ -25,7 +27,7 @@ export function Tags({ props, bindings }: Runtime) {
   function add() {
     const tag = draft.trim()
     if (!tag || tags.includes(tag) || tags.length >= (props.maxTags ?? Infinity)) return
-    setValue([...tags, tag])
+    changeValue([...tags, tag])
     setDraft('')
   }
   function moveTag(index: number, direction: -1 | 1) {
@@ -33,10 +35,12 @@ export function Tags({ props, bindings }: Runtime) {
     if (nextIndex < 0 || nextIndex >= tags.length) return
     const next = [...tags]
     ;[next[index], next[nextIndex]] = [next[nextIndex], next[index]]
-    setValue(next)
+    changeValue(next)
   }
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
@@ -95,7 +99,7 @@ export function Tags({ props, bindings }: Runtime) {
                 type="button"
                 aria-label={`Remove ${tag}`}
                 disabled={props.disabled || props.readOnly}
-                onClick={() => setValue(tags.filter((item) => item !== tag))}
+                onClick={() => changeValue(tags.filter((item) => item !== tag))}
                 className="min-h-6 px-1"
               >
                 ×
@@ -107,6 +111,7 @@ export function Tags({ props, bindings }: Runtime) {
             id={id}
             name={props.name}
             value={draft}
+            onBlur={() => commitValue()}
             onChange={(event) => setDraft(event.currentTarget.value)}
             onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
               if (

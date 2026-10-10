@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Button, Field, FieldError, Input, Label } from '../primitives/index.js'
+import { useLiveField } from './use_live_field.js'
 
 type Props = Infer<typeof components.Text.props>
 type Runtime = {
@@ -16,10 +17,13 @@ type Runtime = {
 
 export function Text({ props, bindings }: Runtime) {
   const [showPassword, setShowPassword] = useState(false)
-  const [value, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
+  const [value, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
   const error = useFieldError(props.error, bindings?.value)
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const listId = props.datalist?.length ? `${id}-options` : undefined
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
@@ -55,7 +59,8 @@ export function Text({ props, bindings }: Runtime) {
                 : (props.type ?? 'text')
             }
             value={value ?? ''}
-            onChange={(event) => setValue(event.currentTarget.value)}
+            onChange={(event) => changeValue(event.currentTarget.value)}
+            onBlur={() => commitValue()}
             placeholder={props.placeholder}
             maxLength={props.maxLength}
             autoComplete={props.autocomplete}
@@ -68,6 +73,7 @@ export function Text({ props, bindings }: Runtime) {
             aria-invalid={!!error}
             className="h-10 min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus-visible:ring-0"
           />
+          {props.suffix && <span className="text-sm text-muted-foreground">{props.suffix}</span>}
           {props.revealable && props.type === 'password' && (
             <Button
               variant="ghost"

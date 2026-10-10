@@ -1,5 +1,11 @@
 export { catalogVersion } from './version.js'
-export { dynamic, jsonRenderExpression, jsonRenderValue, visibilitySchema } from './expressions.js'
+export {
+  dynamic,
+  raw,
+  jsonRenderExpression,
+  jsonRenderValue,
+  visibilitySchema,
+} from './expressions.js'
 export { actions } from './actions.js'
 export { components, catalogEvents } from './components.js'
 export { pupitreCatalog, assertRegistryComplete } from './registry.js'

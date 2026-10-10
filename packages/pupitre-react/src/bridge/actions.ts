@@ -37,21 +37,25 @@ function xsrfToken(): string {
 }
 export async function submitAction(
   url: string,
-  body: { data?: Record<string, unknown>; ids?: Array<string | number> }
+  body: { data?: Record<string, unknown>; ids?: Array<string | number> },
+  method: ActionDescriptor['method'] = 'post'
 ): Promise<{
   status: number
   result?: ActionResult
   errors?: Record<string, unknown>
   message?: string
 }> {
+  const pageUrl =
+    typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
   const response = await activeFetch(url, {
-    method: 'POST',
+    method: method.toUpperCase(),
     credentials: 'same-origin',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
       'X-Pupitre-Action': '1',
+      'X-Pupitre-Url': pageUrl,
       'X-XSRF-TOKEN': xsrfToken(),
     },
     body: JSON.stringify(body),
@@ -186,9 +190,13 @@ export function submitForm(
   const data = (state.data ?? {}) as Record<string, unknown>
   store.set('/meta/submitting', true)
   store.set('/errors', {})
+  store.set('/meta/submitted', false)
   getRouter()[form.method](form.url, data as RequestPayload, {
     preserveState: true,
     preserveScroll: true,
+    onSuccess: () => {
+      store.set('/meta/submitted', true)
+    },
     onError: (errors: Record<string, string>) => {
       mapErrors(store, errors)
       const first = Object.keys(errors)[0]
@@ -316,11 +324,15 @@ export async function uploadFiles(
   return results
 }
 export async function runAction(params: Record<string, unknown>): Promise<void> {
-  await submitAction(String(params.url ?? ''), {
-    data:
-      params.data && typeof params.data === 'object'
-        ? (params.data as Record<string, unknown>)
-        : undefined,
-    ids: params.ids as Array<string | number> | undefined,
-  })
+  await submitAction(
+    String(params.url ?? ''),
+    {
+      data:
+        params.data && typeof params.data === 'object'
+          ? (params.data as Record<string, unknown>)
+          : undefined,
+      ids: params.ids as Array<string | number> | undefined,
+    },
+    (params.method as ActionDescriptor['method'] | undefined) ?? 'post'
+  )
 }

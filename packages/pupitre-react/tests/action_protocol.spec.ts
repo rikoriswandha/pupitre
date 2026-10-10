@@ -10,7 +10,7 @@ import {
 import { setRouter } from '../src/bridge/inertia.js'
 import type { RouterLike } from '../src/bridge/inertia.js'
 import type { ActionDescriptor, ActionResult } from '@rikology/pupitre/catalog'
-import { ensureCatalogVersion } from '../src/page/Pupitre.js'
+import { ensureCatalogVersion, isSafeNewTabUrl } from '../src/page/Pupitre.js'
 
 function fakeRouter(calls: Array<{ method: string; args: unknown[] }>): RouterLike {
   const record =
@@ -42,7 +42,8 @@ test('confirm cancellation sends no request and confirmation submits ids', async
       name: 'archive',
       label: 'Archive',
       kind: 'confirm',
-      url: '/posts/archive',
+      url: '/posts/8',
+      method: 'delete',
       enabled: true,
     } as ActionDescriptor,
     ids: [8, 9],
@@ -69,27 +70,35 @@ test('confirm cancellation sends no request and confirmation submits ids', async
     restoreFetch()
   }
 })
-test('catalog major mismatch warns and performs a full reload', async ({ assert }) => {
-  const calls: Array<{ method: string; args: unknown[] }> = []
-  const restoreRouter = setRouter(fakeRouter(calls))
-  let warned = false
+test('catalog major mismatch triggers one browser reload', async ({ assert }) => {
+  const reload = window.location.reload
+  let reloads = 0
+  Object.defineProperty(window.location, 'reload', {
+    configurable: true,
+    value: () => reloads++,
+  })
   try {
-    ensureCatalogVersion('9.0', () => {
-      warned = true
-    })
-    assert.equal(calls[0]?.method, 'reload')
-    assert.deepEqual(calls[0]?.args[0], undefined)
-    await Promise.resolve()
-    assert.isTrue(warned)
+    ensureCatalogVersion('9.0')
+    ensureCatalogVersion('9.0')
+    assert.equal(reloads, 1)
   } finally {
-    restoreRouter()
+    Object.defineProperty(window.location, 'reload', { configurable: true, value: reload })
   }
+})
+test('new-tab actions allow only HTTP(S) and relative URLs', ({ assert }) => {
+  assert.isTrue(isSafeNewTabUrl('https://example.test/path'))
+  assert.isTrue(isSafeNewTabUrl('/admin/posts'))
+  assert.isTrue(isSafeNewTabUrl('admin/posts'))
+  assert.isFalse(isSafeNewTabUrl('javascript:alert(1)'))
+  assert.isFalse(isSafeNewTabUrl('data:text/html,unsafe'))
 })
 
 test('action submissions consume ActionResult and send selected ids as JSON', async ({
   assert,
 }) => {
   let init: RequestInit | undefined
+  const location = window as unknown as { happyDOM: { setURL(url: string): void } }
+  location.happyDOM.setURL('http://localhost/admin/posts?q=1')
   const restoreFetch = setFetch(async (_input, request) => {
     init = request
     return {
@@ -102,10 +111,34 @@ test('action submissions consume ActionResult and send selected ids as JSON', as
     assert.equal(response.status, 200)
     assert.deepEqual(response.result?.flash, [{ type: 'success', title: 'Saved' }])
     assert.equal(init?.method, 'POST')
+    assert.equal((init?.headers as Record<string, string>)['X-Pupitre-Url'], '/admin/posts?q=1')
     assert.equal(init?.credentials, 'same-origin')
     assert.deepEqual(JSON.parse(String(init?.body)), { ids: [1, 'two'] })
   } finally {
     restoreFetch()
+    location.happyDOM.setURL('about:blank')
+  }
+})
+test('record delete submissions honor DELETE and include the current page URL', async ({
+  assert,
+}) => {
+  let init: RequestInit | undefined
+  const location = window as unknown as { happyDOM: { setURL(url: string): void } }
+  location.happyDOM.setURL('http://localhost/admin/posts/3/edit?page=2')
+  const restoreFetch = setFetch(async (_input, request) => {
+    init = request
+    return { status: 200, json: async () => ({ flash: [] }) } as Response
+  })
+  try {
+    await submitAction('/admin/posts/3', { ids: [3] }, 'delete')
+    assert.equal(init?.method, 'DELETE')
+    assert.equal(
+      (init?.headers as Record<string, string>)['X-Pupitre-Url'],
+      '/admin/posts/3/edit?page=2'
+    )
+  } finally {
+    restoreFetch()
+    location.happyDOM.setURL('about:blank')
   }
 })
 

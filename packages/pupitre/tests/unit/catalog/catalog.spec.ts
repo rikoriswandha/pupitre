@@ -1,6 +1,7 @@
-import { type z } from 'zod'
+import { z } from 'zod'
 import { test } from '@japa/runner'
 import type { JsonRenderSpec } from '../../../catalog/index.js'
+import { jsonRenderSpec } from '../../../catalog/index.js'
 import {
   actionDescriptor,
   actionResult,
@@ -12,7 +13,7 @@ import {
   filterDescriptor,
   formDescriptor,
   jsonRenderExpression,
-  jsonRenderSpec,
+  raw,
   option,
   pageProps,
   patchResponse,
@@ -62,7 +63,9 @@ test.group('catalog component contracts', () => {
     assert.isTrue(
       jsonRenderExpression.safeParse({ $computed: 'concat', args: { first: 'Hi' } }).success
     )
-    assert.isFalse(jsonRenderExpression.safeParse({ $computed: 'concat', args: ['Hi'] }).success)
+    const rawString = raw(z.string())
+    expectTypeOf<z.output<typeof rawString>>().toEqualTypeOf<string>()
+    assert.deepEqual(rawString.parse({ $raw: 'hello' }), 'hello')
   })
 
   test('registry assertion reports missing and unknown component types', ({ assert }) => {
@@ -131,6 +134,23 @@ test.group('catalog wire schemas', () => {
     assert.isTrue(
       filterDescriptor.safeParse({ type: 'ternary', name: 'published', label: 'Published' }).success
     )
+    const nestedSpec = {
+      root: 'search',
+      elements: { search: { type: 'Text', props: { value: { $bindState: '/data/term' } } } },
+    }
+    for (const spec of [nestedSpec, { $raw: nestedSpec }]) {
+      const result = filterDescriptor.safeParse({
+        type: 'custom',
+        name: 'advanced',
+        label: 'Advanced',
+        form: { spec },
+      })
+      assert.isTrue(result.success)
+      if (result.success) assert.deepEqual(result.data.form?.spec, nestedSpec)
+    }
+    assert.deepEqual(raw(z.object({ value: z.string() })).parse({ $raw: { value: 'ok' } }), {
+      value: 'ok',
+    })
     assert.isTrue(option.safeParse({ value: 'draft', label: 'Draft' }).success)
     assert.isTrue(
       pageProps.safeParse({
@@ -165,6 +185,18 @@ test.group('catalog wire schemas', () => {
           meta: { total: 0, perPage: 25, currentPage: 1, lastPage: 1, from: 0, to: 0 },
           query: {},
         },
+      }).success
+    )
+  })
+  test('M1 catalog omits evaluate/fetchOptions and accepts striped table descriptors', ({
+    assert,
+  }) => {
+    assert.notProperty(pupitreCatalog.actions, 'evaluate')
+    assert.notProperty(pupitreCatalog.actions, 'fetchOptions')
+    assert.isTrue(
+      tableDescriptor.safeParse({
+        ...catalogFixtures.DataTable.elements.root.props.descriptor,
+        striped: true,
       }).success
     )
   })

@@ -10,9 +10,19 @@ export default class PupitreContextMiddleware {
     const panel = manager.getPanel(panelId)
     if (!panel) return ctx.response.notFound()
 
-    const authUser =
-      (ctx as Omit<HttpContext, 'auth'> & { auth?: { user?: Record<string, unknown> | null } }).auth
-        ?.user ?? null
+    const auth = ctx as unknown as {
+      auth?: {
+        user?: Record<string, unknown> | null
+        use(guard: string): { authenticate(): Promise<Record<string, unknown>> }
+      }
+    }
+    let authUser: Record<string, unknown> | null | undefined
+    if (panel.guard) {
+      if (!auth.auth?.use) throw new Error(`Panel guard "${panel.guard}" is unavailable`)
+      authUser = await auth.auth.use(panel.guard).authenticate()
+    } else {
+      authUser = auth.auth?.user ?? null
+    }
     const user = authUser
       ? {
           id: authUser.id as string | number,

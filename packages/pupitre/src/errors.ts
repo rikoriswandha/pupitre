@@ -36,6 +36,12 @@ export const E_PUPITRE_FORBIDDEN = handledError(
   403,
   'E_PUPITRE_FORBIDDEN'
 )
+
+export const E_PUPITRE_BOUNCER_NOT_INITIALIZED = createError(
+  'A resource policy is configured but Bouncer is not initialized; register @adonisjs/bouncer initialize middleware',
+  'E_PUPITRE_BOUNCER_NOT_INITIALIZED',
+  500
+)
 export const E_PUPITRE_INVALID_UPLOAD = handledError(
   'The uploaded file is invalid',
   422,

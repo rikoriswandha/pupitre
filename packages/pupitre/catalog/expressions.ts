@@ -17,6 +17,19 @@ const expressionSchema = z.union([
 export function dynamic<T extends z.ZodType>(schema: T) {
   return z.union([schema, expressionSchema]).transform((value): z.output<T> => value as z.output<T>)
 }
+/**
+ * Accepts a literal schema value or a `$raw` wrapper while exposing only the
+ * literal output type to component props.
+ */
+export function raw<T extends z.ZodType>(schema: T) {
+  return z
+    .union([schema, z.object({ $raw: schema })])
+    .transform((value): z.output<T> =>
+      value && typeof value === 'object' && '$raw' in value
+        ? (value.$raw as z.output<T>)
+        : (value as z.output<T>)
+    )
+}
 
 export const jsonRenderExpression = expressionSchema
 export const jsonRenderValue = z.unknown()

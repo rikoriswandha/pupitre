@@ -44,6 +44,8 @@ npm run dev -w apps/example # host app memakai sumber TS package lewat kondisi e
 
 Setiap entri `exports` package punya kondisi `"@rikology/source": "./<file>.ts"` sebelum `types`/`default`. Test dijalankan dengan `node --conditions=@rikology/source --import=@poppinss/ts-exec`, tsconfig memakai `customConditions: ["@rikology/source"]`, Vite (example app, Playwright CT) memasang kondisi yang sama di `resolve.conditions`, dan script `dev`/`test` example memasang `NODE_OPTIONS=--conditions=@rikology/source`. Hasilnya import lintas package selalu ke sumber TS (HMR lintas package, tanpa build) sementara konsumen npm hanya melihat `build/`. Example app memakai `PORT=3391` (3333/3340 dipakai app lain di mesin pengembang).
 
+`node ace add @rikology/pupitre` memasang `@rikology/pupitre-react`, `@rikology/pupitre-ui`, Tailwind CSS v4, dan `@tailwindcss/vite`, mendaftarkan plugin Vite, serta menambahkan `@import '@rikology/pupitre-ui/styles.css';` ke `inertia/css/app.css` bila file tersebut tersedia. Host yang menyimpan CSS entry di lokasi lain perlu menambahkan import stylesheet itu ke entry yang dipakai Inertia/Vite sendiri.
+
 ## 4. Scripts root
 
 | Script | Isi |
@@ -134,7 +136,6 @@ cd apps/example && cp .env.example .env && node ace migration:fresh --seed && np
 
 ## 11. Debugging
 
-- `node ace pupitre:inspect posts` — closure lifting, policy, index.
-- `node ace pupitre:routes` — route + nama.
-- `PUPITRE_DEBUG=1` — spec yang dikirim dicetak ke log dan di-`validateSpec`.
+- `node ace pupitre:routes` — menampilkan route dan namanya.
+- `node ace pupitre:inspect` dan `PUPITRE_DEBUG=1` — fitur M3, belum tersedia di M1.
 - Di client: `window.__pupitre` (hanya dev) mengekspos store dan spec aktif.

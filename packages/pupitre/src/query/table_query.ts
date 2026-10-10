@@ -36,15 +36,17 @@ function applyLike(
   query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   column: string,
   value: string,
-  or = false
+  or = false,
+  model: LucidModel = query.model
 ) {
+  const columnName = model.$keys.attributesToColumns.get(column) ?? column
   if (query.client.dialect.name === 'postgres') {
-    if (or) query.orWhereILike(column, `%${value}%`)
-    else query.whereILike(column, `%${value}%`)
+    if (or) query.orWhereILike(columnName, `%${value}%`)
+    else query.whereILike(columnName, `%${value}%`)
   } else if (or) {
-    query.orWhereRaw('lower(??) like ?', [column, `%${value.toLocaleLowerCase()}%`])
+    query.orWhereRaw('lower(??) like ?', [columnName, `%${value.toLocaleLowerCase()}%`])
   } else {
-    query.whereRaw('lower(??) like ?', [column, `%${value.toLocaleLowerCase()}%`])
+    query.whereRaw('lower(??) like ?', [columnName, `%${value.toLocaleLowerCase()}%`])
   }
 }
 
@@ -67,8 +69,9 @@ function applySearch(
           relation: string,
           callback: (query: ModelQueryBuilderContract<LucidModel, LucidRow>) => void
         ) => unknown
+        const relatedModel = query.model.$getRelation(relation).relatedModel()
         whereHas.call(builder, relation, (relationQuery) =>
-          applyLike(relationQuery, attribute, value)
+          applyLike(relationQuery, attribute, value, false, relatedModel)
         )
       } else {
         applyLike(builder, column.name, value, index > 0)

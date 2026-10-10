@@ -25,8 +25,72 @@ export type FormValidator = {
 
 type FieldRecord = { field: FieldDefinitionUnion; path: string; repeatPath?: string }
 const validators = new WeakMap<SchemaNodeDefinition[], FormValidator>()
-const singleValidators = new WeakMap<FieldDefinitionUnion, FormValidator>()
+const uploadSessionKey = 'pupitre.uploads'
+type UploadedSessionFile = {
+  key: string
+  resource: string
+  field: string
+  ability: 'create' | 'update'
+  recordId?: string
+}
+type ValidatorContext = HttpContext & {
+  session?: { get(key: string): unknown }
+  pupitre?: {
+    panel?: { resources?: { slug: string; definition: { form: SchemaNodeDefinition[] } }[] }
+  }
+}
 
+function resourceSlug(nodes: SchemaNodeDefinition[], ctx?: HttpContext): string | undefined {
+  const resources = (ctx as ValidatorContext | undefined)?.pupitre?.panel?.resources ?? []
+  return resources.find((resource) => resource.definition.form === nodes)?.slug
+}
+
+function persistedAt(record: Record<string, unknown> | null, path: string): unknown {
+  return path.split('.').reduce<unknown>((value, segment) => {
+    if (value === null || typeof value !== 'object') return undefined
+    return (value as Record<string, unknown>)[segment]
+  }, record)
+}
+
+function sessionUploads(ctx: HttpContext | undefined): UploadedSessionFile[] {
+  const uploads = (ctx as ValidatorContext | undefined)?.session?.get(uploadSessionKey)
+  if (!Array.isArray(uploads)) return []
+  return uploads.filter((item): item is UploadedSessionFile =>
+    Boolean(
+      item &&
+      typeof item === 'object' &&
+      'key' in item &&
+      typeof item.key === 'string' &&
+      'resource' in item &&
+      typeof item.resource === 'string' &&
+      'field' in item &&
+      typeof item.field === 'string' &&
+      'ability' in item &&
+      (item.ability === 'create' || item.ability === 'update')
+    )
+  )
+}
+
+function isUploadedFileKey(value: unknown, targetField: string, vineField: FieldContext): boolean {
+  if (typeof value !== 'string') return true
+  const meta = vineField.meta as
+    { ctx?: HttpContext; resource?: string; record?: LucidRow | null } | undefined
+  const record = meta?.record?.serialize() ?? null
+  const previous = persistedAt(record, String(vineField.name)) ?? persistedAt(record, targetField)
+  const persisted = Array.isArray(previous) ? previous : [previous]
+  if (persisted.includes(value)) return true
+  return sessionUploads(meta?.ctx).some(
+    (upload) =>
+      upload.key === value && upload.resource === meta?.resource && upload.field === targetField
+  )
+}
+
+function timeIsValid(value: string): boolean {
+  const match = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value)
+  if (!match) return false
+  const [, hours, minutes, seconds = '00'] = match
+  return Number(hours) < 24 && Number(minutes) < 60 && Number(seconds) < 60
+}
 function normalizeOptions(value: unknown): unknown[] {
   if (Array.isArray(value)) return value
   if (value && typeof value === 'object') return Object.keys(value)
@@ -67,7 +131,6 @@ function addRules(schema: any, field: FieldDefinitionUnion): any {
         { record?: LucidRow | null; model?: LucidModel | null } | undefined
       const record = meta?.record ?? null
       const model = meta?.model ?? (record?.constructor as LucidModel | undefined) ?? null
-      // Field names are model attributes (camelCase); the query needs DB columns.
       const toColumn = (attribute: string) =>
         model?.$keys.attributesToColumns.get(attribute) ?? attribute
       const table = unique.table ?? model?.table
@@ -98,18 +161,34 @@ function addRules(schema: any, field: FieldDefinitionUnion): any {
 
 function applyPresence(schema: any, field: FieldDefinitionUnion): any {
   const rules = field.rules ?? {}
+  const conditionalRequired =
+    field.dehydratedWhenHidden === false ||
+    (field.disabled !== undefined && field.dehydrated !== true)
+  const nullable =
+    rules.nullable || field.dehydrated === false || !rules.required || conditionalRequired
+  if (nullable) schema = schema.nullable()
   if (field.dehydrated === false || !rules.required) return schema.optional()
-  if (field.dehydratedWhenHidden === false) {
+  if (conditionalRequired) {
     return schema.optional().requiredWhen((vineField: FieldContext) => {
       const meta = vineField.meta as
         { record?: Record<string, unknown> | null; ctx?: HttpContext } | undefined
-      return !hidden(field, vineField.data, vineField.data, meta?.record, meta?.ctx)
+      const record = meta?.record ?? null
+      const hiddenField = hidden(field, vineField.data, vineField.data, record, meta?.ctx)
+      const disabled =
+        field.disabled === true ||
+        (typeof field.disabled === 'function' &&
+          field.disabled({
+            get: (path) => getAt(vineField.data, path),
+            record,
+            ctx: meta?.ctx,
+          }) === true)
+      return !hiddenField && !disabled
     })
   }
   return schema
 }
 
-function baseSchema(field: FieldDefinitionUnion): any {
+function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
   const rules = field.rules ?? {}
   let schema: any
   switch (field.kind) {
@@ -157,13 +236,24 @@ function baseSchema(field: FieldDefinitionUnion): any {
     case 'keyValue':
       schema = vine.record(vine.string())
       break
-    case 'fileUpload':
-      schema = field.multiple ? vine.array(vine.string()) : vine.string()
+    case 'fileUpload': {
+      const key = vine.string().use(
+        vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
+          if (!isUploadedFileKey(value, fieldPath, vineField)) {
+            vineField.report(
+              'The {{ field }} field contains a file not uploaded for this field',
+              'fileUpload',
+              vineField
+            )
+          }
+        })()
+      )
+      schema = field.multiple ? vine.array(key) : key
       if (field.multiple && field.maxFiles !== undefined) schema = schema.maxLength(field.maxFiles)
       break
+    }
     case 'date':
     case 'dateTime':
-    case 'time':
       schema = vine
         .string()
         .use(
@@ -179,22 +269,31 @@ function baseSchema(field: FieldDefinitionUnion): any {
         )
         .transform((value: string) => DateTime.fromISO(value, { zone: 'UTC' }))
       break
+    case 'time':
+      schema = vine.string().use(
+        vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
+          if (typeof value === 'string' && !timeIsValid(value)) {
+            vineField.report('The {{ field }} field must be a valid time', 'time', vineField)
+          }
+        })()
+      )
+      break
     case 'repeater':
       schema = vine.array(
-        vine.object(schemaProperties(Array.isArray(field.schema) ? field.schema : []) as never)
+        vine.object(
+          schemaProperties(Array.isArray(field.schema) ? field.schema : [], fieldPath) as never
+        )
       )
       if (field.minItems !== undefined) schema = schema.minLength(field.minItems)
       if (field.maxItems !== undefined) schema = schema.maxLength(field.maxItems)
       schema = addRules(schema, field)
       schema = applyPresence(schema, field)
-      if (rules.nullable) schema = schema.nullable()
       return schema
     default:
       schema = vine.any()
   }
   schema = addRules(schema, field)
   schema = applyPresence(schema, field)
-  if (rules.nullable) schema = schema.nullable()
   return schema
 }
 
@@ -252,14 +351,15 @@ const fieldKinds: Record<string, true> = {
   repeater: true,
 }
 
-function schemaProperties(nodes: SchemaNodeDefinition[]): Record<string, unknown> {
+function schemaProperties(nodes: SchemaNodeDefinition[], pathPrefix = ''): Record<string, unknown> {
   const properties: ObjectProperties = {}
   for (const node of nodes) {
     if ('children' in node) {
-      Object.assign(properties, schemaProperties(node.children))
+      Object.assign(properties, schemaProperties(node.children, pathPrefix))
     } else if (node.kind in fieldKinds && 'name' in node) {
       const field = node as FieldDefinitionUnion
-      insertProperty(properties, field.name, baseSchema(field))
+      const fieldPath = pathPrefix ? `${pathPrefix}.${field.name}` : field.name
+      insertProperty(properties, field.name, baseSchema(field, fieldPath))
     }
   }
   return vineObjectProperties(properties)
@@ -360,7 +460,7 @@ function prepareDates(
 ): void {
   for (const item of fields) {
     const { field } = item
-    if (field.kind !== 'date' && field.kind !== 'dateTime' && field.kind !== 'time') continue
+    if (field.kind !== 'date' && field.kind !== 'dateTime') continue
     for (const concrete of concreteFields(data, item)) {
       const value = getAt(data, concrete.path)
       if (typeof value !== 'string') continue
@@ -395,7 +495,15 @@ function filterHidden(
   const record = options.record?.serialize() ?? null
   for (const item of fields) {
     for (const concrete of concreteFields(data, item)) {
-      if (item.field.dehydrated === false) {
+      const args = {
+        get: (path: string) => getAt(concrete.local, path) ?? getAt(data, path),
+        record,
+        ctx: options.ctx,
+      }
+      const disabled =
+        item.field.disabled === true ||
+        (typeof item.field.disabled === 'function' && item.field.disabled(args) === true)
+      if (item.field.dehydrated === false || (disabled && item.field.dehydrated !== true)) {
         deleteAt(filtered, concrete.path)
         continue
       }
@@ -426,6 +534,7 @@ function buildValidator(nodes: SchemaNodeDefinition[], fields: FieldRecord[]): F
           model: options.model ?? null,
           ctx: options.ctx,
           timezone: options.timezone,
+          resource: resourceSlug(nodes, options.ctx),
         },
       })
       for (const item of fields) {
@@ -450,13 +559,5 @@ export function compileValidator(nodes: SchemaNodeDefinition[]): FormValidator {
   if (cached) return cached
   const validator = buildValidator(nodes, collectFields(nodes))
   validators.set(nodes, validator)
-  return validator
-}
-
-export function compileFieldValidator(node: FieldDefinitionUnion): FormValidator {
-  const cached = singleValidators.get(node)
-  if (cached) return cached
-  const validator = buildValidator([node], collectFields([node]))
-  singleValidators.set(node, validator)
   return validator
 }

@@ -6,4 +6,3 @@ pupitreTest('infolist renders published dates in the panel timezone', async ({ a
   await expect(page.getByText('2026 Oct 07, 19:00')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Field Notes 01' })).toBeVisible()
 })
-

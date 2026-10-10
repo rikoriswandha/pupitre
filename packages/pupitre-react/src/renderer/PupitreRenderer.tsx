@@ -1,8 +1,9 @@
+import type { ActionDescriptor, PupitrePageProps } from '@rikology/pupitre/catalog'
+import { isDev } from '../dev.js'
 import { useEffect, useState } from 'react'
 import { JSONUIProvider, Renderer } from '@json-render/react'
 import type { SetState } from '@json-render/react'
 import type { StateStore } from '@json-render/core'
-import type { PupitrePageProps } from '@rikology/pupitre/catalog'
 import { createPupitreStore } from './store.js'
 import { mapErrors } from '../bridge/errors.js'
 import { visit, reload, submitForm as submitPageForm } from '../bridge/actions.js'
@@ -62,14 +63,10 @@ function PupitreRendererInstance({
     onStore?.(store)
   }, [onStore, store])
   useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      (typeof process === 'undefined' || process.env.NODE_ENV !== 'production')
-    ) {
-      ;(
-        window as Window & { __pupitre?: { store: StateStore; page: PupitrePageProps['page'] } }
-      ).__pupitre = { store, page }
-    }
+    if (typeof window === 'undefined' || !isDev) return
+    ;(
+      window as Window & { __pupitre?: { store: StateStore; page: PupitrePageProps['page'] } }
+    ).__pupitre = { store, page }
   }, [page, store])
   const dispatchState: SetState = (updater) => {
     const next = updater(store.getSnapshot())
@@ -94,6 +91,10 @@ function PupitreRendererInstance({
           kind: 'direct',
           enabled: true,
           url: String(params.url ?? ''),
+          method: (params.method as ActionDescriptor['method']) ?? 'post',
+          keyBindings: Array.isArray(params.keyBindings)
+            ? params.keyBindings.map(String)
+            : undefined,
         } as never,
         { ids: params.ids as Array<string | number> | undefined }
       ),
@@ -112,14 +113,6 @@ function PupitreRendererInstance({
         String(params.field ?? ''),
         Array.isArray(params.files) ? (params.files as File[]) : []
       ),
-    evaluate: async () => {
-      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'production')
-        console.warn('Pupitre evaluate endpoint is available in M3.')
-    },
-    fetchOptions: async () => {
-      if (typeof process === 'undefined' || process.env.NODE_ENV !== 'production')
-        console.warn('Pupitre dynamic options endpoint is available in M2.')
-    },
   }
   const submitForm = embedded ? embedded.submit : () => submitPageForm(page, store, toast)
   const context: RuntimeContextValue = {
@@ -143,6 +136,7 @@ function PupitreRendererInstance({
         store={store}
         handlers={bridge}
         functions={registry.functions}
+        directives={registry.directives}
       >
         <Renderer spec={page.spec as never} registry={registry.registry} />
       </JSONUIProvider>

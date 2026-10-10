@@ -9,6 +9,8 @@ import type {
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ResourceRuntime } from '../manager.js'
 
+import { t } from '../i18n.js'
+
 export type PupitrePageKind = 'list' | 'create' | 'edit' | 'view' | 'custom'
 
 export function buildPageProps(options: {
@@ -19,6 +21,7 @@ export function buildPageProps(options: {
   state: StateModel
   title: string
   recordId?: string | number
+  recordLabel?: string
   headerActions?: ActionDescriptor[]
   data?: TableData | Record<string, unknown>
   component?: string
@@ -31,6 +34,7 @@ export function buildPageProps(options: {
     state,
     title,
     recordId,
+    recordLabel,
     headerActions = [],
     data,
     component,
@@ -39,14 +43,19 @@ export function buildPageProps(options: {
     key: `${ctx.pupitre.panel.id}:${resource.slug}:${kind}:${recordId ?? ''}:`,
     kind: component ? ('custom' as const) : kind,
     title,
-    breadcrumbs: [
-      { label: ctx.pupitre.panel.brand?.name ?? ctx.pupitre.panel.id, url: ctx.pupitre.panel.path },
-      { label: resource.pluralLabel, url: resource.urls.list },
-      ...(recordId === undefined ? [] : [{ label: String(recordId) }]),
-      ...(kind === 'create' ? [{ label: 'Create' }] : []),
-      ...(kind === 'edit' ? [{ label: 'Edit' }] : []),
-      ...(kind === 'view' ? [{ label: 'View' }] : []),
-    ],
+    breadcrumbs: ctx.pupitre.panel.breadcrumbs
+      ? [
+          {
+            label: t(ctx.pupitre.panel.brand?.name ?? ctx.pupitre.panel.id),
+            url: ctx.pupitre.panel.path,
+          },
+          { label: t(resource.pluralLabel), url: resource.urls.list },
+          ...(recordId === undefined ? [] : [{ label: t(recordLabel ?? String(recordId)) }]),
+          ...(kind === 'create' ? [{ label: t('Create') }] : []),
+          ...(kind === 'edit' ? [{ label: t('Edit') }] : []),
+          ...(kind === 'view' ? [{ label: t('View') }] : []),
+        ]
+      : [],
     spec,
     state,
     actions: { header: headerActions },

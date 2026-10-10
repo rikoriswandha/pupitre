@@ -12,6 +12,15 @@ import type { ResourceRuntime } from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
 import { E_PUPITRE_FORBIDDEN } from '../../errors.js'
 
+function isJsonRequest(ctx: HttpContext): boolean {
+  return isPupitreActionRequest(ctx) || ctx.request.accepts(['json', 'html']) === 'json'
+}
+
+function currentPageUrl(ctx: HttpContext, fallback: string): string {
+  const url = ctx.request.header('x-pupitre-url')
+  return url && /^\/(?!\/)/.test(url) ? url : fallback
+}
+
 async function getResource(ctx: HttpContext): Promise<ResourceRuntime | undefined> {
   const manager = (await ctx.containerResolver.make('pupitre.manager')) as {
     findResource(panelId: string, slug: string): ResourceRuntime | undefined
@@ -121,7 +130,11 @@ export default class ActionController {
       await ensureAuthorized(ctx, resource, 'viewAny')
       record = (await scopedRecord(ctx, resource)) ?? undefined
       if (!record) return errorJson(ctx, 'Record not found', 404)
-    } else if (action.context === 'bulk' || action.builtin === 'bulk') {
+    } else if (
+      action.context === 'bulk' ||
+      action.builtin === 'bulk' ||
+      Array.isArray(ctx.request.input('ids'))
+    ) {
       records = (await scopedRecords(ctx, resource, ctx.request.input('ids'))) ?? undefined
       if (!records) return errorJson(ctx, 'One or more records were not found', 404)
       await ensureAuthorized(ctx, resource, 'viewAny')
@@ -140,10 +153,10 @@ export default class ActionController {
             ...(records ? { records } : {}),
             data: ctx.request.input('data') ?? {},
             authorize: (ability, target) => authorizeResource(ctx, resource, ability, target),
-            currentUrl: ctx.request.url(true),
+            currentUrl: currentPageUrl(ctx, resource.urls.list),
             listUrl: resource.urls.list,
           })
-      if (result.flash.length) setPupitreFlash(ctx, result.flash)
+      if (result.flash.length && !isJsonRequest(ctx)) setPupitreFlash(ctx, result.flash)
       if (isPupitreActionRequest(ctx) || ctx.request.accepts(['json', 'html']) === 'json')
         return actionJson(ctx, result)
       if (result.redirect) return ctx.response.redirect(result.redirect)

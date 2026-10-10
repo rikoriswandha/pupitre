@@ -86,7 +86,7 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 | --- | --- | --- |
 | `Form` | `{ method, url, submitLabel, cancelUrl?, keyBindings, dirtyGuard }` | `submitForm` bridge |
 | `DataTable` | `TableDescriptor` + prop Inertia top-level `data` (lihat WIRE_PROTOCOL §5, ADR-0011) | `useTable` → `reload({ only: ['data'] })`; row/bulk action lewat `useRunAction`; M3: `PATCH column`, `POST reorder` |
-| `Repeater` | `{ name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, itemLabel ($template), grid, defaultItems }` + `value` terikat ke array; anak tunggal `RepeaterItem` (`index: { $index: true }`) sebagai template | event `add` → `pushState` (item baru `_key: '$id'`); hapus/pindah/klon/collapse dikerjakan komponen lewat nilai array terikat (`useSetState`), karena param action tidak bisa menyatakan path array induk di scope bersarang |
+| `Repeater` | `{ name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, grid, defaultItems }` + `value` terikat ke array; anak tunggal `RepeaterItem` (`index: { $index: true }`, opsional `itemLabel` expression dalam scope item) sebagai template | event `add` → `pushState` (item baru `_key: '$id'`); hapus/pindah/klon/collapse dikerjakan komponen lewat nilai array terikat (`useSetState`), karena param action tidak bisa menyatakan path array induk di scope bersarang |
 | `Builder` | `{ name, blocks: { key, label, icon, template: ElementId }[], ... Repeater }` | sama + `/data/<name>/<i>/type` |
 | `FileUpload` | `{ name, uploadUrl, deleteUrl, multiple, accept, maxSize, maxFiles, image, imageEditor, directory, visibility, reorderable, downloadable, previewable }` | `POST/DELETE /_pupitre/upload`; nilai state = `string \| string[]` (key) |
 | `RelationSelect` | `Select` + `{ optionsUrl, createOption: { url, modal } }` | `fetchOptions`; `openAction` |
@@ -101,6 +101,8 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 | `TenantSwitcher` | dari `pupitre.tenants` | `visit` |
 | `View` | `{ component: string, props }` — komponen React host dari registry host | — |
 | `Fragment` | sub-spec dari host (`children` saja) | — |
+
+`DataTable` descriptor filter dapat menyertakan sub-spec form. Bungkus spec itu sebagai `{ $raw: spec }` agar ekspresinya tetap utuh sampai `SpecRenderer` memprosesnya dengan store filter sendiri; jangan gunakan wrapper ini untuk prop elemen biasa.
 
 ## 4. Shell
 
@@ -134,4 +136,4 @@ Didaftarkan di catalog dan diimplementasikan oleh bridge `pupitre-react`:
 
 - Menambah prop opsional / komponen baru → minor.
 - Mengubah tipe prop, menghapus prop, mengganti nama komponen → major; `pupitre-react` menolak spec major berbeda dan meminta reload.
-- Setiap komponen punya fixture spec di `packages/pupitre/catalog/fixtures/<Component>.json` (diekspor sebagai `catalogFixtures`) yang dipakai (a) test Zod di catalog, (b) Playwright component test di `pupitre-ui` (`tests/ct`), (c) test registry host memakai `assertRegistryComplete(pupitreCatalog, components)`.
+- Setiap komponen memiliki spec fixture di `packages/pupitre/catalog/fixtures.ts` (`catalogFixtures`), yang dipakai (a) test Zod di catalog, (b) Playwright component test di `pupitre-ui` (`tests/ct`), dan (c) test registry host memakai `assertRegistryComplete(pupitreCatalog, components)`.

@@ -21,7 +21,9 @@ export function Radio({ props, bindings }: Runtime) {
   const error = useFieldError(props.error, bindings?.value)
   const options = Array.isArray(props.options) ? props.options : []
   const generatedId = useId()
-  const id = props.name ?? generatedId
+  const id = bindings?.value
+    ? bindings.value.split('/').slice(2).join('.')
+    : (props.name ?? generatedId)
   const describedBy =
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)

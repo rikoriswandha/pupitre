@@ -127,6 +127,7 @@ export function useTable(descriptor: TableDescriptor) {
   // ourselves and make a partial visit so history/back button and reloads keep
   // the query, while only the top-level `data` prop is refetched (ADR-0011).
   const setQuery = useCallback((partial: Record<string, unknown>) => {
+    setSelected((current) => (current.length > 0 ? [] : current))
     const url = currentUrl()
     for (const [key, value] of Object.entries(partial)) {
       url.searchParams.delete(key)
@@ -146,7 +147,7 @@ export function useTable(descriptor: TableDescriptor) {
     (name: string, value: unknown) => {
       const params = currentUrl().searchParams
       const prefix = `filters[${name}]`
-      const updates: Record<string, unknown> = {}
+      const updates: Record<string, unknown> = { page: '' }
       for (const key of params.keys())
         if (key === prefix || key.startsWith(`${prefix}[`)) updates[key] = ''
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
@@ -168,9 +169,9 @@ export function useTable(descriptor: TableDescriptor) {
     query,
     setQuery,
     sort: (column: string) => setQuery({ sort: query.sort === column ? `-${column}` : column }),
-    search: (q: string) => setQuery({ q, page: 1 }),
+    search: useCallback((q: string) => setQuery({ q, page: 1 }), [setQuery]),
     setPage: (page: number) => setQuery({ page }),
-    setPerPage: (perPage: number | 'all') => setQuery({ perPage }),
+    setPerPage: (perPage: number | 'all') => setQuery({ perPage, page: 1 }),
     setFilter,
     resetFilters,
     selected,

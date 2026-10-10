@@ -101,9 +101,6 @@ export type TextFieldDefinition =
       {
         prefix?: string
         suffix?: string
-        prefixIcon?: string
-        suffixIcon?: string
-        mask?: string
         autocomplete?: string
         datalist?: readonly string[]
       }
@@ -113,9 +110,6 @@ export type TextFieldDefinition =
       {
         prefix?: string
         suffix?: string
-        prefixIcon?: string
-        suffixIcon?: string
-        mask?: string
         autocomplete?: string
         datalist?: readonly string[]
       }
@@ -125,25 +119,18 @@ export type TextFieldDefinition =
       {
         prefix?: string
         suffix?: string
-        prefixIcon?: string
-        suffixIcon?: string
-        mask?: string
         autocomplete?: string
         datalist?: readonly string[]
         revealable?: boolean
       }
     >
 export type NumberFieldDefinition = FieldDefinition<'number', { prefix?: string; suffix?: string }>
-export type TextareaFieldDefinition = FieldDefinition<
-  'textarea',
-  { rows?: number; autosize?: boolean }
->
+export type TextareaFieldDefinition = FieldDefinition<'textarea', { rows?: number }>
 export type SelectFieldDefinition =
   | FieldDefinition<
       'select',
       {
         options?: Record<string, unknown> | readonly unknown[]
-        searchable?: boolean
         native?: boolean
         clearable?: boolean
       }
@@ -152,7 +139,6 @@ export type SelectFieldDefinition =
       'multiSelect',
       {
         options?: Record<string, unknown> | readonly unknown[]
-        searchable?: boolean
         native?: boolean
         clearable?: boolean
       }
@@ -164,7 +150,6 @@ export type CheckboxListFieldDefinition = FieldDefinition<
     options?: Record<string, unknown> | readonly unknown[]
     columns?: number
     searchable?: boolean
-    bulkToggleable?: boolean
   }
 >
 export type RadioFieldDefinition = FieldDefinition<
@@ -195,11 +180,9 @@ export type DateFieldDefinition =
       {
         minDate?: string
         maxDate?: string
-        displayFormat?: string
         timezone?: string
         seconds?: boolean
         native?: boolean
-        weekStartsOn?: number
       }
     >
   | FieldDefinition<
@@ -207,11 +190,9 @@ export type DateFieldDefinition =
       {
         minDate?: string
         maxDate?: string
-        displayFormat?: string
         timezone?: string
         seconds?: boolean
         native?: boolean
-        weekStartsOn?: number
       }
     >
   | FieldDefinition<
@@ -219,11 +200,9 @@ export type DateFieldDefinition =
       {
         minDate?: string
         maxDate?: string
-        displayFormat?: string
         timezone?: string
         seconds?: boolean
         native?: boolean
-        weekStartsOn?: number
       }
     >
 export type ColorFieldDefinition = FieldDefinition<
@@ -498,9 +477,6 @@ export interface FieldBuilderBase<D extends FieldDefinitionUnion> extends Compon
 export interface TextBuilder extends FieldBuilderBase<TextFieldDefinition> {
   prefix(value: string): this
   suffix(value: string): this
-  prefixIcon(value: string): this
-  suffixIcon(value: string): this
-  mask(value: string): this
   autocomplete(value: string): this
   datalist(value: readonly string[]): this
   minLength(value: number): this
@@ -530,7 +506,6 @@ export interface NumberBuilder extends FieldBuilderBase<NumberFieldDefinition> {
 }
 export interface TextareaBuilder extends FieldBuilderBase<TextareaFieldDefinition> {
   rows(value: number): this
-  autosize(value?: boolean): this
   minLength(value: number): this
   maxLength(value: number): this
 }
@@ -538,7 +513,6 @@ export interface SelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'select' }>
 > {
   options(value: Record<string, unknown> | readonly unknown[]): this
-  searchable(value?: boolean): this
   native(value?: boolean): this
   clearable(value?: boolean): this
   multiple(value?: boolean): this
@@ -549,7 +523,6 @@ export interface MultiSelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'multiSelect' }>
 > {
   options(value: Record<string, unknown> | readonly unknown[]): this
-  searchable(value?: boolean): this
   native(value?: boolean): this
   clearable(value?: boolean): this
   in(value: readonly unknown[]): this
@@ -558,11 +531,9 @@ export interface MultiSelectBuilder extends FieldBuilderBase<
 export interface DateBuilder extends FieldBuilderBase<DateFieldDefinition> {
   minDate(value: string): this
   maxDate(value: string): this
-  displayFormat(value: string): this
   timezone(value: string): this
   seconds(value?: boolean): this
   native(value?: boolean): this
-  weekStartsOn(value: number): this
 }
 export interface RepeaterBuilder extends FieldBuilderBase<RepeaterFieldDefinition> {
   schema(
@@ -607,7 +578,6 @@ export interface CheckboxListBuilder extends FieldBuilderBase<CheckboxListFieldD
   options(value: Record<string, unknown> | readonly unknown[]): this
   columns(value: number): this
   searchable(value?: boolean): this
-  bulkToggleable(value?: boolean): this
 }
 export interface RadioBuilder extends FieldBuilderBase<RadioFieldDefinition> {
   options(value: Record<string, unknown> | readonly unknown[]): this

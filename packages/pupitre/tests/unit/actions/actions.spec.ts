@@ -51,6 +51,18 @@ test.group('action compiler', () => {
     assert.equal(confirm.kind, 'confirm')
     assert.equal(form.kind, 'form')
   })
+
+  test('disables actions whose URLs use unsafe schemes', async ({ assert }) => {
+    for (const unsafeUrl of ['javascript:alert(1)', 'data:text/html,unsafe']) {
+      const result = await compileActionDescriptor(
+        action('unsafe')
+          .url(() => unsafeUrl)
+          .openUrlInNewTab().definition,
+        descriptor()
+      )
+      assert.isFalse(result.enabled)
+    }
+  })
   test('preserves action presentation metadata in the catalog descriptor', async ({ assert }) => {
     const compiled = await compileActionDescriptor(
       action('edit')

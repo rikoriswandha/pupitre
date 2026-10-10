@@ -10,6 +10,8 @@ import {
 } from '../../../index.js'
 import Post from '../../fixtures/post.js'
 import SchemaPost from '../../fixtures/schema_post.js'
+// @ts-expect-error the inline validator is deliberately absent from M1
+import type { compileFieldValidator } from '../../../src/compiler/vine_compiler.js'
 
 const realistic = () =>
   defineResource(Post)
@@ -133,5 +135,25 @@ test.group('resource and builder DSL', () => {
     const textField = schema.text('title')
     // @ts-expect-error text fields do not expose editor-only modifiers
     void textField.toolbar
+    // @ts-expect-error unsupported text masks are not exposed by M1 builders
+    void textField.mask
+    // @ts-expect-error unsupported text icons are not exposed by M1 builders
+    void textField.prefixIcon
+    // @ts-expect-error select search UI is not implemented in M1
+    void schema.select('status').searchable
+    // @ts-expect-error textarea autosize is not implemented in M1
+    void schema.textarea('body').autosize
+    // @ts-expect-error checkbox-list bulk toggling is not implemented in M1
+    void schema.checkboxList('roles').bulkToggleable
+    // @ts-expect-error date display formatting is not implemented in M1
+    void schema.date('createdAt').displayFormat
+    // @ts-expect-error date week-start configuration is not implemented in M1
+    void schema.date('createdAt').weekStartsOn
+    defineResource(Post).table((t) => {
+      // @ts-expect-error table row class callbacks are not implemented in M1
+      void t.rowClass
+      return t
+    })
+    void (undefined as typeof compileFieldValidator)
   })
 })

@@ -90,6 +90,22 @@ const rendererProps = (
   toast: () => {},
 })
 
+const nestedSpecRegistry = defineRegistry({
+  Text: Field,
+  DataTable: ({
+    props,
+  }: {
+    props: { descriptor: { filters: Array<{ form?: { spec?: unknown } }> } }
+  }) => (
+    <pre data-testid="nested-spec">{JSON.stringify(props.descriptor.filters[0]?.form?.spec)}</pre>
+  ),
+  Shell: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Toaster: () => null,
+  Modal: () => null,
+  ConfirmDialog: () => null,
+  NotFound: () => null,
+} as never)
+
 test.group('Pupitre renderer store lifecycle', () => {
   test('preserves user data on the same key, updates server-owned paths, and resets on a new key', async ({
     assert,
@@ -214,6 +230,72 @@ test.group('Pupitre renderer store lifecycle', () => {
         (changes.at(-1) as { data?: { title?: string } } | undefined)?.data?.title,
         'Changed sub-spec'
       )
+    } finally {
+      await act(async () => root.unmount())
+      dom.happyDOM.abort()
+    }
+  })
+  test('passes descriptor sub-spec expressions through only when wrapped in $raw', async ({
+    assert,
+  }) => {
+    const dom = installDom()
+    const container = dom.document.createElement('div')
+    dom.document.body.append(container)
+    const root = createRoot(container as unknown as Element)
+    const nestedSpec = {
+      root: 'field',
+      elements: {
+        field: {
+          type: 'Text',
+          props: { name: 'term', value: { $bindState: '/data/term' } },
+        },
+      },
+      state: { data: { term: 'filter state' } },
+    }
+    const makeDescriptorPage = (filterSpec: unknown, key: string): PupitrePageProps['page'] =>
+      ({
+        key,
+        kind: 'list',
+        title: 'Posts',
+        breadcrumbs: [],
+        actions: { header: [] },
+        catalogVersion: '0.1',
+        state: { data: { term: 'outer state' } },
+        spec: {
+          root: 'table',
+          elements: {
+            table: {
+              type: 'DataTable',
+              props: {
+                descriptor: { filters: [{ form: { spec: filterSpec } }] },
+              },
+            },
+          },
+        },
+      }) as unknown as PupitrePageProps['page']
+    try {
+      await act(async () =>
+        root.render(
+          <PupitreRenderer
+            {...rendererProps(makeDescriptorPage({ $raw: nestedSpec }, 'raw'))}
+            registry={nestedSpecRegistry}
+          />
+        )
+      )
+      const readNestedSpec = () => {
+        const output = container.querySelector('[data-testid="nested-spec"]')?.textContent
+        return output ? JSON.parse(output) : undefined
+      }
+      assert.deepEqual(readNestedSpec(), nestedSpec)
+      await act(async () =>
+        root.render(
+          <PupitreRenderer
+            {...rendererProps(makeDescriptorPage(nestedSpec, 'resolved'))}
+            registry={nestedSpecRegistry}
+          />
+        )
+      )
+      assert.deepEqual(readNestedSpec()?.elements.field.props.value, 'outer state')
     } finally {
       await act(async () => root.unmount())
       dom.happyDOM.abort()

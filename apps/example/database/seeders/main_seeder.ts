@@ -38,7 +38,7 @@ export default class MainSeeder extends BaseSeeder {
           categoryId: categories[(index - 1) % categories.length]!.id,
           authorId: admin.id,
           items: [
-            { sku: `NOTE-${index}`, qty: index % 4 + 1, price: index * 1250 },
+            { sku: `NOTE-${index}`, qty: (index % 4) + 1, price: index * 1250 },
             { sku: `INK-${index}`, qty: 2, price: 8500 },
           ],
         }

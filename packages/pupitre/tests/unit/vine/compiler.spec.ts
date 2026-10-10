@@ -1,8 +1,10 @@
 import { test } from '@japa/runner'
 import vine from '@vinejs/vine'
 import { schema } from '../../../src/builder/schema/schema.js'
-import { compileValidator } from '../../../src/compiler/vine_compiler.js'
 import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../../../src/definition/schema.js'
+import type { HttpContext } from '@adonisjs/core/http'
+import type { LucidRow } from '@adonisjs/lucid/types/model'
+import { compileValidator } from '../../../src/compiler/vine_compiler.js'
 
 const field = (builder: { toDefinition(): unknown }) =>
   builder.toDefinition() as FieldDefinitionUnion
@@ -30,6 +32,25 @@ function errorFields(error: unknown): string[] {
     'field' in message &&
     typeof message.field === 'string'
       ? [message.field]
+      : []
+  )
+}
+
+function errorMessages(error: unknown): string[] {
+  if (
+    !error ||
+    typeof error !== 'object' ||
+    !('messages' in error) ||
+    !Array.isArray(error.messages)
+  ) {
+    return []
+  }
+  return error.messages.flatMap((message) =>
+    message &&
+    typeof message === 'object' &&
+    'message' in message &&
+    typeof message.message === 'string'
+      ? [message.message]
       : []
   )
 }
@@ -75,6 +96,76 @@ test.group('Vine compiler', () => {
     )
   })
 
+  test('preserves null for optional fields and omits untouched undefined fields', async ({
+    assert,
+  }) => {
+    const validator = compileValidator([
+      field(schema.text('optional')),
+      field(schema.text('untouched')),
+    ])
+    assert.deepEqual(await validator.validate({ optional: null }, options), { optional: null })
+  })
+
+  test('accepts only persisted or same-resource same-field uploaded file keys', async ({
+    assert,
+  }) => {
+    const nodes = [field(schema.fileUpload('cover'))] as SchemaNodeDefinition[]
+    const sessionUploads = [
+      { key: 'posts/cover/new.png', resource: 'posts', field: 'cover', ability: 'create' },
+      { key: 'posts/body/wrong.png', resource: 'posts', field: 'body', ability: 'create' },
+      { key: 'posts/cover/other.png', resource: 'articles', field: 'cover', ability: 'create' },
+    ]
+    const ctx = {
+      session: { get: (key: string) => (key === 'pupitre.uploads' ? sessionUploads : undefined) },
+      pupitre: { panel: { resources: [{ slug: 'posts', definition: { form: nodes } }] } },
+    } as unknown as HttpContext
+    const record = {
+      serialize: () => ({ cover: 'posts/cover/old.png' }),
+    } as unknown as LucidRow
+    const validator = compileValidator(nodes)
+    assert.deepEqual(
+      await validator.validate({ cover: 'posts/cover/new.png' }, { ...options, ctx, record }),
+      { cover: 'posts/cover/new.png' }
+    )
+    assert.deepEqual(
+      await validator.validate({ cover: 'posts/cover/old.png' }, { ...options, ctx, record }),
+      { cover: 'posts/cover/old.png' }
+    )
+    const error = await captureError(() =>
+      validator.validate({ cover: 'posts/body/wrong.png' }, { ...options, ctx, record })
+    )
+    assert.deepEqual(errorFields(error), ['cover'])
+    assert.include(errorMessages(error).join(' '), 'not uploaded for this field')
+  })
+
+  test('does not dehydrate disabled fields unless explicitly enabled', async ({ assert }) => {
+    const output = await compileValidator([
+      field(schema.text('fixed').disabled(true).required()),
+      field(
+        schema
+          .text('conditional')
+          .disabled(({ get }) => get('locked') === true)
+          .required()
+      ),
+      field(schema.text('persisted').disabled(true).required().dehydrated(true)),
+      field(schema.checkbox('locked')),
+    ]).validate(
+      { fixed: 'crafted', conditional: 'crafted', persisted: 'kept', locked: true },
+      options
+    )
+    assert.deepEqual(output, { persisted: 'kept', locked: true })
+  })
+
+  test('preserves wall-clock time strings and rejects invalid clock values', async ({ assert }) => {
+    const validator = compileValidator([field(schema.time('at'))])
+    assert.deepEqual(await validator.validate({ at: '14:30' }, options), { at: '14:30' })
+    assert.deepEqual(await validator.validate({ at: '14:30:45' }, options), { at: '14:30:45' })
+    for (const at of ['24:00', '12:60', '09:10:60', '9:10', '2026-01-01T14:30:00']) {
+      const error = await captureError(() => validator.validate({ at }, options))
+      assert.deepEqual(errorFields(error), ['at'])
+    }
+  })
+
   test('validates numeric, enum, arrays, tags, key-values and file limits', async ({ assert }) => {
     const nodes = [
       field(schema.number('quantity').min(1).max(5).step(0.5)),
@@ -84,6 +175,12 @@ test.group('Vine compiler', () => {
       field(schema.keyValue('metadata')),
       field(schema.fileUpload('files').multiple().maxFiles(1)),
     ] as SchemaNodeDefinition[]
+    const ctx = {
+      session: {
+        get: () => [{ key: 'a', resource: 'posts', field: 'files', ability: 'create' }],
+      },
+      pupitre: { panel: { resources: [{ slug: 'posts', definition: { form: nodes } }] } },
+    } as unknown as HttpContext
     const validator = compileValidator(nodes)
     const output = await validator.validate(
       {
@@ -94,7 +191,7 @@ test.group('Vine compiler', () => {
         metadata: { color: 'blue' },
         files: ['a'],
       },
-      options
+      { ...options, ctx }
     )
     assert.equal((output.metadata as Record<string, string>).color, 'blue')
     await assert.rejects(() =>
@@ -107,7 +204,7 @@ test.group('Vine compiler', () => {
           metadata: { color: 1 },
           files: ['a', 'b'],
         },
-        options
+        { ...options, ctx }
       )
     )
   })

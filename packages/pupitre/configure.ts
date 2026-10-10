@@ -33,6 +33,23 @@ export async function configure(command: ConfigureCommand) {
     ['inertia/admin/registry.stub', 'inertia/admin/registry.ts', {}],
   ] as const
 
+  await codemods.installPackages([
+    { name: '@rikology/pupitre-react', isDevDependency: false },
+    { name: '@rikology/pupitre-ui', isDevDependency: false },
+    { name: 'tailwindcss', isDevDependency: true },
+    { name: '@tailwindcss/vite', isDevDependency: true },
+  ])
+  await codemods.registerVitePlugin('tailwindcss()', [
+    { isNamed: false, module: '@tailwindcss/vite', identifier: 'tailwindcss' },
+  ])
+
+  const cssPath = command.app.makePath('inertia/css/app.css')
+  if (await exists(cssPath)) {
+    const css = await readFile(cssPath, 'utf-8')
+    const cssImport = "@import '@rikology/pupitre-ui/styles.css';"
+    if (!css.includes(cssImport)) await writeFile(cssPath, `${css.trimEnd()}\n${cssImport}\n`)
+  }
+
   for (const [stub, destination, data] of stubs) {
     if (await exists(command.app.makePath(destination))) continue
     await codemods.makeUsingStub(STUBS_ROOT, stub, data)

@@ -68,14 +68,14 @@ export class PostPolicy {
   viewAny(_user: unknown) {
     return !deniedAbilities.has('viewAny')
   }
-  view(_user: unknown) {
-    return !deniedAbilities.has('view')
+  view(_user: unknown, record: Post) {
+    return record.id > 0 && !deniedAbilities.has('view')
   }
   create(_user: unknown) {
     return !deniedAbilities.has('create')
   }
-  update(_user: unknown) {
-    return !deniedAbilities.has('update')
+  update(_user: unknown, record: Post) {
+    return record.id > 0 && !deniedAbilities.has('update')
   }
   delete(_user: unknown) {
     return !deniedAbilities.has('delete')
@@ -132,8 +132,14 @@ export const fixturePostResource = defineResource(Post)
   .slug('posts')
   .label('Post')
   .pluralLabel('Posts')
+  .recordTitle('title')
   .policy(PostPolicy)
   .scope((query) => query.where('tenant_id', 1))
+  .create((data, _ctx, trx) => Post.create(data, { client: trx }))
+  .update(async (record, data, _ctx, trx) => {
+    record.useTransaction(trx)
+    return record.merge(data).save()
+  })
   .mutateBeforeCreate((data) => {
     fixtureHookEvents.push('mutateBeforeCreate')
     return { ...data, tenantId: 1 }
@@ -156,19 +162,31 @@ export const fixturePostResource = defineResource(Post)
       schema.text('title').required().maxLength(200),
       schema.text('slug').required(),
       schema.select('status').options({ draft: 'Draft', published: 'Published' }),
-      schema.fileUpload('cover').image().maxSize('2mb'),
+      schema.tabs([
+        schema.tab('Media').components([schema.fileUpload('cover').image().maxSize('2mb')]),
+      ]),
       schema.fileUpload('privateCover').visibility('private').image().maxSize('2mb'),
+      schema.richEditor('body'),
       schema.repeater('items').schema([schema.fileUpload('attachment').image().maxSize('2mb')]),
     ])
   )
   .table((definition) =>
     definition
-      .columns([table.text('title').sortable().searchable(), table.badge('status')])
+      .columns([
+        table.text('title').sortable().searchable(),
+        table.text('category.name'),
+        table.badge('status'),
+        table.image('cover'),
+      ])
       .filters([table.filter.select('status').options({ draft: 'Draft', published: 'Published' })])
       .paginated([1, 10])
   )
   .infolist((definition) =>
-    definition.components([schema.textEntry('title'), schema.textEntry('status')])
+    definition.components([
+      schema.textEntry('title'),
+      schema.textEntry('status'),
+      schema.imageEntry('cover'),
+    ])
   )
   .actions({
     header: [actions.create()],
@@ -215,7 +233,15 @@ export type TestApplication = {
   loginAs(user: User): Promise<string>
 }
 
-export async function createTestApp(options: { csrf?: boolean } = {}): Promise<TestApplication> {
+export async function createTestApp(
+  options: {
+    csrf?: boolean
+    panelGuard?: string
+    withoutBouncer?: boolean
+    resourceSlug?: string
+    breadcrumbs?: boolean
+  } = {}
+): Promise<TestApplication> {
   const root = await mkdtemp(join(tmpdir(), 'pupitre-http-'))
   const storagePath = join(root, 'uploads')
   await mkdir(storagePath, { recursive: true })
@@ -239,7 +265,6 @@ export async function createTestApp(options: { csrf?: boolean } = {}): Promise<T
       },
       config: {
         pupitre: defineConfig({
-          path: '/admin',
           cache: { dev: true },
           storage: { disk: 'uploads' },
         }),
@@ -297,7 +322,7 @@ export async function createTestApp(options: { csrf?: boolean } = {}): Promise<T
     () => import('@adonisjs/session/session_middleware'),
     () => import('@adonisjs/shield/shield_middleware'),
     () => import('@adonisjs/auth/initialize_auth_middleware'),
-    async () => ({ default: TestBouncerMiddleware }),
+    ...(options.withoutBouncer ? [] : [async () => ({ default: TestBouncerMiddleware })]),
   ])
   router.post('/__test/login', async (ctx) => {
     const user = await User.findOrFail(ctx.request.input('id'))
@@ -307,10 +332,27 @@ export async function createTestApp(options: { csrf?: boolean } = {}): Promise<T
     await authContext.auth.use('web').login(user)
     return ctx.response.noContent()
   })
+  const configuredPanel = options.resourceSlug
+    ? fixturePanel.resources({
+        posts: fixturePostResource.slug(options.resourceSlug),
+        categories: fixtureCategoryResource,
+      })
+    : fixturePanel
+  const guardedPanel = options.panelGuard
+    ? configuredPanel.guard(options.panelGuard)
+    : configuredPanel
+  const panels =
+    options.resourceSlug || options.panelGuard || options.breadcrumbs === false
+      ? {
+          admin: async () => ({
+            default: guardedPanel.breadcrumbs(options.breadcrumbs ?? true),
+          }),
+        }
+      : fixturePanels
   const manager = (await app.container.make('pupitre.manager')) as {
     boot(panels: typeof fixturePanels): Promise<void>
   }
-  await manager.boot(fixturePanels)
+  await manager.boot(panels)
   await app.start(() => {})
   const server = await app.container.make('server')
   server.errorHandler(async () => ({ default: TestExceptionHandler }))

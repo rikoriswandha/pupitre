@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { createElement, useRef } from 'react'
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
@@ -56,27 +56,78 @@ function DataTableCell({ value, column }: { value: unknown; column: ColumnDescri
   return renderCellValue(value, column)
 }
 
-function CustomFilter({
+function seededFilterState(
+  spec: JsonRenderSpec,
+  name: string,
+  query: Record<string, unknown>
+): Record<string, unknown> {
+  const state = structuredClone(spec.state ?? {}) as Record<string, unknown>
+  const data =
+    state.data && typeof state.data === 'object' && !Array.isArray(state.data)
+      ? { ...(state.data as Record<string, unknown>) }
+      : {}
+  const params: Record<string, unknown> = Object.fromEntries(
+    new URLSearchParams(typeof window === 'undefined' ? '' : window.location.search).entries()
+  )
+  const current = { ...params, ...query }
+  const prefix = `filters[${name}]`
+  const direct = current[prefix]
+  if (direct !== undefined && direct !== null) {
+    const field = Object.keys(data)[0]
+    state.data = field ? { ...data, [field]: direct } : direct
+    return state
+  }
+  for (const [key, value] of Object.entries(current)) {
+    if (key.startsWith(`${prefix}[`)) data[key.slice(prefix.length + 1, -1)] = value
+  }
+  if (Object.keys(data).length) state.data = data
+  return state
+}
+
+function CustomFilterForm({
   filter,
+  spec,
   setFilter,
+  query,
 }: {
   filter: TableDescriptor['filters'][number]
+  spec: JsonRenderSpec
   setFilter: (name: string, value: unknown) => void
+  query: Record<string, unknown>
 }) {
-  const spec = filter.form?.spec
-  if (!spec) return null
+  const seededState = seededFilterState(spec, filter.name, query)
+  const seedKey = JSON.stringify(seededState.data ?? null)
+  // Edits stay local until Apply (or Enter in the embedded form): no visit per keystroke.
+  const [draft, setDraft] = useState<{ seedKey: string; data: unknown } | null>(null)
+  const data = draft?.seedKey === seedKey ? draft.data : seededState.data
+  const apply = () => {
+    setFilter(filter.name, data && typeof data === 'object' ? data : (data ?? ''))
+  }
   return (
-    <div className="min-w-36" key={filter.name}>
+    <div className="min-w-36 space-y-2">
       <span className="text-sm">{filter.label}</span>
       {createElement(SpecRenderer, {
-        spec: spec as JsonRenderSpec,
-        onStateChange: (state) => {
-          const data = state.data
-          setFilter(filter.name, data && typeof data === 'object' ? data : (data ?? ''))
-        },
+        // Re-seed from the URL when the applied filter changes (back/forward, reset).
+        key: seedKey,
+        spec: { ...spec, state: seededState },
+        state: seededState,
+        embeddedSubmit: apply,
+        onStateChange: (state) => setDraft({ seedKey, data: state.data }),
       })}
+      <button type="button" className="rounded border px-3 py-1 text-sm" onClick={apply}>
+        Apply
+      </button>
     </div>
   )
+}
+
+function CustomFilter(props: {
+  filter: TableDescriptor['filters'][number]
+  setFilter: (name: string, value: unknown) => void
+  query: Record<string, unknown>
+}) {
+  const spec = props.filter.form?.spec
+  return spec ? <CustomFilterForm {...props} spec={spec as JsonRenderSpec} /> : null
 }
 function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   const cell =
@@ -219,13 +270,24 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
 
   const querySearch = tableState.query.q
   const searchTable = tableState.search
+  const lastSubmittedSearch = useRef(String(querySearch ?? ''))
   useEffect(() => {
-    setSearch(typeof querySearch === 'string' ? querySearch : '')
+    const value = typeof querySearch === 'string' ? querySearch : ''
+    setSearch(value)
+    lastSubmittedSearch.current = value
   }, [querySearch])
   useEffect(() => {
-    if (!descriptor.searchable || search === (querySearch ?? '')) return
+    if (
+      !descriptor.searchable ||
+      search === (querySearch ?? '') ||
+      search === lastSubmittedSearch.current
+    )
+      return
     const timer = window.setTimeout(
-      () => searchTable(search),
+      () => {
+        lastSubmittedSearch.current = search
+        searchTable(search)
+      },
       Math.max(0, descriptor.searchDebounce)
     )
     return () => window.clearTimeout(timer)
@@ -326,7 +388,14 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
   function renderFilter(filter: TableDescriptor['filters'][number]) {
     const current = tableState.query[`filters[${filter.name}]`] ?? ''
     if (filter.type === 'custom' && filter.form?.spec)
-      return <CustomFilter filter={filter} setFilter={tableState.setFilter} key={filter.name} />
+      return (
+        <CustomFilter
+          filter={filter}
+          setFilter={tableState.setFilter}
+          query={tableState.query}
+          key={`${filter.name}:${typeof window === 'undefined' ? '' : window.location.search}`}
+        />
+      )
     if (filter.type === 'select')
       return (
         <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>

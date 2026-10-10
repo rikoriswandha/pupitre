@@ -1,6 +1,8 @@
 /* eslint-disable @unicorn/filename-case */
-import { defineCatalog } from '@json-render/core'
-import type { ComputedFunction } from '@json-render/core'
+import { defineCatalog, defineDirective } from '@json-render/core'
+import { z } from 'zod'
+import type { ComputedFunction, DirectiveDefinition } from '@json-render/core'
+import type { DefineRegistryResult } from '@json-render/react'
 import { defineRegistry as jsonDefineRegistry } from '@json-render/react'
 import { schema } from '@json-render/react/schema'
 import { pupitreCatalog } from '@rikology/pupitre/catalog'
@@ -14,12 +16,19 @@ export type RegistryComponents = NonNullable<
   Parameters<typeof jsonDefineRegistry<typeof catalog>>[1]['components']
 >
 export type PupitreRegistry = {
-  registry: ReturnType<typeof jsonDefineRegistry>['registry']
+  registry: DefineRegistryResult['registry']
   shell: ShellRegistry
   functions: PupitreFunctions & Record<string, ComputedFunction>
+  directives: DirectiveDefinition[]
 }
 export type HostRegistryComponents = RegistryComponents & ShellRegistry
-const registryHandlers = new WeakMap<object, ReturnType<typeof jsonDefineRegistry>['handlers']>()
+const rawDirective = defineDirective({
+  name: '$raw',
+  description: 'Passes a nested spec through without resolving expressions in its contents.',
+  schema: z.object({ $raw: z.unknown() }),
+  resolve: (value) => value.$raw,
+})
+const registryHandlers = new WeakMap<object, DefineRegistryResult['handlers']>()
 export function getRegistryHandlers(registry: PupitreRegistry['registry']) {
   const handlers = registryHandlers.get(registry)
   if (!handlers) throw new Error('Registry handlers are unavailable for this Pupitre registry.')
@@ -55,7 +64,9 @@ const actions = {
 }
 export function defineRegistry<TComponents extends HostRegistryComponents>(
   components: TComponents,
-  options: { functions?: Partial<PupitreFunctions> & Record<string, ComputedFunction> } = {}
+  options: {
+    functions?: Partial<PupitreFunctions> & Record<string, ComputedFunction>
+  } = {}
 ) {
   const catalogComponents = Object.fromEntries(
     Object.entries(components).filter(([name]) => name in pupitreCatalog.components)
@@ -66,5 +77,5 @@ export function defineRegistry<TComponents extends HostRegistryComponents>(
   ) as ShellRegistry
   const functions = { ...builtInFunctions, ...options.functions }
   registryHandlers.set(result.registry, result.handlers)
-  return { registry: result.registry, shell, functions }
+  return { registry: result.registry, shell, functions, directives: [rawDirective] }
 }

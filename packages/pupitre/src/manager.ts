@@ -103,7 +103,7 @@ export default class PupitreManager {
       ? source.map((value) => [undefined, value] as const)
       : Object.entries(source ?? {})
     const result: ResourceRuntime[] = []
-    for (const [barrelSlug, value] of entries) {
+    for (const [, value] of entries) {
       let loaded = value
       if (typeof value === 'function') {
         const module = await (value as LazyModule<unknown>)()
@@ -114,10 +114,6 @@ export default class PupitreManager {
       )
       if (!definition || typeof definition.slug !== 'string')
         throw new Error(`Resource in panel "${panel.id}" must resolve to a resource definition`)
-      if (barrelSlug && barrelSlug !== definition.slug)
-        throw new Error(
-          `Pupitre resource barrel key "${barrelSlug}" does not match resource slug "${definition.slug}" in panel "${panel.id}"`
-        )
       if (!validSlug(definition.slug))
         throw new Error(`Invalid Pupitre resource slug "${definition.slug}"`)
       const model = definition.modelClass

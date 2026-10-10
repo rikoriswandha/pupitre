@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { dynamic, jsonRenderExpression, visibilitySchema } from './expressions.js'
+import { dynamic, jsonRenderExpression, raw, visibilitySchema } from './expressions.js'
 
 export const option = z.object({
   value: z.union([z.string(), z.number()]),
@@ -92,7 +92,7 @@ export const columnDescriptor = z.object({
 })
 export type ColumnDescriptor = z.infer<typeof columnDescriptor>
 const filterForm = z
-  .object({ fields: z.array(z.unknown()).optional(), spec: formSpec.optional() })
+  .object({ fields: z.array(z.unknown()).optional(), spec: raw(formSpec).optional() })
   .optional()
 export const filterDescriptor = z.discriminatedUnion('type', [
   z.object({
@@ -124,6 +124,7 @@ export const tableDescriptor = z.object({
   reorderable: z.object({ url: z.string() }).optional(),
   poll: z.number().optional(),
   selectable: z.boolean(),
+  striped: z.boolean().optional(),
   bulkActions: z.array(actionDescriptor),
   emptyState: z
     .object({
@@ -190,9 +191,6 @@ export const repeaterDescriptor = z.object({
   collapsible: z.boolean(),
   collapsed: z.boolean().optional(),
   cloneable: z.boolean(),
-  addLabel: z.string().optional(),
-  itemLabel: dynamic(z.string()).optional(),
-  grid: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
   defaultItems: z.array(z.record(z.string(), z.unknown())).optional(),
 })
 export type RepeaterDescriptor = z.infer<typeof repeaterDescriptor>
