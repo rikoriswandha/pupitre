@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { StateStore } from '@json-render/core'
 import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
 import { fetchActionForm, submitAction } from '../bridge/actions.js'
@@ -35,6 +35,12 @@ export function ActionModal({
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<Record<string, unknown>>({})
   const [modalStore, setModalStore] = useState<StateStore | null>(null)
+  // Callers often pass inline `close`/`toast` callbacks; keep the latest ones in a
+  // ref so a re-render never re-fetches the form (which would reset modal state).
+  const callbacks = useRef({ close, toast })
+  useEffect(() => {
+    callbacks.current = { close, toast }
+  })
   useEffect(() => {
     let active = true
     // The initial loading state is true; setting it here would synchronously rerender on mount.
@@ -44,11 +50,11 @@ export function ActionModal({
       })
       .catch((error: unknown) => {
         if (active) {
-          toast({
+          callbacks.current.toast({
             type: 'error',
             title: error instanceof Error ? error.message : 'Unable to load action form.',
           })
-          close()
+          callbacks.current.close()
         }
       })
       .finally(() => {
@@ -57,7 +63,7 @@ export function ActionModal({
     return () => {
       active = false
     }
-  }, [action, close, toast])
+  }, [action])
   const Modal = registry.Modal
   if (!Modal) return null
   const onSubmit = async () => {
@@ -83,6 +89,7 @@ export function ActionModal({
     }
   }
   const onStore = (store: StateStore) => setModalStore(store)
+  const embedded = { submit: () => void onSubmit() }
   return (
     <Modal
       open={Boolean(formResponse)}
@@ -118,6 +125,7 @@ export function ActionModal({
           upload={async () => []}
           toast={toast}
           onStore={onStore}
+          embedded={embedded}
         />
       )}
       {loading && !formResponse ? <span role="status">Loading…</span> : null}

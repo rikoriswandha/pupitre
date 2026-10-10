@@ -175,6 +175,7 @@ test.group('Pupitre renderer store lifecycle', () => {
               functions: runtimeRegistry.functions,
               runAction: async () => {},
               submitForm: () => {},
+              embedded: false,
               upload: async () => [],
               toast: () => {},
             }}
@@ -200,9 +201,13 @@ test.group('Pupitre renderer store lifecycle', () => {
       assert.equal(input?.value, 'Sub-spec')
       await act(async () => {
         if (!input) return
-        input.value = 'Changed sub-spec'
+        // React tracks `value` on the instance; use the prototype setter so the
+        // input event is seen as a real user edit.
+        Object.getOwnPropertyDescriptor(dom.HTMLInputElement.prototype, 'value')?.set?.call(
+          input,
+          'Changed sub-spec'
+        )
         input.dispatchEvent(new dom.Event('input', { bubbles: true }))
-        input.dispatchEvent(new dom.Event('change', { bubbles: true }))
       })
       assert.equal(parent.store.get('/data/title'), 'Parent')
       assert.equal(

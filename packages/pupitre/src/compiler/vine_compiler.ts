@@ -1,7 +1,7 @@
 import vine from '@vinejs/vine'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { Database } from '@adonisjs/lucid/database'
-import type { LucidRow } from '@adonisjs/lucid/types/model'
+import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { FieldContext } from '@vinejs/vine/types'
 import { DateTime } from 'luxon'
 import type {
@@ -12,7 +12,13 @@ import type {
 import { parseInZone } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
 
-type ValidatorOptions = { record?: LucidRow | null; ctx?: HttpContext; timezone: string }
+type ValidatorOptions = {
+  record?: LucidRow | null
+  /** Resource model: default table + attribute→column mapping for `unique` on create. */
+  model?: LucidModel | null
+  ctx?: HttpContext
+  timezone: string
+}
 export type FormValidator = {
   validate(data: unknown, options: ValidatorOptions): Promise<Record<string, unknown>>
 }
@@ -57,24 +63,25 @@ function addRules(schema: any, field: FieldDefinitionUnion): any {
     const { unique } = rules
     schema = schema.unique(async (database: Database, value: unknown, vineField: FieldContext) => {
       if (typeof value !== 'string' && typeof value !== 'number') return true
-      const meta = vineField.meta as { record?: LucidRow | null } | undefined
-      const record = meta?.record as (LucidRow & { $primaryKeyValue?: unknown }) | null | undefined
-      const model = record?.constructor as unknown as
-        { table?: string; primaryKey?: string } | undefined
+      const meta = vineField.meta as
+        { record?: LucidRow | null; model?: LucidModel | null } | undefined
+      const record = meta?.record ?? null
+      const model = meta?.model ?? (record?.constructor as LucidModel | undefined) ?? null
+      // Field names are model attributes (camelCase); the query needs DB columns.
+      const toColumn = (attribute: string) =>
+        model?.$keys.attributesToColumns.get(attribute) ?? attribute
       const table = unique.table ?? model?.table
       if (!table) throw new Error(`The unique rule for "${vineField.name}" requires a table name`)
-      const column = unique.column ?? vineField.name
+      const column = unique.column ?? toColumn(String(vineField.name))
       const query = database
         .connection()
         .from(table)
         .select(column)
         .whereRaw('?? = ?', [column, value])
       if (unique.ignoreRecord && record && model) {
-        const primaryKey = model.primaryKey ?? 'id'
-        const key =
-          record.$primaryKeyValue ?? (record as unknown as Record<string, unknown>)[primaryKey]
+        const key = record.$primaryKeyValue
         if (typeof key === 'string' || typeof key === 'number') {
-          query.whereRaw('?? != ?', [primaryKey, key])
+          query.whereRaw('?? != ?', [toColumn(model.primaryKey), key])
         }
       }
       return !(await query.first())
@@ -357,7 +364,9 @@ function prepareDates(
     for (const concrete of concreteFields(data, item)) {
       const value = getAt(data, concrete.path)
       if (typeof value !== 'string') continue
-      const parsed = parseInZone(value, field.timezone ?? timezone)
+      // Calendar dates carry no instant: parse them as UTC midnight, never shifted.
+      const zone = field.kind === 'date' ? 'UTC' : (field.timezone ?? timezone)
+      const parsed = parseInZone(value, zone)
       if (parsed) setAt(data, concrete.path, parsed.toUTC().toISO())
     }
   }
@@ -412,7 +421,12 @@ function buildValidator(nodes: SchemaNodeDefinition[], fields: FieldRecord[]): F
       const filtered = filterHidden(input, fields, options)
       prepareDates(filtered, fields, options.timezone)
       const validated = await compiled.validate(filtered, {
-        meta: { record: options.record ?? null, ctx: options.ctx, timezone: options.timezone },
+        meta: {
+          record: options.record ?? null,
+          model: options.model ?? null,
+          ctx: options.ctx,
+          timezone: options.timezone,
+        },
       })
       for (const item of fields) {
         for (const concrete of concreteFields(validated, item)) {

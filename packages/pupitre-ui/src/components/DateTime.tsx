@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Input, Label } from '../primitives/index.js'
+import { fromDateTimeInput, toInputValue } from '../primitives/date_value.js'
 
 type Props = Infer<typeof components.DateTime.props>
 type Runtime = {
@@ -47,14 +48,16 @@ export function DateTime({ props, bindings }: Runtime) {
           id={id}
           name={id}
           type="datetime-local"
-          value={value ?? ''}
+          value={toInputValue(value, 'datetime', props.seconds === true)}
           min={props.min}
           max={props.max}
           step={props.seconds ? 1 : 60}
           disabled={props.disabled}
           required={props.required}
           readOnly={props.readOnly}
-          onChange={(event) => setValue(event.currentTarget.value || null)}
+          onChange={(event) =>
+            setValue(fromDateTimeInput(event.currentTarget.value, props.timezone ?? undefined))
+          }
           aria-required={props.required}
           aria-describedby={describedBy}
           aria-invalid={!!error}

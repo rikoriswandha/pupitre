@@ -1,0 +1,286 @@
+import { z } from 'zod'
+import { actionResult, pageProps } from '../../../catalog/wire.js'
+import { test } from '@japa/runner'
+import {
+  allowPolicyAbilities,
+  closeTestApp,
+  createTestApp,
+  denyPolicyAbility,
+  failFixtureAfterSave,
+  fixtureHookEventsSnapshot,
+  resetFixtureHooks,
+  Post,
+  User,
+} from '../../helpers/app.js'
+
+function sessionCookie(response: Response) {
+  return response.headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(';', 1)[0])
+    .join('; ')
+}
+
+async function inertia(
+  baseUrl: string,
+  path: string,
+  method = 'GET',
+  body?: unknown,
+  cookie = '',
+  action = false
+) {
+  return fetch(`${baseUrl}${path}`, {
+    method,
+    redirect: 'manual',
+    headers: {
+      'Accept': 'text/html',
+      'X-Inertia': 'true',
+      'X-Inertia-Version': '1',
+      ...(cookie ? { Cookie: cookie } : {}),
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      ...(action ? { 'X-Pupitre-Action': '1', 'Accept': 'application/json' } : {}),
+      'Referer': `${baseUrl}/admin/posts/create`,
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
+}
+async function responseProps(response: Response) {
+  const text = await response.text()
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch {
+    throw new Error(`Inertia response is not JSON: ${text}`)
+  }
+  if (!body || typeof body !== 'object' || !('props' in body))
+    throw new Error('Inertia response did not contain props')
+  return pageProps.parse(body.props)
+}
+
+const validationResponse = z.object({ errors: z.record(z.string(), z.array(z.string())) })
+
+test.group('Pupitre CRUD HTTP runtime', () => {
+  test('renders create, edit, view and 404 pages with stored values', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const dashboard = await fetch(`${fixture.baseUrl}/admin`, { redirect: 'manual' })
+      assert.equal(dashboard.status, 302)
+      assert.equal(dashboard.headers.get('location'), '/admin/posts')
+      const create = await inertia(fixture.baseUrl, '/admin/posts/create')
+      assert.equal(create.status, 200, await create.clone().text())
+      const record = await Post.create({
+        title: 'HTTP row',
+        slug: 'http-row',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const edit = await inertia(fixture.baseUrl, `/admin/posts/${record.id}/edit`)
+      const editPage = await responseProps(edit)
+      assert.equal(edit.status, 200)
+      assert.equal(editPage.page.kind, 'edit')
+      assert.equal(editPage.page.spec.elements.root?.props.method, 'put')
+      assert.equal(editPage.page.spec.elements.root?.props.url, `/admin/posts/${record.id}`)
+      assert.equal(
+        z.object({ title: z.string() }).parse(editPage.page.state.data).title,
+        'HTTP row'
+      )
+      const view = await inertia(fixture.baseUrl, `/admin/posts/${record.id}`)
+      assert.equal(view.status, 200)
+      const viewProps = await responseProps(view)
+      assert.equal(viewProps.page.kind, 'view')
+      const missing = await inertia(fixture.baseUrl, '/admin/posts/999999/edit')
+      assert.equal(missing.status, 404)
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+  test('authenticates the fixture user through the session guard', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const user = await User.create({
+        name: 'Fixture Admin',
+        email: `admin-${Date.now()}@example.test`,
+      })
+      const cookie = await fixture.loginAs(user)
+      const response = await inertia(fixture.baseUrl, '/admin/posts', 'GET', undefined, cookie)
+      assert.equal(response.status, 200)
+      const props = await responseProps(response)
+      assert.equal(props.pupitre.user?.id, user.id)
+      assert.equal(props.pupitre.user?.name, 'Fixture Admin')
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('validates, creates, updates and destroys records with transactional hooks', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      resetFixtureHooks()
+      const invalid = await inertia(fixture.baseUrl, '/admin/posts', 'POST', {}, '', true)
+      const invalidText = await invalid.text()
+      assert.equal(invalid.status, 422, invalidText)
+      assert.property(validationResponse.parse(JSON.parse(invalidText)).errors, 'title')
+      const invalidWeb = await inertia(fixture.baseUrl, '/admin/posts', 'POST', {})
+      assert.equal(invalidWeb.status, 302)
+
+      const values = { title: 'Created over HTTP', slug: 'created-over-http', status: 'draft' }
+      const actionCreated = await inertia(
+        fixture.baseUrl,
+        '/admin/posts',
+        'POST',
+        { ...values, slug: 'action-created-over-http' },
+        '',
+        true
+      )
+      assert.equal(actionCreated.status, 200)
+      assert.match(
+        actionResult.parse(await actionCreated.json()).redirect ?? '',
+        /\/admin\/posts\/\d+\/edit$/
+      )
+      resetFixtureHooks()
+      const created = await inertia(fixture.baseUrl, '/admin/posts', 'POST', values)
+      assert.equal(created.status, 302)
+      const editUrl = created.headers.get('location')
+      assert.match(editUrl ?? '', /\/admin\/posts\/\d+\/edit$/)
+      assert.deepEqual(fixtureHookEventsSnapshot(), [
+        'mutateBeforeCreate',
+        'mutateBeforeSave',
+        'beforeCreate',
+        'beforeSave',
+        'afterCreate',
+        'afterSave',
+      ])
+      const id = Number(editUrl?.match(/posts\/(\d+)/)?.[1])
+      assert.isNumber(id)
+      const nextPage = await inertia(
+        fixture.baseUrl,
+        editUrl!,
+        'GET',
+        undefined,
+        sessionCookie(created)
+      )
+      const nextPageProps = await responseProps(nextPage)
+      assert.equal(nextPageProps.pupitre.flash[0]?.title, 'Created')
+
+      const invalidUpdate = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'PUT',
+        {},
+        sessionCookie(created)
+      )
+      assert.equal(invalidUpdate.status, 303)
+      resetFixtureHooks()
+      failFixtureAfterSave()
+      const failedUpdate = await inertia(fixture.baseUrl, `/admin/posts/${id}`, 'PUT', {
+        ...values,
+        title: 'Rollback should preserve',
+      })
+      assert.equal(failedUpdate.status, 500)
+      const savedAfterFailure = await Post.findOrFail(id)
+      assert.equal(savedAfterFailure.title, 'Created over HTTP')
+      failFixtureAfterSave(false)
+      const updatedWeb = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'PUT',
+        { ...values, title: 'Updated over HTTP' },
+        sessionCookie(created)
+      )
+      assert.equal(updatedWeb.status, 303)
+      assert.equal(updatedWeb.headers.get('location'), `/admin/posts/${id}/edit`)
+      const savedAfterUpdate = await Post.findOrFail(id)
+      assert.equal(savedAfterUpdate.title, 'Updated over HTTP')
+
+      const updated = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'PUT',
+        { ...values, title: 'Updated over HTTP' },
+        '',
+        true
+      )
+      assert.equal(updated.status, 200)
+      assert.equal(actionResult.parse(await updated.json()).redirect, `/admin/posts/${id}/edit`)
+      const deletedWeb = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'DELETE',
+        undefined,
+        sessionCookie(created)
+      )
+      assert.equal(deletedWeb.status, 303)
+      assert.isNull(await Post.find(id))
+      const actionRecord = await Post.create({
+        title: 'Action delete',
+        slug: 'action-delete',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const deleted = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${actionRecord.id}`,
+        'DELETE',
+        undefined,
+        '',
+        true
+      )
+      assert.equal(deleted.status, 200)
+      assert.equal(actionResult.parse(await deleted.json()).redirect, '/admin/posts')
+      assert.isNull(await Post.find(actionRecord.id))
+    } finally {
+      failFixtureAfterSave(false)
+      await closeTestApp(fixture)
+    }
+  })
+  test('enforces resource abilities and hides denied navigation entries', async ({ assert }) => {
+    const fixture = await createTestApp()
+    try {
+      const record = await Post.create({
+        title: 'Policy row',
+        slug: 'policy-row',
+        status: 'draft',
+        tenantId: 1,
+      })
+      const cases = [
+        { ability: 'viewAny', method: 'GET', path: '/admin/posts' },
+        { ability: 'create', method: 'GET', path: '/admin/posts/create' },
+        { ability: 'create', method: 'POST', path: '/admin/posts', body: {} },
+        { ability: 'view', method: 'GET', path: `/admin/posts/${record.id}` },
+        { ability: 'update', method: 'GET', path: `/admin/posts/${record.id}/edit` },
+        { ability: 'update', method: 'PUT', path: `/admin/posts/${record.id}`, body: {} },
+        { ability: 'delete', method: 'DELETE', path: `/admin/posts/${record.id}` },
+      ]
+      for (const item of cases) {
+        denyPolicyAbility(item.ability)
+        const response = await fetch(`${fixture.baseUrl}${item.path}`, {
+          method: item.method,
+          headers: {
+            Accept: 'application/json',
+            ...(item.body ? { 'Content-Type': 'application/json' } : {}),
+          },
+          ...(item.body ? { body: JSON.stringify(item.body) } : {}),
+        })
+        assert.equal(response.status, 403, `${item.method} ${item.path}: ${await response.text()}`)
+        allowPolicyAbilities()
+      }
+
+      denyPolicyAbility('viewAny')
+      const categories = await inertia(fixture.baseUrl, '/admin/categories')
+      const categoryPage = await responseProps(categories)
+      const navLabels = categoryPage.pupitre.nav.flatMap((group) =>
+        group.items.map((item) => item.label)
+      )
+      assert.notInclude(navLabels, 'Posts')
+      assert.include(navLabels, 'Categories')
+      const dashboard = await fetch(`${fixture.baseUrl}/admin`, { redirect: 'manual' })
+      assert.equal(dashboard.status, 302)
+      assert.equal(dashboard.headers.get('location'), '/admin/categories')
+      allowPolicyAbilities()
+    } finally {
+      allowPolicyAbilities()
+      await closeTestApp(fixture)
+    }
+  })
+})

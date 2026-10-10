@@ -40,6 +40,7 @@ export async function up(database: Database) {
     table.integer('category_id').unsigned().nullable().references('id').inTable('categories')
     table.json('items').nullable()
     table.string('cover').nullable()
+    table.string('private_cover').nullable()
     table.integer('tenant_id').nullable()
     table.timestamps(true, true)
   })

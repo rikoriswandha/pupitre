@@ -690,7 +690,7 @@ export interface PlaceholderBuilder extends LayoutBase<
   Extract<LayoutDefinition, { kind: 'placeholder' }>
 > {
   label(value: string): this
-  content(value: unknown | FieldClosure): this
+  content(value: FieldClosure | string | number | boolean | null): this
 }
 export interface HtmlBuilder extends LayoutBase<Extract<LayoutDefinition, { kind: 'html' }>> {
   content(value: string | FieldClosure<string>): this

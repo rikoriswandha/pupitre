@@ -1,5 +1,6 @@
 import { parse } from 'acorn'
 import { computedFunctionNames } from '../../catalog/index.js'
+import type { ComputedFunctionName } from '../../catalog/index.js'
 
 export type LiftResult =
   { kind: 'expression'; value: unknown } | { kind: 'computed'; value: unknown } | { kind: 'static' }
@@ -37,6 +38,31 @@ type Lifted = { value: unknown; computed: boolean }
 const computedNames: Record<string, true> = Object.fromEntries(
   computedFunctionNames.map((name) => [name, true])
 )
+/**
+ * json-render passes `$computed.args` as a record. Closures call the built-ins
+ * positionally (`concat(get('a'), get('b'))`), so map positions to the named
+ * signatures implemented by `builtInFunctions` in pupitre-react. `null` = the
+ * call shape cannot be lifted (e.g. an options object), which falls back to
+ * static/server evaluation.
+ */
+const namedArgs: Record<ComputedFunctionName, (args: unknown[]) => Record<string, unknown> | null> =
+  {
+    concat: (args) => ({ values: args }),
+    add: ([a, b]) => ({ a, b }),
+    sub: ([a, b]) => ({ a, b }),
+    mul: ([a, b]) => ({ a, b }),
+    div: ([a, b]) => ({ a, b }),
+    sum: (args) => (args.length === 1 ? { values: args[0] } : null),
+    count: (args) => (args.length === 1 ? { value: args[0] } : null),
+    formatNumber: (args) => (args.length === 1 ? { value: args[0] } : null),
+    formatDate: (args) => (args.length === 1 ? { value: args[0] } : null),
+    pluck: ([values, key]) => ({ values, key }),
+    join: ([values, separator]) => (separator === undefined ? { values } : { values, separator }),
+    upper: (args) => (args.length === 1 ? { value: args[0] } : null),
+    lower: (args) => (args.length === 1 ? { value: args[0] } : null),
+    truncate: ([value, length]) => ({ value, length }),
+    coalesce: (args) => ({ values: args }),
+  }
 
 type ParsedFunction = { params?: Node[]; body?: Node | Node[]; type: string }
 function parseFunction(fn: Function): ParsedFunction | null {
@@ -166,7 +192,10 @@ function lift(node: Node, scope: Scope): Lifted | null {
     const fn: Record<string, string> = { '*': 'mul', '+': 'add', '-': 'sub', '/': 'div' }
     const functionName = fn[operator]
     if (!functionName || !computedNames[functionName]) return null
-    return { value: { $computed: functionName, args: [left.value, right.value] }, computed: true }
+    return {
+      value: { $computed: functionName, args: { a: left.value, b: right.value } },
+      computed: true,
+    }
   }
   if (node.type === 'ConditionalExpression') {
     if (!node.test || !node.consequent || !node.alternate) return null
@@ -187,13 +216,11 @@ function lift(node: Node, scope: Scope): Lifted | null {
   ) {
     const args = (node.arguments ?? []).map((argument) => lift(argument, scope))
     if (args.some((argument) => !argument)) return null
-    return {
-      value: {
-        $computed: node.callee.name,
-        args: args.map((argument) => (argument as Lifted).value),
-      },
-      computed: true,
-    }
+    const named = namedArgs[node.callee.name as ComputedFunctionName](
+      args.map((argument) => (argument as Lifted).value)
+    )
+    if (!named) return null
+    return { value: { $computed: node.callee.name, args: named }, computed: true }
   }
   return null
 }

@@ -4,8 +4,19 @@
     "rootDir": "./",
     "outDir": "./build",
     "jsx": "react-jsx",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "customConditions": ["@rikology/source"]
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "customConditions": [
+      "@rikology/source"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
   },
-  "exclude": ["build", "node_modules"]
+  "exclude": [
+    "build",
+    "node_modules"
+  ]
 }

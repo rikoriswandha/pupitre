@@ -4,7 +4,7 @@ import { snapshot } from '@japa/snapshot'
 import { fileSystem } from '@japa/file-system'
 import { expectTypeOf } from '@japa/expect-type'
 import { configure, processCLIArgs, run } from '@japa/runner'
-
+import { teardown } from '../tests/helpers/db.js'
 processCLIArgs(process.argv.splice(2))
 
 configure({
@@ -20,4 +20,8 @@ configure({
   ],
 })
 
-run()
+try {
+  await run()
+} finally {
+  await teardown()
+}

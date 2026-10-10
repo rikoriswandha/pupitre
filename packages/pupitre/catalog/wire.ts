@@ -174,7 +174,7 @@ export const tableData = z.object({
 export type TableData = z.infer<typeof tableData>
 
 export const formDescriptor = z.object({
-  method: z.enum(['post', 'put', 'patch']),
+  method: z.enum(['get', 'post', 'put', 'patch']),
   url: z.string(),
   submitLabel: z.string(),
   cancelUrl: z.string().optional(),

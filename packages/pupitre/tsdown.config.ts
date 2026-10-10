@@ -10,6 +10,7 @@ export default defineConfig({
     './services/main.ts',
     './commands/*.ts',
     './src/discovery/index_admin.ts',
+    './src/http/middleware/*.ts',
     './stubs/main.ts',
   ],
   outDir: './build',

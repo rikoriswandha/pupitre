@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { usePage as useInertiaPage } from '@inertiajs/react'
 import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
 import {
@@ -15,6 +15,7 @@ import { ActionConfirm } from '../renderer/ActionConfirm.js'
 import { PupitreRenderer } from '../renderer/PupitreRenderer.js'
 import { ActionModal } from '../renderer/ActionModal.js'
 import { getRouter } from '../bridge/inertia.js'
+import { PageActionsContext } from '../runtime.js'
 
 type InertiaPupitreProps = PupitrePageProps & { errors?: Record<string, string> }
 export type PupitreProps = { registry: PupitreRegistry }
@@ -45,7 +46,7 @@ export function Pupitre({ registry }: PupitreProps) {
   if (!props) return null
   return <PupitreContent registry={registry} props={props} />
 }
-function PupitreContent({
+export function PupitreContent({
   registry,
   props,
 }: {
@@ -137,6 +138,7 @@ function PupitreContent({
     [handleActionResult, pushToast]
   )
   const closeAction = useCallback(() => setFormAction(null), [])
+  const pageActions = useMemo(() => ({ runAction, toast: pushToast }), [runAction, pushToast])
   const ShellComponent = registry.shell.Shell
   const Toaster = registry.shell.Toaster
   const NotFound = registry.shell.NotFound
@@ -199,11 +201,11 @@ function PupitreContent({
     />
   ) : null
   return (
-    <>
+    <PageActionsContext.Provider value={pageActions}>
       {main}
       {modal}
       {actionModal}
       <Toaster toasts={toasts} dismiss={dismiss} />
-    </>
+    </PageActionsContext.Provider>
   )
 }

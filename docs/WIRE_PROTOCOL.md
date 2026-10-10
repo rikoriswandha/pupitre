@@ -29,17 +29,17 @@ type PupitrePageProps = {
     spec: Spec                         // pohon json-render
     state: StateModel                  // state awal store
     actions: { header: ActionDescriptor[] }
-    data?: TableData | Record<string, unknown>   // list: TableData; lainnya bebas
     widgets?: WidgetDescriptor[]                 // dashboard / edit page
     relations?: RelationDescriptor[]             // edit/view page
     deferred?: string[]                          // nama prop yang masih deferred
     catalogVersion: string
     component?: string                           // kind 'custom': page Inertia host
   }
+  data?: TableData                     // prop top-level; list page saja; partial reload `only: ['data']`
 }
 ```
 
-`pupitre.*` dibagikan lewat `inertia.share` oleh middleware `share_props`; `page.*` disusun controller. Inertia partial reload yang dipakai Pupitre selalu menyebut key eksplisit: `only: ['page.data']`, `only: ['pupitre.notifications']`, `only: ['pupitre.flash']`.
+`pupitre.*` dibagikan lewat `ctx.inertia.share` oleh middleware `share_props`; `page.*` dan `data` disusun controller. `@adonisjs/inertia` 5 hanya menyaring partial reload pada nama prop **top-level** (`inertia_manager` memilih `Object.keys(props)`), karena itu data tabel adalah prop top-level `data` dan refresh tabel memakai `only: ['data']` (ADR-0011). Flash Pupitre dibaca dari session key `pupitre` ke `pupitre.flash`; kanal `flash` Inertia v3 tetap milik middleware host.
 
 ## 2. State model
 
@@ -53,14 +53,15 @@ type PupitrePageProps = {
 | `/options/<field>` | server | `fetchOptions` |
 | `/modal/**` | — | store modal terpisah; struktur sama (`/modal/data`, `/modal/errors`) |
 
-Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeater sebagai segmen: `items.0.sku` ⇔ `/data/items/0/sku`. Error VineJS yang bernama `items.0.sku` dipetakan dengan aturan yang sama.
+Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeater sebagai segmen: `items.0.sku` ⇔ `/data/items/0/sku`. Error VineJS yang bernama `items.0.sku` dipetakan dengan aturan yang sama. Field di dalam repeater tidak membawa prop `error`; komponen membaca `/errors/<path>` dari path binding absolut (`bindings.value`, mis. `/data/items/0/sku`) lewat hook `useFieldError` (jawaban SPIKE Q1).
 
 ## 3. Spec: konvensi elemen
 
 - ID elemen: `f.<path>` untuk field (`f.items.sku` untuk field di dalam repeater template), `l.<n>` untuk layout, `a.<name>` untuk action di dalam form, `root` untuk `Form`/`Infolist`.
 - Field selalu punya `props.name` (path tanpa prefix) dan `props.value: { $bindState: '/data/<path>' }` (atau `$bindItem` di dalam repeat), `props.error: { $state: '/errors/<path>' }`.
-- Repeater: elemen `Repeater` dengan `props.descriptor: RepeaterDescriptor` dan `children` = template; renderer memakai `repeat.statePath` + `$bindItem`. Tambah/hapus memakai built-in `pushState`/`removeState`. Ini yang dibuktikan di [SPIKE_M0.md](./SPIKE_M0.md).
-- `watch` dipasang pada elemen field yang `.live()`: `{ '/data/<path>': [{ action: 'evaluate' | '<handler>', params }] }`.
+- Repeater: elemen `Repeater` dengan `props.descriptor: RepeaterDescriptor`, `props.value` terikat ke array (`$bindState` di level atas, `$bindItem` saat bersarang), `repeat: { statePath, key: '_key' }`, dan satu anak template `RepeaterItem` (`props.index: { $index: true }`) yang anak-anaknya adalah field item. Tiap item di state membawa `_key` (ditambahkan compiler; item baru memakai `pushState` dengan `_key: '$id'`); VineJS membuang `_key` saat validasi. Tambah item = event `add` → `pushState`; hapus/pindah/klon/collapse dikerjakan komponen UI lewat nilai array yang terikat, karena param action json-render tidak bisa menyatakan path array induk di dalam scope repeat bersarang. Lihat [SPIKE_M0.md](./SPIKE_M0.md) §7.
+- Tabs: elemen `Tabs` dengan `props.tabs` dan `props.active: { $bindState: '/ui/tabs/<id>' }`, anak-anaknya elemen `Tab` (urutan sama dengan `props.tabs`); semua panel tetap ter-mount, yang tidak aktif disembunyikan. Named slots tidak dipakai karena nama slot harus statis di catalog (SPIKE Q4).
+- `watch` dipasang pada elemen field yang `.live()` dan punya `afterStateUpdated`: `{ '/data/<path>': [{ action: 'setState', params: { statePath, value: <ekspresi terangkat> } }] }`. Closure yang tidak bisa diangkat ke `setState` + `$state`/`$computed` ditolak saat compile (`E_PUPITRE_UNLIFTABLE_CLOSURE`) sampai `live({ server: true })` + `evaluate` tersedia di M3 (WP31).
 
 ## 4. Action descriptor
 
@@ -85,25 +86,33 @@ type ActionDescriptor = {
 
 Per-record action pada tabel dikirim di setiap `row.actions`, bukan di spec, karena `enabled` dievaluasi per record.
 
-Protokol:
+Protokol (ADR-0012). Semua submit action berjalan lewat `fetch` JSON, bukan `router.post` Inertia, supaya satu respons bisa membawa flash, redirect, reload, atau patch:
 
 | kind | Klik | Submit |
 | --- | --- | --- |
-| `link` | `router.visit(url)` | — |
-| `direct` | `router[method](url)` | — |
-| `confirm` | dialog → `router[method](url, { ids? })` | — |
-| `form` | `GET url` → `ActionFormResponse` → modal | `router.post(url, { data, ids? })` |
+| `link` | `router.visit(url)` (`window.open` bila `openInNewTab`) | — |
+| `direct` | `fetch(url)` JSON | — |
+| `confirm` | `ConfirmDialog` → `fetch(url, { ids? })` JSON | — |
+| `form` | `GET url` (`Accept: application/json`) → `ActionFormResponse` → `ActionModal` | `fetch(url, { data, ids? })` JSON |
+
+Header submit: `Accept: application/json`, `Content-Type: application/json`, `X-Requested-With: XMLHttpRequest`, `X-Pupitre-Action: 1`, `X-XSRF-TOKEN` (dekode cookie `XSRF-TOKEN` Shield), `credentials: 'same-origin'`; body `{ data?, ids? }`. Route resource (`store`/`update`/`destroy`) menjawab redirect Inertia biasa, tetapi JSON bila header `X-Pupitre-Action: 1` ada — `actions.delete()` memakai route `destroy` lewat jalur yang sama.
 
 ```ts
 type ActionFormResponse = { spec: Spec; state: StateModel; catalogVersion: string }
+type ActionResult = {
+  flash: FlashMessage[]
+  redirect?: string        // redirect.back() → URL halaman saat ini; redirect.to(url)
+  reload?: boolean         // refresh.table() → router.reload({ only: ['data'] }) di list page, reload penuh di tempat lain
+  patch?: JsonPatchOp[]    // diterapkan ke prop `data` lalu reload `only: ['data']`
+  deselect?: boolean       // deselectAfter(): kosongkan seleksi tabel
+}
 ```
 
 Respons action setelah submit:
 
-- **Redirect Inertia** (default; `redirect.back()`/`redirect.to(route)`), flash ikut.
-- **`200 { patch: JsonPatch[] }`** untuk `refresh.table()` / `refresh.widgets()`; bridge mengaplikasikan ke `page.data` lokal lalu `router.reload({ only: ['page.data'] })`.
-- **`422`** validasi → Inertia errors → `/modal/errors/**`.
-- **`403`** → toast error + modal tetap terbuka.
+- **`200 ActionResult`**: flash → toast; `redirect` → `router.visit` (URL sama → `router.reload()`); modal ditutup. Default `{ flash, redirect: <URL saat ini> }`. `refresh.table()` menghasilkan `reload: true` tanpa `patch`, karena executor action tidak memegang query tabel aktif sehingga patch yang aman tidak bisa dihitung.
+- **`422 { errors: Record<field, string[]> }`** → `/errors/**` store modal (modal tetap terbuka); action tanpa modal → toast error pertama.
+- **`403 { message }` / `404 { message }`** → toast error, modal tetap terbuka.
 
 ## 5. Tabel
 
@@ -160,7 +169,7 @@ type ColumnDescriptor = {
 }
 ```
 
-### 5.3 Data (di `page.data`, dinamis)
+### 5.3 Data (prop top-level `data`, dinamis)
 
 ```ts
 type TableData = {
@@ -186,7 +195,7 @@ Nilai cell dikirim **sudah terformat** server-side (tanggal di timezone panel, a
 
 | Method & URL | Body | Respons |
 | --- | --- | --- |
-| `GET <list>?...` (Inertia, `only: ['page.data']`) | — | props |
+| `GET <list>?...` (Inertia, `only: ['data']`) | — | props (`data` saja) |
 | `PATCH <list>/:id/column/:name` | `{ value }` | 204 atau 422 |
 | `POST <list>/reorder` | `{ ids: (string\|number)[] }` | 204 |
 | `POST <list>/export` | `{ format: 'csv', columns?: string[], query }` | redirect ke download atau `{ jobId }` kalau adapter jobs ada |
@@ -202,15 +211,15 @@ Semua di dalam route group panel (prefix panel + tenant), middleware sama.
 | `GET /_pupitre/search` | `q` | `{ groups: { resource: string; label: string; results: { title: string; details?: string[]; url: string }[] }[] }` |
 | `GET /_pupitre/notifications` | `page` | `{ items: NotificationItem[]; unread: number; meta }` |
 | `POST /_pupitre/notifications/read` | `{ ids: string[] \| 'all' }` | 204 |
-| `POST /_pupitre/upload` | multipart `file`, `field`, `resource` | `{ key: string; url: string; name: string; size: number; mime: string }` |
-| `DELETE /_pupitre/upload` | `{ key }` | 204 |
+| `POST /_pupitre/upload` | multipart `file`, `field`, `resource`, `record?`; header `Accept: application/json`, `X-XSRF-TOKEN` | `{ key: string; url: string; name: string; size: number; mime: string }`; 403 tanpa ability `create`/`update`; 404 bila resource/field tidak dikenal; 413 bila `maxSize` terlampaui; 422 bila MIME hasil sniff byte (`file-type`) tidak sesuai `accept`/`image()` |
+| `DELETE /_pupitre/upload` | `{ key, field, resource }` | 204; 403 bila key bukan unggahan sesi ini (`session` key `pupitre.uploads`) |
 | `GET /_pupitre/widgets/:name` | query filters dashboard | `WidgetData` |
 
 Setiap endpoint memvalidasi `resource`/`field` terhadap definition yang terdaftar dan menjalankan ability yang sesuai (`options` → `viewAny` model relasi, `evaluate` → `create`/`update`).
 
 ## 7. Route dan penamaan
 
-Pola nama: `<panel>.<slug>.<page>` dan `<panel>.<slug>.actions.<name>`. Semua masuk registry Tuyau sehingga `urlFor('admin.posts.edit', { id })` type-safe.
+Pola nama: `<panel>.<slug>.<page>`; route action memakai nama tetap dengan parameter `:action`. Semua masuk registry Tuyau sehingga `urlFor('admin.posts.edit', { id })` type-safe.
 
 | URL (relatif ke panel path + `/:tenant` opsional) | Nama |
 | --- | --- |
@@ -220,8 +229,9 @@ Pola nama: `<panel>.<slug>.<page>` dan `<panel>.<slug>.actions.<name>`. Semua ma
 | `GET /posts/:id/edit` · `PUT /posts/:id` | `admin.posts.edit` · `admin.posts.update` |
 | `GET /posts/:id` | `admin.posts.view` |
 | `DELETE /posts/:id` | `admin.posts.destroy` |
-| `GET/POST /posts/actions/:action` | `admin.posts.actions.<action>` (header & bulk) |
-| `GET/POST /posts/:id/actions/:action` | `admin.posts.actions.<action>` (row; nama sama, parameter beda) |
+| `GET /posts/actions/:action` · `POST /posts/actions/:action` | `admin.posts.actions` · `admin.posts.actions.store` (header & bulk) |
+| `GET /posts/:id/actions/:action` · `POST /posts/:id/actions/:action` | `admin.posts.record.actions` · `admin.posts.record.actions.store` (row) |
+| `POST /_pupitre/upload` · `DELETE /_pupitre/upload` | `admin.upload.store` · `admin.upload.destroy` |
 | `GET /posts/:id/relations/:relation` | `admin.posts.relations.<relation>.list` |
 | `GET/POST /posts/:id/relations/:relation/:rid/actions/:action` | `admin.posts.relations.<relation>.actions.<action>` |
 | `GET /posts/:id/revisions/...` | `admin.posts.revisions.<page>` (nested resource) |

@@ -3,6 +3,7 @@ import {
   useNavigationGuard,
   useSetState,
   useStateValue,
+  useEmbedded,
   useSubmitForm,
   useVisit,
 } from '@rikology/pupitre-react'
@@ -13,28 +14,32 @@ type Props = Record<string, unknown>
 type RuntimeProps = {
   props: Props
   children?: ReactNode
-  emit?: (event: string, payload?: unknown) => void
   on?: unknown
   bindings?: Record<string, string | undefined>
   loading?: boolean
 }
 
-export function Form({ props, children, emit, bindings, loading = false }: RuntimeProps) {
+export function Form({ props, children, bindings, loading = false }: RuntimeProps) {
   const visit = useVisit()
   const setState = useSetState()
   const submitForm = useSubmitForm()
+  const embedded = useEmbedded()
+  const submitting = useStateValue('/meta/submitting') === true
   const formData = useStateValue('/data')
   const [initialState, setInitialState] = useState(() => JSON.stringify(formData))
   const dirty = JSON.stringify(formData) !== initialState
   useNavigationGuard(
-    useCallback(() => props.dirtyGuard === true && dirty, [dirty, props.dirtyGuard]),
+    useCallback(
+      () => !embedded && props.dirtyGuard === true && dirty,
+      [dirty, embedded, props.dirtyGuard]
+    ),
     'You have unsaved changes. Leave this page?'
   )
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    emit?.('submit')
     setInitialState(JSON.stringify(formData))
     setState('/meta/dirty', false)
+    submitForm()
   }
   useEffect(() => {
     setState('/meta/dirty', dirty)
@@ -81,7 +86,6 @@ export function Form({ props, children, emit, bindings, loading = false }: Runti
     return () => window.removeEventListener('keydown', handler)
   }, [formData, props.keyBindings, setState, submitForm])
   const cancel = () => {
-    emit?.('cancel')
     if (typeof props.cancelUrl === 'string') visit(props.cancelUrl)
   }
   return (
@@ -94,16 +98,19 @@ export function Form({ props, children, emit, bindings, loading = false }: Runti
       data-binding={bindings?.value}
     >
       {children}
-      <div className="flex flex-wrap justify-end gap-2">
-        {typeof props.cancelUrl === 'string' && (
-          <Button type="button" variant="outline" onClick={cancel} disabled={loading}>
-            Cancel
+      {/* Inside an action modal the modal footer owns submit/cancel. */}
+      {!embedded && (
+        <div className="flex flex-wrap justify-end gap-2">
+          {typeof props.cancelUrl === 'string' && (
+            <Button type="button" variant="outline" onClick={cancel} disabled={loading}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={loading || submitting}>
+            {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}
           </Button>
-        )}
-        <Button type="submit" disabled={loading}>
-          {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   )
 }

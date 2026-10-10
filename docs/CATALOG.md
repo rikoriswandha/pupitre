@@ -6,7 +6,7 @@ Catalog adalah daftar komponen yang boleh muncul di spec, lengkap dengan skema p
 - **`pupitre-react`** membangun registry json-render dari catalog;
 - **`pupitre-ui`** dan komponen host mengimplementasikan props-nya; penggantian komponen type-checked.
 
-Catalog dideklarasikan sekali dengan `defineCatalog(schema, { components, actions })` dari `@json-render/core`. `catalogVersion` = `major.minor` dari package `pupitre`; renderer menolak spec dengan major berbeda.
+Catalog diekspor dari `@rikology/pupitre/catalog` sebagai data biasa + Zod (`pupitreCatalog = { components: { [Type]: { props, slots, description } }, actions: { [name]: { params, description } } }`), karena subpath ini hanya boleh bergantung pada `zod`. `pupitre-react` membungkusnya dengan `defineCatalog(schema, pupitreCatalog)` dari `@json-render/core` + `@json-render/react/schema`. Prop yang boleh berupa ekspresi dideklarasikan dengan `dynamic(schema)`: input menerima literal atau ekspresi json-render, output tipe Zod tetap tipe literal sehingga props komponen registry bertipe bersih. `catalogVersion` = `major.minor` dari package `pupitre`; renderer menolak spec dengan major berbeda.
 
 ## 1. Props yang diterima semua komponen
 
@@ -63,8 +63,8 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | `Grid` | `columns: number \| { default, sm, md, lg, xl }`, `gap` | elemen |
 | `Section` | `heading`, `description`, `icon`, `collapsible`, `collapsed` (`$bindState /ui/section/<id>/collapsed`), `aside`, `compact`, `columns`, `footerActions` | elemen |
 | `Fieldset` | `label`, `columns` | elemen |
-| `Tabs` | `tabs: { key, label, icon?, badge? }[]`, `active` (`$bindState /ui/tabs/<id>`), `persistInUrl` | slot per `key` |
-| `Wizard` | `steps: { key, label, description?, icon? }[]`, `step` (`$bindState /ui/wizard/<id>/step`), `skippable`, `submitLabel`, `startOnStep` | slot per `key` |
+| `Tabs` | `id`, `tabs: { key, label, icon?, badge? }[]`, `active` (`$bindState /ui/tabs/<id>`), `persistInUrl` | elemen `Tab` (`key`, `label`), urutan = `tabs` |
+| `Wizard` (M3) | `steps: { key, label, description?, icon? }[]`, `step` (`$bindState /ui/wizard/<id>/step`), `skippable`, `submitLabel`, `startOnStep` | elemen `Step` per `key` (pola Tabs) |
 | `Group` | `relationship?` (hanya metadata) | elemen |
 | `Split` | `from: 'md'\|'lg'`, `ratio` | 2 slot |
 | `Placeholder` | `label`, `content` (ekspresi / `$computed`) | — |
@@ -72,7 +72,7 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | `Divider` | — | — |
 | `Actions` | `actions: ActionDescriptor[]`, `alignment`, `fullWidth` | — |
 
-Tabs/Wizard memakai **named slots** json-render (`slots: { <key>: [ids] }`), bukan children datar, supaya tab tidak aktif tetap bisa divalidasi dan `dehydrated`.
+Tabs memakai anak `Tab` biasa, **bukan** named slots: json-render hanya mengenal nama slot yang dideklarasikan statis di catalog (SPIKE Q4). Semua panel tab tetap ter-mount (state tidak hilang), yang tidak aktif disembunyikan. Wizard (M3) akan memakai pola yang sama.
 
 ### 2.3 Infolist entries
 
@@ -85,8 +85,8 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 | Komponen | Descriptor | Protokol |
 | --- | --- | --- |
 | `Form` | `{ method, url, submitLabel, cancelUrl?, keyBindings, dirtyGuard }` | `submitForm` bridge |
-| `DataTable` | `TableDescriptor` + `data` dari `page.data` (lihat WIRE_PROTOCOL §5) | `reload({ only })`, `PATCH column`, `POST reorder`, bulk actions |
-| `Repeater` | `{ name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, itemLabel ($template), grid, defaultItems }` + children template | `pushState`/`removeState`/`setState` (reorder = `setState` seluruh array) |
+| `DataTable` | `TableDescriptor` + prop Inertia top-level `data` (lihat WIRE_PROTOCOL §5, ADR-0011) | `useTable` → `reload({ only: ['data'] })`; row/bulk action lewat `useRunAction`; M3: `PATCH column`, `POST reorder` |
+| `Repeater` | `{ name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, itemLabel ($template), grid, defaultItems }` + `value` terikat ke array; anak tunggal `RepeaterItem` (`index: { $index: true }`) sebagai template | event `add` → `pushState` (item baru `_key: '$id'`); hapus/pindah/klon/collapse dikerjakan komponen lewat nilai array terikat (`useSetState`), karena param action tidak bisa menyatakan path array induk di scope bersarang |
 | `Builder` | `{ name, blocks: { key, label, icon, template: ElementId }[], ... Repeater }` | sama + `/data/<name>/<i>/type` |
 | `FileUpload` | `{ name, uploadUrl, deleteUrl, multiple, accept, maxSize, maxFiles, image, imageEditor, directory, visibility, reorderable, downloadable, previewable }` | `POST/DELETE /_pupitre/upload`; nilai state = `string \| string[]` (key) |
 | `RelationSelect` | `Select` + `{ optionsUrl, createOption: { url, modal } }` | `fetchOptions`; `openAction` |
@@ -104,7 +104,9 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 
 ## 4. Shell
 
-`Shell`, `Sidebar`, `SidebarItem`, `SidebarGroup`, `Topbar`, `Breadcrumbs`, `UserMenu`, `PageHeader`, `EmptyState`, `Toast`, `AuthLayout`. Dirender dari `pupitre.nav`/`page.*`, bukan dari spec; tetap ada di registry agar bisa diganti.
+`Shell`, `Toaster`, `Modal`, `ConfirmDialog`, `NotFound`. Dirender dari `pupitre.nav`/`page.*`, bukan dari spec; prop-nya bertipe di `@rikology/pupitre-react` (`ShellProps`, `ModalProps`, ...) dan didaftarkan di map `components` yang sama dengan komponen catalog (`defineRegistry(components)`), sehingga host bisa mengganti satu per satu. Sidebar, topbar, breadcrumb, user menu, page header, dan empty state adalah bagian dalam `Shell`/`DataTable` di `pupitre-ui`.
+
+Komponen yang butuh payload runtime (DataTable, ActionBar, FileUpload, Repeater item) memakai hook `pupitre-react` (`useTable`, `useRunAction`, `useUpload`, `useSetState`, `useBoundValue`, `useFieldError`, `useVisit`, `useNavigationGuard`, `SpecRenderer` untuk sub-spec) karena event json-render tidak membawa payload; `pupitre-ui` tidak pernah mengimpor `@json-render/*`.
 
 ## 5. Actions (json-render `actions`)
 
@@ -118,18 +120,18 @@ Didaftarkan di catalog dan diimplementasikan oleh bridge `pupitre-react`:
 | `submitForm` | `{ formId? }` | kumpulkan `/data` → `router[method](url)` |
 | `openAction` | `{ action: ActionDescriptor, ids? }` | sesuai `kind` |
 | `runAction` | `{ url, method, ids? }` | `direct` tanpa dialog |
-| `evaluate` | `{ field }` | `POST /_pupitre/evaluate` → `set` hasilnya |
-| `fetchOptions` | `{ field, q, page }` | `GET /_pupitre/options` → `/options/<field>` |
+| `evaluate` | `{ field }` | M3 (WP31): `POST /_pupitre/evaluate` → `set` hasilnya. Di M1 compiler tidak pernah memancarkannya; handler client hanya memberi peringatan dev |
+| `fetchOptions` | `{ field, q, page }` | M2 (WP25): `GET /_pupitre/options` → `/options/<field>`; sama, belum dipancarkan di M1 |
 | `upload` | `{ field, files }` | `POST /_pupitre/upload` |
 | `toast` | `{ type, title, body? }` | tampilkan toast lokal |
 | `copy` | `{ text }` | clipboard |
 
 ## 6. Fungsi `$computed` bawaan
 
-`concat`, `add`, `sub`, `mul`, `div`, `sum(array)`, `count`, `formatNumber(value, { locale, decimals, currency })`, `formatDate(value, { format, timezone })`, `pluck(array, key)`, `join`, `upper`, `lower`, `truncate`, `coalesce`. Host dapat menambah lewat `defineRegistry(..., { functions })`; compiler hanya memakai nama yang terdaftar di `catalog.functions`.
+`concat`, `add`, `sub`, `mul`, `div`, `sum(array)`, `count`, `formatNumber(value, { locale, decimals, currency })`, `formatDate(value, { format, timezone })`, `pluck(array, key)`, `join`, `upper`, `lower`, `truncate`, `coalesce`. `args` json-render berbentuk record (`{ $computed: 'mul', args: { a, b } }`), bukan array. Daftar nama diekspor sebagai `computedFunctionNames`; implementasinya `builtInFunctions` di `pupitre-react`. Host dapat menambah lewat `defineRegistry(components, { functions })`; compiler (closure lifter) hanya memakai nama di `computedFunctionNames`.
 
 ## 7. Aturan evolusi
 
 - Menambah prop opsional / komponen baru → minor.
 - Mengubah tipe prop, menghapus prop, mengganti nama komponen → major; `pupitre-react` menolak spec major berbeda dan meminta reload.
-- Setiap komponen punya fixture spec di `packages/catalog/fixtures/<Component>.json` yang dipakai (a) test Zod di catalog, (b) story/visual test di `pupitre-ui`, (c) test registry host memakai `assertRegistryComplete(catalog, components)`.
+- Setiap komponen punya fixture spec di `packages/pupitre/catalog/fixtures/<Component>.json` (diekspor sebagai `catalogFixtures`) yang dipakai (a) test Zod di catalog, (b) Playwright component test di `pupitre-ui` (`tests/ct`), (c) test registry host memakai `assertRegistryComplete(pupitreCatalog, components)`.

@@ -2,7 +2,7 @@ import { test } from '@japa/runner'
 import { defineValidationRules } from '../../../../node_modules/@adonisjs/lucid/build/src/bindings/vinejs.js'
 import { schema } from '../../src/builder/schema/schema.js'
 import { compileValidator } from '../../src/compiler/vine_compiler.js'
-import { setupDatabase, teardown, truncate, seed } from '../helpers/db.js'
+import { setupDatabase, teardown, truncate, seed, Post } from '../helpers/db.js'
 async function captureError(operation: () => Promise<unknown>): Promise<unknown> {
   try {
     await operation()
@@ -30,15 +30,10 @@ function validationFields(error: unknown): string[] {
   )
 }
 
-let rulesRegistered = false
-
 test.group('Vine Lucid rules', (group) => {
   group.each.setup(async () => {
-    const db = await setupDatabase()
-    if (!rulesRegistered) {
-      defineValidationRules(db)
-      rulesRegistered = true
-    }
+    // Lucid binds the rules to one Database instance; each test gets a fresh one.
+    defineValidationRules(await setupDatabase())
     await truncate()
   })
   group.each.teardown(async () => teardown())
@@ -72,5 +67,25 @@ test.group('Vine Lucid rules', (group) => {
     await assert.rejects(() =>
       validator.validate({ slug: 'new', authorId: '9999' }, { timezone: 'UTC' })
     )
+  })
+
+  test('unique without an explicit table uses the resource model on create and update', async ({
+    assert,
+  }) => {
+    const { posts } = await seed({
+      posts: [{ title: 'Existing', slug: 'existing', status: 'draft' }],
+    })
+    const validator = compileValidator([
+      schema.text('slug').unique({ ignoreRecord: true }).toDefinition(),
+    ])
+    const error = await captureError(() =>
+      validator.validate({ slug: 'existing' }, { timezone: 'UTC', model: Post })
+    )
+    assert.deepEqual(validationFields(error), ['slug'])
+    const updated = await validator.validate(
+      { slug: 'existing' },
+      { timezone: 'UTC', model: Post, record: posts[0] }
+    )
+    assert.equal(updated.slug, 'existing')
   })
 })

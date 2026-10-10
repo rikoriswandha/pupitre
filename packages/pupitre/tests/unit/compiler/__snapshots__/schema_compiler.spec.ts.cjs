@@ -252,6 +252,7 @@ exports[`schema compiler > compiles a form, nested repeaters, defaults and snaps
         },
         "label": "Published At",
         "name": "publishedAt",
+        "timezone": "Asia/Jakarta",
         "value": {
           "$bindState": "/data/publishedAt",
         },

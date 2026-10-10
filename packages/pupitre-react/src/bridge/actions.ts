@@ -1,3 +1,4 @@
+import type { RequestPayload } from '@inertiajs/core'
 import type { StateStore } from '@json-render/core'
 import { actionResult, fileUploadDescriptor } from '@rikology/pupitre/catalog'
 import type {
@@ -159,14 +160,14 @@ export function visit(params: Record<string, unknown>): void {
   const router = getRouter()
   router.visit(String(params.url ?? ''), {
     method: (params.method as 'get' | 'post' | 'put' | 'patch' | 'delete') ?? 'get',
-    data: params.data as Record<string, unknown> | undefined,
+    data: params.data as RequestPayload | undefined,
     preserveScroll: Boolean(params.preserveScroll),
   })
 }
 export function reload(params: Record<string, unknown>): void {
   getRouter().reload({
     only: Array.isArray(params.only) ? (params.only as string[]) : [],
-    data: params.data as Record<string, unknown> | undefined,
+    data: params.data as RequestPayload | undefined,
   })
 }
 export function getFormDescriptor(page: PupitrePageProps['page']): FormDescriptor | undefined {
@@ -185,7 +186,7 @@ export function submitForm(
   const data = (state.data ?? {}) as Record<string, unknown>
   store.set('/meta/submitting', true)
   store.set('/errors', {})
-  getRouter()[form.method](form.url, data, {
+  getRouter()[form.method](form.url, data as RequestPayload, {
     preserveState: true,
     preserveScroll: true,
     onError: (errors: Record<string, string>) => {
@@ -246,26 +247,72 @@ export function findUploadDescriptor(
   }
   return undefined
 }
+/**
+ * Resource slug and record id from `page.key`
+ * (`${panel}:${resource}:${page}:${recordId}:${tenant}`): the server checks the
+ * `create` ability without a record and `update` with one.
+ */
+function uploadContext(pageKey: string) {
+  const [, resource = '', , record = ''] = pageKey.split(':')
+  return { resource, record }
+}
+export async function uploadFile(
+  descriptor: FileUploadDescriptor,
+  file: File,
+  pageKey: string
+): Promise<UploadResponse> {
+  const { resource, record } = uploadContext(pageKey)
+  const body = new FormData()
+  body.append('file', file)
+  body.append('field', descriptor.name)
+  body.append('resource', resource)
+  if (record) body.append('record', record)
+  const response = await activeFetch(descriptor.uploadUrl, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-XSRF-TOKEN': xsrfToken(),
+    },
+    body,
+  })
+  const payload: unknown = await response.json().catch(() => null)
+  if (!response.ok) {
+    const message =
+      payload && typeof payload === 'object' && 'message' in payload
+        ? String(payload.message)
+        : `Upload failed (${response.status}).`
+    throw new Error(message)
+  }
+  return payload as UploadResponse
+}
+export async function deleteUpload(
+  descriptor: FileUploadDescriptor,
+  key: string,
+  pageKey: string
+): Promise<void> {
+  const { resource } = uploadContext(pageKey)
+  const response = await activeFetch(descriptor.deleteUrl, {
+    method: 'DELETE',
+    credentials: 'same-origin',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      'X-XSRF-TOKEN': xsrfToken(),
+    },
+    body: JSON.stringify({ key, field: descriptor.name, resource }),
+  })
+  if (!response.ok) throw new Error(`Upload removal failed (${response.status}).`)
+}
 export async function uploadFiles(
   descriptor: FileUploadDescriptor,
   files: File[],
   pageKey: string
 ): Promise<UploadResponse[]> {
-  const resource = pageKey.split(':')[1] ?? ''
   const results: UploadResponse[] = []
-  for (const file of files) {
-    const body = new FormData()
-    body.append('file', file)
-    body.append('field', descriptor.name)
-    body.append('resource', resource)
-    const response = await fetch(descriptor.uploadUrl, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-      body,
-    })
-    if (!response.ok) throw new Error(`Upload failed (${response.status}).`)
-    results.push((await response.json()) as UploadResponse)
-  }
+  for (const file of files) results.push(await uploadFile(descriptor, file, pageKey))
   return results
 }
 export async function runAction(params: Record<string, unknown>): Promise<void> {

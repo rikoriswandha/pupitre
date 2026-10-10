@@ -1,5 +1,5 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/dist-ByBBf4Gl.js","assets/index-D3pAAvIG.js","assets/index-D6JylmUj.css","assets/dist-D5N53XOC.js","assets/dist-CUXPL_RM.js","assets/dist-D7mHrF_q.js","assets/dist-_pdNwpsQ.js"])))=>i.map(i=>d[i]);
-import { a as __commonJSMin, i as require_react, n as require_client, o as __exportAll$1, r as require_react_dom, s as __toESM, t as __vitePreload } from "./index-D3pAAvIG.js";
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/dist-BTpyEED9.js","assets/index-Cy4IS1Mx.js","assets/index-D6JylmUj.css","assets/dist-D5N53XOC.js","assets/dist-CUXPL_RM.js","assets/dist-D7mHrF_q.js","assets/dist-_pdNwpsQ.js"])))=>i.map(i=>d[i]);
+import { a as __commonJSMin, i as require_react, n as require_client, o as __exportAll$1, r as require_react_dom, s as __toESM, t as __vitePreload } from "./index-Cy4IS1Mx.js";
 //#region ../../node_modules/use-sync-external-store/cjs/use-sync-external-store-shim.production.js
 /**
 * @license React
@@ -8266,6 +8266,7 @@ var tableData = object({
 });
 var formDescriptor = object({
 	method: _enum([
+		"get",
 		"post",
 		"put",
 		"patch"
@@ -29104,6 +29105,61 @@ async function fetchActionForm(action) {
 	}
 	return await response.json();
 }
+/**
+* Resource slug and record id from `page.key`
+* (`${panel}:${resource}:${page}:${recordId}:${tenant}`): the server checks the
+* `create` ability without a record and `update` with one.
+*/
+function uploadContext(pageKey) {
+	const [, resource = "", , record = ""] = pageKey.split(":");
+	return {
+		resource,
+		record
+	};
+}
+async function uploadFile(descriptor, file, pageKey) {
+	const { resource, record } = uploadContext(pageKey);
+	const body = new FormData();
+	body.append("file", file);
+	body.append("field", descriptor.name);
+	body.append("resource", resource);
+	if (record) body.append("record", record);
+	const response = await activeFetch(descriptor.uploadUrl, {
+		method: "POST",
+		credentials: "same-origin",
+		headers: {
+			"Accept": "application/json",
+			"X-Requested-With": "XMLHttpRequest",
+			"X-XSRF-TOKEN": xsrfToken()
+		},
+		body
+	});
+	const payload = await response.json().catch(() => null);
+	if (!response.ok) {
+		const message = payload && typeof payload === "object" && "message" in payload ? String(payload.message) : `Upload failed (${response.status}).`;
+		throw new Error(message);
+	}
+	return payload;
+}
+async function deleteUpload(descriptor, key, pageKey) {
+	const { resource } = uploadContext(pageKey);
+	const response = await activeFetch(descriptor.deleteUrl, {
+		method: "DELETE",
+		credentials: "same-origin",
+		headers: {
+			"Accept": "application/json",
+			"Content-Type": "application/json",
+			"X-Requested-With": "XMLHttpRequest",
+			"X-XSRF-TOKEN": xsrfToken()
+		},
+		body: JSON.stringify({
+			key,
+			field: descriptor.name,
+			resource
+		})
+	});
+	if (!response.ok) throw new Error(`Upload removal failed (${response.status}).`);
+}
 async function runAction(params) {
 	await submitAction(String(params.url ?? ""), {
 		data: params.data && typeof params.data === "object" ? params.data : void 0,
@@ -31911,6 +31967,14 @@ function useRuntime() {
 	if (!value) throw new Error("Pupitre hooks must be used inside <Pupitre>.");
 	return value;
 }
+var PageActionsContext = (0, import_react.createContext)(null);
+function usePageActions() {
+	const runtime = (0, import_react.useContext)(RuntimeContext);
+	const page = (0, import_react.useContext)(PageActionsContext);
+	const value = runtime ?? page;
+	if (!value) throw new Error("Pupitre hooks must be used inside <Pupitre>.");
+	return value;
+}
 //#endregion
 //#region ../pupitre-react/src/renderer/functions.ts
 /** Built-in $computed signatures: concat({ values }), add/sub/mul/div({ a, b }), sum({ values }), count({ value }), formatNumber({ value, locale?, decimals?, currency? }), formatDate({ value, format?, timezone? }), pluck({ values, key }), join({ values, separator? }), upper/lower({ value }), truncate({ value, length, suffix? }), coalesce({ values }). */
@@ -32004,7 +32068,7 @@ function defineRegistry(components, options = {}) {
 function PupitreRenderer(props) {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(PupitreRendererInstance, { ...props }, props.page.key);
 }
-function PupitreRendererInstance({ page, data, errors, pupitre, registry, runAction, upload, toast, onStore }) {
+function PupitreRendererInstance({ page, data, errors, pupitre, registry, runAction, upload, toast, onStore, embedded }) {
 	const [runtime] = (0, import_react.useState)(() => {
 		const state = createPupitreStore(structuredClone(page.state ?? {}));
 		if (errors) mapErrors(state.store, errors);
@@ -32040,7 +32104,7 @@ function PupitreRendererInstance({ page, data, errors, pupitre, registry, runAct
 		...getRegistryHandlers(registry.registry)(() => dispatchState, () => store.getSnapshot()),
 		visit: async (params) => visit(params),
 		reload: async (params) => reload(params),
-		submitForm: async () => submitForm(page, store, toast),
+		submitForm: async () => submitForm$1(),
 		openAction: async (params) => runAction(params.action, { ids: params.ids }),
 		runAction: async (params) => runAction({
 			name: "runAction",
@@ -32065,6 +32129,7 @@ function PupitreRendererInstance({ page, data, errors, pupitre, registry, runAct
 			if (typeof process === "undefined" || false) console.warn("Pupitre dynamic options endpoint is available in M2.");
 		}
 	};
+	const submitForm$1 = embedded ? embedded.submit : () => submitForm(page, store, toast);
 	const context = {
 		store,
 		page,
@@ -32074,7 +32139,8 @@ function PupitreRendererInstance({ page, data, errors, pupitre, registry, runAct
 		handlers: bridge,
 		functions: registry.functions,
 		runAction,
-		submitForm: () => submitForm(page, store, toast),
+		submitForm: submitForm$1,
+		embedded: Boolean(embedded),
 		upload,
 		toast
 	};
@@ -32099,17 +32165,27 @@ function ActionModal({ action, ids, registry, runtimeRegistry, pupitre, close, t
 	const [loading, setLoading] = (0, import_react.useState)(true);
 	const [errors, setErrors] = (0, import_react.useState)({});
 	const [modalStore, setModalStore] = (0, import_react.useState)(null);
+	const callbacks = (0, import_react.useRef)({
+		close,
+		toast
+	});
+	(0, import_react.useEffect)(() => {
+		callbacks.current = {
+			close,
+			toast
+		};
+	});
 	(0, import_react.useEffect)(() => {
 		let active = true;
 		fetchActionForm(action).then((result) => {
 			if (active) setFormResponse(result);
 		}).catch((error) => {
 			if (active) {
-				toast({
+				callbacks.current.toast({
 					type: "error",
 					title: error instanceof Error ? error.message : "Unable to load action form."
 				});
-				close();
+				callbacks.current.close();
 			}
 		}).finally(() => {
 			if (active) setLoading(false);
@@ -32117,11 +32193,7 @@ function ActionModal({ action, ids, registry, runtimeRegistry, pupitre, close, t
 		return () => {
 			active = false;
 		};
-	}, [
-		action,
-		close,
-		toast
-	]);
+	}, [action]);
 	const Modal = registry.Modal;
 	if (!Modal) return null;
 	const onSubmit = async () => {
@@ -32184,7 +32256,8 @@ function ActionModal({ action, ids, registry, runtimeRegistry, pupitre, close, t
 			runAction: async () => {},
 			upload: async () => [],
 			toast,
-			onStore
+			onStore,
+			embedded: { submit: () => void onSubmit() }
 		}), loading && !formResponse ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
 			role: "status",
 			children: "Loading…"
@@ -32257,10 +32330,14 @@ function useSetState() {
 	return (0, import_react.useCallback)((path, value) => state.set(path, value), [state]);
 }
 function useRunAction() {
-	return useRuntime().runAction;
+	return usePageActions().runAction;
 }
 function useSubmitForm() {
 	return useRuntime().submitForm;
+}
+/** True when rendered inside an action modal (no page-level form chrome). */
+function useEmbedded() {
+	return useRuntime().embedded;
 }
 /**
 * Inertia navigation for UI components (sidebar links, row clicks) without
@@ -32274,58 +32351,37 @@ function useVisit() {
 * (Form `dirtyGuard`). Inertia visits ask `window.confirm(message)`.
 */
 function useNavigationGuard(shouldBlock, message) {
+	const latest = (0, import_react.useRef)({
+		shouldBlock,
+		message
+	});
+	(0, import_react.useEffect)(() => {
+		latest.current = {
+			shouldBlock,
+			message
+		};
+	});
 	(0, import_react.useEffect)(() => {
 		if (typeof window === "undefined") return;
 		const removeBefore = getRouter().on("before", (event) => {
 			const visit = event.detail.visit;
-			if (visit.method === "get" && !visit.only.length && shouldBlock() && !window.confirm(message)) event.preventDefault();
+			if (visit.method === "get" && !visit.only.length && latest.current.shouldBlock() && !window.confirm(latest.current.message)) event.preventDefault();
 		});
 		const onBeforeUnload = (event) => {
-			if (shouldBlock()) event.preventDefault();
+			if (latest.current.shouldBlock()) event.preventDefault();
 		};
 		window.addEventListener("beforeunload", onBeforeUnload);
 		return () => {
 			removeBefore();
 			window.removeEventListener("beforeunload", onBeforeUnload);
 		};
-	}, [shouldBlock, message]);
+	}, []);
 }
 function useUpload(descriptor) {
 	const { page } = useRuntime();
-	const resource = page.key.split(":")[1] ?? "";
 	return {
-		upload: (0, import_react.useCallback)(async (file) => {
-			const body = new FormData();
-			body.append("file", file);
-			body.append("field", descriptor.name);
-			body.append("resource", resource);
-			const response = await fetch(descriptor.uploadUrl, {
-				method: "POST",
-				headers: {
-					"Accept": "application/json",
-					"X-Requested-With": "XMLHttpRequest"
-				},
-				body
-			});
-			if (!response.ok) throw new Error(`Upload failed (${response.status}).`);
-			return await response.json();
-		}, [
-			descriptor.name,
-			descriptor.uploadUrl,
-			resource
-		]),
-		remove: (0, import_react.useCallback)(async (key) => {
-			const response = await fetch(descriptor.deleteUrl, {
-				method: "DELETE",
-				headers: {
-					"Accept": "application/json",
-					"Content-Type": "application/json",
-					"X-Requested-With": "XMLHttpRequest"
-				},
-				body: JSON.stringify({ key })
-			});
-			if (!response.ok) throw new Error(`Upload removal failed (${response.status}).`);
-		}, [descriptor.deleteUrl])
+		upload: (0, import_react.useCallback)((file) => uploadFile(descriptor, file, page.key), [descriptor, page.key]),
+		remove: (0, import_react.useCallback)((key) => deleteUpload(descriptor, key, page.key), [descriptor, page.key])
 	};
 }
 function useTable(descriptor) {
@@ -32335,15 +32391,14 @@ function useTable(descriptor) {
 	(0, import_react.useEffect)(() => registerTableSelectionClearer(() => setSelected([])), []);
 	const query = Object.fromEntries(currentUrl().searchParams.entries());
 	const setQuery = (0, import_react.useCallback)((partial) => {
-		const params = currentUrl().searchParams;
+		const url = currentUrl();
 		for (const [key, value] of Object.entries(partial)) {
-			params.delete(key);
-			if (value !== null && value !== void 0 && value !== "") params.set(key, String(value));
+			url.searchParams.delete(key);
+			if (value !== null && value !== void 0 && value !== "") url.searchParams.set(key, String(value));
 		}
-		const queryData = Object.fromEntries(params.entries());
-		getRouter().reload({
+		const search = url.searchParams.toString();
+		getRouter().visit(`${url.pathname}${search ? `?${search}` : ""}`, {
 			only: ["data"],
-			data: queryData,
 			preserveState: true,
 			preserveScroll: true,
 			onStart: () => setIsLoading(true),
@@ -32371,9 +32426,9 @@ function useTable(descriptor) {
 			setQuery(updates);
 		}, [setQuery]),
 		resetFilters: (0, import_react.useCallback)(() => {
-			const params = currentUrl().searchParams;
-			for (const key of [...params.keys()]) if (key.startsWith("filters[")) params.delete(key);
-			setQuery(Object.fromEntries(params.entries()));
+			const updates = { page: "" };
+			for (const key of currentUrl().searchParams.keys()) if (key.startsWith("filters[")) updates[key] = "";
+			setQuery(updates);
 		}, [setQuery]),
 		selected,
 		setSelected,
@@ -109252,19 +109307,25 @@ function FileUpload({ props, children, emit, bindings, loading = false }) {
 }
 //#endregion
 //#region src/components/Form.tsx
-function Form({ props, children, emit, bindings, loading = false }) {
+function Form({ props, children, bindings, loading = false }) {
 	const visit = useVisit();
 	const setState = useSetState();
 	const submitForm = useSubmitForm();
+	const embedded = useEmbedded();
+	const submitting = useStateValue("/meta/submitting") === true;
 	const formData = useStateValue("/data");
 	const [initialState, setInitialState] = (0, import_react.useState)(() => JSON.stringify(formData));
 	const dirty = JSON.stringify(formData) !== initialState;
-	useNavigationGuard((0, import_react.useCallback)(() => props.dirtyGuard === true && dirty, [dirty, props.dirtyGuard]), "You have unsaved changes. Leave this page?");
+	useNavigationGuard((0, import_react.useCallback)(() => !embedded && props.dirtyGuard === true && dirty, [
+		dirty,
+		embedded,
+		props.dirtyGuard
+	]), "You have unsaved changes. Leave this page?");
 	const submit = (event) => {
 		event.preventDefault();
-		emit?.("submit");
 		setInitialState(JSON.stringify(formData));
 		setState("/meta/dirty", false);
+		submitForm();
 	};
 	(0, import_react.useEffect)(() => {
 		setState("/meta/dirty", dirty);
@@ -109293,7 +109354,6 @@ function Form({ props, children, emit, bindings, loading = false }) {
 		submitForm
 	]);
 	const cancel = () => {
-		emit?.("cancel");
 		if (typeof props.cancelUrl === "string") visit(props.cancelUrl);
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("form", {
@@ -109303,7 +109363,7 @@ function Form({ props, children, emit, bindings, loading = false }) {
 		onSubmit: submit,
 		"data-dirty": dirty || void 0,
 		"data-binding": bindings?.value,
-		children: [children, /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+		children: [children, !embedded && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 			className: "flex flex-wrap justify-end gap-2",
 			children: [typeof props.cancelUrl === "string" && /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 				type: "button",
@@ -109313,7 +109373,7 @@ function Form({ props, children, emit, bindings, loading = false }) {
 				children: "Cancel"
 			}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Button, {
 				type: "submit",
-				disabled: loading,
+				disabled: loading || submitting,
 				children: typeof props.submitLabel === "string" ? props.submitLabel : "Submit"
 			})]
 		})]
@@ -111855,7 +111915,8 @@ var RepeaterContext = (0, import_react.createContext)({
 	cloneable: false,
 	collapsible: false,
 	move: () => {},
-	clone: () => {}
+	clone: () => {},
+	remove: () => {}
 });
 function Repeater({ props, children, emit, bindings, loading = false }) {
 	const descriptor = readDescriptor(props.descriptor);
@@ -111887,6 +111948,10 @@ function Repeater({ props, children, emit, bindings, loading = false }) {
 		nextItems.splice(index + 1, 0, clonedItem);
 		setState(statePath, nextItems);
 	};
+	const remove = (index) => {
+		if (!statePath || itemCount <= min || index < 0 || index >= items.length) return;
+		setState(statePath, items.filter((_, position) => position !== index));
+	};
 	const context = {
 		minItems: min,
 		maxItems: max,
@@ -111895,7 +111960,8 @@ function Repeater({ props, children, emit, bindings, loading = false }) {
 		cloneable: descriptor?.cloneable ?? false,
 		collapsible: descriptor?.collapsible ?? false,
 		move,
-		clone
+		clone,
+		remove
 	};
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RepeaterContext.Provider, {
 		value: context,
@@ -111923,12 +111989,11 @@ function Repeater({ props, children, emit, bindings, loading = false }) {
 }
 //#endregion
 //#region src/components/RepeaterItem.tsx
-function RepeaterItem({ props, children, emit, loading = false }) {
+function RepeaterItem({ props, children, loading = false }) {
 	const context = (0, import_react.useContext)(RepeaterContext);
 	const [collapsed, setCollapsed] = (0, import_react.useState)(props.collapsed === true);
 	const index = typeof props.index === "number" ? props.index : 0;
 	const label = typeof props.itemLabel === "string" ? props.itemLabel : `Item ${index + 1}`;
-	const action = (event) => emit?.(event);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", {
 		className: "min-w-0 rounded-md border border-border bg-card",
 		children: [/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", {
@@ -111960,10 +112025,7 @@ function RepeaterItem({ props, children, emit, loading = false }) {
 						type: "button",
 						variant: "ghost",
 						className: "min-h-8 px-2",
-						onClick: () => {
-							setCollapsed((value) => !value);
-							action("collapse");
-						},
+						onClick: () => setCollapsed((value) => !value),
 						"aria-expanded": !collapsed,
 						children: collapsed ? "Expand" : "Collapse"
 					}),
@@ -111979,7 +112041,7 @@ function RepeaterItem({ props, children, emit, loading = false }) {
 						type: "button",
 						variant: "ghost",
 						className: "min-h-8 px-2 text-destructive",
-						onClick: () => action("remove"),
+						onClick: () => context.remove(index),
 						disabled: loading || context.itemCount <= context.minItems,
 						children: "Remove"
 					})
@@ -111995,7 +112057,7 @@ function RepeaterItem({ props, children, emit, loading = false }) {
 //#region src/components/RichEditor.tsx
 var TiptapEditor = (0, import_react.lazy)(async () => {
 	const [reactEditor, starterKitModule, linkModule, imageModule] = await Promise.all([
-		__vitePreload(() => import("./dist-ByBBf4Gl.js"), __vite__mapDeps([0,1,2,3])),
+		__vitePreload(() => import("./dist-BTpyEED9.js"), __vite__mapDeps([0,1,2,3])),
 		__vitePreload(() => import("./dist-CUXPL_RM.js"), __vite__mapDeps([4,3,5])),
 		__vitePreload(() => import("./dist-D7mHrF_q.js"), __vite__mapDeps([5,3])),
 		__vitePreload(() => import("./dist-_pdNwpsQ.js"), __vite__mapDeps([6,3]))
@@ -112009,7 +112071,7 @@ var TiptapEditor = (0, import_react.lazy)(async () => {
 		const [imageError, setImageError] = (0, import_react.useState)();
 		const editor = reactEditor.useEditor({
 			extensions: [
-				StarterKit,
+				StarterKit.configure({ link: false }),
 				Link.configure({ openOnClick: false }),
 				Image
 			],
@@ -117277,14 +117339,33 @@ var panel = {
 	locale: "en",
 	timezone: "UTC"
 };
+function logRouterCall(entry) {
+	const calls = window.__ctRouterCalls ?? [];
+	calls.push(entry);
+	window.__ctRouterCalls = calls;
+	const output = document.querySelector("[data-testid=\"router-calls\"]");
+	if (output) output.textContent = JSON.stringify(calls);
+}
 function RouterLog() {
-	(0, import_react.useEffect)(() => setRouter({ reload: (options) => {
-		const calls = window.__ctRouterCalls ?? [];
-		calls.push(options ?? {});
-		window.__ctRouterCalls = calls;
-		const output = document.querySelector("[data-testid=\"router-calls\"]");
-		if (output) output.textContent = JSON.stringify(calls);
-	} }), []);
+	(0, import_react.useEffect)(() => setRouter({
+		reload: (options) => logRouterCall(options ?? {}),
+		visit: (url, options) => logRouterCall({
+			method: "visit",
+			url,
+			only: options?.only
+		}),
+		put: (url, data) => logRouterCall({
+			method: "put",
+			url,
+			data
+		}),
+		post: (url, data) => logRouterCall({
+			method: "post",
+			url,
+			data
+		}),
+		on: () => () => {}
+	}), []);
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("pre", {
 		"data-testid": "router-calls",
 		children: "[]"
@@ -117538,7 +117619,52 @@ function ConfirmStory() {
 		onCancel: noopToast
 	});
 }
+function FormStory() {
+	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, import_jsx_runtime.jsx)(PupitreRenderer, {
+		page: {
+			key: "ct:form",
+			kind: "edit",
+			title: "Edit post",
+			breadcrumbs: [],
+			spec: {
+				root: "form",
+				elements: {
+					form: {
+						type: "Form",
+						props: {
+							method: "put",
+							url: "/admin/posts/4",
+							submitLabel: "Save",
+							dirtyGuard: false
+						},
+						children: ["title"]
+					},
+					title: {
+						type: "Text",
+						props: {
+							name: "title",
+							label: "Title",
+							value: { $bindState: "/data/title" }
+						}
+					}
+				}
+			},
+			state: {
+				data: { title: "Draft" },
+				errors: {},
+				meta: {}
+			},
+			actions: { header: [] },
+			catalogVersion: "0.1"
+		},
+		pupitre: panel,
+		registry,
+		runAction: async () => {},
+		upload: async () => ({}),
+		toast: noopToast
+	}), /* @__PURE__ */ (0, import_jsx_runtime.jsx)(RouterLog, {})] });
+}
 //#endregion
-export { ActionStory, ConfirmStory, DataTableStory, FixtureStory, RepeaterStory, RichEditorStory, SelectStory, TabsStory, UploadStory, require_jsx_runtime as n, require_shim as r, require_with_selector as t };
+export { ActionStory, ConfirmStory, DataTableStory, FixtureStory, FormStory, RepeaterStory, RichEditorStory, SelectStory, TabsStory, UploadStory, require_jsx_runtime as n, require_shim as r, require_with_selector as t };
 
-//# sourceMappingURL=catalog.story-7YTyWgl7.js.map
+//# sourceMappingURL=catalog.story-Dc6N-k58.js.map

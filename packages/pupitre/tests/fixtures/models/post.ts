@@ -19,6 +19,7 @@ export default class Post extends BaseModel {
   @column() declare categoryId: number | null
   @column() declare items: { sku: string; qty: number }[] | null
   @column() declare cover: string | null
+  @column() declare privateCover: string | null
   @column() declare tenantId: number | null
   @column.dateTime({ autoCreate: true }) declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true }) declare updatedAt: DateTime

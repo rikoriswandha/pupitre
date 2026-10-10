@@ -91,9 +91,11 @@ test.group('Pupitre React bridge', () => {
     }
   })
 
-  test('writes table filters into the query and reloads only top-level data', ({ assert }) => {
+  test('table changes visit the next URL and refetch only top-level data', ({ assert }) => {
     const calls: Array<{ method: string; args: unknown[] }> = []
     const restoreRouter = setRouter(fakeRouter(calls))
+    const location = globalThis.window as unknown as { happyDOM: { setURL(url: string): void } }
+    location.happyDOM.setURL('http://localhost/admin/posts?q=notes&filters%5Bstatus%5D=draft')
     let controls: ReturnType<typeof useTable> | undefined
     const runtime = {
       store: createPupitreStore({}).store,
@@ -110,19 +112,34 @@ test.group('Pupitre React bridge', () => {
       controls = useTable(tableDescriptor)
       return null
     }
+    const visited = () =>
+      calls.map(({ method, args }) => {
+        assert.equal(method, 'visit')
+        const options = args[1] as { only: string[]; preserveState: boolean }
+        assert.deepEqual(options.only, ['data'])
+        assert.isTrue(options.preserveState)
+        return new URL(String(args[0]), 'http://localhost')
+      })
     try {
       renderToString(
         <RuntimeContext.Provider value={runtime}>
           <Consumer />
         </RuntimeContext.Provider>
       )
-      controls?.setFilter('status', 'draft')
-      assert.equal(calls[0]?.method, 'reload')
-      const options = calls[0]?.args[0] as { only: string[]; data: Record<string, unknown> }
-      assert.deepEqual(options.only, ['data'])
-      assert.equal(options.data['filters[status]'], 'draft')
+      controls?.sort('title')
+      controls?.setFilter('status', 'published')
+      controls?.resetFilters()
+      const [sorted, filtered, reset] = visited()
+      assert.equal(sorted?.pathname, '/admin/posts')
+      assert.equal(sorted?.searchParams.get('sort'), 'title')
+      assert.equal(sorted?.searchParams.get('filters[status]'), 'draft')
+      assert.equal(filtered?.searchParams.get('filters[status]'), 'published')
+      assert.equal(filtered?.searchParams.get('q'), 'notes')
+      assert.isNull(reset?.searchParams.get('filters[status]'))
+      assert.equal(reset?.searchParams.get('q'), 'notes')
     } finally {
       restoreRouter()
+      location.happyDOM.setURL('about:blank')
     }
   })
 

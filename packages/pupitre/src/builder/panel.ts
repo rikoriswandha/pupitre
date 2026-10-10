@@ -4,7 +4,7 @@ export type PanelBuilder = {
   readonly definition: PanelDefinition
   path(value: string): PanelBuilder
   guard(value: string): PanelBuilder
-  middleware(value: readonly unknown[]): PanelBuilder
+  middleware(value: PanelDefinition['middleware']): PanelBuilder
   resources(value: readonly unknown[] | Record<string, unknown>): PanelBuilder
   brand(value: NonNullable<PanelDefinition['brand']>): PanelBuilder
   theme(value: NonNullable<PanelDefinition['theme']>): PanelBuilder
@@ -28,22 +28,23 @@ class Panel implements PanelBuilder {
   guard(value: string): PanelBuilder {
     return this.set({ guard: value })
   }
-  middleware(value: readonly unknown[]): PanelBuilder {
+  middleware(value: PanelDefinition['middleware']): PanelBuilder {
     return this.set({ middleware: [...value] })
   }
   resources(value: readonly unknown[] | Record<string, unknown>): PanelBuilder {
-    const entries = Array.isArray(value) ? value : Object.values(value)
-    const resources = entries.map((resource) => {
-      if (
-        resource &&
-        typeof resource === 'object' &&
-        'toDefinition' in resource &&
-        typeof resource.toDefinition === 'function'
-      ) {
-        return resource.toDefinition()
-      }
-      return resource
-    })
+    const resources = Array.isArray(value)
+      ? value.map((resource) => {
+          if (
+            resource &&
+            typeof resource === 'object' &&
+            'toDefinition' in resource &&
+            typeof resource.toDefinition === 'function'
+          ) {
+            return resource.toDefinition()
+          }
+          return resource
+        })
+      : value
     return this.set({ resources })
   }
   brand(value: NonNullable<PanelDefinition['brand']>): PanelBuilder {

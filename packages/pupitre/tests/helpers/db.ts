@@ -18,11 +18,23 @@ const silentLogger = {
 }
 const emitter = { hasListeners: () => false, emit() {} }
 let database: Database | undefined
+let databaseSetup: Promise<Database> | undefined
 let sqlitePath: string | undefined
+export async function migrateDatabase(db: Database) {
+  await migrate(db)
+}
 
-export async function setupDatabase() {
-  if (database) return database
+export function setupDatabase() {
+  if (database) return Promise.resolve(database)
+  if (databaseSetup) return databaseSetup
+  databaseSetup = initializeDatabase().catch((error: unknown) => {
+    databaseSetup = undefined
+    throw error
+  })
+  return databaseSetup
+}
 
+async function initializeDatabase() {
   if (process.env.DB === 'pg') {
     const url = process.env.DATABASE_URL
     if (!url) throw new Error('DATABASE_URL is required when DB=pg')
@@ -55,7 +67,7 @@ export async function setupDatabase() {
   }
 
   BaseModel.useAdapter(database.modelAdapter())
-  await migrate(database)
+  await migrateDatabase(database)
   return database
 }
 
@@ -79,10 +91,11 @@ export async function seed(data: {
 }
 
 export async function teardown() {
-  if (database) await database.manager.closeAll()
+  if (database) await database.manager.closeAll(true)
   if (sqlitePath) await unlink(sqlitePath).catch(() => {})
   sqlitePath = undefined
   database = undefined
+  databaseSetup = undefined
   BaseModel.useAdapter(undefined as never)
 }
 

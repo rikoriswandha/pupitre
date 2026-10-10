@@ -89,7 +89,23 @@ test('action form GET renders a separate form store and validation keeps the mod
   let responseStatus = 422
   let responsePayload: Record<string, unknown> = { errors: { title: ['Invalid title'] } }
   let submission: { url: string; init: RequestInit } | undefined
+  const formResponse = {
+    spec: {
+      root: 'field',
+      elements: {
+        field: {
+          type: 'Text',
+          props: { name: 'title', value: { $bindState: '/data/title' } },
+        },
+      },
+    },
+    state: { data: { title: 'Draft' } },
+    catalogVersion: '0.1',
+  }
   const restoreFetch = setFetch(async (url, init) => {
+    if ((init?.method ?? 'GET') === 'GET') {
+      return { ok: true, status: 200, json: async () => formResponse } as Response
+    }
     submission = { url: String(url), init: init ?? {} }
     return {
       ok: responseStatus === 200,
@@ -113,27 +129,6 @@ test('action form GET renders a separate form store and validation keeps the mod
     patch: record('patch'),
     delete: record('delete'),
   } as unknown as RouterLike)
-  const originalFetch = globalThis.fetch
-  Object.defineProperty(globalThis, 'fetch', {
-    configurable: true,
-    writable: true,
-    value: async () => ({
-      ok: true,
-      json: async () => ({
-        spec: {
-          root: 'field',
-          elements: {
-            field: {
-              type: 'Text',
-              props: { name: 'title', value: { $bindState: '/data/title' } },
-            },
-          },
-        },
-        state: { data: { title: 'Draft' } },
-        catalogVersion: '0.1',
-      }),
-    }),
-  })
   dom.document.cookie = 'XSRF-TOKEN=abc%2B123'
   try {
     await act(async () =>
@@ -184,11 +179,6 @@ test('action form GET renders a separate form store and validation keeps the mod
     await act(async () => root.unmount())
     restoreRouter()
     restoreFetch()
-    Object.defineProperty(globalThis, 'fetch', {
-      configurable: true,
-      writable: true,
-      value: originalFetch,
-    })
     dom.happyDOM.abort()
   }
 })

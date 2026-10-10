@@ -1,7 +1,7 @@
 import { createError } from '@adonisjs/core/exceptions'
 import { DateTime } from 'luxon'
 import type { HttpContext } from '@adonisjs/core/http'
-import type { LucidModel, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
+import type { LucidModel, LucidRow, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type {
   QueryCallback,
   TableColumnDefinition,
@@ -12,7 +12,7 @@ import type {
 type ListTabs = Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
 type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs }
 type QueryResult = {
-  query: ModelQueryBuilderContract<LucidModel>
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>
   normalized: Record<string, unknown>
   perPage: number | 'all'
   page: number
@@ -33,7 +33,7 @@ function filterAttribute(filter: TableFilterDefinition) {
 }
 
 function applyLike(
-  query: ModelQueryBuilderContract<LucidModel>,
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   column: string,
   value: string,
   or = false
@@ -49,7 +49,7 @@ function applyLike(
 }
 
 function applySearch(
-  query: ModelQueryBuilderContract<LucidModel>,
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   table: TableDefinition,
   value: unknown
 ) {
@@ -65,7 +65,7 @@ function applySearch(
       if (relation && attribute) {
         const whereHas = (index === 0 ? builder.whereHas : builder.orWhereHas) as unknown as (
           relation: string,
-          callback: (query: ModelQueryBuilderContract<LucidModel>) => void
+          callback: (query: ModelQueryBuilderContract<LucidModel, LucidRow>) => void
         ) => unknown
         whereHas.call(builder, relation, (relationQuery) =>
           applyLike(relationQuery, attribute, value)
@@ -78,7 +78,7 @@ function applySearch(
 }
 
 function applyRelationSort(
-  query: ModelQueryBuilderContract<LucidModel>,
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   name: string,
   direction: 'asc' | 'desc'
 ) {
@@ -103,7 +103,7 @@ function timezone(ctx?: HttpContext) {
 }
 
 export function applyTableQuery(
-  query: ModelQueryBuilderContract<LucidModel>,
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   table: TableDefinition,
   params: Record<string, unknown>,
   options: QueryOptions = {}

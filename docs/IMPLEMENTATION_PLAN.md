@@ -124,7 +124,9 @@ Gate: [FILAMENT_PARITY.md](./FILAMENT_PARITY.md) semua baris "v1" ✅.
 | Dependency | Versi saat ini | Risiko | Tindakan |
 | --- | --- | --- | --- |
 | `@json-render/core`/`react` | 0.21.0 (2026‑09‑18) | 0.x, API `experimental_*` berubah | Pin exact; renovate manual; test spike dijadikan regression suite |
-| `@adonisjs/inertia` 4 / `@inertiajs/react` 3 | — | partial reload `only` dengan nested key | Test `only: ['page.data']` di WP9 |
-| shadcn + Base UI | default sejak Jul 2026 | API `@base-ui-components/react` 1.x | Komponen UI dibungkus adaptor tipis |
+| `@adonisjs/inertia` 5 / `@inertiajs/react` 3 | 5.0.1 / 3.9.1 (2026‑10‑10); `@adonisjs/inertia` 4 hanya untuk Inertia v2 | partial reload `only` hanya menyaring prop top-level | Data tabel = prop top-level `data` (ADR-0011); test `only: ['data']` di WP6 |
+| shadcn + Base UI | `@base-ui/react` 1.9 (paket lama `@base-ui-components/react` berhenti di 1.0.0-rc) | API Base UI 1.x | Komponen UI dibungkus adaptor tipis (`pupitre-ui/src/primitives`) |
+| `@tanstack/react-table` | 8.21.3 (v9 sudah rilis) | v9 mengganti API | Tetap v8 di M1; evaluasi v9 setelah 1.0 |
+| `@playwright/experimental-ct-react` | 1.62.1 (dipasangkan dengan `@playwright/test` 1.62.1) | experimental; transform JSX CT menduplikasi import campuran | Test CT hanya mengimpor komponen story (`tests/ct/stories`) |
 | `@adonisjs/queue` | 0.6.x | breaking minor | Driver dipin minor; adapter interface stabil |
 | `@rikology/adonisjs-tenant`, `-notifications`, `-audit-trail` | milik sendiri | perubahan ikut kebutuhan Pupitre | Driver di subpath, optional peer, test terhadap versi yang dipin |

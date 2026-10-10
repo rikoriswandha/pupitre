@@ -24,6 +24,7 @@ export {
   useRunAction,
   useTable,
   useSubmitForm,
+  useEmbedded,
   useUpload,
   useToast,
   useVisit,

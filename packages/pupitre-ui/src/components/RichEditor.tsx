@@ -61,7 +61,12 @@ const TiptapEditor = lazy(async () => {
     const [uploadingImage, setUploadingImage] = useState(false)
     const [imageError, setImageError] = useState<string>()
     const editor = reactEditor.useEditor({
-      extensions: [StarterKit, Link.configure({ openOnClick: false }), Image],
+      // Tiptap v3 StarterKit bundles Link; disable it so the configured Link is the only one.
+      extensions: [
+        StarterKit.configure({ link: false }),
+        Link.configure({ openOnClick: false }),
+        Image,
+      ],
       content: value,
       editable: !disabled && !readOnly,
       onUpdate: ({ editor: current }) => onChange(current.getHTML()),

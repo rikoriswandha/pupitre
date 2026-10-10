@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/experimental-ct-react'
 import {
   ActionStory,
   ConfirmStory,
+  FormStory,
   DataTableStory,
   RepeaterStory,
   SelectStory,
@@ -34,7 +35,9 @@ test('Repeater adds two rows and retains the second typed value after removing t
   await expect(view.locator('input').first()).toHaveValue('second typed')
 })
 
-test('DataTable header sorting reloads only data with the selected sort', async ({ mount }) => {
+test('DataTable header sorting visits the sorted URL and refetches only data', async ({
+  mount,
+}) => {
   const view = await mount(<DataTableStory />)
   await view.getByRole('button', { name: 'Title' }).click()
   const calls = view.getByTestId('router-calls')
@@ -42,8 +45,9 @@ test('DataTable header sorting reloads only data with the selected sort', async 
     .poll(async () => JSON.parse((await calls.textContent()) ?? '[]').length)
     .toBeGreaterThan(0)
   const first = JSON.parse((await calls.textContent()) ?? '[]')[0]
+  expect(first.method).toBe('visit')
   expect(first.only).toEqual(['data'])
-  expect(first.data.sort).toBe('title')
+  expect(new URL(first.url, 'http://localhost').searchParams.get('sort')).toBe('title')
 })
 
 test('Tabs switch to the other panel', async ({ mount }) => {
@@ -116,4 +120,19 @@ test('RichEditor requests its separate tiptap chunks only after mounting', async
   expect(tiptapChunk()).toBe(false)
   await mount(<RichEditorStory />)
   await expect.poll(tiptapChunk).toBe(true)
+})
+
+test('Form submit button sends the bound data with the form method and url', async ({ mount }) => {
+  const view = await mount(<FormStory />)
+  await view.getByLabel('Title').fill('Published title')
+  await view.getByRole('button', { name: 'Save' }).click()
+  const calls = view.getByTestId('router-calls')
+  await expect
+    .poll(async () => JSON.parse((await calls.textContent()) ?? '[]').length)
+    .toBeGreaterThan(0)
+  expect(JSON.parse((await calls.textContent()) ?? '[]')[0]).toEqual({
+    method: 'put',
+    url: '/admin/posts/4',
+    data: { title: 'Published title' },
+  })
 })

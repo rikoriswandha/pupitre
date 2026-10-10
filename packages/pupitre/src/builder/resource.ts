@@ -141,7 +141,11 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
   private change(patch: Partial<ResourceDefinition<ModelInstance<M>>>): ResourceBuilder<M> {
     const next = { ...this.definition, ...patch }
     next.toJSON = () =>
-      stableJson(Object.fromEntries(Object.entries(next).filter(([key]) => key !== 'toJSON')))
+      stableJson(
+        Object.fromEntries(
+          Object.entries(next).filter(([key]) => key !== 'toJSON' && key !== 'modelClass')
+        )
+      )
     return new Resource(next)
   }
   slug(value: string): ResourceBuilder<M> {
@@ -210,9 +214,12 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
   actions(value: ResourceActions): ResourceBuilder<M> {
     return this.change({
       actions: {
-        header: (value.header ?? []).map((item) => item.definition),
-        row: (value.row ?? []).map((item) => item.definition),
-        bulk: (value.bulk ?? []).map((item) => item.definition),
+        header: (value.header ?? []).map((item) => ({
+          ...item.definition,
+          context: 'header' as const,
+        })),
+        row: (value.row ?? []).map((item) => ({ ...item.definition, context: 'record' as const })),
+        bulk: (value.bulk ?? []).map((item) => ({ ...item.definition, context: 'bulk' as const })),
       },
     })
   }
@@ -289,6 +296,7 @@ export function defineResource<M extends ResourceModel>(model: M): ResourceBuild
   const modelName = model.name.replace(/Model$/, '')
   const definition: ResourceDefinition<ModelInstance<M>> = {
     model: model.name,
+    modelClass: model as unknown as LucidModel,
     slug: pluralize(kebab(modelName)),
     label: modelName,
     pluralLabel: pluralize(modelName),
@@ -302,6 +310,10 @@ export function defineResource<M extends ResourceModel>(model: M): ResourceBuild
     toJSON: () => '',
   }
   definition.toJSON = () =>
-    stableJson(Object.fromEntries(Object.entries(definition).filter(([key]) => key !== 'toJSON')))
+    stableJson(
+      Object.fromEntries(
+        Object.entries(definition).filter(([key]) => key !== 'toJSON' && key !== 'modelClass')
+      )
+    )
   return new Resource<M>(definition)
 }

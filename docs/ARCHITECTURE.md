@@ -43,7 +43,7 @@ graph LR
 | `pupitre` | `@adonisjs/*`, `@vinejs/vine`, `luxon`, `@json-render/core` (hanya `type`) | `react`, `@inertiajs/react`, apa pun dari `pupitre-react`/`pupitre-ui` |
 | `pupitre/catalog` | `zod` saja | Semua yang lain (dipakai server + client + renderer non-React) |
 | `pupitre-react` | `react`, `@inertiajs/react`, `@json-render/core`, `@json-render/react`, `zustand`, `pupitre/catalog` | `@adonisjs/*`, `lucid`, JSX komponen visual |
-| `pupitre-ui` | `react`, `@base-ui-components/react`, `@tanstack/react-table`, `recharts`, `pupitre/catalog`, hooks dari `pupitre-react` | `@json-render/*` langsung (lewat hooks `pupitre-react`), server code |
+| `pupitre-ui` | `react`, `@base-ui/react`, `@tanstack/react-table`, `recharts`, `pupitre/catalog`, hooks dari `pupitre-react` | `@json-render/*` langsung (lewat hooks `pupitre-react`), server code |
 | Plugin resmi | `pupitre` + peer-nya sendiri | `pupitre-react` (plugin menyumbang spec, bukan komponen; komponen tambahan lewat registry host) |
 
 Batas ini ditegakkan oleh lint rule `no-restricted-imports` per workspace dan oleh `verify:exports` di CI (lihat [DEVELOPMENT.md](./DEVELOPMENT.md)).
@@ -162,21 +162,22 @@ sequenceDiagram
 ### 4.3 Action berbentuk form (modal)
 
 1. Spec halaman membawa `ActionDescriptor { name, kind:'form', url, label, icon, color, enabled }`.
-2. Klik → `bridge.openAction(url)` → `GET url` → `{ spec, state }` → modal dirender oleh `PupitreRenderer` kedua dengan store terpisah (prefix `/modal`).
-3. Submit → `POST url` dengan `{ data, ids? }`. Respons: redirect Inertia (default) atau `{ patch: [...] }` RFC 6902 untuk `refresh.table()`.
+2. Klik → `useRunAction()` → `GET url` (`Accept: application/json`) → `ActionFormResponse { spec, state }` → `ActionModal` dirender oleh `PupitreRenderer` kedua dengan store terpisah.
+3. Submit → `fetch(url, { data, ids? })` JSON dengan `X-Pupitre-Action: 1` → `ActionResult { flash, redirect?, reload?, patch?, deselect? }` / 422 / 403 (ADR-0012, WIRE_PROTOCOL §4).
 
 ### 4.4 Tabel
 
-URL query adalah satu-satunya sumber state tabel. `bridge.reload({ only: ['page.data'], data: query })` → `TableController` membangun ulang query Lucid dari URL → mengembalikan `data: { rows, meta, summary?, groups? }`. Spec/descriptor tabel tidak ikut dikirim ulang (bagian `only`).
+URL query adalah satu-satunya sumber state tabel. `useTable` → `router.reload({ only: ['data'], data: query })` → `ResourceController.list` membangun ulang query Lucid dari URL → mengembalikan prop top-level `data: { rows, meta, query }` (ADR-0011). Spec/descriptor tabel tidak ikut dikirim ulang.
 
 ## 5. Compiler
 
 ### 5.1 Input/output
 
 ```ts
-compileSchema(fields: FieldDefinition[], input: CompileInput): CompiledSchema
-// CompileInput = { ctx, record?, locale, pathPrefix?: '/data' }
-// CompiledSchema = { spec: Spec, state: StateModel, static: StaticPatch[], catalogVersion: string }
+compileForm(nodes: SchemaNodeDefinition[], options: CompileContext & { form: FormDescriptor; data? }): Promise<CompiledSchema>
+compileInfolist(nodes: SchemaNodeDefinition[], options: CompileContext): Promise<CompiledSchema>
+// CompileContext = { locale, timezone, ctx?, record?, model?, uploadUrls?, resolveFileUrl?, cache? }
+// CompiledSchema = { spec: Spec, state: StateModel, catalogVersion: string }
 ```
 
 ### 5.2 Cache
@@ -192,9 +193,9 @@ Lihat [DESIGN.md §Compiler](./DESIGN.md#compiler-builder--spec-json-render). Ke
 
 | Hasil lift | Dipakai untuk | Cara kerja |
 | --- | --- | --- |
-| `expression` | `visible`, `disabled`, `label`, `helperText`, `placeholder.content` | Proxy `get` merekam `get('status') === 'published'` → `{ $state: '/data/status', eq: 'published' }`; template string → `$template` |
-| `static` | sama | Dievaluasi sekali di server dengan state awal; hasil literal di-patch ke spec; dilaporkan `pupitre:inspect` |
-| `server` | `afterStateUpdated` | `watch` → action `evaluate` → `POST /_pupitre/evaluate` |
+| `expression` | `visible`, `disabled`, `label`, `helperText`, `placeholder.content` | `acorn` mem-parse `fn.toString()`; pola sederhana diterjemahkan: `get('status') === 'published'` → `{ $state: '/data/status', eq: 'published' }`, `!==`/`>`/`<`/`!`/truthiness, `&&` → `$and`, `\|\|` → `$or`, template string → `$template`, ternary → `$cond`; di dalam repeater `get('qty')` → `{ $item: 'qty' }` |
+| `static` | sama | Dievaluasi per request di server dengan state awal + record; hasil literal di-patch ke salinan spec cache |
+| `server` | `afterStateUpdated` | M3 (WP31): `watch` → `evaluate` → `POST /_pupitre/evaluate`. Di M1 hanya `set('x', <ekspresi terangkat>)` yang didukung (→ `watch` + `setState`); selain itu `E_PUPITRE_UNLIFTABLE_CLOSURE` saat compile |
 | `computed` | `placeholder.content` aritmatika sederhana | `{ $computed: 'expr', args }` dengan **fungsi terdaftar** bawaan (`add`, `mul`, `concat`, `formatNumber`, ...), **bukan** string JS yang di-`eval` |
 
 Keputusan: desain v0 menyebut "fungsi dikirim sebagai string di spec". Itu **tidak** dilakukan: `new Function` di client bentrok dengan CSP Shield (`script-src` tanpa `unsafe-eval`) dan membuka celah kalau spec pernah berasal dari sumber lain. Closure yang tidak bisa dipetakan ke fungsi `$computed` terdaftar jatuh ke `static` atau `server`. Lihat [ADR-0002](./adr/0002-client-first-reactivity.md).
@@ -203,7 +204,7 @@ Keputusan: desain v0 menyebut "fungsi dikirim sebagai string di spec". Itu **tid
 
 Urutan middleware group panel (dipasang oleh `router.ts`):
 
-1. Named middleware host dari `.middleware([...])` (termasuk `auth` guard).
+1. Middleware host dari `.middleware([...])` — referensi middleware asli (`middleware.auth({ guards: ['web'] })` dari `#start/kernel`), bukan string, karena package tidak bisa mengimpor koleksi named middleware host.
 2. `pupitre_context`: membangun `ctx.pupitre = { panel, locale, timezone, user }`.
 3. `tenancy_resolver`: `adapter.tenancy.resolve(ctx)` → `ctx.pupitre.tenant`; 404 kalau mode `url` dan tenant tidak ditemukan / user bukan anggota.
 4. `share_props`: `inertia.share({ user, tenant, nav, flash, notifications })`. `nav` sudah difilter `viewAny`.

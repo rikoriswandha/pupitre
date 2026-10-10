@@ -25,17 +25,23 @@ const panel: PupitrePageProps['pupitre'] = {
   timezone: 'UTC',
 }
 
+function logRouterCall(entry: unknown) {
+  const calls = (window as Window & { __ctRouterCalls?: unknown[] }).__ctRouterCalls ?? []
+  calls.push(entry)
+  ;(window as Window & { __ctRouterCalls?: unknown[] }).__ctRouterCalls = calls
+  const output = document.querySelector('[data-testid="router-calls"]')
+  if (output) output.textContent = JSON.stringify(calls)
+}
 function RouterLog() {
   useEffect(
     () =>
       setRouter({
-        reload: (options?: unknown) => {
-          const calls = (window as Window & { __ctRouterCalls?: unknown[] }).__ctRouterCalls ?? []
-          calls.push(options ?? {})
-          ;(window as Window & { __ctRouterCalls?: unknown[] }).__ctRouterCalls = calls
-          const output = document.querySelector('[data-testid="router-calls"]')
-          if (output) output.textContent = JSON.stringify(calls)
-        },
+        reload: (options?: unknown) => logRouterCall(options ?? {}),
+        visit: (url: string, options?: { only?: string[] }) =>
+          logRouterCall({ method: 'visit', url, only: options?.only }),
+        put: (url: string, data: unknown) => logRouterCall({ method: 'put', url, data }),
+        post: (url: string, data: unknown) => logRouterCall({ method: 'post', url, data }),
+        on: () => () => {},
       } as never),
     []
   )
@@ -265,5 +271,44 @@ export function ConfirmStory() {
       }}
       onCancel={noopToast}
     />
+  )
+}
+
+export function FormStory() {
+  const page: PupitrePageProps['page'] = {
+    key: 'ct:form',
+    kind: 'edit',
+    title: 'Edit post',
+    breadcrumbs: [],
+    spec: {
+      root: 'form',
+      elements: {
+        form: {
+          type: 'Form',
+          props: { method: 'put', url: '/admin/posts/4', submitLabel: 'Save', dirtyGuard: false },
+          children: ['title'],
+        },
+        title: {
+          type: 'Text',
+          props: { name: 'title', label: 'Title', value: { $bindState: '/data/title' } },
+        },
+      },
+    },
+    state: { data: { title: 'Draft' }, errors: {}, meta: {} },
+    actions: { header: [] },
+    catalogVersion: '0.1',
+  }
+  return (
+    <div>
+      <PupitreRenderer
+        page={page}
+        pupitre={panel}
+        registry={registry}
+        runAction={async () => {}}
+        upload={async () => ({})}
+        toast={noopToast}
+      />
+      <RouterLog />
+    </div>
   )
 }

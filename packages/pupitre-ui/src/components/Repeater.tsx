@@ -21,6 +21,7 @@ type RepeaterContextValue = {
   collapsible: boolean
   move: (index: number, direction: 'up' | 'down') => void
   clone: (index: number) => void
+  remove: (index: number) => void
 }
 type RuntimeProps = {
   props: Record<string, unknown>
@@ -55,6 +56,7 @@ export const RepeaterContext = createContext<RepeaterContextValue>({
   collapsible: false,
   move: () => {},
   clone: () => {},
+  remove: () => {},
 })
 
 export function Repeater({ props, children, emit, bindings, loading = false }: RuntimeProps) {
@@ -98,6 +100,13 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
     nextItems.splice(index + 1, 0, clonedItem)
     setState(statePath, nextItems)
   }
+  const remove = (index: number) => {
+    if (!statePath || itemCount <= min || index < 0 || index >= items.length) return
+    setState(
+      statePath,
+      items.filter((_, position) => position !== index)
+    )
+  }
   const context: RepeaterContextValue = {
     minItems: min,
     maxItems: max,
@@ -107,6 +116,7 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
     collapsible: descriptor?.collapsible ?? false,
     move,
     clone,
+    remove,
   }
   return (
     <RepeaterContext.Provider value={context}>

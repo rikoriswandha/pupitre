@@ -18,12 +18,28 @@ export type RuntimeContextValue = {
     options?: { ids?: Array<string | number>; record?: Record<string, unknown> }
   ) => Promise<void>
   submitForm: () => void
+  /** True inside an action modal: the host owns submit/cancel buttons. */
+  embedded: boolean
   upload: (field: string, files: File[]) => Promise<unknown>
   toast: (toast: Omit<ToastMessage, 'id'>) => void
 }
 export const RuntimeContext = createContext<RuntimeContextValue | null>(null)
 export function useRuntime(): RuntimeContextValue {
   const value = useContext(RuntimeContext)
+  if (!value) throw new Error('Pupitre hooks must be used inside <Pupitre>.')
+  return value
+}
+
+/**
+ * Page-level services available outside the spec renderer (the Shell renders
+ * header actions and toasts around `PupitreRenderer`, which owns the store).
+ */
+export type PageActionsContextValue = Pick<RuntimeContextValue, 'runAction' | 'toast'>
+export const PageActionsContext = createContext<PageActionsContextValue | null>(null)
+export function usePageActions(): PageActionsContextValue {
+  const runtime = useContext(RuntimeContext)
+  const page = useContext(PageActionsContext)
+  const value = runtime ?? page
   if (!value) throw new Error('Pupitre hooks must be used inside <Pupitre>.')
   return value
 }

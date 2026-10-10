@@ -11760,19 +11760,21 @@ window.playwrightUpdate = async (rootElement, component) => {
 	if (!entry) throw new Error("Component was not mounted");
 	entry.setRenderer(() => __pwRender(component));
 };
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_FixtureStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.FixtureStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ActionStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.ActionStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ConfirmStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.ConfirmStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_DataTableStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.DataTableStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_RepeaterStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.RepeaterStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_SelectStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.SelectStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_TabsStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.TabsStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_UploadStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.UploadStory), []);
-var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_RichEditorStory = () => __vitePreload(() => import("./catalog.story-7YTyWgl7.js").then((mod) => mod.RichEditorStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_FixtureStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.FixtureStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ActionStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.ActionStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ConfirmStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.ConfirmStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_FormStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.FormStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_DataTableStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.DataTableStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_RepeaterStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.RepeaterStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_SelectStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.SelectStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_TabsStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.TabsStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_UploadStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.UploadStory), []);
+var _Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_RichEditorStory = () => __vitePreload(() => import("./catalog.story-Dc6N-k58.js").then((mod) => mod.RichEditorStory), []);
 __pwRegistry.initialize({
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_FixtureStory,
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ActionStory,
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_ConfirmStory,
+	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_FormStory,
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_DataTableStory,
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_RepeaterStory,
 	_Users_rikoriswandha_Developer_projects_opensource_pupitre_packages_pupitre_ui_tests_ct_stories_catalog_story_js_SelectStory,
@@ -11783,4 +11785,4 @@ __pwRegistry.initialize({
 //#endregion
 export { __commonJSMin as a, require_react as i, require_client as n, __exportAll as o, require_react_dom as r, __toESM as s, __vitePreload as t };
 
-//# sourceMappingURL=index-D3pAAvIG.js.map
+//# sourceMappingURL=index-Cy4IS1Mx.js.map

@@ -5,15 +5,13 @@ import { Button } from '../primitives/index.js'
 type RuntimeProps = {
   props: Record<string, unknown>
   children?: ReactNode
-  emit?: (event: string) => void
   loading?: boolean
 }
-export function RepeaterItem({ props, children, emit, loading = false }: RuntimeProps) {
+export function RepeaterItem({ props, children, loading = false }: RuntimeProps) {
   const context = useContext(RepeaterContext)
   const [collapsed, setCollapsed] = useState(props.collapsed === true)
   const index = typeof props.index === 'number' ? props.index : 0
   const label = typeof props.itemLabel === 'string' ? props.itemLabel : `Item ${index + 1}`
-  const action = (event: 'remove' | 'collapse') => emit?.(event)
   return (
     <article className="min-w-0 rounded-md border border-border bg-card">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
@@ -48,10 +46,7 @@ export function RepeaterItem({ props, children, emit, loading = false }: Runtime
               type="button"
               variant="ghost"
               className="min-h-8 px-2"
-              onClick={() => {
-                setCollapsed((value) => !value)
-                action('collapse')
-              }}
+              onClick={() => setCollapsed((value) => !value)}
               aria-expanded={!collapsed}
             >
               {collapsed ? 'Expand' : 'Collapse'}
@@ -72,7 +67,7 @@ export function RepeaterItem({ props, children, emit, loading = false }: Runtime
             type="button"
             variant="ghost"
             className="min-h-8 px-2 text-destructive"
-            onClick={() => action('remove')}
+            onClick={() => context.remove(index)}
             disabled={loading || context.itemCount <= context.minItems}
           >
             Remove

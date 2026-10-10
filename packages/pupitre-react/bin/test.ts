@@ -1,3 +1,4 @@
+import '../tests/helpers/dom_globals.js'
 import { assert } from '@japa/assert'
 import { configure, processCLIArgs, run } from '@japa/runner'
 

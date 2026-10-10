@@ -1,13 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useBoundProp, useStateStore, useStateValue } from '@json-render/react'
 import type {
   FileUploadDescriptor,
   TableDescriptor,
   UploadResponse,
 } from '@rikology/pupitre/catalog'
-import { registerTableSelectionClearer } from '../bridge/actions.js'
+import { deleteUpload, registerTableSelectionClearer, uploadFile } from '../bridge/actions.js'
 import { currentUrl, getRouter, type RouterLike } from '../bridge/inertia.js'
-import { useRuntime } from '../runtime.js'
+import { usePageActions, useRuntime } from '../runtime.js'
 
 export function useBoundValue<T>(
   value: T | undefined,
@@ -42,13 +42,17 @@ export function usePage() {
   return { ...page, data }
 }
 export function useRunAction() {
-  return useRuntime().runAction
+  return usePageActions().runAction
 }
 export function useSubmitForm() {
   return useRuntime().submitForm
 }
+/** True when rendered inside an action modal (no page-level form chrome). */
+export function useEmbedded() {
+  return useRuntime().embedded
+}
 export function useToast() {
-  return useRuntime().toast
+  return usePageActions().toast
 }
 /**
  * Inertia navigation for UI components (sidebar links, row clicks) without
@@ -65,6 +69,12 @@ export function useVisit() {
  * (Form `dirtyGuard`). Inertia visits ask `window.confirm(message)`.
  */
 export function useNavigationGuard(shouldBlock: () => boolean, message: string) {
+  // Subscribe once per mount; read the latest predicate/message through a ref so
+  // typing (which changes `dirty`) never re-subscribes to router events.
+  const latest = useRef({ shouldBlock, message })
+  useEffect(() => {
+    latest.current = { shouldBlock, message }
+  })
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
@@ -76,15 +86,15 @@ export function useNavigationGuard(shouldBlock: () => boolean, message: string) 
         if (
           visit.method === 'get' &&
           !visit.only.length &&
-          shouldBlock() &&
-          !window.confirm(message)
+          latest.current.shouldBlock() &&
+          !window.confirm(latest.current.message)
         ) {
           event.preventDefault()
         }
       }
     )
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (shouldBlock()) {
+      if (latest.current.shouldBlock()) {
         event.preventDefault()
       }
     }
@@ -93,41 +103,17 @@ export function useNavigationGuard(shouldBlock: () => boolean, message: string) 
       removeBefore()
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
-  }, [shouldBlock, message])
+  }, [])
 }
 export function useUpload(descriptor: FileUploadDescriptor) {
   const { page } = useRuntime()
-  const resource = page.key.split(':')[1] ?? ''
   const upload = useCallback(
-    async (file: File): Promise<UploadResponse> => {
-      const body = new FormData()
-      body.append('file', file)
-      body.append('field', descriptor.name)
-      body.append('resource', resource)
-      const response = await fetch(descriptor.uploadUrl, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body,
-      })
-      if (!response.ok) throw new Error(`Upload failed (${response.status}).`)
-      return (await response.json()) as UploadResponse
-    },
-    [descriptor.name, descriptor.uploadUrl, resource]
+    (file: File): Promise<UploadResponse> => uploadFile(descriptor, file, page.key),
+    [descriptor, page.key]
   )
   const remove = useCallback(
-    async (key: string): Promise<void> => {
-      const response = await fetch(descriptor.deleteUrl, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        body: JSON.stringify({ key }),
-      })
-      if (!response.ok) throw new Error(`Upload removal failed (${response.status}).`)
-    },
-    [descriptor.deleteUrl]
+    (key: string): Promise<void> => deleteUpload(descriptor, key, page.key),
+    [descriptor, page.key]
   )
   return { upload, remove }
 }
@@ -137,16 +123,19 @@ export function useTable(descriptor: TableDescriptor) {
   const [isLoading, setIsLoading] = useState(false)
   useEffect(() => registerTableSelectionClearer(() => setSelected([])), [])
   const query = Object.fromEntries(currentUrl().searchParams.entries())
+  // The URL is the single source of table state (ADR-0004): build the next URL
+  // ourselves and make a partial visit so history/back button and reloads keep
+  // the query, while only the top-level `data` prop is refetched (ADR-0011).
   const setQuery = useCallback((partial: Record<string, unknown>) => {
-    const params = currentUrl().searchParams
+    const url = currentUrl()
     for (const [key, value] of Object.entries(partial)) {
-      params.delete(key)
-      if (value !== null && value !== undefined && value !== '') params.set(key, String(value))
+      url.searchParams.delete(key)
+      if (value !== null && value !== undefined && value !== '')
+        url.searchParams.set(key, String(value))
     }
-    const queryData = Object.fromEntries(params.entries())
-    getRouter().reload({
+    const search = url.searchParams.toString()
+    getRouter().visit(`${url.pathname}${search ? `?${search}` : ''}`, {
       only: ['data'],
-      data: queryData,
       preserveState: true,
       preserveScroll: true,
       onStart: () => setIsLoading(true),
@@ -169,9 +158,10 @@ export function useTable(descriptor: TableDescriptor) {
     [setQuery]
   )
   const resetFilters = useCallback(() => {
-    const params = currentUrl().searchParams
-    for (const key of [...params.keys()]) if (key.startsWith('filters[')) params.delete(key)
-    setQuery(Object.fromEntries(params.entries()))
+    const updates: Record<string, unknown> = { page: '' }
+    for (const key of currentUrl().searchParams.keys())
+      if (key.startsWith('filters[')) updates[key] = ''
+    setQuery(updates)
   }, [setQuery])
   return {
     data,

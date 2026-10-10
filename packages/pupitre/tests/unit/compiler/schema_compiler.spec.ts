@@ -92,7 +92,10 @@ test.group('schema compiler', () => {
       ),
       {
         kind: 'computed',
-        value: { $computed: 'mul', args: [{ $state: '/data/qty' }, { $state: '/data/price' }] },
+        value: {
+          $computed: 'mul',
+          args: { a: { $state: '/data/qty' }, b: { $state: '/data/price' } },
+        },
       }
     )
     assert.equal(
@@ -144,6 +147,48 @@ test.group('schema compiler', () => {
     }
     assert.instanceOf(failure, E_PUPITRE_UNLIFTABLE_CLOSURE)
     assert.include(String(failure), 'title')
+  })
+
+  test('repeater placeholders lift arithmetic to a catalog-valid $computed with item args', async ({
+    assert,
+  }) => {
+    const items = node(
+      schema
+        .repeater('items')
+        .schema([
+          schema.number('qty'),
+          schema.number('price'),
+          schema.placeholder('subtotal').content(({ get }) => get('qty') * get('price')),
+        ])
+    )
+    const compiled = await compileForm([items], options)
+    const placeholder = Object.values(compiled.spec.elements).find(
+      (element) => element.type === 'Placeholder'
+    )
+    assert.deepEqual(placeholder?.props.content, {
+      $computed: 'mul',
+      args: { a: { $item: 'qty' }, b: { $item: 'price' } },
+    })
+  })
+
+  test('normalizes record dates nested in layouts to the form timezone', async ({ assert }) => {
+    const nodes = [
+      node(
+        schema.tabs([
+          schema
+            .tab('Publishing')
+            .components([schema.dateTime('publishedAt'), schema.date('embargoOn')]),
+        ])
+      ),
+    ]
+    const compiled = await compileForm(nodes, {
+      ...options,
+      data: { publishedAt: '2026-10-07T12:00:00.000+00:00', embargoOn: '2026-10-07' },
+    })
+    assert.deepInclude(compiled.state.data, {
+      publishedAt: '2026-10-07T19:00:00+07:00',
+      embargoOn: '2026-10-07',
+    })
   })
 
   test('cache specs are cloned and evaluate static closures for each record', async ({

@@ -21,6 +21,11 @@ export type PupitreRendererProps = {
   upload: RuntimeContextValue['upload']
   toast: RuntimeContextValue['toast']
   onStore?: (store: StateStore) => void
+  /**
+   * Embedded renderers (action modals) submit through their host instead of
+   * the page Form protocol; components hide their own submit chrome.
+   */
+  embedded?: { submit: () => void }
 }
 export function PupitreRenderer(props: PupitreRendererProps) {
   return <PupitreRendererInstance key={props.page.key} {...props} />
@@ -35,6 +40,7 @@ function PupitreRendererInstance({
   upload,
   toast,
   onStore,
+  embedded,
 }: PupitreRendererProps) {
   const [runtime] = useState(() => {
     const initial = structuredClone((page.state ?? {}) as Record<string, unknown>)
@@ -77,7 +83,7 @@ function PupitreRendererInstance({
     ...handlers,
     visit: async (params: Record<string, unknown>) => visit(params),
     reload: async (params: Record<string, unknown>) => reload(params),
-    submitForm: async () => submitPageForm(page, store, toast),
+    submitForm: async () => submitForm(),
     openAction: async (params: Record<string, unknown>) =>
       runAction(params.action as never, { ids: params.ids as Array<string | number> | undefined }),
     runAction: async (params: Record<string, unknown>) =>
@@ -115,6 +121,7 @@ function PupitreRendererInstance({
         console.warn('Pupitre dynamic options endpoint is available in M2.')
     },
   }
+  const submitForm = embedded ? embedded.submit : () => submitPageForm(page, store, toast)
   const context: RuntimeContextValue = {
     store,
     page,
@@ -124,7 +131,8 @@ function PupitreRendererInstance({
     handlers: bridge,
     functions: registry.functions,
     runAction,
-    submitForm: () => submitPageForm(page, store, toast),
+    submitForm,
+    embedded: Boolean(embedded),
     upload,
     toast,
   }

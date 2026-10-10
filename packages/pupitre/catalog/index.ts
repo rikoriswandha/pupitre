@@ -1,15 +1,7 @@
 export { catalogVersion } from './version.js'
 export { dynamic, jsonRenderExpression, jsonRenderValue, visibilitySchema } from './expressions.js'
 export { actions } from './actions.js'
-export {
-  components,
-  catalogEvents,
-  repeaterItemEvents,
-  repeaterEvents,
-  dataTableEvents,
-  actionBarEvents,
-  formEvents,
-} from './components.js'
+export { components, catalogEvents } from './components.js'
 export { pupitreCatalog, assertRegistryComplete } from './registry.js'
 export { catalogFixtures } from './fixtures.js'
 export {

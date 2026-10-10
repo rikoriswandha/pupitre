@@ -34,6 +34,7 @@ export type ResourceHandlers<Model extends object> = {
 }
 export type ResourceDefinition<Model extends object = object> = {
   model: string
+  modelClass?: LucidModel
   slug: string
   label: string
   pluralLabel: string

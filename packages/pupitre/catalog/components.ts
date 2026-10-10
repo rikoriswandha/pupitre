@@ -54,17 +54,13 @@ const container = <T extends z.ZodRawShape>(
 })
 const optionList = dynamic(z.array(option))
 
-export const repeaterItemEvents = ['remove', 'move', 'clone', 'collapse'] as const
-export const repeaterEvents = ['add', 'remove', 'move', 'clone', 'collapse'] as const
-export const dataTableEvents = ['reload', 'column', 'reorder', 'action'] as const
-export const actionBarEvents = ['action'] as const
-export const formEvents = ['submit', 'cancel'] as const
+/**
+ * Events the compiler binds through json-render `on`. json-render events carry
+ * no runtime payload, so everything that needs one (row actions, table query
+ * changes, item reordering, uploads) goes through pupitre-react hooks instead.
+ */
 export const catalogEvents = {
-  RepeaterItem: repeaterItemEvents,
-  Repeater: repeaterEvents,
-  DataTable: dataTableEvents,
-  ActionBar: actionBarEvents,
-  Form: formEvents,
+  Repeater: ['add'],
 } as const
 
 export const components = {

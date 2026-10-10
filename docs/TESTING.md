@@ -49,13 +49,14 @@ PostgreSQL: job CI `test:pg` menjalankan file yang ditandai `@pg` (query ILIKE, 
 ## 4. pupitre-react
 
 - Store: render `<Pupitre page={A}/>`, ketik, rerender dengan `page` yang `key` sama tapi `state` berbeda → `/data` tetap; `key` berbeda → reset.
-- Bridge: mock `@inertiajs/react` `router` (vi.mock/`test.mock`); `submitForm` memanggil `router.put(url, data, { preserveState: true, onError })`; `onError({ 'items.0.sku': 'x' })` → `store.get('/errors/items/0/sku') === 'x'`.
+- Bridge: `router` Inertia diganti lewat seam `setRouter()` dan `fetch` lewat `setFetch()` (tanpa monkey-patch modul); `submitForm` memanggil `router.put(url, data, { preserveState: true, onError })`; `onError({ 'items.0.sku': 'x' })` → `store.get('/errors/items/0/sku') === 'x'`. Action JSON (ADR-0012): 422 → `/errors/**` modal, 403 → toast + modal tetap, `ActionResult.patch/reload/redirect/deselect`.
+- Regression suite spike json-render (`tests/spike/**`, K1–K5) wajib hijau saat upgrade `@json-render/*`.
 - `catalogVersion` mismatch → toast + reload.
 - Tanpa SSR di v1, tetapi test `renderToString` di Node dipertahankan supaya tidak ada regresi `window` di module scope.
 
 ## 5. pupitre-ui
 
-- Satu test per komponen dari fixture catalog: render dengan props fixture, cek a11y (axe, tanpa `critical`), interaksi inti (Select pilih opsi → `onChange`, Repeater add/remove, DataTable sort klik → `reload` dipanggil dengan `sort`).
+- Satu test per komponen dari fixture catalog: render dengan props fixture, cek a11y (axe, tanpa `critical`), interaksi inti (Select pilih opsi → state, Repeater add/remove, DataTable sort klik → `reload` dengan `sort` + `only: ['data']`, Tabs, modal action, ConfirmDialog, FileUpload, RichEditor lazy chunk). File test CT hanya mengimpor **komponen story** dari `tests/ct/stories/*.story.tsx`; registry, runtime, router/fetch palsu dipasang di dalam story (sisi browser), karena Playwright CT mengeksekusi file test di Node lewat transform JSX-nya. Observasi dibaca lewat DOM (`data-testid`).
 - Visual snapshot hanya untuk shell (sidebar, topbar) dan DataTable; komponen input tidak di-snapshot visual (terlalu rapuh).
 - `registry:check` memastikan sumber komponen = registry.
 

@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Input, Label } from '../primitives/index.js'
+import { toInputValue } from '../primitives/date_value.js'
 
 type Props = Infer<typeof components.Date.props>
 type Runtime = {
@@ -47,7 +48,7 @@ export function Date({ props, bindings }: Runtime) {
           id={id}
           name={id}
           type="date"
-          value={value ?? ''}
+          value={toInputValue(value, 'date', props.seconds === true)}
           min={props.min}
           max={props.max}
           disabled={props.disabled}

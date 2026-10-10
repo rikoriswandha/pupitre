@@ -6,7 +6,7 @@ exports[`resource and builder DSL > serializes a realistic definition determinis
         "confirmation": {
           "destructive": true,
         },
-        "context": "record",
+        "context": "bulk",
         "kind": "delete",
         "name": "delete",
       },

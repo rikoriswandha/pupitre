@@ -16,6 +16,7 @@ import type {
 } from '../definition/schema.js'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import {
+  toDateTime,
   toIsoInZone,
   formatDate,
   formatDateTime,
@@ -159,7 +160,7 @@ function defaults(
           ...(row as Record<string, unknown>),
           _key: (row as Record<string, unknown>)._key ?? `k${index}`,
         }))
-        if (value === undefined || create) setPath(data, node.name, keyed)
+        if (!Array.isArray(value) || create) setPath(data, node.name, keyed)
         for (const row of keyed) defaults(template, row, create)
       } else if (value === undefined && create && 'default' in node && node.default !== undefined)
         setPath(
@@ -248,51 +249,6 @@ async function addField(
     const templateId = `${id}.item`
     const templateChildren: string[] = []
     for (const child of children) templateChildren.push(await addNode(child, build, path, true))
-    const on: Record<string, unknown[]> = {
-      remove: [
-        {
-          action: 'removeState',
-          params: {
-            statePath: inRepeater ? { $item: node.name } : `/data/${pointer(path)}`,
-            index: { $index: true },
-          },
-        },
-      ],
-      move: [
-        {
-          action: 'setState',
-          params: {
-            statePath: inRepeater ? { $item: node.name } : `/data/${pointer(path)}`,
-            value: inRepeater ? { $item: node.name } : { $state: `/data/${pointer(path)}` },
-          },
-        },
-      ],
-      clone: [
-        {
-          action: 'pushState',
-          params: {
-            statePath: inRepeater ? { $item: node.name } : `/data/${pointer(path)}`,
-            value: { $item: '', _key: '$id' },
-          },
-        },
-      ],
-      collapse: [
-        {
-          action: 'setState',
-          params: {
-            statePath: `/ui/repeater/${pointer(path)}/collapsed`,
-            value: {
-              $cond: { $state: `/ui/repeater/${pointer(path)}/collapsed` },
-              $then: false,
-              $else: true,
-            },
-          },
-        },
-      ],
-    }
-    const itemDefaults = Array.isArray(getPath(build.data, path))
-      ? (getPath(build.data, path) as Record<string, unknown>[])
-      : []
     const defaultItem: Record<string, unknown> = {}
     defaults(children, defaultItem, true)
     const liftedLabel =
@@ -314,15 +270,41 @@ async function addField(
       grid: definition.grid,
       itemLabel:
         liftedLabel && liftedLabel.kind !== 'static' ? liftedLabel.value : definition.itemLabel,
-      defaultItems: itemDefaults,
+      defaultItems: Array.isArray(getPath(build.data, path)) ? getPath(build.data, path) : [],
     } as unknown as RepeaterDescriptor
+    const statePath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
+    const itemPath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
+    const itemMoveValue = inRepeater ? { $item: node.name } : { $state: statePath }
     build.elements[templateId] = {
       type: 'RepeaterItem',
+      on: {
+        remove: [
+          { action: 'removeState', params: { statePath: itemPath, index: { $index: true } } },
+        ],
+        clone: [
+          {
+            action: 'pushState',
+            params: { statePath: itemPath, value: { $item: '', _key: '$id' } },
+          },
+        ],
+        move: [{ action: 'setState', params: { statePath: itemPath, value: itemMoveValue } }],
+        collapse: [
+          {
+            action: 'setState',
+            params: {
+              statePath: `/ui/repeater/${pointer(path)}/collapsed`,
+              value: {
+                $cond: { $state: `/ui/repeater/${pointer(path)}/collapsed` },
+                $then: false,
+                $else: true,
+              },
+            },
+          },
+        ],
+      },
       props: { index: { $index: true } },
       children: templateChildren,
-      on,
     }
-    const statePath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
     const repeatValue = inRepeater ? { $bindItem: node.name } : { $bindState: statePath }
     const repeater: Element = {
       type: 'Repeater',
@@ -359,6 +341,10 @@ async function addField(
   if (node.readOnly !== undefined) props.readOnly = node.readOnly
   if (node.columnSpan !== undefined) props.columnSpan = node.columnSpan
   if (node.extraAttributes !== undefined) props.extraAttributes = node.extraAttributes
+  // Date inputs show wall-clock values and send ISO with the zone's offset back
+  // (ADR-0009); they need the resolved zone (component > panel/user).
+  if (node.kind === 'date' || node.kind === 'dateTime' || node.kind === 'time')
+    props.timezone = node.timezone ?? build.options.timezone
   const excluded = new Set([
     'kind',
     'name',
@@ -605,6 +591,11 @@ function normalizeFormData(
           normalizeFormData(children, row as Record<string, unknown>, timezone, record)
       continue
     }
+    // Layouts (section, tabs, grid, …) are transparent for state paths.
+    if ('children' in node && Array.isArray(node.children)) {
+      normalizeFormData(node.children, data, timezone, record)
+      continue
+    }
     if (!fieldKinds[node.kind] || !('name' in node)) continue
     const field = node as FieldDefinitionUnion
     if (typeof field.format === 'function' && record)
@@ -612,6 +603,9 @@ function normalizeFormData(
     const value = getPath(data, field.name)
     if (field.kind === 'dateTime' && value !== null && value !== undefined)
       setPath(data, field.name, toIsoInZone(value as string, field.timezone ?? timezone))
+    // Calendar dates have no instant: never shift them through a timezone.
+    if (field.kind === 'date' && value !== null && value !== undefined)
+      setPath(data, field.name, toDateTime(value as string)?.toISODate() ?? null)
     if (field.kind === 'richEditor' && typeof value === 'string')
       setPath(data, field.name, sanitizeHtml(value))
   }
