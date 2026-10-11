@@ -7,6 +7,8 @@ import { authProps } from '../../auth/props.js'
 import { tenancyProps } from '../../tenancy/props.js'
 import { notificationProps } from '../../notifications/props.js'
 import { searchProps } from '../../search/props.js'
+import type PupitreManager from '../../manager.js'
+import { realtimeChannels } from '../../adapters/realtime.js'
 
 type SharedPupitre = PupitrePageProps['pupitre']
 
@@ -73,6 +75,14 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
   const tenantUnbound = panel.tenancy?.mode === 'url' && panel.path === ctx.pupitre.basePath
   const search = tenantUnbound ? undefined : searchProps(ctx)
   const notifications = tenantUnbound ? undefined : await notificationProps(ctx)
+  const manager = (await ctx.containerResolver.make('pupitre.manager')) as PupitreManager
+  const realtime =
+    manager.realtime && ctx.pupitre.user
+      ? {
+          driver: manager.realtime.driver,
+          userChannel: realtimeChannels.user(panel.id, ctx.pupitre.user.id),
+        }
+      : undefined
   return {
     panel: {
       id: panel.id,
@@ -89,6 +99,7 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
     nav: tenantUnbound ? [] : await buildNavigation(ctx),
     flash,
     ...(notifications ? { notifications } : {}),
+    ...(realtime ? { realtime } : {}),
     locale: ctx.pupitre.locale,
     timezone: ctx.pupitre.timezone,
   }

@@ -1,3 +1,6 @@
+import { open } from 'node:fs/promises'
+import { E_PUPITRE_UPLOAD_TOO_LARGE } from '../errors.js'
+
 import type {
   FileUploadFieldDefinition,
   MarkdownEditorFieldDefinition,
@@ -49,14 +52,58 @@ export function parseMaxSize(value: number | string | undefined): number | undef
   return Math.floor(Number(match[1]) * multiplier)
 }
 
+/** Default ceiling also covers editor and plugin-contributed upload fields. */
+export const DEFAULT_UPLOAD_MAX_BYTES = 10 * 1024 * 1024
+
+/** Check the actual tempfile before allocating; never buffer more than the accepted size. */
+export async function readUploadBytes(path: string, maxBytes: number): Promise<Buffer> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
+  const file = await open(path, 'r')
+  try {
+    const { size } = await file.stat()
+    if (size > maxBytes) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
+    const bytes = Buffer.alloc(size)
+    let offset = 0
+    while (offset < size) {
+      const result = await file.read(bytes, offset, size - offset, offset)
+      if (result.bytesRead === 0) break
+      offset += result.bytesRead
+    }
+    // Detect growth without allocating/buffering the enlarged file.
+    const extra = Buffer.alloc(1)
+    const overflow = await file.read(extra, 0, 1, size)
+    if (overflow.bytesRead > 0) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
+    return bytes.subarray(0, offset)
+  } finally {
+    await file.close()
+  }
+}
+
+export function isPassiveImageMime(mime: string): boolean {
+  return mime.toLowerCase().startsWith('image/') && mime.toLowerCase() !== 'image/svg+xml'
+}
+
 export function isUploadMimeAllowed(
   field: SchemaNodeDefinition,
   mime: string,
   extension: string
 ): boolean {
+  mime = mime.toLowerCase()
+  extension = extension.toLowerCase()
+  if (
+    [
+      'image/svg+xml',
+      'text/html',
+      'application/xhtml+xml',
+      'text/javascript',
+      'application/javascript',
+    ].includes(mime) ||
+    ['svg', 'html', 'htm', 'xhtml', 'js', 'mjs'].includes(extension)
+  )
+    return false
   if (field.kind !== 'fileUpload' && field.kind !== 'richEditor' && field.kind !== 'markdownEditor')
     return false
-  if (field.kind !== 'fileUpload' || field.image) return mime.startsWith('image/')
+  if (field.kind !== 'fileUpload' || field.image) return isPassiveImageMime(mime)
   if (!field.accept) return true
   const accepts = (Array.isArray(field.accept) ? field.accept : [field.accept])
     .flatMap((accept) => accept.split(','))

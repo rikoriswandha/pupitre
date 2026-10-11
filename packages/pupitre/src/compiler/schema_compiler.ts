@@ -612,7 +612,24 @@ async function addField(
       props.searchable = node.searchable ?? true
       props.preload = node.preload ?? false
       if (owner && node.createOptionForm?.length) props.createOption = { url: optionsUrl }
-      addValueSlot(build, id, 'options', async (data) => {
+      const visibilityClosure = typeof node.hidden === 'function' ? node.hidden : node.visible
+      const serverVisibility =
+        typeof visibilityClosure === 'function' &&
+        liftClosure(visibilityClosure, 'visible', {
+          pathPrefix: '/data',
+          inRepeater,
+          numericFields: build.numericFields,
+        }).kind === 'static'
+      addValueSlot(build, id, 'options', async (data, record, context) => {
+        const requestContext = context as HttpContext
+        if (
+          serverVisibility &&
+          ((typeof node.hidden === 'function' &&
+            (await evaluateClosure(node.hidden, data, record, requestContext)) === true) ||
+            (typeof node.visible === 'function' &&
+              (await evaluateClosure(node.visible, data, record, requestContext)) === false))
+        )
+          return []
         const selected = getPath(data, path)
         const selectedValues = Array.isArray(selected)
           ? selected
@@ -630,11 +647,11 @@ async function addField(
             } catch {
               throw new Error(`Unknown relationship "${node.relationship.name}"`)
             }
-            if (!(await authorizeModel(ctx, relatedModel, 'viewAny')))
+            if (!(await authorizeModel(requestContext, relatedModel, 'viewAny')))
               throw new E_PUPITRE_FORBIDDEN()
           }
           const result = await queryOptions({
-            ctx,
+            ctx: requestContext,
             ...(owner ? { owner } : {}),
             field: node,
             selected: node.preload ? [] : selectedValues,

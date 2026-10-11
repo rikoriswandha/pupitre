@@ -7,6 +7,7 @@ import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { requestResource, scopedQuery } from '../query/scoped_query.js'
 import { createJobContext } from './job_context.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
+import { publishResourceChange } from '../realtime.js'
 
 type BulkJobPayload = {
   panelId: string
@@ -59,6 +60,7 @@ export function registerBulkJob(jobs: JobsAdapter, manager: PupitreManager) {
       throw new E_PUPITRE_FORBIDDEN()
     if (bulkDelete) {
       await executeBuiltinDelete(resource.definition, records, ctx)
+      await publishResourceChange(ctx, resource.slug)
       return
     }
     await executeAction(action, {
@@ -69,5 +71,6 @@ export function registerBulkJob(jobs: JobsAdapter, manager: PupitreManager) {
       currentUrl: payload.currentUrl ?? scopedResource.urls.list,
       listUrl: scopedResource.urls.list,
     })
+    await publishResourceChange(ctx, resource.slug)
   })
 }

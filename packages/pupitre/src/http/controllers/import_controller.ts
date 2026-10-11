@@ -1,3 +1,4 @@
+import { publishResourceChange } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser'
 import type { Database } from '@adonisjs/lucid/database'
@@ -5,7 +6,7 @@ import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import app from '@adonisjs/core/services/app'
 import vine from '@vinejs/vine'
 import { parse as parseCsv } from 'csv-parse/sync'
-import { readFile } from 'node:fs/promises'
+import { readUploadBytes } from '../../storage/upload_validation.js'
 import { randomUUID } from 'node:crypto'
 import { DateTime } from 'luxon'
 import type { ActionDefinition } from '../../definition/action.js'
@@ -83,8 +84,7 @@ async function uploadedCsv(
   const file = ctx.request.file('file') as MultipartFile | null
   if (!file || !file.tmpPath || file.errors.length > 0) throw new Error('Upload a valid CSV file.')
   if (file.size > CSV_MAX_BYTES) throw new Error('CSV files must be 10 MiB or smaller.')
-  const bytes = await readFile(file.tmpPath)
-  if (bytes.byteLength > CSV_MAX_BYTES) throw new Error('CSV files must be 10 MiB or smaller.')
+  const bytes = await readUploadBytes(file.tmpPath, CSV_MAX_BYTES)
   const parsed = parseCsv(bytes, {
     bom: true,
     columns: true,
@@ -148,7 +148,7 @@ async function persistFailedRows(
   await database.table('pupitre_exports').insert({
     id,
     user_id: userId,
-    tenant_id: tenantId,
+    tenant_id: tenantId === null ? null : String(tenantId),
     resource: `import-failures:${resource.slug}`,
     status: 'done',
     total_rows: rows.length,
@@ -250,6 +250,7 @@ export async function processImportRows(
     }
     await onProgress?.(created + updated + failedRows.length)
   }
+  if (created + updated > 0) await publishResourceChange(ctx, resource.slug)
   const failedRowsUrl = failedRows.length
     ? await persistFailedRows(ctx, resource, failedRows, headers)
     : undefined
@@ -344,7 +345,7 @@ export default class ImportController {
     await database.table('pupitre_exports').insert({
       id: importId,
       user_id: userId,
-      tenant_id: tenantId,
+      tenant_id: tenantId === null ? null : String(tenantId),
       resource: `imports:${resource.slug}`,
       status: 'queued',
       total_rows: csv.rows.length,
@@ -361,10 +362,14 @@ export default class ImportController {
     if (!file?.tmpPath) return errorJson(ctx, 'Upload a valid CSV file.', 422)
     const fileKey = `imports/${importId}.csv`
     try {
-      await createPupitreStorage().put(fileKey, await readFile(file.tmpPath), {
-        contentType: 'text/csv; charset=utf-8',
-        visibility: 'private',
-      })
+      await createPupitreStorage().put(
+        fileKey,
+        await readUploadBytes(file.tmpPath, CSV_MAX_BYTES),
+        {
+          contentType: 'text/csv; charset=utf-8',
+          visibility: 'private',
+        }
+      )
       await jobs.dispatch(jobName, {
         importId,
         panelId: ctx.pupitre.panel.id,

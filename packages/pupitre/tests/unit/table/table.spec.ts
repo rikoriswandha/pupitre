@@ -6,6 +6,7 @@ import type { TableDefinition } from '../../../src/definition/table.js'
 import { compileTable } from '../../../src/compiler/table_compiler.js'
 import { buildTableData } from '../../../src/table/table_data.js'
 import { setupDatabase, teardown, truncate, seed, Post } from '../../helpers/db.js'
+import type { HttpContext } from '@adonisjs/core/http'
 
 const spec = { root: 'root', elements: { root: { type: 'Fragment', props: {} } } } as never
 const table: TableDefinition = {
@@ -133,6 +134,40 @@ test.group('table data formatting', (group) => {
   group.teardown(async () => {
     Settings.now = originalNow
     await teardown()
+  })
+
+  test('awaits authorized URL closures with the request context', async ({ assert }) => {
+    const record = await Post.create({
+      title: 'Authorized URL',
+      slug: 'authorized-url',
+      status: 'draft',
+    })
+    const ctx = { params: { marker: 'request' } } as unknown as HttpContext
+    const definition: TableDefinition = {
+      ...table,
+      columns: [
+        {
+          kind: 'text',
+          name: 'title',
+          url: async ({ record: row, ctx: request }) => {
+            assert.strictEqual(request, ctx)
+            return `/subject/${(row as Post).id}`
+          },
+        },
+      ],
+    }
+    const data = await buildTableData(definition, [record], undefined, {
+      ctx,
+      locale: 'en',
+      timezone: 'UTC',
+      normalized: {},
+      rowActions: async () => [],
+      rowUrl: () => undefined,
+    })
+    assert.deepEqual(data.rows[0].cells.title, {
+      value: record.title,
+      url: `/subject/${record.id}`,
+    })
   })
 
   test('formats relation, money, date, since, badge and resolved image cells', async ({

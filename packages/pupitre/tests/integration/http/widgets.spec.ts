@@ -42,6 +42,14 @@ const recentPosts = defineWidget('recent-posts', Post)
 const recordSummary = defineWidget('edit-summary').stats(({ record }) => [
   stat('Post', String((record as Post | undefined)?.title ?? 'missing')),
 ])
+const recordTimeline = defineWidget('record-timeline').timeline(() => [
+  {
+    title: 'Post updated',
+    time: '2026-10-11T12:00:00Z',
+    actor: 'Ada',
+    changes: [{ field: 'title', old: 'Old', new: 'New' }],
+  },
+])
 
 function testTenantAdapter(): TenancyAdapter {
   return {
@@ -79,6 +87,68 @@ async function inertiaPage(baseUrl: string, path: string, partialData?: string) 
 }
 
 test.group('widgets', () => {
+  test('timeline formats times and requires view access even on edit pages', async ({ assert }) => {
+    allowPolicyAbilities()
+    const resource = fixturePostResource.pages({
+      edit: pages.edit().widgets([recordTimeline]),
+      view: pages.view().widgets([recordTimeline]),
+    })
+    const panel = definePanel('admin')
+      .path('/admin')
+      .tenancy({ mode: 'url', adapter: testTenantAdapter() })
+      .resources({ posts: resource })
+    const fixture = await createTestApp({ panels: { admin: async () => ({ default: panel }) } })
+    try {
+      const post = await Post.create({
+        title: 'Timeline owner',
+        slug: `timeline-${Date.now()}`,
+        status: 'draft',
+        tenantId: 1,
+      })
+      const foreign = await Post.create({
+        title: 'Foreign owner',
+        slug: `timeline-foreign-${Date.now()}`,
+        status: 'draft',
+        tenantId: 2,
+      })
+      const endpoint =
+        '/admin/acme/_pupitre/widgets/record-timeline?resource=posts&widgetPage=edit&record='
+      const response = await new ApiClient(fixture.baseUrl)
+        .get(`${endpoint}${post.id}`)
+        .header('Accept', 'application/json')
+        .send()
+      assert.equal(response.status(), 200, response.text())
+      const data = widgetDataSchema.parse(response.body())
+      if (data.kind !== 'timeline') throw new Error('Expected timeline')
+      assert.equal(data.items[0].time.iso, '2026-10-11T12:00:00.000Z')
+      assert.isNotEmpty(data.items[0].time.formatted)
+      assert.deepEqual(data.items[0].changes, [{ field: 'title', old: 'Old', new: 'New' }])
+      denyPolicyAbility('view')
+      const denied = await new ApiClient(fixture.baseUrl)
+        .get(`${endpoint}${post.id}`)
+        .header('Accept', 'application/json')
+        .send()
+      assert.equal(denied.status(), 403)
+      const edit = await inertiaPage(fixture.baseUrl, `/admin/acme/posts/${post.id}/edit`)
+      assert.equal(edit.status(), 200, edit.text())
+      const editProps = pageProps.parse(edit.body().props)
+      assert.notInclude(
+        editProps.page.widgets?.map((widget) => widget.name) ?? [],
+        'record-timeline'
+      )
+      assert.notInclude(editProps.page.deferred ?? [], 'widget_header_record_timeline')
+      allowPolicyAbilities()
+      const crossTenant = await new ApiClient(fixture.baseUrl)
+        .get(`${endpoint}${foreign.id}`)
+        .header('Accept', 'application/json')
+        .send()
+      assert.equal(crossTenant.status(), 404)
+    } finally {
+      allowPolicyAbilities()
+      await closeTestApp(fixture)
+    }
+  })
+
   test('validates dashboard widget props and resolves deferred data for only', async ({
     assert,
   }) => {

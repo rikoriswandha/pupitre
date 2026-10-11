@@ -13,6 +13,16 @@ export type WidgetStat = {
   chart?: number[]
 }
 
+export type TimelineItem = {
+  title: string
+  description?: string
+  time: string
+  actor?: string
+  icon?: string
+  color?: string
+  changes?: { field: string; old: unknown; new: unknown }[]
+}
+
 export type WidgetData =
   | { kind: 'stats'; stats: WidgetStat[] }
   | {
@@ -21,12 +31,13 @@ export type WidgetData =
       datasets: { label: string; data: number[]; color?: string }[]
     }
   | { kind: 'table'; data: unknown }
+  | { kind: 'timeline'; items: TimelineItem[] }
   | { kind: 'component'; data: unknown }
 
 export type WidgetContext = { ctx: HttpContext; filters: Record<string, unknown>; record?: unknown }
 export type WidgetDefinition = {
   name: string
-  kind: 'stats' | 'chart' | 'table' | 'component'
+  kind: 'stats' | 'chart' | 'table' | 'timeline' | 'component'
   load?: (args: WidgetContext) => unknown | Promise<unknown>
   chartType?: 'line' | 'bar' | 'area' | 'pie' | 'doughnut'
   table?: TableDefinition

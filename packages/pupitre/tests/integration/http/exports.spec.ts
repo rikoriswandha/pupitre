@@ -74,6 +74,8 @@ test.group('Pupitre CSV exports', (group) => {
     )
     assert.equal(response.status, 200, await response.clone().text())
     assert.include(response.headers.get('content-type'), 'text/csv')
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff')
+    assert.match(response.headers.get('content-disposition') ?? '', /^attachment;/)
     const csv = await response.text()
     assert.include(csv, 'Post title')
     assert.include(csv, 'Z MATCH')

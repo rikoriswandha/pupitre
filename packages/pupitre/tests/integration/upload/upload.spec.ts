@@ -93,6 +93,19 @@ test.group('Pupitre upload HTTP runtime', () => {
         'evil.png'
       )
       assert.equal(executable.status, 422)
+      for (const content of [
+        '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>',
+        '<!doctype html><script>alert(1)</script>',
+      ]) {
+        const active = await upload(
+          fixture.baseUrl,
+          uploadFields(),
+          Buffer.from(content),
+          'spoofed.png',
+          'image/png'
+        )
+        assert.equal(active.status, 422)
+      }
       const oversized = await upload(
         fixture.baseUrl,
         uploadFields(),

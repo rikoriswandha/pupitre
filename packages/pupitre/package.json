@@ -1,9 +1,14 @@
 {
   "name": "@rikology/pupitre",
-  "version": "0.3.0-beta.0",
+  "version": "1.0.0",
   "description": "Filament-like admin panel for AdonisJS v7 + Inertia React, rendered through json-render specs",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./catalog/index.ts",
+    "./catalog/csp.ts",
+    "./build/catalog/index.js",
+    "./build/catalog/csp.js"
+  ],
   "license": "MIT",
   "author": "Riko Riswandha",
   "repository": {
@@ -26,6 +31,7 @@
     "build",
     "CHANGELOG.md",
     "!build/bin",
+    "!build/tmp",
     "!build/tests"
   ],
   "exports": {
@@ -118,6 +124,7 @@
     "@adonisjs/mail": "^10.0.0",
     "@adonisjs/queue": "~0.6.2",
     "@adonisjs/session": "^8.0.0",
+    "@rikology/adonisjs-audit-trail": "^1.2.4",
     "@rikology/adonisjs-notifications": "^1.5.0",
     "@rikology/adonisjs-tenant": "^1.0.0",
     "@simplewebauthn/server": "^14.0.0",
@@ -149,6 +156,9 @@
       "optional": true
     },
     "@adonisjs/queue": {
+      "optional": true
+    },
+    "@rikology/adonisjs-audit-trail": {
       "optional": true
     },
     "@rikology/adonisjs-notifications": {
@@ -189,6 +199,7 @@
     "@japa/runner": "^5.3.0",
     "@japa/snapshot": "^2.0.10",
     "@poppinss/ts-exec": "^1.5.0",
+    "@rikology/adonisjs-audit-trail": "^1.2.4",
     "@rikology/adonisjs-notifications": "^1.5.2",
     "@rikology/adonisjs-tenant": "^1.0.2",
     "@simplewebauthn/server": "^14.0.3",
@@ -222,8 +233,7 @@
     ]
   },
   "publishConfig": {
-    "access": "public",
-    "tag": "next"
+    "access": "public"
   },
   "prettier": "@adonisjs/prettier-config"
 }

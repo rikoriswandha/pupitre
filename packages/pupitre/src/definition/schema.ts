@@ -579,7 +579,7 @@ export type TextEntryDefinition = EntryCommon & {
   kind: 'textEntry'
   badge?: boolean
   copyable?: boolean
-  url?: string | FieldClosure<string>
+  url?: string | FieldClosure<string | undefined | Promise<string | undefined>>
   dateTime?: string
   date?: string
   timezone?: string
@@ -899,7 +899,7 @@ export interface TextEntryBuilder extends ComponentBuilder<
   label(value: string | null): this
   badge(value?: boolean): this
   copyable(value?: boolean): this
-  url(value: string | FieldClosure<string>): this
+  url(value: NonNullable<TextEntryDefinition['url']>): this
   dateTime(value?: string): this
   timezone(value: string): this
   date(value?: string): this

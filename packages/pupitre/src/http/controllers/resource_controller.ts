@@ -15,6 +15,7 @@ import { buildPageProps } from '../page_props.js'
 import { isPupitreActionRequest, actionJson, errorJson, setPupitreFlash } from '../responses.js'
 import type { ResourceRuntime } from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
+import { isReadOnlyResource } from '../../definition/resource.js'
 import { walkSchema } from '../../definition/walk.js'
 import { valuesAt } from '../../definition/values_at.js'
 import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../../definition/schema.js'
@@ -44,6 +45,7 @@ import {
 import { compileRelationDescriptor, loadRelationTableData } from './relation_controller.js'
 import { flattenRelationManagers } from '../../definition/relation_manager.js'
 import { E_PUPITRE_NOT_FOUND } from '../../errors.js'
+import { publishResourceChange, resourceRealtime } from '../../realtime.js'
 const schemaCache = new SpecCache<JsonRenderSpec>()
 
 type PreparedPageWidgets = {
@@ -371,7 +373,11 @@ function headerDefinitions(
   ) {
     definitions.push(builtInActions.view().definition)
   }
-  if ((page === 'edit' || page === 'view') && !definitions.some((item) => item.name === 'delete')) {
+  if (
+    (page === 'edit' || page === 'view') &&
+    !isReadOnlyResource(target.definition) &&
+    !definitions.some((item) => item.name === 'delete')
+  ) {
     definitions.push(builtInActions.delete().definition)
   }
   return definitions
@@ -503,6 +509,7 @@ export default class ResourceController {
         return compiled.spec
       },
     })
+    descriptor.realtime = await resourceRealtime(ctx, target.slug)
     const spec = {
       root: 'table',
       elements: { table: { type: 'DataTable', props: { descriptor } } },
@@ -590,6 +597,7 @@ export default class ResourceController {
       if (pageConfig?.modals && !rowActions.some((item) => item.name === 'edit'))
         rowActions.push(builtInActions.edit().definition)
       const data = await buildTableData(table, rows, meta, {
+        ctx,
         locale: ctx.pupitre.locale,
         timezone: ctx.pupitre.timezone,
         normalized: queryResult.normalized,
@@ -827,6 +835,7 @@ export default class ResourceController {
       await target.definition.hooks.afterSave?.(record, ctx, trx)
       return record
     })
+    await publishResourceChange(ctx, target.slug)
     const submittedRichEditorFields = new Set(
       richEditorFieldNames(target.definition.form).filter((field) =>
         valuesAt(validated, field).some((value) => value !== undefined)
@@ -898,6 +907,7 @@ export default class ResourceController {
       await syncRelationshipRepeaters(target, savedRecord, data, trx)
       await target.definition.hooks.afterSave?.(savedRecord, ctx, trx)
     })
+    await publishResourceChange(ctx, target.slug)
     const submittedRichEditorFields = new Set(
       richEditorFieldNames(target.definition.form).filter((field) =>
         valuesAt(validated, field).some((value) => value !== undefined)
@@ -994,6 +1004,7 @@ export default class ResourceController {
       }
       return ctx.response.unprocessableEntity({ errors })
     }
+    await publishResourceChange(ctx, target.slug)
     return ctx.response.noContent()
   }
 
@@ -1029,6 +1040,7 @@ export default class ResourceController {
         await record.merge({ [column]: startIndex + index }).save()
       }
     })
+    await publishResourceChange(ctx, target.slug)
     return ctx.response.noContent()
   }
 
@@ -1040,6 +1052,7 @@ export default class ResourceController {
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'delete', record)
     await executeBuiltinDelete(target.definition, [record], ctx)
+    await publishResourceChange(ctx, target.slug)
     const flash = [{ type: 'success' as const, title: 'Deleted' }]
     setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx))

@@ -1,3 +1,4 @@
+import { publishNotification } from '../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, ActionFormResponse, ActionResult } from '../../catalog/wire.js'
 import type { ActionDefinition, NotificationAction } from '../definition/action.js'
@@ -395,6 +396,8 @@ function flashBuilder(type: FlashType, title: string, target: PendingFlash[], ct
         },
         ctx
       )
+      if (recipient.$primaryKeyValue !== undefined)
+        await publishNotification(ctx, recipient.$primaryKeyValue)
     },
   }
   return builder

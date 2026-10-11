@@ -7,6 +7,7 @@ import type { PanelRuntime } from '../manager.js'
 import type { PupitreConfig } from '../define_config.js'
 import { completeLogin } from './login_flow.js'
 import { allyFromContext } from '../drivers/ally.js'
+import { authLimitResponse, authRateLimited } from './rate_limit.js'
 
 type SocialContext = HttpContext & {
   pupitre: HttpContext['pupitre'] & { panel: PanelRuntime }
@@ -71,6 +72,7 @@ export default class SocialAuthController {
     const provider = String(ctx.params.provider)
     const social = ctx.pupitre.panel.social
     if (!social?.providers.includes(provider)) return ctx.response.notFound()
+    if (await authRateLimited(ctx, 'social-callback', 60)) return authLimitResponse(ctx)
     const ally = await allyFromContext(ctx, provider)
     if (ally.accessDenied()) return fail(ctx, 'Social sign-in was denied')
     if (ally.stateMisMatch()) return fail(ctx, 'Social sign-in state did not match; try again')

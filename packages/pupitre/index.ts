@@ -2,6 +2,21 @@ export { stubsRoot } from './stubs/main.js'
 export { configure } from './configure.js'
 export { defineConfig } from './src/define_config.js'
 export type { PupitreConfig, PupitreConfigInput } from './src/define_config.js'
+export { resolveAdapter } from './src/define_config.js'
+export { authorizeResource } from './src/authz/bouncer.js'
+export { scopedQuery } from './src/query/scoped_query.js'
+export type { RealtimeAdapter } from './src/adapters/realtime.js'
+export { realtimeChannels } from './src/adapters/realtime.js'
+export { panelGuard } from './src/auth/guard.js'
+export { resolveTenancyAdapter } from './src/tenancy/runtime.js'
+export type {
+  AuditAdapter,
+  AuditEntry,
+  AuditChange,
+  AuditPagination,
+  AuditRecordOptions,
+  AuditPage,
+} from './src/adapters/audit.js'
 export { definePanel } from './src/builder/panel.js'
 export { defineTheme } from './src/definition/theme.js'
 export type { ThemeDefinition } from './src/definition/theme.js'
@@ -9,6 +24,12 @@ export { defineResource } from './src/builder/resource.js'
 export { defineRelationManager, relationGroup } from './src/builder/relation_manager.js'
 export type { RelationManagerBuilder } from './src/builder/relation_manager.js'
 export type { PanelBuilder, TenancyInput } from './src/builder/panel.js'
+export { definePlugin } from './src/builder/plugin.js'
+export type {
+  PupitrePlugin,
+  PluginBootContext,
+  PluginResourceContext,
+} from './src/definition/plugin.js'
 export { definePage } from './src/builder/page.js'
 export type { CustomPageBuilder } from './src/builder/page.js'
 export type { CustomPageDefinition } from './src/definition/custom_page.js'
@@ -19,6 +40,7 @@ export type {
   WidgetStat,
   WidgetData,
   WidgetContext,
+  TimelineItem,
 } from './src/definition/widget.js'
 export type { ResourceBuilder, ResourceModel, ModelConstructor } from './src/builder/resource.js'
 export { nav } from './src/builder/nav.js'

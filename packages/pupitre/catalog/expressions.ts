@@ -1,3 +1,5 @@
+import './csp.js'
+
 import { z } from 'zod'
 
 const expressionSchema = z.union([

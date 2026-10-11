@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased (1.0.0, milestone M4)
+
+### Added
+- Shield (WP37): official `@rikology/pupitre-shield` plugin with Lucid roles/permissions, grouped role-management forms, request-cached Bouncer policies, super-admin bypass, explicit-policy preservation, custom action and nested resource grants, `shield:sync`, User-role assignment helper and custom-page access helper.
+- Shield review (M4): hidden relationship fields skip preload authorization/options queries using the current request context; Shield inventories are panel-local and include related-model custom abilities only for enforced resources.
+- Documentation (WP41): English Astro/Starlight site for pupitre.dev with M1–M3 guides, plugin authoring, Filament API migration, source-generated TypeScript references and package changelogs; static output publishes the generated shadcn registry index and payloads.
+- Plugin generators (WP36): `make:plugin <name>` creates an idempotent local plugin; `--force` overwrites, while `--package [--dir]` executes the standalone scaffolder pinned to the core major without a shell.
+- Registry (WP40): `pupitre:ui add` validates names and runs shadcn@4. Explicit root-relative file targets preserve the Inertia source tree; unsafe flattening `--path` passthrough is removed. Hook item names use kebab-case. Real CLI smoke type-checks copied Select and its dependency closure.
+- Plugins (WP36): `definePlugin({ name, register, resources, pages, widgets, middleware, navigation, extendResource, boot })` and panel `.plugins([...])`. Plugins apply in declaration order at boot: `register(panel)` returns a new immutable panel builder, contributions are appended to the panel's own entries, `extendResource()` runs for every (nested) resource, and `boot({ app, manager, panel })` runs before routes are registered. Plugin navigation merges into explicit panel navigation by group label, or follows the derived navigation and claims the resources it references.
+- Audit (WP38): optional `audit` adapter configuration and lazy `drivers/audit` reader over audit-trail, configurable model discriminators, normalized changes and pagination; timeline widgets format timestamps in the panel/user timezone and require record view authorization even on edit pages.
+- Read-only activity resources omit mutation routes and implicit Delete actions. Text-column/text-entry URLs support authorized asynchronous subject links, with request context passed through table rendering. Audit timestamps handle the peer's real SQLite ISO storage and UTC-normalized filter bounds.
+- Realtime (WP39): optional lazy `RealtimeAdapter`, boot initialization, URI-encoded user/resource channels, tenant-scoped table subscriptions, authenticated shared client metadata, and best-effort post-commit mutation/inbox pings (including queued imports and bulk actions). Existing polling remains available without a realtime client.
+- Realtime review (M4): namespace wire pings as `pupitre:notification` / `pupitre:table`, notify every enabled panel's user channel, and share authorization patterns plus panel guard resolution with transport plugins.
+- Audit review (M4): remove unused `recent`/`AuditFilters` contract; custom adapters serve record timelines while Activity queries the audit-trail model.
+- Import/export lifecycle records persist canonical string tenant identifiers, keeping queued worker ownership checks consistent across SQLite and PostgreSQL.
+- Security audit (WP42): enumerate all example mutating routes for missing/invalid XSRF rejection, enforce explicit 403 CSRF responses, disable browser Zod JIT probes under strict CSP, and publish the 1.x private disclosure policy.
+- Restrict UI installer registry URLs and validate component names before network access; block sensitive paths, symlinks and recognizable embedded credentials from registry publication.
+- Release performance audit (WP42): enforce measured gzip/Brotli budgets and lazy heavy-feature boundaries after the example CI build; load the example Transmit client only for an enabled realtime driver.
+- Packaging audit (WP42): verify every built runtime import uses a declared dependency/peer and resolves under ESM conditions; validate all seven package tarballs and release assets, and exclude configure-test `tmp` declarations from the core build.
+- Harden MIME validation and bounded tempfile buffering for resource/plugin uploads, avatars and CSV imports; apply default ceilings and serve CSV attachments with nosniff.
+- Throttle sensitive panel and example-host authentication endpoints with bounded local fallback or installed shared limiter, propagating limiter backend failures instead of bypassing protection.
+- Bind synthetic queued HttpContext into the Bouncer container resolver so injected authorization policies work in production jobs.
+- Login and passkey-options quotas: the IP-wide auth budget is 60/minute (it counts successful sign-ins, so shared IPs are not locked out) while the per-email failure window stays at 5/minute and clears on success.
+- Nested resources reused by a parent's relation manager (or reached outside nested routes) no longer fail with `.where expects value to be defined`: the nested scope constrains `:parentId` only when the route carries it.
+- Release 1.0 (WP42): `@rikology/pupitre`, `-react` and `-ui` move lockstep to `1.0.0`; official plugins and `create-pupitre-plugin` start at `1.0.0`; inter-package peer ranges are `^1.0.0`; `catalogVersion` is `1.0` (clients on a different major reload once); npm dist-tag `latest` via the new `release.yml` trusted-publishing workflow.
+- Final confirmation remediation: nested child scopes now fail closed outside an explicitly bound parent; owning relation managers bind that parent without leaking global-search or relationship-option rows.
+- Preserve preloaded options for client-reactive visibility while still skipping server-hidden relationship authorization and queries.
+- Align passkey login verification and social callbacks with the 60/minute shared-IP sign-in budget; evict the oldest local limiter key at the 10,000-key cap rather than locking out every new identity.
+- Initialize browser CSP jitless configuration before every catalog schema module and probe the built catalog in a fresh process during `verify:exports`; retain repeated-success login and version-derived scaffolder regressions.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

@@ -5,5 +5,5 @@
     "declaration": true,
     "noEmit": false
   },
-  "exclude": ["build", "node_modules", "bin", "tests", "scripts", "tsdown.config.ts"]
+  "exclude": ["build", "node_modules", "bin", "tests", "tmp", "scripts", "tsdown.config.ts"]
 }

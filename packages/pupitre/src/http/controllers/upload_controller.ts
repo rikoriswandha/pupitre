@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
@@ -17,6 +16,8 @@ import {
   findUploadField,
   isUploadMimeAllowed,
   parseMaxSize,
+  DEFAULT_UPLOAD_MAX_BYTES,
+  readUploadBytes,
 } from '../../storage/upload_validation.js'
 import { scopedQuery } from '../../query/scoped_query.js'
 
@@ -101,10 +102,11 @@ export default class UploadController {
     if (!file || !file.tmpPath || file.errors.length > 0) {
       throw new E_PUPITRE_INVALID_UPLOAD()
     }
-    const limit = parseMaxSize(field.kind === 'fileUpload' ? field.maxSize : undefined)
-    if (limit !== undefined && file.size > limit) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
-    const bytes = await readFile(file.tmpPath)
-    if (limit !== undefined && bytes.byteLength > limit) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
+    const limit =
+      parseMaxSize(field.kind === 'fileUpload' ? field.maxSize : undefined) ??
+      DEFAULT_UPLOAD_MAX_BYTES
+    if (file.size > limit) throw new E_PUPITRE_UPLOAD_TOO_LARGE()
+    const bytes = await readUploadBytes(file.tmpPath, limit)
 
     const sniffed = await fileTypeFromBuffer(bytes)
     if (!sniffed || !isUploadMimeAllowed(field, sniffed.mime, sniffed.ext))

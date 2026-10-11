@@ -86,6 +86,8 @@ test.group('Pupitre CSV imports', (group) => {
     const failedRows = await fetch(`${fixture.baseUrl}${summary.failedRowsUrl}`, {
       headers: { Cookie: cookie, Connection: 'close' },
     })
+    assert.equal(failedRows.headers.get('x-content-type-options'), 'nosniff')
+    assert.match(failedRows.headers.get('content-disposition') ?? '', /^attachment;/)
     const failureCsv = await failedRows.text()
     assert.equal(summary.total, 3)
     assert.equal(summary.created, 1, failureCsv)

@@ -67,42 +67,86 @@ async function renderItem(
   }
 }
 
+type RenderedEntry = { group: NavGroup; sort: number }
+
+async function renderEntries(
+  ctx: HttpContext,
+  entries: readonly NavEntryDefinition[],
+  currentUrl: string
+): Promise<RenderedEntry[]> {
+  const result: RenderedEntry[] = []
+  for (const entry of entries.map(definitionOf)) {
+    if (entry.type === 'group') {
+      const items: { item: NavItem; sort: number }[] = []
+      for (const definition of entry.items) {
+        const item = await renderItem(ctx, definition, currentUrl)
+        if (item) items.push({ item, sort: definition.sort ?? 0 })
+      }
+      items.sort((a, b) => a.sort - b.sort || a.item.label.localeCompare(b.item.label))
+      if (items.length)
+        result.push({
+          group: {
+            label: entry.label,
+            items: items.map(({ item }) => item),
+            ...(entry.icon ? { icon: entry.icon } : {}),
+            collapsible: entry.collapsible,
+            collapsed: entry.collapsed,
+          },
+          sort: entry.sort ?? 0,
+        })
+    } else {
+      const item = await renderItem(ctx, entry, currentUrl)
+      if (item) result.push({ group: { label: '', items: [item] }, sort: entry.sort ?? 0 })
+    }
+  }
+  result.sort((a, b) => a.sort - b.sort || a.group.label.localeCompare(b.group.label))
+  return result
+}
+
+/** Merges labelled groups that share a label (host + plugin contributions); keeps first position. */
+function mergeGroups(groups: NavGroup[]): NavGroup[] {
+  const merged: NavGroup[] = []
+  const byLabel = new Map<string, NavGroup>()
+  for (const group of groups) {
+    const existing = group.label ? byLabel.get(group.label) : undefined
+    if (existing) {
+      existing.items = [...existing.items, ...group.items]
+      continue
+    }
+    const copy = { ...group, items: [...group.items] }
+    if (group.label) byLabel.set(group.label, copy)
+    merged.push(copy)
+  }
+  return merged
+}
+
+/** Resource/page slugs referenced by navigation entries. */
+function claimedSlugs(entries: readonly NavEntryDefinition[]): Set<string> {
+  const slugs = new Set<string>()
+  const claim = (item: NavItemDefinition) => {
+    if (item.resource) slugs.add(item.resource)
+    if (item.page) slugs.add(item.page)
+  }
+  for (const entry of entries.map(definitionOf)) {
+    if (entry.type === 'group') entry.items.forEach(claim)
+    else claim(entry)
+  }
+  return slugs
+}
+
 export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
   const panel = ctx.pupitre.panel
   const currentUrl = ctx.request.url().split('?')[0]
   if (panel.navigation) {
-    const result: { group: NavGroup; sort: number }[] = []
-    for (const entry of panel.navigation.map(definitionOf)) {
-      if (entry.type === 'group') {
-        const items: { item: NavItem; sort: number }[] = []
-        for (const definition of entry.items) {
-          const item = await renderItem(ctx, definition, currentUrl)
-          if (item) items.push({ item, sort: definition.sort ?? 0 })
-        }
-        items.sort((a, b) => a.sort - b.sort || a.item.label.localeCompare(b.item.label))
-        if (items.length)
-          result.push({
-            group: {
-              label: entry.label,
-              items: items.map(({ item }) => item),
-              ...(entry.icon ? { icon: entry.icon } : {}),
-              collapsible: entry.collapsible,
-              collapsed: entry.collapsed,
-            },
-            sort: entry.sort ?? 0,
-          })
-      } else {
-        const item = await renderItem(ctx, entry, currentUrl)
-        if (item) result.push({ group: { label: '', items: [item] }, sort: entry.sort ?? 0 })
-      }
-    }
-    result.sort((a, b) => a.sort - b.sort || a.group.label.localeCompare(b.group.label))
-    return result.map(({ group }) => group)
+    const rendered = await renderEntries(ctx, panel.navigation, currentUrl)
+    return mergeGroups(rendered.map(({ group }) => group))
   }
 
+  const pluginNavigation = panel.pluginNavigation ?? []
+  const claimed = claimedSlugs(pluginNavigation)
   const groups = new Map<string, { item: NavItem; sort: number }[]>()
   for (const resource of panel.resources) {
-    if (resource.parent) continue
+    if (resource.parent || claimed.has(resource.slug)) continue
     if (!(await authorizeResource(ctx, resource, 'viewAny'))) continue
     const group = resource.definition.navigation?.group ?? 'Resources'
     const items = groups.get(group) ?? []
@@ -122,6 +166,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
     groups.set(group, items)
   }
   for (const page of panel.pages) {
+    if (claimed.has(page.slug)) continue
     if (page.definition.canAccess && !(await page.definition.canAccess(ctx))) continue
     const group = page.definition.navigation?.group ?? 'Pages'
     const items = groups.get(group) ?? []
@@ -141,7 +186,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
     })
     groups.set(group, items)
   }
-  return [...groups]
+  const derived = [...groups]
     .map(([label, items]) => ({
       label,
       items: items
@@ -149,4 +194,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
         .map(({ item }) => item),
     }))
     .sort((a, b) => a.label.localeCompare(b.label))
+  if (!pluginNavigation.length) return derived
+  const contributed = await renderEntries(ctx, pluginNavigation, currentUrl)
+  return mergeGroups([...derived, ...contributed.map(({ group }) => group)])
 }

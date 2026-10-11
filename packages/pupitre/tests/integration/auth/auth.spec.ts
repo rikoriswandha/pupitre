@@ -320,9 +320,9 @@ test.group('Pupitre auth runtime', () => {
         fullName: 'Profile User',
         email: 'profile@example.test',
         password: 'current-password',
-        avatar: 'avatars/1/previous.png',
       })
       const oldKey = `avatars/${user.id}/previous.png`
+      await user.merge({ avatar: oldKey }).save()
       await mkdir(join(fixture.storagePath, `avatars/${user.id}`), { recursive: true })
       await writeFile(join(fixture.storagePath, oldKey), Buffer.from('old avatar'))
       const cookie = await fixture.loginAs(user)
@@ -344,6 +344,39 @@ test.group('Pupitre auth runtime', () => {
       assert.equal(missingCurrent.status, 302)
       const afterRejectedChange = await User.findOrFail(user.id)
       assert.equal(afterRejectedChange.email, 'profile@example.test')
+
+      for (const activeBytes of [
+        '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>',
+        '<!doctype html><script>alert(1)</script>',
+      ]) {
+        const activeUpload = new FormData()
+        activeUpload.append('resource', 'profile')
+        activeUpload.append('field', 'avatar')
+        activeUpload.append('record', String(user.id))
+        activeUpload.append('file', new Blob([activeBytes], { type: 'image/png' }), 'spoofed.png')
+        const rejected = await fetch(`${fixture.baseUrl}/admin/profile/avatar`, {
+          method: 'POST',
+          headers: { Cookie: cookie, Accept: 'application/json' },
+          body: activeUpload,
+        })
+        assert.equal(rejected.status, 422)
+        await rejected.arrayBuffer()
+        const directProfile = new FormData()
+        directProfile.append(
+          'avatar',
+          new Blob([activeBytes], { type: 'image/png' }),
+          'spoofed.png'
+        )
+        const rejectedProfile = await fetch(`${fixture.baseUrl}/admin/profile`, {
+          method: 'PUT',
+          headers: { Cookie: cookie, Accept: 'text/html' },
+          body: directProfile,
+          redirect: 'manual',
+        })
+        assert.equal(rejectedProfile.status, 302)
+        const afterRejectedAvatar = await User.findOrFail(user.id)
+        assert.equal(afterRejectedAvatar.avatar, oldKey)
+      }
 
       const uploadForm = new FormData()
       uploadForm.append('field', 'avatar')
@@ -598,20 +631,39 @@ test.group('Pupitre auth runtime', () => {
     }
   })
 
-  test('limits repeated login attempts only when the host configures the limiter', async ({
+  test('limits repeated login attempts with the host limiter and with the local fallback', async ({
     assert,
   }) => {
     const noLimiter = await createTestApp(options({ async send() {} }))
     try {
-      for (let attempt = 0; attempt < 6; attempt++) {
+      // Rotating emails defeats the per-email failure window; the IP quota (60/min) still applies.
+      for (let attempt = 0; attempt < 61; attempt++) {
         const response = await fetch(`${noLimiter.baseUrl}/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'text/html' },
-          body: new URLSearchParams({ email: 'none@example.test', password: 'wrong-password' }),
+          body: new URLSearchParams({
+            email: `none-${attempt}@example.test`,
+            password: 'wrong-password',
+          }),
           redirect: 'manual',
         })
         assert.equal(response.status, 302)
+        assert.equal(response.headers.get('retry-after'), attempt === 60 ? '60' : null)
       }
+      const jsonResponse = await fetch(`${noLimiter.baseUrl}/admin/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json',
+        },
+        body: new URLSearchParams({ email: 'another@example.test', password: 'wrong-password' }),
+        redirect: 'manual',
+      })
+      assert.equal(jsonResponse.status, 429)
+      assert.equal(jsonResponse.headers.get('retry-after'), '60')
+      assert.deepEqual(await jsonResponse.json(), {
+        message: 'Too many attempts. Try again in one minute.',
+      })
     } finally {
       await closeTestApp(noLimiter)
     }
@@ -632,15 +684,16 @@ test.group('Pupitre auth runtime', () => {
         password: 'correct-password',
       })
       for (let attempt = 0; attempt < 6; attempt++) {
-        const response = await fetch(`${limited.baseUrl}/admin/login`, {
+        const successfulLogin = await fetch(`${limited.baseUrl}/admin/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'text/html' },
           body: new URLSearchParams({ email: 'repeat@example.test', password: 'correct-password' }),
           redirect: 'manual',
         })
-        assert.equal(response.status, 302)
-        assert.equal(response.headers.get('location'), '/admin')
+        assert.equal(successfulLogin.status, 302)
+        assert.equal(successfulLogin.headers.get('location'), '/admin')
       }
+      // Five failures for one email exhaust its window; the sixth is throttled.
       let lastResponse: Response | undefined
       for (let attempt = 0; attempt < 6; attempt++) {
         lastResponse = await fetch(`${limited.baseUrl}/admin/login`, {
@@ -650,7 +703,8 @@ test.group('Pupitre auth runtime', () => {
           redirect: 'manual',
         })
       }
-      assert.equal(lastResponse?.status, 429)
+      assert.equal(lastResponse?.status, 302)
+      assert.equal(lastResponse?.headers.get('retry-after'), '60')
       const resetAfterLoginLimit = await fetch(`${limited.baseUrl}/admin/password/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'text/html' },
@@ -667,7 +721,8 @@ test.group('Pupitre auth runtime', () => {
           redirect: 'manual',
         })
       }
-      assert.equal(resetResponse?.status, 429)
+      assert.equal(resetResponse?.status, 302)
+      assert.equal(resetResponse?.headers.get('retry-after'), '60')
     } finally {
       await closeTestApp(limited)
     }

@@ -1,3 +1,5 @@
+import './csp.js'
+
 import { z } from 'zod'
 import { dynamic } from './expressions.js'
 import {
@@ -386,6 +388,10 @@ export const components = {
     { descriptor: widgetDescriptor, data: z.unknown().optional() },
     'Displays table widget data.'
   ),
+  'Widget.Timeline': leaf(
+    { descriptor: widgetDescriptor, data: z.unknown().optional() },
+    'Displays chronological activity with actors, timestamps, and field changes.'
+  ),
   'RelationManager': leaf(
     { descriptor: relationDescriptor, ...common },
     'RelationManager shows one related table with contextual badge, actions, and read-only state.'
@@ -525,6 +531,7 @@ const componentDescriptions: Record<keyof typeof components, string> = {
   'Widget.Stats': 'Displays statistics and sparkline data.',
   'Widget.Chart': 'Displays a chart widget.',
   'Widget.Table': 'Displays table widget data.',
+  'Widget.Timeline': 'Displays activity timestamps, actors, and field changes.',
   'RelationManager': 'Renders one relation-manager table and its contextual badge.',
   'ActionBar': 'Renders available actions; emits action when one is selected.',
   'Infolist': 'Groups read-only entries describing a record.',

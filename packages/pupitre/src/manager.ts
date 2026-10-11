@@ -12,6 +12,9 @@ import { registerImportJob } from './jobs/import_job.js'
 import { registerBulkJob } from './jobs/bulk_job.js'
 import type { WidgetDefinition } from './definition/widget.js'
 import type { JobsAdapter } from './adapters/jobs.js'
+import { applyPlugins, bootPlugins, extendResource } from './plugins/apply.js'
+import type { RealtimeAdapter } from './adapters/realtime.js'
+import type { RealtimeEvent } from '../catalog/wire.js'
 
 export type ResourceRuntime = {
   slug: string
@@ -142,6 +145,7 @@ export function bindPanel(panel: PanelRuntime, path: string): PanelRuntime {
 export default class PupitreManager {
   readonly panels: PanelRuntime[] = []
   jobs?: JobsAdapter
+  realtime?: RealtimeAdapter
   private routesRegistered = false
 
   constructor(private readonly app: ApplicationService) {}
@@ -160,14 +164,15 @@ export default class PupitreManager {
       } else {
         loaded = input
       }
-      const definition = asDefinition<PanelDefinition>(loaded)
-      if (!definition || typeof definition.id !== 'string')
+      const declared = asDefinition<PanelDefinition>(loaded)
+      if (!declared || typeof declared.id !== 'string')
         throw new Error('Pupitre panel must resolve to a panel definition')
-      if (barrelId && barrelId !== definition.id)
+      if (barrelId && barrelId !== declared.id)
         throw new Error(
-          `Pupitre panel barrel key "${barrelId}" does not match panel id "${definition.id}"`
+          `Pupitre panel barrel key "${barrelId}" does not match panel id "${declared.id}"`
         )
-      if (!validSlug(definition.id)) throw new Error(`Invalid Pupitre panel id "${definition.id}"`)
+      if (!validSlug(declared.id)) throw new Error(`Invalid Pupitre panel id "${declared.id}"`)
+      const definition = applyPlugins(declared)
       const resources = await this.resolveResources(definition)
       const pages = await this.resolvePages(definition)
       const duplicate = pages.find((page) =>
@@ -191,9 +196,23 @@ export default class PupitreManager {
       await registerExportJob(jobs, this)
       await jobs.initialize?.()
     }
+    this.realtime = await resolveAdapter(config.realtime)
+    await this.realtime?.initialize?.(this)
+    for (const panel of this.panels) await bootPlugins(this.app, this, panel)
     const router = (await this.app.container.make('router')) as HttpRouterService
     for (const panel of this.panels) registerPanelRoutes(router, panel, this)
     this.routesRegistered = true
+  }
+
+  /** Failed delivery must never turn a committed mutation into a failed request/job. */
+  async publishRealtime(channel: string, event: RealtimeEvent): Promise<void> {
+    if (!this.realtime) return
+    try {
+      await this.realtime.publish(channel, event)
+    } catch (error) {
+      const logger = await this.app.container.make('logger')
+      logger.error({ err: error, channel }, 'Pupitre realtime publish failed')
+    }
   }
 
   getPanel(id: string): PanelRuntime | undefined {
@@ -257,7 +276,11 @@ export default class PupitreManager {
     }
     const registerNested = (parent: ResourceRuntime) => {
       for (const nestedChild of parent.definition.nested ?? []) {
-        const child = nestedChild as unknown as ResourceDefinition<LucidRow>
+        const child = extendResource(
+          panel,
+          nestedChild as unknown as ResourceDefinition<LucidRow>,
+          parent.slug
+        )
         if (!validSlug(child.slug)) throw new Error(`Invalid nested resource slug "${child.slug}"`)
         if (!child.parent)
           throw new Error(
@@ -278,7 +301,10 @@ export default class PupitreManager {
           ...child,
           scope: (query, ctx) => {
             if (typeof originalScope === 'function') originalScope(query, ctx)
-            query.where(parentRelation.foreignKey, ctx.params[parentParam])
+            // Only nested routes or an explicitly bound owning relation may expose children.
+            const parentId = ctx.params[parentParam]
+            if (parentId === undefined) query.whereRaw('1 = 0')
+            else query.where(parentRelation.foreignKey, parentId)
           },
         }
         const routeSlug = `${parent.routeSlug}/:${parentParam}/${child.slug}`
@@ -313,11 +339,12 @@ export default class PupitreManager {
         const module = await (value as LazyModule<unknown>)()
         loaded = module.default
       }
-      const definition = asDefinition<ResourceDefinition<LucidRow> & { modelClass?: LucidModel }>(
+      const declared = asDefinition<ResourceDefinition<LucidRow> & { modelClass?: LucidModel }>(
         loaded as never
       )
-      if (!definition || typeof definition.slug !== 'string')
+      if (!declared || typeof declared.slug !== 'string')
         throw new Error(`Resource in panel "${panel.id}" must resolve to a resource definition`)
+      const definition = extendResource(panel, declared)
       if (!validSlug(definition.slug))
         throw new Error(`Invalid Pupitre resource slug "${definition.slug}"`)
       const model = resolveModel(definition)

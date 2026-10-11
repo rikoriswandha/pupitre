@@ -89,7 +89,7 @@ test.group('catalog wire schemas', () => {
       }).success
     )
     assert.isTrue(
-      actionFormResponse.safeParse({ spec: catalogFixtures.Text, state: {}, catalogVersion: '0.3' })
+      actionFormResponse.safeParse({ spec: catalogFixtures.Text, state: {}, catalogVersion: '1.0' })
         .success
     )
     assert.isTrue(
@@ -203,7 +203,7 @@ test.group('catalog wire schemas', () => {
           spec: catalogFixtures.DataTable,
           state: {},
           actions: { header: [] },
-          catalogVersion: '0.3',
+          catalogVersion: '1.0',
         },
         data: {
           rows: [],

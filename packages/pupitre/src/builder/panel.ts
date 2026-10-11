@@ -8,6 +8,7 @@ import type { TenancyDefinition, TenancyMode } from '../definition/tenancy.js'
 import { validateTheme } from '../definition/theme.js'
 import type { WidgetFilterDefinition } from '../definition/widget.js'
 import { stableJson } from '../definition/shared.js'
+import type { PupitrePlugin } from '../definition/plugin.js'
 
 type Definable<T> = T | { toDefinition(): T }
 export type TenancyInput = Partial<Omit<TenancyDefinition, 'mode'>> & { mode: TenancyMode }
@@ -41,6 +42,8 @@ export type PanelBuilder = {
   globalSearch(options?: { keyBinding?: string } | false): PanelBuilder
   widgets(value: readonly unknown[] | Record<string, unknown>): PanelBuilder
   filters(value: readonly WidgetFilterDefinition[]): PanelBuilder
+  /** Plugins applied in order at boot (`definePlugin`). Replaces earlier `.plugins()` calls. */
+  plugins(value: readonly PupitrePlugin[]): PanelBuilder
   toDefinition(): PanelDefinition
   toJSON(): string
 }
@@ -205,12 +208,28 @@ class Panel implements PanelBuilder {
       })),
     })
   }
+  plugins(value: readonly PupitrePlugin[]): PanelBuilder {
+    const names = new Set<string>()
+    for (const plugin of value) {
+      if (!plugin || typeof plugin.name !== 'string')
+        throw new Error('Panel plugins must be created with definePlugin()')
+      if (names.has(plugin.name))
+        throw new Error(`Pupitre plugin "${plugin.name}" is registered twice on panel`)
+      names.add(plugin.name)
+    }
+    return this.set({ plugins: [...value] })
+  }
   toDefinition(): PanelDefinition {
     return this.definition
   }
   toJSON(): string {
     return this.definition.toJSON()
   }
+}
+
+/** Wraps an existing panel definition in an (immutable) builder; used to run plugin `register()`. */
+export function panelBuilder(definition: PanelDefinition): PanelBuilder {
+  return new Panel(withToJSON({ ...definition }))
 }
 
 export function definePanel(id: string): PanelBuilder {
@@ -230,6 +249,7 @@ export function definePanel(id: string): PanelBuilder {
         profile: { enabled: false, avatar: false },
       },
       userMenu: [],
+      plugins: [],
       social: undefined,
       notifications: null,
       globalSearch: { keyBinding: 'mod+k' },

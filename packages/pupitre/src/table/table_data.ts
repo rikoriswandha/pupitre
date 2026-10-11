@@ -1,4 +1,5 @@
 import type { LucidRow } from '@adonisjs/lucid/types/model'
+import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, TableData, TableMeta, TableRow } from '../../catalog/wire.js'
 import type { TableColumnDefinition, TableDefinition } from '../definition/table.js'
 import {
@@ -13,6 +14,7 @@ import {
 
 export type TableSummary = Record<string, Record<string, number | string>>
 export type TableDataOptions = {
+  ctx?: HttpContext
   locale: string
   timezone: string
   rowActions(record: LucidRow): Promise<ActionDescriptor[]>
@@ -100,7 +102,7 @@ async function formatCell(
     return {
       value: column.limit !== undefined ? truncate(value, column.limit) : value,
       ...(column.description ? { description: await column.description({ record }) } : {}),
-      ...(column.url ? { url: await column.url({ record }) } : {}),
+      ...(column.url ? { url: await column.url({ record, ctx: options.ctx }) } : {}),
     }
   }
   return value

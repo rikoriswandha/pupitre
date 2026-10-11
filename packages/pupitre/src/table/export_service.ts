@@ -117,6 +117,7 @@ export async function processExport(
     if (records.length === 0) break
     processed += records.length
     const tableData = await buildTableData(table, records, total, {
+      ctx,
       locale: ctx.pupitre.locale,
       timezone: ctx.pupitre.timezone,
       normalized: queryResult.normalized,

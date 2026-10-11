@@ -1,3 +1,5 @@
+import './csp.js'
+
 export { catalogVersion } from './version.js'
 export {
   dynamic,
@@ -44,6 +46,7 @@ export {
   widgetDescriptor,
   widgetFilter,
   widgetStat,
+  widgetTimelineItem,
   tableRow,
   tenantOption,
   tenantSummary,
@@ -62,6 +65,7 @@ export {
   importPreviewResponse,
   importResultResponse,
   importJobResponse,
+  realtimeEvent,
 } from './wire.js'
 export type {
   ActionResult,
@@ -104,8 +108,11 @@ export type {
   WidgetDescriptor,
   WidgetFilter,
   WidgetStat,
+  WidgetTimelineItem,
   ImportResultResponse,
   ImportJobResponse,
+  RealtimeEvent,
+  RealtimeClient,
 } from './wire.js'
 
 export const computedFunctionNames = [

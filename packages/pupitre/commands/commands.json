@@ -128,6 +128,47 @@
       "filePath": "make_panel.js"
     },
     {
+      "commandName": "make:plugin",
+      "description": "Generate a local Pupitre plugin or standalone package",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing plugin file"
+        },
+        {
+          "name": "package",
+          "flagName": "package",
+          "required": false,
+          "type": "boolean",
+          "description": "Scaffold a standalone plugin package"
+        },
+        {
+          "name": "dir",
+          "flagName": "dir",
+          "required": false,
+          "type": "string",
+          "description": "Destination directory for --package"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Plugin name",
+          "type": "string"
+        }
+      ],
+      "options": {},
+      "filePath": "make_plugin.js"
+    },
+    {
       "commandName": "make:relation-manager",
       "description": "Generate a Pupitre relation manager",
       "help": "",
@@ -278,6 +319,54 @@
         "startApp": true
       },
       "filePath": "routes.js"
+    },
+    {
+      "commandName": "pupitre:ui",
+      "description": "Copy Pupitre components using shadcn: pupitre:ui add <names...>",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "registry",
+          "flagName": "registry",
+          "required": false,
+          "type": "string",
+          "description": "Registry origin containing registry.json and r/*.json"
+        },
+        {
+          "name": "yes",
+          "flagName": "yes",
+          "required": false,
+          "type": "boolean",
+          "description": "Skip shadcn confirmation prompts"
+        },
+        {
+          "name": "dryRun",
+          "flagName": "dry-run",
+          "required": false,
+          "type": "boolean",
+          "description": "Validate names and print the installer command without copying files"
+        }
+      ],
+      "args": [
+        {
+          "name": "operation",
+          "argumentName": "operation",
+          "required": true,
+          "description": "Operation (add)",
+          "type": "string"
+        },
+        {
+          "name": "names",
+          "argumentName": "names",
+          "required": true,
+          "description": "Registry component names (for example select)",
+          "type": "spread"
+        }
+      ],
+      "options": {},
+      "filePath": "ui_add.js"
     }
   ],
   "version": 1

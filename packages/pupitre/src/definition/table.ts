@@ -45,7 +45,10 @@ export type TextColumnDefinition = TableColumnBase & {
   since?: boolean
   copyable?: boolean
   timezone?: string
-  url?: (args: { record: unknown }) => string
+  url?: (args: {
+    record: unknown
+    ctx?: HttpContext
+  }) => string | undefined | Promise<string | undefined>
 }
 export type BadgeColumnDefinition = TableColumnBase & {
   kind: 'badge'

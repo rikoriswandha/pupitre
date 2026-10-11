@@ -30,12 +30,13 @@ export const fixtureMigrations: { up(database: Database): Promise<void>; tables:
   { up: repeaterLinks120, tables: ['post_links'] },
   {
     up: relations140,
+    // Children before parents: `fixtureTables()` reverses entries, not tables within one.
     tables: [
-      'relation_posts',
+      'relation_revisions',
+      'relation_post_tags',
       'relation_comments',
       'relation_tags',
-      'relation_post_tags',
-      'relation_revisions',
+      'relation_posts',
     ],
   },
 ]

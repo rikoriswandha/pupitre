@@ -3,6 +3,8 @@ import type { LucidModel } from '@adonisjs/lucid/types/model'
 import type { MailAdapter } from './adapters/mail.js'
 import type { NotificationsAdapter } from './adapters/notifications.js'
 import type { JobsAdapter } from './adapters/jobs.js'
+import type { AuditAdapter } from './adapters/audit.js'
+import type { RealtimeAdapter } from './adapters/realtime.js'
 
 type Lazy<T> = T | (() => Promise<T>)
 
@@ -38,12 +40,18 @@ export interface PupitreConfig {
   mail?: Lazy<MailAdapter>
   notifications?: Lazy<NotificationsAdapter>
   jobs?: Lazy<JobsAdapter>
+  audit?: Lazy<AuditAdapter>
+  realtime?: Lazy<RealtimeAdapter>
   exports?: { maxSyncRows?: number; maxAsyncRows?: number; retentionMinutes?: number }
 }
 
 export type PupitreConfigInput = Partial<
-  Pick<PupitreConfig, 'timezone' | 'policies' | 'mail' | 'notifications' | 'jobs' | 'exports'>
+  Pick<
+    PupitreConfig,
+    'timezone' | 'policies' | 'mail' | 'notifications' | 'jobs' | 'exports' | 'audit'
+  >
 > & {
+  realtime?: PupitreConfig['realtime']
   cache?: Partial<PupitreConfig['cache']>
   storage?: Partial<PupitreConfig['storage']>
   auth?: Partial<Omit<PupitreConfig['auth'], 'columns'>> & {

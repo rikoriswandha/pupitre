@@ -4,7 +4,7 @@ import type { NavEntryDefinition } from '../definition/navigation.js'
 export function validateNavigation(panel: PanelRuntime): void {
   const resourceSlugs = new Set(panel.resources.map((resource) => resource.slug))
   const pageSlugs = new Set(panel.pages.map((page) => page.slug))
-  for (const raw of panel.navigation ?? []) {
+  for (const raw of [...(panel.navigation ?? []), ...(panel.pluginNavigation ?? [])]) {
     const entry =
       typeof raw === 'object' && 'toDefinition' in raw && typeof raw.toDefinition === 'function'
         ? raw.toDefinition()

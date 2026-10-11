@@ -12,6 +12,7 @@ import ExportsController from './controllers/exports_controller.js'
 import ImportController from './controllers/import_controller.js'
 import UploadController from './controllers/upload_controller.js'
 import { authorizeResource } from '../authz/bouncer.js'
+import { isReadOnlyResource } from '../definition/resource.js'
 import type { PanelRuntime } from '../manager.js'
 import type PupitreManager from '../manager.js'
 import type { ResourceRuntime } from '../manager.js'
@@ -120,6 +121,7 @@ export function registerPanelRoutes(
       const routeBase = `/${resource.routeSlug}`
       const routeName = resource.parent ? `${resource.parent.resource}.${slug}` : slug
       const modalResource = resource.definition.pages.list?.modals === true
+      const readOnly = isReadOnlyResource(resource.definition)
       const resolveSlug = (ctx: HttpContext, next: () => Promise<void>) => {
         ctx.params.slug = slug
         return next()
@@ -136,26 +138,28 @@ export function registerPanelRoutes(
           .as(`${routeName}.store`)
           .use(resolveSlug)
       }
-      router
-        .post(`${routeBase}/export`, [ExportController, 'run'])
-        .as(`${routeName}.export`)
-        .use(resolveSlug)
-      router
-        .post(`${routeBase}/import/preview`, [ImportController, 'preview'])
-        .as(`${routeName}.import.preview`)
-        .use(resolveSlug)
-      router
-        .post(`${routeBase}/import`, [ImportController, 'store'])
-        .as(`${routeName}.import.store`)
-        .use(resolveSlug)
-      router
-        .get(`${routeBase}/actions/:action`, [ActionController, 'show'])
-        .as(`${routeName}.actions`)
-        .use(resolveSlug)
-      router
-        .post(`${routeBase}/actions/:action`, [ActionController, 'run'])
-        .as(`${routeName}.actions.store`)
-        .use(resolveSlug)
+      if (!readOnly) {
+        router
+          .post(`${routeBase}/export`, [ExportController, 'run'])
+          .as(`${routeName}.export`)
+          .use(resolveSlug)
+        router
+          .post(`${routeBase}/import/preview`, [ImportController, 'preview'])
+          .as(`${routeName}.import.preview`)
+          .use(resolveSlug)
+        router
+          .post(`${routeBase}/import`, [ImportController, 'store'])
+          .as(`${routeName}.import.store`)
+          .use(resolveSlug)
+        router
+          .get(`${routeBase}/actions/:action`, [ActionController, 'show'])
+          .as(`${routeName}.actions`)
+          .use(resolveSlug)
+        router
+          .post(`${routeBase}/actions/:action`, [ActionController, 'run'])
+          .as(`${routeName}.actions.store`)
+          .use(resolveSlug)
+      }
       for (const relation of flattenRelationManagers(resource.definition.relations)) {
         const base = `${routeBase}/:id/relations/${relation.relation}`
         const resolveRelation = (ctx: HttpContext, next: () => Promise<void>) => {
@@ -224,28 +228,30 @@ export function registerPanelRoutes(
             .use(resolveAction)
         }
       }
-      const recordActionGet = router.get(`${routeBase}/:id/actions/:action`, [
-        ActionController,
-        'show',
-      ])
-      constrainPrimaryKey(recordActionGet, resource)
-      recordActionGet.as(`${routeName}.record.actions`).use(resolveSlug)
-      const recordActionPost = router.post(`${routeBase}/:id/actions/:action`, [
-        ActionController,
-        'run',
-      ])
-      constrainPrimaryKey(recordActionPost, resource)
-      recordActionPost.as(`${routeName}.record.actions.store`).use(resolveSlug)
-      const columnRoute = router.patch(`${routeBase}/:id/column/:name`, [
-        ResourceController,
-        'updateColumn',
-      ])
-      constrainPrimaryKey(columnRoute, resource)
-      columnRoute.as(`${routeName}.column.update`).use(resolveSlug)
-      router
-        .post(`${routeBase}/reorder`, [ResourceController, 'reorder'])
-        .as(`${routeName}.reorder`)
-        .use(resolveSlug)
+      if (!readOnly) {
+        const recordActionGet = router.get(`${routeBase}/:id/actions/:action`, [
+          ActionController,
+          'show',
+        ])
+        constrainPrimaryKey(recordActionGet, resource)
+        recordActionGet.as(`${routeName}.record.actions`).use(resolveSlug)
+        const recordActionPost = router.post(`${routeBase}/:id/actions/:action`, [
+          ActionController,
+          'run',
+        ])
+        constrainPrimaryKey(recordActionPost, resource)
+        recordActionPost.as(`${routeName}.record.actions.store`).use(resolveSlug)
+        const columnRoute = router.patch(`${routeBase}/:id/column/:name`, [
+          ResourceController,
+          'updateColumn',
+        ])
+        constrainPrimaryKey(columnRoute, resource)
+        columnRoute.as(`${routeName}.column.update`).use(resolveSlug)
+        router
+          .post(`${routeBase}/reorder`, [ResourceController, 'reorder'])
+          .as(`${routeName}.reorder`)
+          .use(resolveSlug)
+      }
       if (resource.definition.pages.edit && !modalResource) {
         const editRoute = router.get(`${routeBase}/:id/edit`, [ResourceController, 'edit'])
         constrainPrimaryKey(editRoute, resource)
@@ -259,9 +265,11 @@ export function registerPanelRoutes(
         constrainPrimaryKey(viewRoute, resource)
         viewRoute.as(`${routeName}.view`).use(resolveSlug)
       }
-      const destroyRoute = router.delete(`${routeBase}/:id`, [ResourceController, 'destroy'])
-      constrainPrimaryKey(destroyRoute, resource)
-      destroyRoute.as(`${routeName}.destroy`).use(resolveSlug)
+      if (!readOnly) {
+        const destroyRoute = router.delete(`${routeBase}/:id`, [ResourceController, 'destroy'])
+        constrainPrimaryKey(destroyRoute, resource)
+        destroyRoute.as(`${routeName}.destroy`).use(resolveSlug)
+      }
     }
     router.post('/_pupitre/upload', [UploadController, 'store']).as('upload.store')
     router.delete('/_pupitre/upload', [UploadController, 'destroy']).as('upload.destroy')

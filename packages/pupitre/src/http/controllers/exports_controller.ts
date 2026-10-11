@@ -88,6 +88,7 @@ export default class ExportsController {
     if (!(await createPupitreStorage().exists(row.file_key)))
       return errorJson(ctx, 'Export file is no longer available', 404)
     ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
+    ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(
       'Content-Disposition',
       `attachment; filename="${resource.slug}-${row.id}.csv"`

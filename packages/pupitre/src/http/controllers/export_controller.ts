@@ -1,5 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import { QsParserFactory } from '@adonisjs/http-server/factories'
+import { QsParserFactory } from '@adonisjs/core/factories/http'
 import type { Database } from '@adonisjs/lucid/database'
 import app from '@adonisjs/core/services/app'
 import { randomUUID } from 'node:crypto'
@@ -116,7 +116,7 @@ export default class ExportController {
       await database.table('pupitre_exports').insert({
         id: exportId,
         user_id: userId,
-        tenant_id: tenantId,
+        tenant_id: tenantId === null ? null : String(tenantId),
         resource: resource.slug,
         status: 'queued',
         total_rows: count,
@@ -162,6 +162,7 @@ export default class ExportController {
     if (result.total !== count) throw new Error('The export result set changed during processing')
     const stream = createCsvStream(result.rows, csvColumns)
     ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
+    ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(
       'Content-Disposition',
       `attachment; filename="${resource.slug}-${new Date().toISOString().slice(0, 10)}.csv"`

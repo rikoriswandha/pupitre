@@ -1,3 +1,4 @@
+import { publishResourceChange, resourceRealtime } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 import type { LucidModel, LucidRow, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
@@ -155,7 +156,16 @@ async function relatedQuery(
   const model = relatedModel(target, manager)
   const relatedResource = ctx.pupitre.panel.resources.find((item) => item.model === model)
   const query = relationClient(parent, manager.relation).query()
-  await applyRelatedScope(ctx, model, query, relatedResource)
+  const scopeContext = relatedResource?.parent
+    ? Object.assign(Object.create(ctx) as HttpContext, {
+        params: {
+          ...ctx.params,
+          [relatedResource.parent.param]:
+            relatedResource.parent.resource === target.slug ? parent.$primaryKeyValue : undefined,
+        },
+      })
+    : ctx
+  await applyRelatedScope(scopeContext, model, query, relatedResource)
   if (relatedResource) {
     const softDeleteColumn = relatedResource.definition.softDeletes
     if (softDeleteColumn) {
@@ -334,6 +344,7 @@ export async function compileRelationDescriptor(
       },
     }
   )
+  if (manager.table?.poll) table.realtime = await resourceRealtime(ctx, target.slug)
   const badge = manager.badge ? await manager.badge(ctx, parent) : undefined
   return {
     key: manager.relation,
@@ -409,6 +420,7 @@ export async function loadRelationTableData(
   const relation = target.model.$getRelation(manager.relation)
   const actions = relationActions(manager, relation.type)
   return buildTableData(table, rows, meta, {
+    ctx,
     locale: ctx.pupitre.locale,
     timezone: ctx.pupitre.timezone,
     normalized: result.normalized,
@@ -647,6 +659,7 @@ export default class RelationController {
         const attributes = await fillRelatedOwnership(ctx, related, validated, relatedResource)
         await relationClient(parent, manager.relation).create(attributes)
       })
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, {
         flash: [],
         reload: true,
@@ -678,6 +691,7 @@ export default class RelationController {
           attachments = Object.fromEntries(keys.map((key) => [String(key), pivot]))
       }
       await relationClient(parent, manager.relation).attach(attachments)
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
     if (action.builtin === 'detach' || action.builtin === 'delete') {
@@ -706,6 +720,7 @@ export default class RelationController {
           }
         })
       else return errorJson(ctx, 'Detach requires a manyToMany relation', 400)
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
     if (action.builtin === 'associate' || action.builtin === 'dissociate') {
@@ -742,6 +757,7 @@ export default class RelationController {
           await row.save()
         }
       })
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
     if (action.builtin === 'edit' && record) {
@@ -750,6 +766,7 @@ export default class RelationController {
       const validated = await validateResourceData(ctx, related, nodes, data, record)
       record.merge(validated as never)
       await record.save()
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
     if ((!action.builtin || action.builtin === 'bulk') && action.handle) {
@@ -762,6 +779,7 @@ export default class RelationController {
         currentUrl: ctx.request.header('x-pupitre-url') ?? relationUrl(target, manager, parent),
         listUrl: target.urls.list,
       })
+      await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, result)
     }
     return errorJson(ctx, 'Unsupported relation action', 400)

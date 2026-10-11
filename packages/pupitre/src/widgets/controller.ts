@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { tableData as tableDataSchema, widgetData as widgetDataSchema } from '../../catalog/wire.js'
 import type { WidgetData, WidgetDescriptor } from '../../catalog/wire.js'
-import type { WidgetDefinition } from '../definition/widget.js'
+import type { TimelineItem, WidgetDefinition } from '../definition/widget.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
 import { authorizeResource, ensureAuthorized } from '../authz/bouncer.js'
@@ -12,6 +12,7 @@ import { applyTableQuery } from '../query/table_query.js'
 import { buildTableData } from '../table/table_data.js'
 import { aggregateTableSummaries } from '../table/table_summary.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
+import { formatDateTime, toDateTime } from '../format/index.js'
 function filtersFrom(ctx: HttpContext): Record<string, unknown> {
   const query = ctx.request.qs() as Record<string, unknown>
   return typeof query.filters === 'object' && query.filters !== null
@@ -90,6 +91,7 @@ async function loadTableWidget(ctx: HttpContext, definition: WidgetDefinition) {
   }
   return tableDataSchema.parse(
     await buildTableData(table, rows, meta, {
+      ctx,
       locale: ctx.pupitre.locale,
       timezone: ctx.pupitre.timezone,
       normalized: loaded.normalized,
@@ -109,6 +111,11 @@ export async function loadWidget(
   checkVisibility = true
 ): Promise<WidgetData> {
   if (checkVisibility) await canView(ctx, definition)
+  // Edit access alone does not grant access to a record's history.
+  if (definition.kind === 'timeline' && record && typeof ctx.params.slug === 'string') {
+    const resource = requestResource(ctx, ctx.params.slug)
+    if (resource) await ensureAuthorized(ctx, resource, 'view', record as LucidRow)
+  }
   const loaded =
     definition.kind === 'table'
       ? await loadTableWidget(ctx, definition)
@@ -126,7 +133,23 @@ export async function loadWidget(
         ? { kind: 'chart' as const, ...(loaded as object) }
         : definition.kind === 'table'
           ? { kind: 'table' as const, data: loaded }
-          : { kind: 'component' as const, data: loaded }
+          : definition.kind === 'timeline'
+            ? {
+                kind: 'timeline' as const,
+                items: (loaded as TimelineItem[]).map((item) => {
+                  const date = toDateTime(item.time)
+                  if (!date)
+                    throw new Error(`Timeline widget "${definition.name}" has an invalid time`)
+                  return {
+                    ...item,
+                    time: {
+                      iso: date.toISO()!,
+                      formatted: formatDateTime(date, ctx.pupitre)!,
+                    },
+                  }
+                }),
+              }
+            : { kind: 'component' as const, data: loaded }
   return widgetDataSchema.parse(data)
 }
 
@@ -212,6 +235,11 @@ export async function prepareWidgets(
 ) {
   const visible: WidgetDefinition[] = []
   for (const definition of definitions) {
+    if (definition.kind === 'timeline' && record && typeof ctx.params.slug === 'string') {
+      const resource = requestResource(ctx, ctx.params.slug)
+      if (resource && !(await authorizeResource(ctx, resource, 'view', record as LucidRow)))
+        continue
+    }
     if (!definition.canView || (await definition.canView(ctx))) visible.push(definition)
   }
   const deferred: string[] = []

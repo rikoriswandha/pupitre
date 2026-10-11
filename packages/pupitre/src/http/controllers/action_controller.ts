@@ -1,3 +1,4 @@
+import { publishResourceChange } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import {
@@ -355,6 +356,12 @@ export default class ActionController {
                 currentUrl: currentPageUrl(ctx, resource.urls.list),
                 listUrl: resource.urls.list,
               })
+      if (
+        action.handle ||
+        ['restore', 'forceDelete', 'replicate'].includes(action.builtin ?? '') ||
+        bulkDelete
+      )
+        await publishResourceChange(ctx, resource.slug)
       if (result.flash.length && !isJsonRequest(ctx)) setPupitreFlash(ctx, result.flash)
       if (isPupitreActionRequest(ctx) || ctx.request.accepts(['json', 'html']) === 'json')
         return actionJson(ctx, result)

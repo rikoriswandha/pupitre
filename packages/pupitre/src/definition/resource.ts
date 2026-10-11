@@ -68,3 +68,22 @@ export type ResourceDefinition<Model extends object = object> = {
   handlers: ResourceHandlers<Model>
   toJSON(): string
 }
+
+/** A definition without write surfaces must not receive implicit mutation routes or actions. */
+export function isReadOnlyResource<Model extends object>(
+  definition: ResourceDefinition<Model>
+): boolean {
+  if (
+    definition.form?.length ||
+    definition.pages.create ||
+    definition.pages.edit ||
+    definition.relations?.length ||
+    definition.table?.reorderable ||
+    definition.table?.columns.some((column) => 'editable' in column && column.editable)
+  )
+    return false
+  for (const actions of Object.values(definition.actions ?? {})) {
+    if (actions.some((action) => action.name !== 'view')) return false
+  }
+  return true
+}

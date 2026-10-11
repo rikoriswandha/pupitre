@@ -1,5 +1,16 @@
+import './csp.js'
+
 import { z } from 'zod'
 import { dynamic, jsonRenderExpression, raw, visibilitySchema } from './expressions.js'
+
+export const realtimeEvent = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('pupitre:notification') }),
+  z.object({ type: z.literal('pupitre:table'), resource: z.string() }),
+])
+export type RealtimeEvent = z.infer<typeof realtimeEvent>
+export type RealtimeClient = {
+  subscribe(channel: string, onEvent: (event: RealtimeEvent) => void): () => void
+}
 
 export const option = z.object({
   value: z.union([z.string(), z.number()]),
@@ -138,6 +149,7 @@ export const tableDescriptor = z.object({
   searchDebounce: z.number(),
   reorderable: z.object({ url: z.string() }).optional(),
   poll: z.number().optional(),
+  realtime: z.object({ channel: z.string() }).optional(),
   deferFilters: z.boolean().optional(),
   deferLoading: z.boolean().optional(),
   selectable: z.boolean(),
@@ -226,6 +238,15 @@ export const widgetStat = z.object({
   color: z.string().optional(),
   chart: z.array(z.number()).optional(),
 })
+export const widgetTimelineItem = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  time: z.object({ iso: z.string(), formatted: z.string() }),
+  actor: z.string().optional(),
+  icon: z.string().optional(),
+  color: z.string().optional(),
+  changes: z.array(z.object({ field: z.string(), old: z.unknown(), new: z.unknown() })).optional(),
+})
 export const widgetData = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('stats'), stats: z.array(widgetStat) }),
   z.object({
@@ -235,12 +256,13 @@ export const widgetData = z.discriminatedUnion('kind', [
       z.object({ label: z.string(), data: z.array(z.number()), color: z.string().optional() })
     ),
   }),
+  z.object({ kind: z.literal('timeline'), items: z.array(widgetTimelineItem) }),
   z.object({ kind: z.literal('table'), data: tableData }),
   z.object({ kind: z.literal('component'), data: z.unknown() }),
 ])
 export const widgetDescriptor = z.object({
   name: z.string(),
-  kind: z.enum(['stats', 'chart', 'table', 'component']),
+  kind: z.enum(['stats', 'chart', 'table', 'component', 'timeline']),
   dataProp: z.string(),
   dataUrl: z.string().optional(),
   heading: z.string().optional(),
@@ -253,6 +275,7 @@ export const widgetDescriptor = z.object({
   component: z.string().optional(),
   table: tableDescriptor.optional(),
 })
+export type WidgetTimelineItem = z.infer<typeof widgetTimelineItem>
 export type WidgetStat = z.infer<typeof widgetStat>
 export type WidgetData = z.infer<typeof widgetData>
 export type WidgetDescriptor = z.infer<typeof widgetDescriptor>
@@ -470,6 +493,7 @@ export const elementSchema = z.object({
     'Widget.Stats',
     'Widget.Chart',
     'Widget.Table',
+    'Widget.Timeline',
     'RelationManager',
     'ActionBar',
     'Infolist',
@@ -666,6 +690,7 @@ export const pageProps = z
       nav: z.array(navGroup),
       flash: z.array(flashMessage),
       notifications: notificationsProp.optional(),
+      realtime: z.object({ driver: z.string(), userChannel: z.string() }).optional(),
       locale: z.string(),
       timezone: z.string(),
     }),

@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { isPassiveImageMime, readUploadBytes } from '../storage/upload_validation.js'
 import { fileTypeFromBuffer } from 'file-type'
 import type { MultipartFile } from '@adonisjs/bodyparser'
 import { createPupitreStorage } from '../storage/index.js'
@@ -16,6 +16,7 @@ import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_prop
 import type { FormDescriptor } from '../../catalog/index.js'
 import type { SchemaNodeBuilder, SchemaNodeDefinition } from '../definition/schema.js'
 import { clearLoginLimit, consumeLoginLimit } from '../drivers/limiter.js'
+import { authLimitResponse, authRateLimited } from './rate_limit.js'
 import { panelGuard } from './guard.js'
 import { E_PUPITRE_FORBIDDEN, E_PUPITRE_MAIL_ADAPTER_REQUIRED } from '../errors.js'
 import { t } from '../i18n.js'
@@ -276,6 +277,9 @@ export default class AuthController {
     )
   }
   async login(ctx: AuthContext) {
+    // IP-wide budget counts successful sign-ins too (shared office/NAT IPs); the
+    // per-email failure window below stays at 5 and is cleared on success.
+    if (await authRateLimited(ctx, 'login', 60)) return authLimitResponse(ctx, 'email')
     const cfg = await config(ctx)
     const Model = await userModel(cfg)
     const input = ctx.request.all()
@@ -289,10 +293,11 @@ export default class AuthController {
       .update(`login:${data.email.toLowerCase()}:${ctx.request.ip()}`)
       .digest('hex')
     if (await consumeLoginLimit(key)) {
-      ctx.session?.flash('inputErrorsBag', {
-        email: 'Too many login attempts. Please try again in one minute.',
-      })
-      return ctx.response.status(429).redirect().back()
+      return authLimitResponse(
+        ctx,
+        'email',
+        'Too many login attempts. Please try again in one minute.'
+      )
     }
     let user: LucidRow
     try {
@@ -400,6 +405,7 @@ export default class AuthController {
     })
   }
   async mfaSetup(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'mfa-setup')) return authLimitResponse(ctx)
     const cfg = await config(ctx)
     const user = ctx.pupitre.authUser as MutableUser
     const attributes = user.$attributes
@@ -418,6 +424,7 @@ export default class AuthController {
     return ctx.response.json({ secret: enrollment.secret, qrCode: enrollment.qrCode })
   }
   async mfaConfirm(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'mfa-confirm')) return authLimitResponse(ctx, 'code')
     const cfg = await config(ctx)
     const setup = ctx.session?.get('pupitre.mfa.setup')
     const code = ctx.request.input('code')
@@ -514,10 +521,12 @@ export default class AuthController {
     return ctx.response.status(204)
   }
   async passkeyLoginOptions(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'passkey-login-options', 60)) return authLimitResponse(ctx)
     const cfg = await config(ctx)
     return ctx.response.json(await authenticationOptions(ctx, cfg))
   }
   async passkeyLoginVerify(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'passkey-login-verify', 60)) return authLimitResponse(ctx)
     const cfg = await config(ctx)
     const result = await verifyAuthentication(ctx, cfg, ctx.request.input('credential'))
     if (!result) {
@@ -536,6 +545,7 @@ export default class AuthController {
     })
   }
   async passkeyRegisterOptions(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'passkey-register-options')) return authLimitResponse(ctx)
     const cfg = await config(ctx)
     const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
     const attributes = user.$attributes
@@ -548,6 +558,7 @@ export default class AuthController {
     )
   }
   async passkeyRegisterVerify(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'passkey-register-verify')) return authLimitResponse(ctx)
     const validated = await passkeyNameValidator.validate(ctx.request.all())
     const result = await verifyRegistration(
       ctx,
@@ -610,6 +621,7 @@ export default class AuthController {
     )
   }
   async forgot(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'password-reset-request')) return authLimitResponse(ctx, 'email')
     const cfg = await config(ctx)
     let email: string
     try {
@@ -624,10 +636,11 @@ export default class AuthController {
       .update(`reset:${email.toLowerCase()}:${ctx.request.ip()}`)
       .digest('hex')
     if (await consumeLoginLimit(key)) {
-      ctx.session?.flash('inputErrorsBag', {
-        email: 'Too many reset attempts. Please try again in one minute.',
-      })
-      return ctx.response.status(429).redirect().back()
+      return authLimitResponse(
+        ctx,
+        'email',
+        'Too many reset attempts. Please try again in one minute.'
+      )
     }
     if (cfg.auth.model && cfg.mail) {
       const Model = await userModel(cfg)
@@ -684,6 +697,8 @@ export default class AuthController {
     )
   }
   async updatePassword(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'password-reset-consume'))
+      return authLimitResponse(ctx, 'password')
     const cfg = await config(ctx)
     const Model = await userModel(cfg)
     try {
@@ -734,6 +749,7 @@ export default class AuthController {
     )
   }
   async register(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'register')) return authLimitResponse(ctx, 'email')
     const cfg = await config(ctx)
     const Model = await userModel(cfg)
     if (ctx.pupitre.panel.auth.emailVerification && !cfg.mail)
@@ -769,6 +785,7 @@ export default class AuthController {
     )
   }
   async sendVerification(ctx: AuthContext) {
+    if (await authRateLimited(ctx, 'email-resend')) return authLimitResponse(ctx)
     const cfg = await config(ctx)
     if (ctx.pupitre.authUser) await sendVerification(ctx, ctx.pupitre.authUser, cfg)
     return ctx.response.redirect().back()
@@ -840,11 +857,9 @@ export default class AuthController {
     const file = ctx.request.file('file') as MultipartFile | null
     if (!file || !file.tmpPath || file.errors.length > 0 || file.size > 5 * 1024 * 1024)
       return ctx.response.status(422).json({ message: 'Choose an image no larger than 5 MB' })
-    const bytes = await readFile(file.tmpPath)
-    if (bytes.byteLength > 5 * 1024 * 1024)
-      return ctx.response.status(422).json({ message: 'Choose an image no larger than 5 MB' })
+    const bytes = await readUploadBytes(file.tmpPath, 5 * 1024 * 1024)
     const type = await fileTypeFromBuffer(bytes)
-    if (!type?.mime.startsWith('image/'))
+    if (!type || !isPassiveImageMime(type.mime))
       return ctx.response.status(422).json({ message: 'The avatar must be an image' })
 
     const key = `avatars/${String(user.$attributes.id)}/${randomUUID()}.${type.ext}`
@@ -936,11 +951,9 @@ export default class AuthController {
       if (file) {
         if (!file.tmpPath || file.errors.length > 0 || file.size > 5 * 1024 * 1024)
           return flashErrors(ctx, { avatar: 'Choose an image no larger than 5 MB' })
-        const bytes = await readFile(file.tmpPath)
-        if (bytes.byteLength > 5 * 1024 * 1024)
-          return flashErrors(ctx, { avatar: 'Choose an image no larger than 5 MB' })
+        const bytes = await readUploadBytes(file.tmpPath, 5 * 1024 * 1024)
         const type = await fileTypeFromBuffer(bytes)
-        if (!type?.mime.startsWith('image/'))
+        if (!type || !isPassiveImageMime(type.mime))
           return flashErrors(ctx, { avatar: 'The avatar must be an image' })
         storedAvatar = `avatars/${String(user.$attributes.id)}/${randomUUID()}.${type.ext}`
         await createPupitreStorage().put(storedAvatar, bytes, {

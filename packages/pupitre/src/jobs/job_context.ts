@@ -1,6 +1,6 @@
-import type { HttpContext } from '@adonisjs/core/http'
+import { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
-import { HttpContextFactory } from '@adonisjs/http-server/factories'
+import { HttpContextFactory } from '@adonisjs/core/factories/http'
 import type { Bouncer } from '@adonisjs/bouncer'
 import app from '@adonisjs/core/services/app'
 import type { PupitreConfig } from '../define_config.js'
@@ -62,6 +62,7 @@ export async function createJobContext(
     })
     .create()
   ctx.containerResolver = app.container.createResolver()
+  ctx.containerResolver.bindValue(HttpContext, ctx)
   ctx.params = { ...(payload.params ?? {}) }
   const request = ctx.request as unknown as {
     input: (key: string, defaultValue?: unknown) => unknown
@@ -127,7 +128,7 @@ export async function createJobContext(
       () => (ctx as AuthenticatedJobContext).auth.user as LucidRow | null,
       {},
       policies as never
-    ),
+    ).setContainerResolver(ctx.containerResolver),
     response: undefined,
   })
   return { ctx, resource }

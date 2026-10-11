@@ -647,6 +647,35 @@ export const catalogFixtures = {
       },
     },
   },
+  'Widget.Timeline': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Widget.Timeline',
+        props: {
+          descriptor: {
+            name: 'activity',
+            kind: 'timeline',
+            dataProp: 'widget_activity',
+            heading: 'Activity',
+            span: 2,
+            sort: 3,
+          },
+          data: {
+            kind: 'timeline',
+            items: [
+              {
+                title: 'Post updated',
+                actor: 'Ada',
+                time: { iso: '2026-10-11T10:00:00Z', formatted: '11 Oct 2026, 10:00' },
+                changes: [{ field: 'status', old: 'draft', new: 'published' }],
+              },
+            ],
+          },
+        },
+      },
+    },
+  },
   'Widget.Table': {
     root: 'root',
     elements: {

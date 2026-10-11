@@ -12,6 +12,7 @@ import { createJobContext, type PupitreJobContextPayload } from '../jobs/job_con
 import { processExport, type ExportQuery } from './export_service.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
 import { authorizeResource } from '../authz/bouncer.js'
+import { publishUserNotification } from '../realtime.js'
 
 type ExportJobPayload = PupitreJobContextPayload & {
   id: string
@@ -36,6 +37,8 @@ async function notifyCompleted(config: PupitreConfig, payload: ExportJobPayload)
     { type: 'success', title: 'Your export is ready', url: payload.downloadUrl },
     undefined
   )
+  const manager = (await app.container.make('pupitre.manager')) as PupitreManager
+  await publishUserNotification(manager, payload.userId)
 }
 
 /** Registers the serializable export worker handler with the configured jobs adapter. */

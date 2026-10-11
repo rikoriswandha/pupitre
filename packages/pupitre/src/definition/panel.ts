@@ -3,6 +3,7 @@ import type { NavEntryDefinition, UserMenuItemDefinition } from './navigation.js
 import type { TenancyDefinition } from './tenancy.js'
 import type { ThemeDefinition } from './theme.js'
 import type { WidgetFilterDefinition } from './widget.js'
+import type { PupitrePlugin } from './plugin.js'
 /** Built-in auth pages served by the panel (WP17). All default to disabled. */
 export type PanelAuthDefinition = {
   login: boolean
@@ -45,6 +46,14 @@ export type PanelDefinition = {
   social?: PanelSocialDefinition
   /** Explicit navigation; when absent, nav is derived from resources/pages. */
   navigation?: NavEntryDefinition[]
+  /**
+   * Navigation contributed by plugins. Merged into `navigation` when the panel
+   * declares one; otherwise rendered after the derived navigation, and the
+   * resources/pages it references are not derived a second time.
+   */
+  pluginNavigation?: NavEntryDefinition[]
+  /** Plugins in application order (WP36); applied by the manager at boot. */
+  plugins: readonly PupitrePlugin[]
   userMenu: UserMenuItemDefinition[]
   tenancy?: TenancyDefinition
   /** Database notifications tray + polling interval (ms); `null` disables. */

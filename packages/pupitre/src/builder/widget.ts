@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel } from '@adonisjs/lucid/types/model'
 import { stableJson } from '../definition/shared.js'
-import type { WidgetDefinition, WidgetStat } from '../definition/widget.js'
+import type { TimelineItem, WidgetDefinition, WidgetStat } from '../definition/widget.js'
 import { Table } from './table/table.js'
 import type { TableDefinition, TableSchema } from '../definition/table.js'
 
@@ -49,6 +49,9 @@ type StatInput = WidgetStat | StatBuilder
 export type WidgetBuilder = {
   readonly definition: WidgetDefinition
   stats(callback: (args: WidgetContext) => StatInput[] | Promise<StatInput[]>): WidgetBuilder
+  timeline(
+    callback: (args: WidgetContext) => TimelineItem[] | Promise<TimelineItem[]>
+  ): WidgetBuilder
   chart(
     type: NonNullable<WidgetDefinition['chartType']>,
     callback: (args: WidgetContext) => ChartData | Promise<ChartData>
@@ -84,6 +87,10 @@ class Widget implements WidgetBuilder {
         return stats.map((item) => ('toDefinition' in item ? item.toDefinition() : item))
       },
     })
+  }
+
+  timeline(callback: (args: WidgetContext) => TimelineItem[] | Promise<TimelineItem[]>) {
+    return this.change({ kind: 'timeline', load: callback })
   }
 
   chart(
