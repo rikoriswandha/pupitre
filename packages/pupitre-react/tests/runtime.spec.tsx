@@ -45,7 +45,7 @@ const page = {
   },
   state: {},
   actions: { header: [] },
-  catalogVersion: '0.3',
+  catalogVersion: '1.0',
 } as unknown as PupitrePageProps['page']
 const tableDescriptor = {
   id: 'posts',

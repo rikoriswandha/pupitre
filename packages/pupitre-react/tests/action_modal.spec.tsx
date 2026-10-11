@@ -100,7 +100,7 @@ test('action form GET renders a separate form store and validation keeps the mod
       },
     },
     state: { data: { title: 'Draft' } },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   const restoreFetch = setFetch(async (url, init) => {
     if ((init?.method ?? 'GET') === 'GET') {
@@ -202,7 +202,7 @@ test('modal footer actions submit current data and modalSubmit(false) hides subm
       },
     },
     state: { data: { title: 'Current modal value' } },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   const restoreFetch = setFetch(async (url, init) => {
     if ((init?.method ?? 'GET') === 'GET')

@@ -1,10 +1,15 @@
 import { useEffect } from 'react'
 import { getRouter } from '../bridge/inertia.js'
+import { useNotificationRealtime } from './use_realtime.js'
 
 /** Refreshes shared panel props on the configured interval while the tab is visible. */
-export function useNotificationsPolling(interval: number | undefined): void {
+export function useNotificationsPolling(
+  interval: number | undefined,
+  onNotification?: () => void
+): void {
+  const realtime = useNotificationRealtime(onNotification)
   useEffect(() => {
-    if (!interval || interval <= 0) return
+    if (realtime || !interval || interval <= 0 || typeof document === 'undefined') return
     let timer: NodeJS.Timeout | number | undefined
     const poll = () => getRouter().reload({ only: ['pupitre'] })
     const start = () => {
@@ -26,5 +31,5 @@ export function useNotificationsPolling(interval: number | undefined): void {
       document.removeEventListener('visibilitychange', updateVisibility)
       stop()
     }
-  }, [interval])
+  }, [interval, realtime])
 }

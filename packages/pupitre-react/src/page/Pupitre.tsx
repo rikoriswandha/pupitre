@@ -26,9 +26,11 @@ import { ActionModal } from '../renderer/ActionModal.js'
 import { getRouter } from '../bridge/inertia.js'
 import { PageActionsContext } from '../runtime.js'
 import { matchesKeyBinding } from '../key_bindings.js'
+import { RealtimeProvider } from '../hooks/use_realtime.js'
+import type { RealtimeClient } from '@rikology/pupitre/catalog'
 
 type InertiaPupitreProps = PupitrePageProps & { errors?: Record<string, string> }
-export type PupitreProps = { registry: PupitreRegistry }
+export type PupitreProps = { registry: PupitreRegistry; realtime?: RealtimeClient }
 let toastId = 0
 const emptyToasts: ToastMessage[] = []
 let toastState: ToastMessage[] = []
@@ -96,16 +98,18 @@ function useInertiaPropsSafely(): InertiaPupitreProps | null {
     throw error
   }
 }
-export function Pupitre({ registry }: PupitreProps) {
+export function Pupitre({ registry, realtime }: PupitreProps) {
   const props = useInertiaPropsSafely()
   if (!props) return null
-  return <PupitreContent registry={registry} props={props} />
+  return <PupitreContent registry={registry} realtime={realtime} props={props} />
 }
 export function PupitreContent({
   registry,
+  realtime,
   props,
 }: {
   registry: PupitreRegistry
+  realtime?: RealtimeClient
   props: InertiaPupitreProps
 }) {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => emptyToasts)
@@ -466,12 +470,14 @@ export function PupitreContent({
       />
     ) : null
   return (
-    <PageActionsContext.Provider value={pageActions}>
-      {main}
-      {modal}
-      {actionModal}
-      {importModal}
-      <Toaster toasts={toasts} dismiss={dismiss} />
-    </PageActionsContext.Provider>
+    <RealtimeProvider client={realtime} userChannel={panel.realtime?.userChannel}>
+      <PageActionsContext.Provider value={pageActions}>
+        {main}
+        {modal}
+        {actionModal}
+        {importModal}
+        <Toaster toasts={toasts} dismiss={dismiss} />
+      </PageActionsContext.Provider>
+    </RealtimeProvider>
   )
 }

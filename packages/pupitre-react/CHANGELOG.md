@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased (1.0.0, milestone M4)
+
+### Added
+- Realtime (WP39): optional `Pupitre`/`PupitreShell` client context, SSR-safe `useRealtimeSubscription` with stable callbacks and cleanup, coalesced descriptor-scoped `useTableRealtime`, and notification push refresh with polling fallback.
+- Security (WP42): preserve Request-input methods and headers in `jsonFetch`, ensuring XSRF headers on all mutating methods; add multipart/upload/deletion regressions.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

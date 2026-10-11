@@ -52,11 +52,13 @@ export function xsrfToken(): string {
 }
 
 export function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
-  const method = (init.method ?? 'GET').toUpperCase()
+  const request = input instanceof Request ? input : undefined
+  const method = (init.method ?? request?.method ?? 'GET').toUpperCase()
+  const sourceHeaders = init.headers ?? request?.headers
   const headers: Record<string, string> =
-    init.headers && !Array.isArray(init.headers) && !(init.headers instanceof Headers)
-      ? { ...init.headers }
-      : Object.fromEntries(new Headers(init.headers).entries())
+    sourceHeaders && !Array.isArray(sourceHeaders) && !(sourceHeaders instanceof Headers)
+      ? { ...sourceHeaders }
+      : Object.fromEntries(new Headers(sourceHeaders).entries())
   const existingHeaders = new Headers(headers)
   if (!existingHeaders.has('Accept')) headers.Accept = 'application/json'
   if (typeof init.body === 'string' && !existingHeaders.has('Content-Type'))

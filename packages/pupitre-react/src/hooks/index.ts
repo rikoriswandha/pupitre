@@ -219,3 +219,4 @@ export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
 export { useOptions } from './use_options.js'
 export { useBoundValue as useBoundProp }
 export { useNotificationsPolling } from './use_notifications_polling.js'
+export { useRealtimeSubscription, useTableRealtime } from './use_realtime.js'

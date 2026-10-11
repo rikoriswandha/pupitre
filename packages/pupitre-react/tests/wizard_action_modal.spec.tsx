@@ -123,7 +123,7 @@ test('wizard modal retains Next and Back beside footer actions when submit is di
             },
           },
           state: { data: {}, ui: { wizard: { setup: { step: 0 } } } },
-          catalogVersion: '0.3',
+          catalogVersion: '1.0',
         }),
       }) as Response
   )
@@ -194,7 +194,7 @@ test('confirm footer actions ask for confirmation before submitting', async ({ a
         json: async () => ({
           spec: { root: 'form', elements: { form: { type: 'Form', props: {} } } },
           state: { data: {} },
-          catalogVersion: '0.3',
+          catalogVersion: '1.0',
         }),
       } as Response
     submissions.push(String(init?.method))

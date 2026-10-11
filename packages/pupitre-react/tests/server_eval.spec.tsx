@@ -45,7 +45,7 @@ const basePage = {
   },
   state: { data: { title: '', slug: '' }, meta: {}, errors: {} },
   actions: { header: [] },
-  catalogVersion: '0.3',
+  catalogVersion: '1.0',
 } as unknown as PupitrePageProps['page']
 
 const pupitre = {

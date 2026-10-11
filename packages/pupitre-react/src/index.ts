@@ -1,3 +1,6 @@
+// Initialize strict-CSP schema settings before renderer dependencies construct schemas.
+import '@rikology/pupitre/catalog'
+
 export type { PupitreProps } from './page/Pupitre.js'
 export { Pupitre } from './page/Pupitre.js'
 export { PupitreShell } from './page/PupitreShell.js'
@@ -42,6 +45,8 @@ export {
   useOptions,
   useRuntime,
   useNotificationsPolling,
+  useRealtimeSubscription,
+  useTableRealtime,
 } from './hooks/index.js'
 export type {
   ShellProps,

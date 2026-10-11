@@ -74,7 +74,7 @@ function pageProps(key: string, url = '/admin/posts') {
       kind: 'list',
       title: 'Posts',
       breadcrumbs: [],
-      catalogVersion: '0.3',
+      catalogVersion: '1.0',
       actions: { header: [] },
     },
     data: {},

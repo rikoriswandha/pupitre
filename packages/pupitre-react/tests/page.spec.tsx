@@ -69,7 +69,7 @@ const props = {
     spec: { root: 'form', elements: { form: { type: 'Form', props: {} } } },
     state: {},
     actions: { header: [create] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   },
 } as unknown as PupitrePageProps
 
