@@ -28,9 +28,11 @@ export function EntryShell({
         ? { gridColumn: `span ${columnSpan} / span ${columnSpan}` }
         : undefined
   return (
-    <div className="min-w-0 space-y-1" style={style}>
-      {label && <dt className="text-sm font-medium text-muted-foreground">{label}</dt>}
-      <div className="min-w-0 text-sm text-foreground">{children}</div>
-    </div>
+    <dl className="min-w-0 space-y-1" style={style}>
+      <dt className={label ? 'text-sm font-medium text-muted-foreground' : 'sr-only'}>
+        {label ?? 'Value'}
+      </dt>
+      <dd className="min-w-0 text-sm text-foreground">{children}</dd>
+    </dl>
   )
 }

@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
+import { Field as BaseField } from '@base-ui/react/field'
 import { Field, FieldError } from '../primitives/index.js'
 
 type Props = Infer<typeof components.CheckboxList.props>
@@ -53,7 +54,6 @@ export function CheckboxList({ props, bindings }: Runtime) {
           {...props.extraAttributes}
           className="grid gap-2"
           disabled={props.disabled}
-          aria-required={props.required}
           aria-describedby={describedBy}
           aria-invalid={!!error}
         >
@@ -72,14 +72,14 @@ export function CheckboxList({ props, bindings }: Runtime) {
             {options.map((option) => {
               const optionId = `${id}-${String(option.value)}`
               return (
-                <label
+                <BaseField.Item
                   key={String(option.value)}
-                  htmlFor={optionId}
-                  className="flex items-center gap-2 text-sm"
+                  className="flex min-h-6 items-center gap-2 text-sm"
                 >
                   <BaseCheckbox.Root
                     {...props.extraAttributes}
                     id={optionId}
+                    aria-labelledby={`${optionId}-label`}
                     name={
                       bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name
                     }
@@ -91,12 +91,14 @@ export function CheckboxList({ props, bindings }: Runtime) {
                     aria-required={props.required}
                     aria-describedby={describedBy}
                     aria-invalid={!!error}
-                    className="grid size-4 place-items-center rounded border border-input data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
+                    className="grid size-6 place-items-center rounded border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
                   >
                     <BaseCheckbox.Indicator className="text-xs">✓</BaseCheckbox.Indicator>
                   </BaseCheckbox.Root>
-                  {option.label}
-                </label>
+                  <BaseField.Label id={`${optionId}-label`} htmlFor={optionId}>
+                    {option.label}
+                  </BaseField.Label>
+                </BaseField.Item>
               )
             })}
           </div>

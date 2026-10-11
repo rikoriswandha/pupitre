@@ -117,7 +117,15 @@ export function ShellSidebar({
           return (
             <section key={`${group.label}:${groupIndex}`} className={topNav ? 'relative' : ''}>
               {topNav ? (
-                <details className="group">
+                <details
+                  className="group"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Escape' || !event.currentTarget.open) return
+                    event.preventDefault()
+                    event.currentTarget.open = false
+                    event.currentTarget.querySelector('summary')?.focus()
+                  }}
+                >
                   <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
                     {group.icon && <Icon name={group.icon} className="size-4" />}
                     <span>{group.label || 'Menu'}</span>

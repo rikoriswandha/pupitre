@@ -93,10 +93,10 @@ export function Text({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
+        {props.label !== null && (
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor={id}>
-              {props.label}
+              {props.label ?? props.name ?? id}
               {props.required && <span aria-hidden="true"> *</span>}
             </Label>
             {props.hintAction && <ActionButton action={props.hintAction} />}
@@ -127,6 +127,7 @@ export function Text({ props, bindings }: Runtime) {
             required={props.required}
             disabled={props.disabled}
             readOnly={props.readOnly}
+            aria-label={props.label === null ? (props.name ?? id) : undefined}
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
@@ -161,7 +162,12 @@ export function Text({ props, bindings }: Runtime) {
             style={props.hintColor ? { color: props.hintColor } : undefined}
           >
             {props.hintIcon && (
-              <span title={props.hintTooltip} aria-label={props.hintTooltip ?? undefined}>
+              <span
+                role={props.hintTooltip ? 'img' : undefined}
+                aria-hidden={props.hintTooltip ? undefined : true}
+                title={props.hintTooltip}
+                aria-label={props.hintTooltip ?? undefined}
+              >
                 <Icon name={props.hintIcon} className="size-4" />
               </span>
             )}

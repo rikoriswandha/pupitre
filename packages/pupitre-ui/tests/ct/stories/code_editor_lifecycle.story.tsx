@@ -28,7 +28,7 @@ const page: PupitrePageProps['page'] = {
   spec: fixture,
   state: fixture.state,
   actions: { header: [] },
-  catalogVersion: '0.3',
+  catalogVersion: '1.0',
 }
 const panel: PupitrePageProps['pupitre'] = {
   panel: { id: 'admin', path: '/admin', brand: { name: 'Admin' }, theme: {}, features: {} },

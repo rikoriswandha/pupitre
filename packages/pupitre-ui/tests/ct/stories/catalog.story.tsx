@@ -77,7 +77,7 @@ function fixturePage(name: string, spec?: JsonRenderSpec): PupitrePageProps['pag
     spec: fixture,
     state: 'state' in fixture ? (fixture.state ?? {}) : {},
     actions: { header: [] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
 }
 
@@ -161,7 +161,7 @@ function RepeaterFixture({
     },
     state: { data: { items: initialItems } },
     actions: { header: [] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   return (
     <PupitreRenderer
@@ -231,7 +231,7 @@ export function TabsStory() {
     },
     state: { data: {}, ui: { tabs: { 'interaction-tabs': 'details' } } },
     actions: { header: [] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   return (
     <PupitreRenderer
@@ -332,7 +332,7 @@ export function ActionStory() {
           ? {
               spec: catalogFixtures.Text,
               state: catalogFixtures.Text.state ?? {},
-              catalogVersion: '0.3',
+              catalogVersion: '1.0',
             }
           : { flash: [], reload: false }
       return new Response(JSON.stringify(payload), {
@@ -401,7 +401,7 @@ export function FormStory() {
     },
     state: { data: { title: 'Draft' }, errors: {}, meta: {} },
     actions: { header: [] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   return (
     <div>
@@ -439,7 +439,7 @@ function standalonePage(
     spec,
     state,
     actions: { header: [] },
-    catalogVersion: '0.3',
+    catalogVersion: '1.0',
   }
   return (
     <div>

@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useId } from 'react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
@@ -32,6 +32,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   const { descriptor } = props
   const [value, setValue] = useBoundValue(props.value, bindings?.value)
   const error = useFieldError(props.error, bindings?.value)
+  const id = useId()
   const uploadApi = useUpload(descriptor)
   const [working, setWorking] = useState(false)
   const [workingFile, setWorkingFile] = useState<string | null>(null)
@@ -165,12 +166,16 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
       }}
     >
       {props.label && (
-        <label className="block text-sm font-medium">
+        <label htmlFor={id} className="block text-sm font-medium">
           {props.label}
           {props.required && <span aria-hidden="true"> *</span>}
         </label>
       )}
-      {props.helperText && <p className="text-sm text-muted-foreground">{props.helperText}</p>}
+      {props.helperText && (
+        <p id={`${id}-helper`} className="text-sm text-muted-foreground">
+          {props.helperText}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {keys.map((key, index) => {
           const file = uploadedFiles[key]
@@ -238,6 +243,15 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
           {working ? 'Uploading…' : 'Choose file'}
           <input
             className="sr-only"
+            id={id}
+            aria-label={props.label ?? 'Choose file'}
+            aria-invalid={!!(error || localError)}
+            aria-required={props.required}
+            aria-describedby={
+              [props.helperText && `${id}-helper`, (error || localError) && `${id}-error`]
+                .filter(Boolean)
+                .join(' ') || undefined
+            }
             type="file"
             accept={descriptor.accept?.join(',')}
             multiple={descriptor.multiple}
@@ -256,7 +270,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         )}
       </div>
       {(error || localError) && (
-        <p className="text-sm text-destructive" role="alert">
+        <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
           {error ?? localError}
         </p>
       )}

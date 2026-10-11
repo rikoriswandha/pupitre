@@ -9,7 +9,7 @@ const page = {
   kind: 'custom',
   title: 'Table interactions',
   breadcrumbs: [],
-  catalogVersion: '0.3',
+  catalogVersion: '1.0',
   actions: { header: [] },
   state: {},
   spec: {

@@ -18,6 +18,33 @@ export function WidgetChart({ descriptor, data }: Props) {
       <Suspense fallback={<div aria-busy="true" className="h-64 animate-pulse rounded bg-muted" />}>
         <ChartBody chartType={descriptor.chartType ?? 'line'} data={data} />
       </Suspense>
+      {data?.kind === 'chart' && (
+        <div className="sr-only">
+          <table>
+            <caption>{descriptor.heading ?? 'Chart'} data</caption>
+            <thead>
+              <tr>
+                <th scope="col">Period</th>
+                {data.datasets.map((dataset, index) => (
+                  <th scope="col" key={index}>
+                    {dataset.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.labels.map((label, index) => (
+                <tr key={index}>
+                  <th scope="row">{label}</th>
+                  {data.datasets.map((dataset, seriesIndex) => (
+                    <td key={seriesIndex}>{dataset.data[index] ?? 0}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   )
 }

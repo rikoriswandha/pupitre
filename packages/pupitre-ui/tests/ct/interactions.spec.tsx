@@ -153,8 +153,8 @@ test('FileUpload shows the uploaded image preview', async ({ mount, page }) => {
       'base64'
     ),
   })
-  await expect(view.getByRole('dialog', { name: 'Edit image' })).toBeVisible()
-  await view.getByRole('button', { name: 'Apply crop' }).click()
+  await expect(page.getByRole('dialog', { name: 'Edit image' })).toBeVisible()
+  await page.getByRole('button', { name: 'Apply crop' }).click()
   await expect(view.getByRole('link', { name: 'Preview' })).toHaveAttribute('href', '/file.png')
   await expect(view.locator('img')).toBeVisible()
 })

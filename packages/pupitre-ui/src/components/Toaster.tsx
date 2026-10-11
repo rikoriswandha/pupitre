@@ -50,7 +50,7 @@ export function Toaster({ toasts, dismiss }: ToasterProps) {
             </div>
             <button
               type="button"
-              aria-label="Dismiss notification"
+              aria-label={`Dismiss notification: ${toast.title}`}
               className="pointer-events-auto rounded p-1 text-muted-foreground hover:bg-muted"
               onClick={() => dismiss(toast.id)}
             >

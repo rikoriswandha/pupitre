@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Toggle as BaseToggle } from '@base-ui/react/toggle'
+import { ToggleGroup } from '@base-ui/react/toggle-group'
 import { Field, FieldError } from '../primitives/index.js'
 
 type Props = Infer<typeof components.ToggleButtons.props>
@@ -22,25 +23,13 @@ export function ToggleButtons({ props, bindings }: Runtime) {
   )
   const error = useFieldError(props.error, bindings?.value)
   const options = Array.isArray(props.options) ? props.options : []
-  const selected = (option: string | number) =>
-    props.multiple
-      ? Array.isArray(value) && value.some((item) => String(item) === String(option))
-      : String(value) === String(option)
-  const toggle = (option: string | number) => {
-    if (!props.multiple) {
-      setValue(options.find((entry) => String(entry.value) === String(option))?.value ?? option)
-      return
-    }
-    const selectedValues = Array.isArray(value) ? value : []
-    setValue(
-      selected(option)
-        ? selectedValues.filter((item) => String(item) !== String(option))
-        : [
-            ...selectedValues.filter((item) => String(item) !== String(option)),
-            options.find((entry) => String(entry.value) === String(option))?.value ?? option,
-          ]
-    )
-  }
+  const selectedValues = props.multiple
+    ? Array.isArray(value)
+      ? value.map(String)
+      : []
+    : value === '' || value === null || value === undefined
+      ? []
+      : [String(value)]
   const generatedId = useId()
   const id = bindings?.value
     ? bindings.value.split('/').slice(2).join('.')
@@ -67,11 +56,20 @@ export function ToggleButtons({ props, bindings }: Runtime) {
             {props.required && <span aria-hidden="true"> *</span>}
           </p>
         )}
-        <div
+        <ToggleGroup
           {...props.extraAttributes}
+          value={selectedValues}
+          multiple={props.multiple}
+          disabled={props.disabled || props.readOnly}
+          onValueChange={(next) => {
+            const canonical = next.map(
+              (item) => options.find((option) => String(option.value) === item)?.value ?? item
+            )
+            if (props.multiple) setValue(canonical)
+            else if (canonical[0] !== undefined) setValue(canonical[0])
+          }}
           role="group"
           aria-labelledby={props.label ? `${id}-label` : undefined}
-          aria-required={props.required}
           aria-describedby={describedBy}
           aria-invalid={!!error}
           className={`inline-flex w-fit overflow-hidden rounded-md border border-input ${props.grouped === false ? 'gap-2 border-0' : ''}`}
@@ -82,10 +80,7 @@ export function ToggleButtons({ props, bindings }: Runtime) {
               key={String(option.value)}
               type="button"
               value={String(option.value)}
-              pressed={selected(option.value)}
               disabled={props.disabled || props.readOnly || option.disabled}
-              onPressedChange={() => toggle(option.value)}
-              aria-required={props.required}
               aria-describedby={describedBy}
               aria-invalid={!!error}
               style={{ color: props.colors?.[String(option.value)] }}
@@ -99,7 +94,7 @@ export function ToggleButtons({ props, bindings }: Runtime) {
               {option.label}
             </BaseToggle>
           ))}
-        </div>
+        </ToggleGroup>
         {props.hint && (
           <p id={`${id}-hint`} className="text-sm text-muted-foreground">
             {props.hint}

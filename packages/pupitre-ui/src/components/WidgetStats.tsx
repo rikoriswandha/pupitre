@@ -21,7 +21,12 @@ function Sparkline({ values }: { values: number[] }) {
     )
     .join(' ')
   return (
-    <svg aria-label="Trend" role="img" viewBox="0 0 100 34" className="h-9 w-24 text-primary">
+    <svg
+      aria-label={`Trend: ${values.join(', ')}`}
+      role="img"
+      viewBox="0 0 100 34"
+      className="h-9 w-24 text-primary"
+    >
       <polyline
         points={points}
         fill="none"

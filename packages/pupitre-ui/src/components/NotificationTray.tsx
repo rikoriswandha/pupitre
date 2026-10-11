@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react'
+import { Popover } from '@base-ui/react/popover'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NotificationItem, PupitrePageProps } from '@rikology/pupitre/catalog'
 import { notificationListResponse as notificationListSchema } from '@rikology/pupitre/catalog'
 import { jsonFetch, t, useNotificationsPolling, useVisit } from '@rikology/pupitre-react'
@@ -14,29 +15,51 @@ export function NotificationTray({ notifications }: NotificationTrayProps) {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [unreadOverride, setUnreadOverride] = useState<{ source: number; value: number } | null>(
     null
   )
   const unreadProp = notifications?.unread ?? 0
   const unread = unreadOverride?.source === unreadProp ? unreadOverride.value : unreadProp
   const visit = useVisit()
-  useNotificationsPolling(notifications?.interval)
+  const inboxRequest = useRef<AbortController | null>(null)
+  useEffect(() => {
+    return () => {
+      inboxRequest.current?.abort()
+      inboxRequest.current = null
+    }
+  }, [notifications?.url])
 
   const fetchInbox = useCallback(async () => {
     if (!notifications) return
-    setLoading(true)
+    inboxRequest.current?.abort()
+    const controller = new AbortController()
+    inboxRequest.current = controller
+    setLoading(items.length === 0)
+    setRefreshing(items.length > 0)
     try {
-      const response = await jsonFetch(`${notifications.url}?page=1`)
+      const response = await jsonFetch(`${notifications.url}?page=1`, {
+        signal: controller.signal,
+      })
       if (!response.ok) return
       const result = notificationListSchema.safeParse(await response.json())
-      if (result.success) {
+      if (result.success && inboxRequest.current === controller && !controller.signal.aborted) {
         setItems(result.data.items)
         setUnreadOverride({ source: unreadProp, value: result.data.unread })
       }
+    } catch (error) {
+      if (!controller.signal.aborted) throw error
     } finally {
-      setLoading(false)
+      if (inboxRequest.current === controller) {
+        inboxRequest.current = null
+        setLoading(false)
+        setRefreshing(false)
+      }
     }
-  }, [notifications, unreadProp])
+  }, [items.length, notifications, unreadProp])
+  useNotificationsPolling(notifications?.interval, () => {
+    if (open) void fetchInbox()
+  })
 
   const markRead = useCallback(
     async (ids: string[] | 'all') => {
@@ -66,18 +89,23 @@ export function NotificationTray({ notifications }: NotificationTrayProps) {
 
   if (!notifications) return null
   return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="ghost"
+    <Popover.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen)
+        if (nextOpen) void fetchInbox()
+        else {
+          inboxRequest.current?.abort()
+          inboxRequest.current = null
+          setLoading(false)
+          setRefreshing(false)
+        }
+      }}
+    >
+      <Popover.Trigger
+        render={<Button type="button" variant="ghost" />}
         className="relative size-10 min-h-10 px-2"
         aria-label={t('Notifications')}
-        aria-expanded={open}
-        onClick={() => {
-          const nextOpen = !open
-          setOpen(nextOpen)
-          if (nextOpen) void fetchInbox()
-        }}
       >
         <Icon name="bell" className="size-5" />
         {unread > 0 && (
@@ -85,37 +113,37 @@ export function NotificationTray({ notifications }: NotificationTrayProps) {
             {unread > 99 ? '99+' : unread}
           </span>
         )}
-      </Button>
-      {open && (
-        <section
-          className="absolute right-0 z-50 mt-2 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg"
-          aria-label={t('Notifications')}
-        >
-          <header className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold">{t('Notifications')}</h2>
-            <Button
-              type="button"
-              variant="ghost"
-              className="min-h-8 px-2 text-xs"
-              disabled={!unread}
-              onClick={() => void markRead('all')}
-            >
-              {t('Mark all read')}
-            </Button>
-          </header>
-          <div className="max-h-96 overflow-y-auto">
-            {loading && (
-              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-                {t('Loading notifications…')}
-              </p>
-            )}
-            {!loading && items.length === 0 && (
-              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-                {t('You’re all caught up.')}
-              </p>
-            )}
-            {!loading &&
-              items.map((item) => (
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="end" sideOffset={8} className="z-50">
+          <Popover.Popup
+            className="w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-lg outline-none"
+            aria-label={t('Notifications')}
+          >
+            <header className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h2 className="text-sm font-semibold">{t('Notifications')}</h2>
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-8 px-2 text-xs"
+                disabled={!unread}
+                onClick={() => void markRead('all')}
+              >
+                {t('Mark all read')}
+              </Button>
+            </header>
+            <div className="max-h-96 overflow-y-auto" aria-busy={loading || refreshing}>
+              {loading && (
+                <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                  {t('Loading notifications…')}
+                </p>
+              )}
+              {!loading && items.length === 0 && (
+                <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  {t('You’re all caught up.')}
+                </p>
+              )}
+              {items.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-start gap-3 border-b border-border/70 px-4 py-3 last:border-0"
@@ -177,9 +205,10 @@ export function NotificationTray({ notifications }: NotificationTrayProps) {
                   </div>
                 </div>
               ))}
-          </div>
-        </section>
-      )}
-    </div>
+            </div>
+          </Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
   )
 }

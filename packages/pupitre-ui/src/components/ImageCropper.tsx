@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Cropper from 'react-easy-crop'
+import { Modal } from './Modal.js'
 
 type Crop = { x: number; y: number }
 type Area = { x: number; y: number; width: number; height: number }
@@ -100,22 +101,8 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
   const aspectRatios = ratios?.length ? ratios : [null]
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Edit image"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 1000,
-        display: 'grid',
-        placeItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-        padding: '1rem',
-      }}
-    >
+    <Modal open onClose={onCancel} heading="Edit image" width="2xl">
       <div className="max-h-[calc(100vh-2rem)] w-[min(100%,42rem)] overflow-y-auto rounded-xl border border-border bg-background p-4 text-foreground shadow-xl">
-        <h2 className="text-lg font-semibold">Edit image</h2>
         <div
           className="relative h-80 w-full bg-black"
           style={{ position: 'relative', height: '20rem', width: '100%', backgroundColor: '#000' }}
@@ -180,7 +167,7 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 

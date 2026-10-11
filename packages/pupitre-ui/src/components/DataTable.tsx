@@ -11,6 +11,7 @@ import type {
   TableRow,
 } from '@rikology/pupitre/catalog'
 import { getRouter, jsonFetch, t, useRunAction, useTable } from '@rikology/pupitre-react'
+import { useTableRealtime } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
 import { DataTableEditableCell } from './DataTableEditableCell.js'
@@ -197,6 +198,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   if (column.type === 'toggle')
     return (
       <span
+        role="img"
         aria-label={raw ? 'Enabled' : 'Disabled'}
         className={raw ? 'text-primary' : 'text-muted-foreground'}
       >
@@ -209,7 +211,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
         ? (column.props.icons as Record<string, string>)
         : undefined
     return (
-      <span aria-label={text} title={text}>
+      <span role="img" aria-label={text} title={text}>
         {icons?.[text] ?? text}
       </span>
     )
@@ -280,6 +282,7 @@ export function DataTable({
   const descriptor = props.descriptor as TableDescriptor & { striped?: boolean }
   const tableState = useTable(descriptor, fallbackData)
   const runAction = useRunAction()
+  const realtime = useTableRealtime(descriptor)
   const tableData =
     tableState.data && typeof tableState.data === 'object' && 'rows' in tableState.data
       ? (tableState.data as TableData)
@@ -332,7 +335,8 @@ export function DataTable({
     }
   }, [descriptor.id, visibility, visibilityLoaded])
   useEffect(() => {
-    if (!descriptor.poll || descriptor.poll <= 0) return
+    if (realtime || !descriptor.poll || descriptor.poll <= 0 || typeof window === 'undefined')
+      return
     const timer = window.setInterval(() => {
       const modalOpen = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).some(
         (dialog) => {
@@ -348,7 +352,7 @@ export function DataTable({
       getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
     }, descriptor.poll)
     return () => window.clearInterval(timer)
-  }, [descriptor.poll, descriptor.dataProp])
+  }, [descriptor.poll, descriptor.dataProp, realtime])
 
   const querySearch = tableState.query.q
   const searchTable = tableState.search
@@ -1068,6 +1072,9 @@ export function DataTable({
                       type="checkbox"
                       aria-label="Select all rows"
                       checked={allSelected}
+                      ref={(input) => {
+                        if (input) input.indeterminate = selected.length > 0 && !allSelected
+                      }}
                       onChange={(event) =>
                         tableState.setSelected(
                           event.currentTarget.checked ? selectableRows.map((row) => row.key) : []
@@ -1081,6 +1088,15 @@ export function DataTable({
                   return (
                     <th
                       key={header.id}
+                      aria-sort={
+                        tableState.query.sort === header.column.id
+                          ? 'ascending'
+                          : tableState.query.sort === `-${header.column.id}`
+                            ? 'descending'
+                            : header.column.getCanSort()
+                              ? 'none'
+                              : undefined
+                      }
                       className={`px-3 py-2 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
                       style={{ width: column?.width }}
                     >

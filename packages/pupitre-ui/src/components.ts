@@ -21,6 +21,7 @@ import {
   WidgetStatsRenderer,
   WidgetChartRenderer,
   WidgetTableRenderer,
+  WidgetTimelineRenderer,
 } from './components/WidgetCatalogAdapters.js'
 import { Date } from './components/Date.js'
 import { DateTime } from './components/DateTime.js'
@@ -112,6 +113,7 @@ export const components = {
   'Widget.Stats': WidgetStatsRenderer,
   'Widget.Chart': WidgetChartRenderer,
   'Widget.Table': WidgetTableRenderer,
+  'Widget.Timeline': WidgetTimelineRenderer,
   RelationManager,
   ActionBar,
   Infolist,
@@ -194,6 +196,7 @@ export {
   ImportModal,
   WidgetGrid,
 }
+export { WidgetTimeline } from './components/WidgetTimeline.js'
 export {
   ViewRegistryProvider,
   ViewContext,

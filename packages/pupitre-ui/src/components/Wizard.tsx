@@ -99,8 +99,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
                 }}
               >
                 {step.icon && <Icon name={step.icon} className="mr-2 inline size-4" />}
-                <span className="mr-2">{index + 1}</span>
-                {step.label}
+                <span className="mr-2">{index + 1}</span> {step.label}
               </button>
             </li>
           ))}

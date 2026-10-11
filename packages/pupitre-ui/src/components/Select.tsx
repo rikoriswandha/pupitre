@@ -166,6 +166,7 @@ export function Select({ props, bindings }: Runtime) {
               )}
             <div
               id={props.searchable ? undefined : id}
+              aria-multiselectable={props.multiple || undefined}
               role="listbox"
               aria-labelledby={
                 props.label !== null && props.label !== undefined ? `${id}-label` : undefined
@@ -175,6 +176,26 @@ export function Select({ props, bindings }: Runtime) {
               aria-required={props.required}
               aria-describedby={describedBy}
               aria-disabled={props.disabled || props.readOnly}
+              onKeyDown={(event) => {
+                const list = event.currentTarget
+                const choices = Array.from(
+                  list.querySelectorAll<HTMLButtonElement>('[role="option"]:not(:disabled)')
+                )
+                const index = choices.indexOf(document.activeElement as HTMLButtonElement)
+                const next =
+                  event.key === 'Home'
+                    ? choices[0]
+                    : event.key === 'End'
+                      ? choices[choices.length - 1]
+                      : event.key === 'ArrowDown'
+                        ? choices[(index + 1) % choices.length]
+                        : event.key === 'ArrowUp'
+                          ? choices[(index - 1 + choices.length) % choices.length]
+                          : undefined
+                if (!next) return
+                event.preventDefault()
+                next.focus()
+              }}
               className="max-h-56 overflow-auto rounded-md border border-border p-1"
             >
               {options.map((option) => (
@@ -186,6 +207,11 @@ export function Select({ props, bindings }: Runtime) {
                     Array.isArray(value)
                       ? value.some((item) => String(item) === String(option.value))
                       : String(value) === String(option.value)
+                  }
+                  tabIndex={
+                    options.find((candidate) => !candidate.disabled)?.value === option.value
+                      ? 0
+                      : -1
                   }
                   disabled={props.disabled || props.readOnly || option.disabled}
                   onClick={() => selectOption(option)}
@@ -199,18 +225,18 @@ export function Select({ props, bindings }: Runtime) {
                   )}
                 </button>
               ))}
-              {asyncOptions.loading && <span role="status">{t('Loading options')}</span>}
-              {asyncOptions.error && <span role="alert">{asyncOptions.error}</span>}
-              {asyncOptions.hasMore && (
-                <button
-                  type="button"
-                  onClick={asyncOptions.loadMore}
-                  disabled={props.disabled || props.readOnly || asyncOptions.loading}
-                >
-                  {t('Load more')}
-                </button>
-              )}
             </div>
+            {asyncOptions.loading && <span role="status">{t('Loading options')}</span>}
+            {asyncOptions.error && <span role="alert">{asyncOptions.error}</span>}
+            {asyncOptions.hasMore && (
+              <button
+                type="button"
+                onClick={asyncOptions.loadMore}
+                disabled={props.disabled || props.readOnly || asyncOptions.loading}
+              >
+                {t('Load more')}
+              </button>
+            )}
             {createAction && (
               <button
                 type="button"

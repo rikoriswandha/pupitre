@@ -7,6 +7,7 @@ import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
 import { WidgetChart } from './WidgetChart.js'
 import { WidgetStats } from './WidgetStats.js'
 import { WidgetTable } from './WidgetTable.js'
+import { WidgetTimeline } from './WidgetTimeline.js'
 
 type Props = {
   props: { descriptor: WidgetDescriptor; data?: unknown }
@@ -36,4 +37,9 @@ export function WidgetChartRenderer({ props }: Props) {
 export function WidgetTableRenderer({ props }: Props) {
   const widget = widgetParts(props)
   return <WidgetTable {...widget} />
+}
+
+export function WidgetTimelineRenderer({ props }: Props) {
+  const widget = widgetParts(props)
+  return <WidgetTimeline {...widget} />
 }

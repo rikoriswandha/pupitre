@@ -1,4 +1,4 @@
-import { createContext, type ReactNode } from 'react'
+import { createContext, useId, type ReactNode } from 'react'
 import { useBoundValue } from '@rikology/pupitre-react'
 
 type TabContextValue = { active: string; select: (key: string) => void; id: string }
@@ -21,9 +21,11 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
           typeof tab.label === 'string'
       )
     : []
-  const initial = typeof props.active === 'string' ? props.active : (tabs[0]?.key ?? '')
+  const initial =
+    typeof props.active === 'string' ? props.active : (tabs.find((tab) => !tab.disabled)?.key ?? '')
   const [active, setActive] = useBoundValue(initial, bindings?.active)
-  const id = typeof props.id === 'string' ? props.id : 'tabs'
+  const generatedId = useId()
+  const id = typeof props.id === 'string' ? props.id : generatedId
 
   return (
     <TabContext.Provider value={{ active: active ?? initial, select: setActive, id }}>
@@ -42,6 +44,25 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
               aria-selected={(active ?? initial) === tab.key}
               aria-controls={`${id}-${tab.key}-panel`}
               disabled={tab.disabled === true}
+              tabIndex={(active ?? initial) === tab.key ? 0 : -1}
+              onKeyDown={(event) => {
+                const enabled = tabs.filter((candidate) => !candidate.disabled)
+                const index = enabled.findIndex((candidate) => candidate.key === tab.key)
+                const next =
+                  event.key === 'Home'
+                    ? enabled[0]
+                    : event.key === 'End'
+                      ? enabled[enabled.length - 1]
+                      : event.key === 'ArrowRight'
+                        ? enabled[(index + 1) % enabled.length]
+                        : event.key === 'ArrowLeft'
+                          ? enabled[(index - 1 + enabled.length) % enabled.length]
+                          : undefined
+                if (!next) return
+                event.preventDefault()
+                setActive(next.key)
+                document.getElementById(`${id}-${next.key}-tab`)?.focus()
+              }}
               className="border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-selected:border-primary aria-selected:text-foreground disabled:opacity-50"
               onClick={() => setActive(tab.key)}
             >

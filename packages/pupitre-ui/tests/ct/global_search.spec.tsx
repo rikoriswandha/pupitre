@@ -6,6 +6,7 @@ test('opens with the configured shortcut, groups results, and visits a selection
   page,
 }) => {
   const story = await mount(<GlobalSearchStory />)
+  await page.getByRole('button', { name: 'Global search', exact: true }).focus()
   await page.keyboard.press('Control+k')
   await expect(page.getByRole('dialog', { name: 'Global search' })).toBeVisible()
   await page.getByRole('combobox', { name: 'Search resources' }).fill('field')

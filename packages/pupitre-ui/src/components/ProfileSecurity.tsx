@@ -1,6 +1,6 @@
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 import { t } from '@rikology/pupitre-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 
 type Passkey = { id: string | number; name: string | null }
 export type ProfileSecurityProps = {
@@ -31,6 +31,10 @@ export function ProfileSecurity({
   mfaEnabled: initialMfaEnabled,
   passkeysEnabled,
 }: ProfileSecurityProps) {
+  const id = useId()
+  const mfaHeadingId = `${id}-mfa-heading`
+  const passkeysHeadingId = `${id}-passkeys-heading`
+  const passkeyNameId = `${id}-passkey-name`
   const [mfaEnabled, setMfaEnabled] = useState(initialMfaEnabled)
   const [enrollment, setEnrollment] = useState<{ secret: string; qrCode: string }>()
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>()
@@ -97,8 +101,8 @@ export function ProfileSecurity({
           {error}
         </p>
       )}
-      <section className="space-y-3" aria-labelledby="mfa-heading">
-        <h3 id="mfa-heading" className="font-medium">
+      <section className="space-y-3" aria-labelledby={mfaHeadingId}>
+        <h3 id={mfaHeadingId} className="font-medium">
           {t('Authenticator app')}
         </h3>
         {!mfaEnabled && !enrollment && (
@@ -236,16 +240,16 @@ export function ProfileSecurity({
         )}
       </section>
       {passkeysEnabled && (
-        <section className="space-y-3 border-t pt-5" aria-labelledby="passkeys-heading">
-          <h3 id="passkeys-heading" className="font-medium">
+        <section className="space-y-3 border-t pt-5" aria-labelledby={passkeysHeadingId}>
+          <h3 id={passkeysHeadingId} className="font-medium">
             {t('Passkeys')}
           </h3>
           <div className="flex flex-wrap gap-2">
-            <label className="sr-only" htmlFor="passkey-name">
+            <label className="sr-only" htmlFor={passkeyNameId}>
               {t('Passkey name')}
             </label>
             <input
-              id="passkey-name"
+              id={passkeyNameId}
               className="rounded-md border px-3 py-2 text-sm"
               placeholder={t('Passkey name')}
               required

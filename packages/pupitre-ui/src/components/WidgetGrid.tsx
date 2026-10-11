@@ -4,6 +4,7 @@ import type { WidgetData, WidgetDescriptor, WidgetFilter } from '@rikology/pupit
 import { WidgetChart } from './WidgetChart.js'
 import { WidgetStats } from './WidgetStats.js'
 import { WidgetTable } from './WidgetTable.js'
+import { WidgetTimeline } from './WidgetTimeline.js'
 
 type CustomWidget = ComponentType<{ descriptor: WidgetDescriptor; data: unknown }>
 type Props = {
@@ -115,6 +116,9 @@ export function WidgetGrid({
             {widget.kind === 'stats' ? <WidgetStats descriptor={widget} data={value} /> : null}
             {widget.kind === 'chart' ? <WidgetChart descriptor={widget} data={value} /> : null}
             {widget.kind === 'table' ? <WidgetTable descriptor={widget} data={value} /> : null}
+            {widget.kind === 'timeline' ? (
+              <WidgetTimeline descriptor={widget} data={value} />
+            ) : null}
             {widget.kind === 'component' && Custom ? (
               <Custom descriptor={widget} data={widgetData[widget.dataProp]} />
             ) : null}

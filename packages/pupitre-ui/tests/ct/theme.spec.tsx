@@ -35,12 +35,16 @@ test('mobile navigation opens at 375px and density does not inflate checkbox con
 }) => {
   await page.setViewportSize({ width: 375, height: 812 })
   const view = await mount(<ThemeStory />)
-  const toggle = view.getByRole('button', { name: 'Open navigation' })
+  const toggle = view.getByRole('button', { name: 'Open navigation', includeHidden: true })
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
-  await expect(toggle).toHaveAttribute('aria-controls', 'pupitre-mobile-navigation')
+  await expect(toggle).toHaveAttribute('aria-haspopup', 'dialog')
   await toggle.click()
   await expect(toggle).toHaveAttribute('aria-expanded', 'true')
-  await expect(view.locator('#pupitre-mobile-navigation')).toBeVisible()
+  const navigation = page.getByRole('dialog', { name: 'Navigation', exact: true })
+  await expect(navigation).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-controls', (await navigation.getAttribute('id'))!)
+  await navigation.getByRole('button', { name: 'Close navigation' }).click()
+  await expect(navigation).toBeHidden()
   await expect(
     Number.parseFloat(
       await view

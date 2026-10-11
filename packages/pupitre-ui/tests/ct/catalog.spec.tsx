@@ -20,14 +20,20 @@ const fixtures = [
   'Color',
   'Tags',
   'KeyValue',
+  'MarkdownEditor',
+  'CodeEditor',
   'RichEditor',
   'FileUpload',
+  'Builder',
+  'BuilderItem',
   'Repeater',
   'RepeaterItem',
   'Form',
   'Grid',
   'Section',
   'Fieldset',
+  'Wizard',
+  'Step',
   'Tabs',
   'Tab',
   'Group',
@@ -39,6 +45,10 @@ const fixtures = [
   'View',
   'Fragment',
   'DataTable',
+  'Widget.Stats',
+  'Widget.Chart',
+  'Widget.Table',
+  'Widget.Timeline',
   'RelationManager',
   'ActionBar',
   'Infolist',
@@ -54,11 +64,13 @@ const fixtures = [
 
 test.describe('catalog fixtures', () => {
   for (const name of fixtures) {
-    test(`${name} renders with no critical accessibility violations`, async ({ mount, page }) => {
+    test(`${name} renders without WCAG 2.1 A/AA violations`, async ({ mount, page }) => {
       const view = await mount(<FixtureStory name={name} />)
       await expect(view).toBeVisible()
-      const results = await new AxeBuilder({ page: page as never }).analyze()
-      expect(results.violations.filter((violation) => violation.impact === 'critical')).toEqual([])
+      const results = await new AxeBuilder({ page: page as never })
+        .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+        .analyze()
+      expect(results.violations).toEqual([])
       await view.unmount()
     })
   }

@@ -52,7 +52,7 @@ export function Checkbox({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className="mt-0.5 grid size-4 place-items-center rounded border border-input data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
+            className="mt-0.5 grid size-6 place-items-center rounded border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
           >
             <BaseCheckbox.Indicator className="text-xs">✓</BaseCheckbox.Indicator>
           </BaseCheckbox.Root>

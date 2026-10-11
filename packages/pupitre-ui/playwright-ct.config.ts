@@ -1,5 +1,6 @@
 /* eslint-disable @unicorn/filename-case -- Playwright's config path is explicit in the test script. */
 import { defineConfig } from '@playwright/experimental-ct-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   testDir: './tests/ct',
@@ -11,6 +12,7 @@ export default defineConfig({
     ctPort: Number(process.env.CT_PORT ?? 3100),
     ...(process.env.CT_CACHE_DIR ? { ctCacheDir: process.env.CT_CACHE_DIR } : {}),
     ctViteConfig: {
+      plugins: [tailwindcss()],
       resolve: {
         conditions: ['@rikology/source', 'module', 'browser', 'development|production'],
         dedupe: ['react', 'react-dom'],

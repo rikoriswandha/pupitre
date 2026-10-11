@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased (1.0.0, milestone M4)
+
+### Added
+- Registry (WP40): deterministic shadcn registry generated from UI sources, versioned npm/import-graph dependencies, preserved relative targets, public `/r/*.json` payloads and index, CI drift check, and copy-ability tests.
+- Audit (WP38): `Widget.Timeline` catalog renderer and exported `WidgetTimeline` display server-formatted activity times, actors, icons/colors, structured field changes, and empty states; `WidgetGrid` supports timeline spans and deferred data.
+- Realtime (WP39): DataTable and NotificationTray replace polling with configured channel subscriptions, retain polling fallback, and clean up subscriptions and pending reloads on unmount.
+- Realtime inbox (WP39): open notification trays refresh items on user-channel pings through the existing single subscription; superseded requests are aborted and late responses cannot overwrite the current inbox.
+- Accessibility (WP42): strict WCAG 2.1 A/AA axe coverage across registry fixtures, shell/account components, dialogs and interactive popup/editor/table states, plus an example auth/CRUD/settings/security audit.
+
+### Fixed
+- Host styling (M4): namespace the example's card/focus tokens so public-site defaults cannot override Pupitre light/dark surfaces and keyboard focus.
+- Accessibility (M4): move the panel toolbar banner outside the main landmark and cover shell landmark best practices.
+- Realtime inbox (M4): retain existing notification items and keyboard focus during background ping refreshes.
+- Accessibility (WP42): use an opaque auth canvas and strengthen light muted-text contrast so authentication links and muted-surface text meet AA in the built host application.
+- Accessibility (WP42): isolate CheckboxList option field scopes and labels; hide duplicate native inputs correctly, preserve required/error descriptions, and provide 24px checkbox targets with visible keyboard focus.
+- Accessibility (WP42): fall back to field names for unlabelled Text controls, repair standalone/nested infolist description-list semantics, and remove invalid ARIA from decorative hint/color content.
+- Accessibility (WP42): trap and restore mobile navigation/modal/search focus, dismiss menus with Escape, expose skip/landmark structure, uniquely label repeated profile controls and toast dismissal actions, and announce empty search states without invalid empty listbox roles.
+- Accessibility (WP42): add roving ToggleGroup focus, separately named Radio options, sortable/mixed-selection table semantics, labelled upload/editor controls, editor loading status, chart data alternatives, valid icon/toggle table cell roles, and AA destructive-text contrast on hover.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

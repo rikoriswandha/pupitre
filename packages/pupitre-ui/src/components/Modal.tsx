@@ -23,7 +23,7 @@ const widthValues = {
 export function Modal({
   open,
   onClose,
-  heading,
+  heading = 'Dialog',
   description,
   width = 'md',
   slideOver,

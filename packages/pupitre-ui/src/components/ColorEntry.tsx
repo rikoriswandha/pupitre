@@ -8,7 +8,7 @@ export function ColorEntry({ props = {} }: { props?: EntryProps }) {
       {color ? (
         <span className="inline-flex items-center gap-2">
           <span
-            aria-label={`Color ${color}`}
+            aria-hidden="true"
             className="size-5 rounded border border-border"
             style={{ backgroundColor: color }}
           />

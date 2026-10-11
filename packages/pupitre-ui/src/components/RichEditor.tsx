@@ -1,4 +1,4 @@
-import { lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Suspense } from 'react'
 import type { ReactNode } from 'react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
@@ -34,6 +34,9 @@ type LazyEditorProps = {
   uploadImage: (file: File) => Promise<UploadResponse>
   disabled?: boolean
   readOnly?: boolean
+  label?: string
+  describedBy?: string
+  invalid: boolean
 }
 
 const TiptapEditor = lazy(async () => {
@@ -56,6 +59,9 @@ const TiptapEditor = lazy(async () => {
     uploadImage: uploadFile,
     disabled,
     readOnly,
+    label,
+    describedBy,
+    invalid,
   }: LazyEditorProps) {
     const imageInput = useRef<HTMLInputElement>(null)
     const [uploadingImage, setUploadingImage] = useState(false)
@@ -71,6 +77,17 @@ const TiptapEditor = lazy(async () => {
       editable: !disabled && !readOnly,
       onUpdate: ({ editor: current }) => onChange(current.getHTML()),
       immediatelyRender: false,
+      editorProps: {
+        attributes: {
+          'role': 'textbox',
+          'aria-label': label ?? 'Rich text editor',
+          'aria-multiline': 'true',
+          'aria-invalid': String(invalid),
+          'aria-describedby': describedBy ?? '',
+          'aria-readonly': String(!!readOnly),
+          'aria-disabled': String(!!disabled),
+        },
+      },
     })
     useEffect(() => {
       if (editor && editor.getHTML() !== value)
@@ -172,6 +189,25 @@ const TiptapEditor = lazy(async () => {
             className="flex flex-wrap gap-1 border-b p-1"
             role="toolbar"
             aria-label="Text formatting"
+            onKeyDown={(event) => {
+              const buttons = Array.from(
+                event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+              )
+              const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+              const next =
+                event.key === 'Home'
+                  ? buttons[0]
+                  : event.key === 'End'
+                    ? buttons[buttons.length - 1]
+                    : event.key === 'ArrowRight'
+                      ? buttons[(index + 1) % buttons.length]
+                      : event.key === 'ArrowLeft'
+                        ? buttons[(index - 1 + buttons.length) % buttons.length]
+                        : undefined
+              if (!next) return
+              event.preventDefault()
+              next.focus()
+            }}
           >
             {actions.map((control) => (
               <button
@@ -233,6 +269,11 @@ const TiptapEditor = lazy(async () => {
 export function RichEditor({ props, emit, bindings, children, loading = false }: RichEditorProps) {
   const [value, setValue] = useBoundValue(props.value, bindings?.value)
   const error = useFieldError(props.error, bindings?.value)
+  const generatedId = useId()
+  const describedBy =
+    [props.helperText && `${generatedId}-helper`, error && `${generatedId}-error`]
+      .filter(Boolean)
+      .join(' ') || undefined
   const uploadApi = useUpload({
     name: props.name ?? 'richEditor',
     uploadUrl: props.uploadUrl ?? '',
@@ -266,13 +307,18 @@ export function RichEditor({ props, emit, bindings, children, loading = false }:
   return (
     <div className="space-y-2" aria-busy={loading}>
       {props.label && <label className="block text-sm font-medium">{props.label}</label>}
-      {props.helperText && <p className="text-sm text-muted-foreground">{props.helperText}</p>}
+      {props.helperText && (
+        <p id={`${generatedId}-helper`} className="text-sm text-muted-foreground">
+          {props.helperText}
+        </p>
+      )}
       <Suspense
         fallback={
           <div
             className="rounded-md border bg-muted/20"
             style={{ minHeight: props.minHeight ?? 180 }}
             aria-label="Loading editor"
+            role="status"
           />
         }
       >
@@ -286,10 +332,13 @@ export function RichEditor({ props, emit, bindings, children, loading = false }:
           maxHeight={props.maxHeight}
           disabled={props.disabled || loading}
           readOnly={props.readOnly}
+          label={props.label ?? undefined}
+          describedBy={describedBy}
+          invalid={!!error}
         />
       </Suspense>
       {error && (
-        <p className="text-sm text-destructive" role="alert">
+        <p id={`${generatedId}-error`} className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

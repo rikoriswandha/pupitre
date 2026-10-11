@@ -148,6 +148,8 @@ function MarkdownInput({
           ref={imageInput}
           className="sr-only"
           type="file"
+          aria-label="Choose an image to upload"
+          disabled={!uploadUrl || disabled || readOnly}
           accept="image/*"
           onChange={(event) => {
             void upload(event.currentTarget.files?.[0])
@@ -245,6 +247,7 @@ export function MarkdownEditor({ props, emit, bindings, children, loading = fals
           <div
             className="h-64 rounded-md border bg-muted/20"
             aria-label="Loading Markdown editor"
+            role="status"
           />
         }
       >

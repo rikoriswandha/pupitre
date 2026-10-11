@@ -4,6 +4,7 @@ import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Radio as BaseRadio } from '@base-ui/react/radio'
 import { RadioGroup } from '@base-ui/react/radio-group'
+import { Field as BaseField } from '@base-ui/react/field'
 import { Field, FieldError, Label } from '../primitives/index.js'
 
 type Props = Infer<typeof components.Radio.props>
@@ -43,12 +44,11 @@ export function Radio({ props, bindings }: Runtime) {
         <fieldset
           className="grid gap-2"
           disabled={props.disabled}
-          aria-required={props.required}
           aria-describedby={describedBy}
           aria-invalid={!!error}
         >
           {props.label !== null && props.label !== undefined && (
-            <legend className="text-sm font-medium">
+            <legend id={`${id}-label`} className="text-sm font-medium">
               {props.label}
               {props.required && <span aria-hidden="true"> *</span>}
             </legend>
@@ -63,6 +63,7 @@ export function Radio({ props, bindings }: Runtime) {
             required={props.required}
             disabled={props.disabled}
             readOnly={props.readOnly}
+            aria-labelledby={props.label ? `${id}-label` : undefined}
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
@@ -72,24 +73,29 @@ export function Radio({ props, bindings }: Runtime) {
               const optionId = `${id}-${String(option.value)}`
               const description = props.descriptions?.[String(option.value)] ?? option.description
               return (
-                <div key={String(option.value)} className="flex items-start gap-2 text-sm">
+                <BaseField.Item
+                  key={String(option.value)}
+                  className="flex min-h-6 items-start gap-2 text-sm"
+                >
                   <BaseRadio.Root
                     {...props.extraAttributes}
                     id={optionId}
+                    aria-labelledby={`${optionId}-label`}
                     value={String(option.value)}
                     disabled={option.disabled || props.disabled || props.readOnly}
-                    aria-required={props.required}
                     aria-describedby={describedBy}
                     aria-invalid={!!error}
-                    className="mt-0.5 grid size-4 place-items-center rounded-full border border-input data-[checked]:border-primary"
+                    className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary"
                   >
                     <BaseRadio.Indicator className="size-2 rounded-full bg-primary" />
                   </BaseRadio.Root>
                   <div>
-                    <Label htmlFor={optionId}>{option.label}</Label>
+                    <Label id={`${optionId}-label`} htmlFor={optionId}>
+                      {option.label}
+                    </Label>
                     {description && <p className="text-muted-foreground">{description}</p>}
                   </div>
-                </div>
+                </BaseField.Item>
               )
             })}
           </RadioGroup>

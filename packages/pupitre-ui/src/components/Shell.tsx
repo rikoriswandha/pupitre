@@ -1,5 +1,6 @@
 import type { ShellProps } from '@rikology/pupitre-react'
-import { useState } from 'react'
+import { Dialog } from '@base-ui/react/dialog'
+import { useId, useState } from 'react'
 import { Icon } from '../icons.js'
 import { ActionButton } from './ActionButton.js'
 import { GlobalSearch } from './GlobalSearch.js'
@@ -27,6 +28,7 @@ export function Shell({
   notifications,
   children,
 }: ShellProps) {
+  const mainId = useId()
   const [mobileOpen, setMobileOpen] = useState(false)
   const style = usePanelTheme(panel)
   const topNav = panel.theme?.sidebar === 'top-nav'
@@ -74,10 +76,15 @@ export function Shell({
       data-sidebar={panel.theme?.sidebar ?? 'expanded'}
       style={style}
     >
+      <a
+        href={`#${mainId}`}
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:outline-2 focus:outline-ring"
+      >
+        Skip to content
+      </a>
       {!topNav && (
         <aside
-          id="pupitre-mobile-navigation"
-          className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full'} fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-border bg-background p-4 transition-transform duration-200 ease-out md:static md:translate-x-0 ${collapsed ? 'md:w-16' : 'md:w-auto'}`}
+          className={`hidden flex-col border-r border-border bg-background p-4 md:flex ${collapsed ? 'md:w-16' : 'md:w-auto'}`}
         >
           <TenantSwitcher tenant={tenant} tenants={tenants} />
           {panel.theme?.sidebarCollapsibleOnDesktop && (
@@ -113,22 +120,40 @@ export function Shell({
         </header>
       )}
       {!topNav && (
-        <button
-          type="button"
-          aria-label="Open navigation"
-          aria-expanded={mobileOpen}
-          aria-controls="pupitre-mobile-navigation"
-          className="fixed left-4 top-4 z-40 rounded-md border border-border bg-background p-2 md:hidden"
-          onClick={() => setMobileOpen((open) => !open)}
-        >
-          <Icon name="menu" className="size-4" />
-        </button>
+        <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
+          <Dialog.Trigger
+            aria-label="Open navigation"
+            className="fixed left-4 top-4 z-40 rounded-md border border-border bg-background p-2 md:hidden"
+          >
+            <Icon name="menu" className="size-4" />
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30" />
+            <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background p-4 text-foreground outline-none">
+              <Dialog.Title className="sr-only">Navigation</Dialog.Title>
+              <Dialog.Close aria-label="Close navigation" className="mb-3 self-end rounded-md p-2">
+                <Icon name="x" className="size-4" />
+              </Dialog.Close>
+              <TenantSwitcher tenant={tenant} tenants={tenants} />
+              <ShellSidebar
+                panel={panel}
+                nav={nav}
+                currentUrl={currentUrl}
+                onNavigate={() => setMobileOpen(false)}
+              />
+            </Dialog.Popup>
+          </Dialog.Portal>
+        </Dialog.Root>
       )}
-      <main
+      <div
         className="mx-auto min-w-0 w-full px-4 pb-10 pt-16 md:px-8 md:pt-6"
         style={{ maxWidth: maxContentWidth }}
       >
-        <div className="mb-5 flex min-h-10 items-center justify-between gap-4">
+        <header
+          role={topNav ? 'region' : undefined}
+          aria-label="Panel toolbar"
+          className="mb-5 flex min-h-10 items-center justify-between gap-4"
+        >
           {breadcrumbs.length > 0 ? (
             <nav
               aria-label="Breadcrumb"
@@ -160,42 +185,36 @@ export function Shell({
             <NotificationTray notifications={notifications} />
             <UserMenu panel={panel} user={user} />
           </div>
-        </div>
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <div className="flex flex-wrap gap-2">
-            {headerActions.map((action) => (
-              <ActionButton key={action.name} action={action} />
-            ))}
-          </div>
         </header>
-        {subNavigation.length > 0 && (
-          <nav
-            aria-label="Record navigation"
-            className="mb-5 flex gap-1 overflow-x-auto border-b border-border"
-          >
-            {subNavigation.map((item) => (
-              <a
-                key={item.key}
-                href={item.url}
-                aria-current={item.active ? 'page' : undefined}
-                className="shrink-0 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-        )}
-        {children}
-      </main>
-      {mobileOpen && (
-        <button
-          type="button"
-          aria-label="Close navigation overlay"
-          className="fixed inset-0 z-20 bg-black/30 md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+        <main id={mainId} tabIndex={-1} style={{ maxWidth: maxContentWidth }}>
+          <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+            <div className="flex flex-wrap gap-2">
+              {headerActions.map((action) => (
+                <ActionButton key={action.name} action={action} />
+              ))}
+            </div>
+          </header>
+          {subNavigation.length > 0 && (
+            <nav
+              aria-label="Record navigation"
+              className="mb-5 flex gap-1 overflow-x-auto border-b border-border"
+            >
+              {subNavigation.map((item) => (
+                <a
+                  key={item.key}
+                  href={item.url}
+                  aria-current={item.active ? 'page' : undefined}
+                  className="shrink-0 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          )}
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 
@@ -24,6 +24,8 @@ type Props = {
 type EditorProps = {
   value: string
   label?: string
+  describedBy?: string
+  invalid: boolean
   language: Language
   lineNumbers: boolean
   minHeight: number
@@ -47,6 +49,8 @@ const Editor = lazy(async () => {
   function CodeMirrorEditor({
     value,
     label,
+    describedBy,
+    invalid,
     language,
     lineNumbers: showLineNumbers,
     minHeight,
@@ -68,9 +72,11 @@ const Editor = lazy(async () => {
           'aria-label': label ?? 'Code editor',
           'aria-readonly': String(readOnly),
           'aria-disabled': String(disabled),
+          'aria-describedby': describedBy ?? '',
+          'aria-invalid': String(invalid),
         }),
       ],
-      [disabled, readOnly, label]
+      [disabled, readOnly, label, describedBy, invalid]
     )
     const accessRef = useRef(accessExtensions)
     useEffect(() => {
@@ -180,6 +186,10 @@ const Editor = lazy(async () => {
 export function CodeEditor({ props, emit, bindings, children, loading = false }: Props) {
   const [value, setValue] = useBoundValue(props.value, bindings?.value)
   const error = useFieldError(props.error, bindings?.value)
+  const id = useId()
+  const describedBy =
+    [props.helperText && `${id}-helper`, error && `${id}-error`].filter(Boolean).join(' ') ||
+    undefined
   const update = useCallback(
     (source: string) => {
       setValue(source)
@@ -190,19 +200,26 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
   return (
     <div className="space-y-2" aria-busy={loading}>
       {props.label && <label className="block text-sm font-medium">{props.label}</label>}
-      {props.helperText && <p className="text-sm text-muted-foreground">{props.helperText}</p>}
+      {props.helperText && (
+        <p id={`${id}-helper`} className="text-sm text-muted-foreground">
+          {props.helperText}
+        </p>
+      )}
       <Suspense
         fallback={
           <div
             className="rounded-md border bg-muted/20"
             style={{ minHeight: props.minHeight ?? 180 }}
             aria-label="Loading code editor"
+            role="status"
           />
         }
       >
         <Editor
           value={value ?? ''}
           label={props.label ?? undefined}
+          describedBy={describedBy}
+          invalid={!!error}
           language={props.language ?? 'javascript'}
           lineNumbers={props.lineNumbers ?? true}
           minHeight={props.minHeight ?? 180}
@@ -212,7 +229,7 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
         />
       </Suspense>
       {error && (
-        <p className="text-sm text-destructive" role="alert">
+        <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
           {error}
         </p>
       )}

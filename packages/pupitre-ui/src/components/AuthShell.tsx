@@ -23,7 +23,7 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
     .map((feature) => feature.slice('social:'.length))
   return (
     <div
-      className="grid min-h-screen place-items-center bg-muted/40 px-4 py-10 text-foreground"
+      className="grid min-h-screen place-items-center bg-muted px-4 py-10 text-foreground"
       style={style}
     >
       <main className="w-full max-w-md">

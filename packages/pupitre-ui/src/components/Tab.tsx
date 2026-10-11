@@ -19,6 +19,7 @@ export function Tab({ props, children }: RuntimeProps) {
       id={`${context.id}-${key}-panel`}
       aria-labelledby={`${context.id}-${key}-tab`}
       hidden={!selected}
+      tabIndex={0}
       className="min-w-0 space-y-3"
     >
       {children}
