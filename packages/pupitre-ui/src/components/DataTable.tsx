@@ -13,6 +13,7 @@ import type {
 import { getRouter, jsonFetch, t, useRunAction, useTable } from '@rikology/pupitre-react'
 import { useTableRealtime } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
+import { NavLink } from '../primitives/nav_link.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
 import { DataTableEditableCell } from './DataTableEditableCell.js'
 import { DataTableGrid } from './DataTableGrid.js'
@@ -608,10 +609,10 @@ export function DataTable({
           {firstColumn?.editable && firstCell ? (
             renderCell(firstCell)
           ) : row.original.url ? (
-            <a className="font-medium text-primary hover:underline" href={row.original.url}>
+            <NavLink className="font-medium text-primary hover:underline" href={row.original.url}>
               {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
                 String(row.original.key)}
-            </a>
+            </NavLink>
           ) : (
             <strong>
               {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
@@ -706,9 +707,9 @@ export function DataTable({
               style={{ width: column?.width }}
             >
               {index === 0 && item.url && !column?.editable ? (
-                <a className="text-primary hover:underline" href={item.url}>
+                <NavLink className="text-primary hover:underline" href={item.url}>
                   {renderCell(cell)}
-                </a>
+                </NavLink>
               ) : (
                 renderCell(cell)
               )}

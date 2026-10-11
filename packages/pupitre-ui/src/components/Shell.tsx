@@ -2,6 +2,7 @@ import type { ShellProps } from '@rikology/pupitre-react'
 import { Dialog } from '@base-ui/react/dialog'
 import { useId, useState } from 'react'
 import { Icon } from '../icons.js'
+import { NavLink } from '../primitives/nav_link.js'
 import { ActionButton } from './ActionButton.js'
 import { GlobalSearch } from './GlobalSearch.js'
 import { NotificationTray } from './NotificationTray.js'
@@ -166,9 +167,9 @@ export function Shell({
                 >
                   {index > 0 && <Icon name="chevron-right" className="size-3" />}
                   {crumb.url ? (
-                    <a href={crumb.url} className="hover:text-foreground">
+                    <NavLink href={crumb.url} className="hover:text-foreground">
                       {crumb.label}
-                    </a>
+                    </NavLink>
                   ) : (
                     <span aria-current="page" className="text-foreground">
                       {crumb.label}
@@ -201,14 +202,14 @@ export function Shell({
               className="mb-5 flex gap-1 overflow-x-auto border-b border-border"
             >
               {subNavigation.map((item) => (
-                <a
+                <NavLink
                   key={item.key}
                   href={item.url}
                   aria-current={item.active ? 'page' : undefined}
                   className="shrink-0 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
                 >
                   {item.label}
-                </a>
+                </NavLink>
               ))}
             </nav>
           )}

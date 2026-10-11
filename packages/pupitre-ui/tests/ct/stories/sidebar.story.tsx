@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import { setRouter } from '@rikology/pupitre-react'
 import { ShellSidebar } from '../../../src/components/ShellSidebar.js'
 
 const panel = {
@@ -25,5 +27,23 @@ export function SidebarStory({ collapsed = false }: { collapsed?: boolean }) {
       onNavigate={() => {}}
       collapsed={collapsed}
     />
+  )
+}
+
+export function SidebarNavigationStory() {
+  const [visited, setVisited] = useState('')
+  useEffect(
+    () =>
+      setRouter({
+        visit: (url: string) => setVisited(url),
+        on: () => () => {},
+      } as never),
+    []
+  )
+  return (
+    <>
+      <SidebarStory />
+      <output data-testid="visited">{visited}</output>
+    </>
   )
 }

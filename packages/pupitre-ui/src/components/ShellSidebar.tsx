@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { ShellProps } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
+import { NavLink } from '../primitives/nav_link.js'
 
 const navigationStorageEvent = 'pupitre:nav-storage'
 
@@ -83,7 +84,7 @@ export function ShellSidebar({
   }
   return (
     <>
-      <a
+      <NavLink
         href={panelPath}
         aria-label={railCollapsed ? (panelBrand?.name ?? panelId) : undefined}
         className={`mb-6 flex min-h-10 items-center gap-3 px-2 font-semibold ${railCollapsed ? 'justify-center' : ''}`}
@@ -107,7 +108,7 @@ export function ShellSidebar({
           </span>
         )}
         {!railCollapsed && <span>{panelBrand?.name ?? panelId}</span>}
-      </a>
+      </NavLink>
       <nav
         aria-label="Main navigation"
         className={`flex-1 overflow-y-auto ${topNav ? 'flex items-center gap-2' : 'space-y-5'}`}
@@ -134,13 +135,13 @@ export function ShellSidebar({
                   <ul className="absolute left-0 top-full z-40 mt-1 min-w-48 rounded-md border border-border bg-background p-1 shadow-lg">
                     {group.items.map((item) => (
                       <li key={`${item.label}:${item.url ?? ''}`}>
-                        <a
+                        <NavLink
                           href={item.url ?? '#'}
                           onClick={onNavigate}
                           className="block rounded px-3 py-2 text-sm hover:bg-muted"
                         >
                           {item.label}
-                        </a>
+                        </NavLink>
                       </li>
                     ))}
                   </ul>
@@ -181,7 +182,7 @@ export function ShellSidebar({
                           )
                         return (
                           <li key={`${item.label}:${item.url ?? ''}`}>
-                            <a
+                            <NavLink
                               href={item.url ?? '#'}
                               target={item.external ? '_blank' : undefined}
                               rel={item.external ? 'noreferrer' : undefined}
@@ -212,17 +213,17 @@ export function ShellSidebar({
                                   {item.badge}
                                 </span>
                               )}
-                            </a>
+                            </NavLink>
                             {item.children?.length ? (
                               <ul className="ml-5 mt-1 space-y-1 border-l border-border pl-3">
                                 {item.children.map((child) => (
                                   <li key={child.label}>
-                                    <a
+                                    <NavLink
                                       href={child.url ?? '#'}
                                       className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
                                     >
                                       {child.label}
-                                    </a>
+                                    </NavLink>
                                   </li>
                                 ))}
                               </ul>
