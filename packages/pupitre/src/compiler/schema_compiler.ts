@@ -15,7 +15,7 @@ import type {
   SchemaNamespace,
   RepeaterFieldDefinition,
 } from '../definition/schema.js'
-import type { LucidRow } from '@adonisjs/lucid/types/model'
+import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import {
   toDateTime,
   toIsoInZone,
@@ -29,9 +29,17 @@ import {
 import { sanitizeHtml } from '../sanitize.js'
 import { evaluateClosure, liftClosure } from './closure_lifter.js'
 import { type SpecCache, type StaticSlot } from './cache.js'
-import { E_PUPITRE_INVALID_SPEC, E_PUPITRE_UNLIFTABLE_CLOSURE } from '../errors.js'
+import {
+  E_PUPITRE_FORBIDDEN,
+  E_PUPITRE_INVALID_SPEC,
+  E_PUPITRE_UNLIFTABLE_CLOSURE,
+} from '../errors.js'
 import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
+import { authorizeAbility, authorizeModel, authorizeResource } from '../authz/bouncer.js'
 
+import { compileActionDescriptor } from './action_compiler.js'
+import type { ActionDefinition } from '../definition/action.js'
+import { queryOptions } from '../options/query.js'
 type Element = {
   type: string
   props: Record<string, unknown>
@@ -46,6 +54,7 @@ export type CompileContext = {
   locale: string
   timezone: string
   ctx?: HttpContext
+  resourceSlug?: string
   record?: Record<string, unknown> | null
   model?: LucidRow | null
   uploadUrls?: { upload: string; delete: string }
@@ -397,6 +406,15 @@ async function addField(
     'reorderable',
     'downloadable',
     'previewable',
+    'options',
+    'relationship',
+    'searchable',
+    'preload',
+    'getOptionLabelUsing',
+    'createOptionForm',
+    'createOptionUsing',
+    'prefixAction',
+    'suffixAction',
   ])
   for (const [key, value] of Object.entries(node))
     if (!excluded.has(key) && value !== undefined) props[key] = value
@@ -405,6 +423,135 @@ async function addField(
   if ('minDate' in node && node.minDate !== undefined) props.min = node.minDate
   if ('maxDate' in node && node.maxDate !== undefined) props.max = node.maxDate
   mapOptions(node as unknown as Record<string, unknown>, props)
+  if (
+    (node.kind === 'select' || node.kind === 'multiSelect') &&
+    (typeof node.options === 'function' || node.relationship)
+  ) {
+    const ctx = build.options.ctx
+    const ownerSlug = build.options.resourceSlug
+    const owner =
+      ownerSlug && ctx?.pupitre.panel.resources.find((resource) => resource.slug === ownerSlug)
+    if (ctx && ownerSlug) {
+      const optionsUrl = `${ctx.pupitre.panel.path}/_pupitre/options/${ownerSlug}/${encodeURIComponent(path)}`
+      props.optionsUrl = optionsUrl
+      props.searchable = node.searchable ?? true
+      props.preload = node.preload ?? false
+      if (owner && node.createOptionForm?.length) props.createOption = { url: optionsUrl }
+      if (owner) {
+        for (const key of ['prefixAction', 'suffixAction'] as const) {
+          const action = node[key] as ActionDefinition | undefined
+          if (!action) continue
+          addValueSlot(build, id, key, () =>
+            compileActionDescriptor(action, {
+              baseUrl: owner.urls.list,
+              ctx,
+              authorize: (ability, record) => authorizeResource(ctx, owner, ability, record),
+              routes: owner.urls,
+              resourceLabel: owner.label,
+            })
+          )
+        }
+      }
+      addValueSlot(build, id, 'options', async (data) => {
+        const selected = getPath(data, path)
+        const selectedValues = Array.isArray(selected)
+          ? selected
+          : selected === undefined || selected === null || selected === ''
+            ? []
+            : [selected]
+        let page = 1
+        let hasMore = true
+        const options: Option[] = []
+        while (hasMore) {
+          if (node.preload && node.relationship && owner) {
+            let relatedModel: LucidModel
+            try {
+              relatedModel = owner.model.$getRelation(node.relationship.name).relatedModel()
+            } catch {
+              throw new Error(`Unknown relationship "${node.relationship.name}"`)
+            }
+            if (!(await authorizeModel(ctx, relatedModel, 'viewAny')))
+              throw new E_PUPITRE_FORBIDDEN()
+          }
+          const result = await queryOptions({
+            ctx,
+            ...(owner ? { owner } : {}),
+            field: node,
+            selected: node.preload ? [] : selectedValues,
+            page,
+            selectedOnly: !node.preload,
+          })
+          options.push(...result.options)
+          hasMore = Boolean(node.preload && result.hasMore)
+          page += 1
+        }
+        return options
+      })
+    }
+  }
+  if (
+    (node.kind === 'select' || node.kind === 'multiSelect') &&
+    build.options.ctx &&
+    (!build.options.resourceSlug ||
+      !build.options.ctx.pupitre.panel.resources.some(
+        (resource) => resource.slug === build.options.resourceSlug
+      ) ||
+      (!node.relationship && typeof node.options !== 'function'))
+  ) {
+    const ctx = build.options.ctx
+    const ownerSlug = build.options.resourceSlug
+    const owner = ctx.pupitre.panel.resources?.find((resource) => resource.slug === ownerSlug)
+    const page = ctx.pupitre.panel.pages?.find((candidate) => candidate.slug === ownerSlug)
+    for (const key of ['prefixAction', 'suffixAction'] as const) {
+      const action = node[key]
+      if (!action) continue
+      if (owner) {
+        addValueSlot(build, id, key, () =>
+          compileActionDescriptor(action, {
+            baseUrl: owner.urls.list,
+            ctx,
+            authorize: (ability, record) => authorizeResource(ctx, owner, ability, record),
+            routes: owner.urls,
+            resourceLabel: owner.label,
+          })
+        )
+      } else if (
+        page &&
+        page.definition.actions.some((candidate) => candidate.name === action.name)
+      ) {
+        addValueSlot(build, id, key, () =>
+          compileActionDescriptor(action, {
+            baseUrl: page.url,
+            ctx,
+            authorize: (ability) => authorizeAbility(ctx, ability),
+            routes: {
+              list: page.url,
+              create: page.url,
+              edit: () => page.url,
+              view: () => page.url,
+              destroy: () => page.url,
+            },
+          })
+        )
+      } else if (action.url && !action.can && !action.builtin) {
+        const baseUrl = ctx.pupitre.panel.path
+        addValueSlot(build, id, key, () =>
+          compileActionDescriptor(action, {
+            baseUrl,
+            ctx,
+            authorize: async () => true,
+            routes: {
+              list: baseUrl,
+              create: `${baseUrl}/create`,
+              edit: (recordId) => `${baseUrl}/${encodeURIComponent(String(recordId))}/edit`,
+              view: (recordId) => `${baseUrl}/${encodeURIComponent(String(recordId))}`,
+              destroy: (recordId) => `${baseUrl}/${encodeURIComponent(String(recordId))}`,
+            },
+          })
+        )
+      }
+    }
+  }
   if (node.kind === 'fileUpload') {
     const maxSize =
       typeof node.maxSize === 'number'

@@ -4,16 +4,31 @@ import type {
   Breadcrumb,
   NavGroup,
   PupitrePageProps,
+  TenantOption,
 } from '@rikology/pupitre/catalog'
 
+type SharedPupitre = PupitrePageProps['pupitre']
+
 export type ShellProps = {
-  panel: PupitrePageProps['pupitre']['panel']
-  user: PupitrePageProps['pupitre']['user']
+  panel: SharedPupitre['panel']
+  user: SharedPupitre['user']
   nav: NavGroup[]
   breadcrumbs: Breadcrumb[]
   title: string
   headerActions: ActionDescriptor[]
   currentUrl: string
+  /** Current tenant (tenancy enabled), else `null`. */
+  tenant: SharedPupitre['tenant']
+  /** Tenants for the switcher; empty when the switcher is hidden. */
+  tenants: TenantOption[]
+  /** Database notifications tray state; absent when the panel has no notifications. */
+  notifications?: SharedPupitre['notifications']
+  children: ReactNode
+}
+/** Layout for `page.kind === 'auth'` pages (login, reset, register): no navigation shell. */
+export type AuthShellProps = {
+  panel: SharedPupitre['panel']
+  title: string
   children: ReactNode
 }
 export type ToasterProps = { toasts: ToastMessage[]; dismiss: (id: string) => void }
@@ -49,6 +64,7 @@ export type ConfirmDialogProps = {
 export type NotFoundProps = { title: string; message: string }
 export type ShellRegistry = {
   Shell: React.ComponentType<ShellProps>
+  AuthShell: React.ComponentType<AuthShellProps>
   Toaster: React.ComponentType<ToasterProps>
   Modal: React.ComponentType<ModalProps>
   ConfirmDialog: React.ComponentType<ConfirmDialogProps>

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (0.2.0-beta, milestone M2)
+
+### Added
+
+- `kind: 'auth'` pages render inside the registry `AuthShell`; `kind: 'custom'` pages and host pages can keep the panel shell through `PupitreShell`.
+- `ShellProps` gains `tenant`, `tenants` and `notifications`; `ShellRegistry` gains `AuthShell`.
+- Hooks: `useOptions` (debounced, abortable, paged dynamic select options), `useNotificationsPolling` (pauses while the tab is hidden); shared `jsonFetch`/`xsrfToken` bridge helpers.
+
 ## Unreleased (0.1.0-beta, milestone M1)
 
 ### Added

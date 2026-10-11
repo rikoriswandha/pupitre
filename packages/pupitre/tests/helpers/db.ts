@@ -6,7 +6,7 @@ import { BaseModel } from '@adonisjs/lucid/orm'
 import Post from '../fixtures/models/post.js'
 import Category from '../fixtures/models/category.js'
 import User from '../fixtures/models/user.js'
-import { up as migrate } from '../fixtures/migrations/001_tables.js'
+import { fixtureMigrations, fixtureTables } from '../fixtures/migrations/index.js'
 
 const silentLogger = {
   trace() {},
@@ -21,7 +21,7 @@ let database: Database | undefined
 let databaseSetup: Promise<Database> | undefined
 let sqlitePath: string | undefined
 export async function migrateDatabase(db: Database) {
-  await migrate(db)
+  for (const migration of fixtureMigrations) await migration.up(db)
 }
 
 export function setupDatabase() {
@@ -52,7 +52,7 @@ async function initializeDatabase() {
       silentLogger as never,
       emitter as never
     )
-    for (const table of ['posts', 'categories', 'users']) {
+    for (const table of fixtureTables()) {
       await database.connection().schema.dropTableIfExists(table)
     }
   } else {
@@ -82,7 +82,7 @@ async function initializeDatabase() {
 
 export async function truncate() {
   const db = await setupDatabase()
-  for (const table of ['posts', 'categories', 'users']) {
+  for (const table of fixtureTables()) {
     await db.connection().from(table).del()
   }
 }

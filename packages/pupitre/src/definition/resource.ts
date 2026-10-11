@@ -50,8 +50,10 @@ export type ResourceDefinition<Model extends object = object> = {
     badge?: (ctx: HttpContext) => unknown | Promise<unknown>
   }
   recordTitle?: string
+  globallySearchable?: string[]
+  globalSearchDetails?: (record: Model) => string[]
   policy?: PolicyClass | (() => Promise<{ default: PolicyClass }>)
-  scope?: (query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void
+  scope?: false | ((query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void)
   form?: ComponentDefinition[]
   table?: TableDefinition
   infolist?: ComponentDefinition[]

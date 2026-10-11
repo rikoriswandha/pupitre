@@ -2,7 +2,9 @@ import type { ApplicationService, HttpRouterService } from '@adonisjs/core/types
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { PanelDefinition } from './definition/panel.js'
 import type { ResourceDefinition } from './definition/resource.js'
+import type { CustomPageDefinition } from './definition/custom_page.js'
 import { registerPanelRoutes } from './http/router.js'
+import { validateNavigation } from './navigation/validate.js'
 
 export type ResourceRuntime = {
   slug: string
@@ -21,7 +23,18 @@ export type ResourceRuntime = {
   }
 }
 
-export type PanelRuntime = Omit<PanelDefinition, 'resources'> & { resources: ResourceRuntime[] }
+/** A custom page (`definePage`) registered on a panel (WP23 resolves them). */
+export type PageRuntime = {
+  slug: string
+  definition: CustomPageDefinition
+  /** Request-bound absolute URL (tenant segment included in mode `url`). */
+  url: string
+}
+
+export type PanelRuntime = Omit<PanelDefinition, 'resources' | 'pages'> & {
+  resources: ResourceRuntime[]
+  pages: PageRuntime[]
+}
 type LazyModule<T> = () => Promise<{ default: T }>
 type PanelInput =
   PanelDefinition | { toDefinition(): PanelDefinition } | { definition: PanelDefinition }
@@ -46,11 +59,79 @@ function isLazyModule(value: unknown): value is LazyModule<PanelInput> {
 function validSlug(value: string): boolean {
   return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value)
 }
+const RESERVED_PAGE_SLUGS: Record<string, true> = {
+  dashboard: true,
+  search: true,
+  notifications: true,
+  options: true,
+  upload: true,
+  profile: true,
+  login: true,
+  logout: true,
+  register: true,
+  password: true,
+  email: true,
+  tenant: true,
+  _pupitre: true,
+}
+const RESERVED_PAGE_PATHS: Record<string, true> = {
+  '/': true,
+  '/dashboard': true,
+  '/search': true,
+  '/notifications': true,
+  '/options': true,
+  '/upload': true,
+  '/profile': true,
+  '/login': true,
+  '/logout': true,
+  '/register': true,
+  '/password': true,
+  '/email': true,
+  '/tenant': true,
+  '/_pupitre': true,
+}
+
+/** URL builders for one resource under a (possibly tenant-prefixed) panel path. */
+export function resourceUrls(panelPath: string, slug: string): ResourceRuntime['urls'] {
+  const base = `${panelPath.replace(/\/$/, '')}/${slug}`
+  return {
+    list: base,
+    create: `${base}/create`,
+    edit: (id) => `${base}/${encodeURIComponent(String(id))}/edit`,
+    update: (id) => `${base}/${encodeURIComponent(String(id))}`,
+    view: (id) => `${base}/${encodeURIComponent(String(id))}`,
+    destroy: (id) => `${base}/${encodeURIComponent(String(id))}`,
+    actions: (name, id) =>
+      `${base}/${id === undefined ? '' : `${encodeURIComponent(String(id))}/`}actions/${encodeURIComponent(name)}`,
+  }
+}
+
+/** Absolute URL of a custom page under a (possibly tenant-prefixed) panel path. */
+export function pageUrl(panelPath: string, pagePath: string): string {
+  return `${panelPath.replace(/\/$/, '')}/${pagePath.replace(/^\//, '')}`
+}
+
+/**
+ * Returns a request-scoped copy of the panel whose `path`, resource URLs and
+ * page URLs are rooted at `path` (e.g. `/admin/acme` in tenancy mode `url`).
+ * Never mutates the boot-time runtime.
+ */
+export function bindPanel(panel: PanelRuntime, path: string): PanelRuntime {
+  if (panel.path === path) return panel
+  return {
+    ...panel,
+    path,
+    resources: panel.resources.map((resource) => ({
+      ...resource,
+      urls: resourceUrls(path, resource.slug),
+    })),
+    pages: panel.pages.map((page) => ({ ...page, url: pageUrl(path, page.definition.path) })),
+  }
+}
 
 export default class PupitreManager {
   readonly panels: PanelRuntime[] = []
   private routesRegistered = false
-  private readonly resourcesByPanel = new Map<string, Map<string, ResourceRuntime>>()
 
   constructor(private readonly app: ApplicationService) {}
   async boot(
@@ -77,12 +158,17 @@ export default class PupitreManager {
         )
       if (!validSlug(definition.id)) throw new Error(`Invalid Pupitre panel id "${definition.id}"`)
       const resources = await this.resolveResources(definition)
-      const panel: PanelRuntime = { ...definition, resources }
-      this.panels.push(panel)
-      this.resourcesByPanel.set(
-        panel.id,
-        new Map(resources.map((resource) => [resource.slug, resource]))
+      const pages = await this.resolvePages(definition)
+      const duplicate = pages.find((page) =>
+        resources.some((resource) => resource.slug === page.slug)
       )
+      if (duplicate)
+        throw new Error(
+          `Pupitre resource and page slugs must be unique in panel "${definition.id}": "${duplicate.slug}"`
+        )
+      const panel: PanelRuntime = { ...definition, resources, pages }
+      validateNavigation(panel)
+      this.panels.push(panel)
     }
     const router = (await this.app.container.make('router')) as HttpRouterService
     for (const panel of this.panels) registerPanelRoutes(router, panel, this)
@@ -93,10 +179,49 @@ export default class PupitreManager {
     return this.panels.find((panel) => panel.id === id)
   }
 
-  findResource(panelId: string, slug: string): ResourceRuntime | undefined {
-    return this.resourcesByPanel.get(panelId)?.get(slug)
-  }
+  private async resolvePages(panel: PanelDefinition): Promise<PageRuntime[]> {
+    const source = panel.pages as unknown[] | Record<string, unknown>
+    const entries = Array.isArray(source)
+      ? source.map((value) => [undefined, value] as const)
+      : Object.entries(source ?? {})
+    const result: PageRuntime[] = []
+    for (const [, value] of entries) {
+      let loaded = value
+      if (typeof value === 'function') {
+        const module = await (value as LazyModule<unknown>)()
+        loaded = module.default
+      }
+      const definition = asDefinition<CustomPageDefinition>(loaded as never)
+      if (!definition || typeof definition.slug !== 'string')
+        throw new Error(`Page in panel "${panel.id}" must resolve to a page definition`)
+      if (!validSlug(definition.slug))
+        throw new Error(`Invalid Pupitre page slug "${definition.slug}"`)
+      if (RESERVED_PAGE_SLUGS[definition.slug])
+        throw new Error(
+          `Pupitre page slug "${definition.slug}" is reserved for a built-in route in panel "${panel.id}"`
+        )
 
+      if (typeof definition.path !== 'string' || !definition.path.startsWith('/'))
+        throw new Error(`Page "${definition.slug}" must have a path starting with "/"`)
+      const normalizedPath = definition.path.replace(/\/+$/, '') || '/'
+      if (RESERVED_PAGE_PATHS[normalizedPath] || normalizedPath.startsWith('/_pupitre/'))
+        throw new Error(
+          `Pupitre page path "${definition.path}" is reserved for a built-in route in panel "${panel.id}"`
+        )
+      result.push({
+        slug: definition.slug,
+        definition,
+        url: pageUrl(panel.path, definition.path),
+      })
+    }
+    const pageSlugs: Record<string, true> = {}
+    for (const page of result) {
+      if (pageSlugs[page.slug])
+        throw new Error(`Duplicate Pupitre page slug "${page.slug}" in panel "${panel.id}"`)
+      pageSlugs[page.slug] = true
+    }
+    return result
+  }
   private async resolveResources(panel: PanelDefinition): Promise<ResourceRuntime[]> {
     const source = panel.resources as unknown[] | Record<string, unknown>
     const entries = Array.isArray(source)
@@ -119,23 +244,13 @@ export default class PupitreManager {
       const model = definition.modelClass
       if (!model)
         throw new Error(`Resource "${definition.slug}" does not expose its Lucid model constructor`)
-      const base = `${panel.path.replace(/\/$/, '')}/${definition.slug}`
       result.push({
         slug: definition.slug,
         definition,
         model,
         label: definition.label,
         pluralLabel: definition.pluralLabel,
-        urls: {
-          list: base,
-          create: `${base}/create`,
-          edit: (id) => `${base}/${encodeURIComponent(String(id))}/edit`,
-          update: (id) => `${base}/${encodeURIComponent(String(id))}`,
-          view: (id) => `${base}/${encodeURIComponent(String(id))}`,
-          destroy: (id) => `${base}/${encodeURIComponent(String(id))}`,
-          actions: (name, id) =>
-            `${base}/${id === undefined ? '' : `${encodeURIComponent(String(id))}/`}actions/${encodeURIComponent(name)}`,
-        },
+        urls: resourceUrls(panel.path, definition.slug),
       })
     }
     return result

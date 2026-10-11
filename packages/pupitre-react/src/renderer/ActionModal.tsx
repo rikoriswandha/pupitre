@@ -16,6 +16,7 @@ export type ActionModalController = {
   close: () => void
   toast: PupitreRendererProps['toast']
   onResult: (result: ActionResult) => void
+  onOptionCreated?: (option: { value: string | number; label: string }) => void
 }
 export function ActionModal({
   action,
@@ -26,6 +27,7 @@ export function ActionModal({
   close,
   toast,
   onResult,
+  onOptionCreated,
 }: ActionModalController) {
   const [formResponse, setFormResponse] = useState<{
     spec: PupitrePageProps['page']['spec']
@@ -73,7 +75,10 @@ export function ActionModal({
     if (modalStore) modalStore.set('/errors', {})
     try {
       const actionResponse = await submitAction(action.url, { data, ids }, action.method)
-      if (actionResponse.status === 200 && actionResponse.result) {
+      if (actionResponse.status === 200 && actionResponse.option) {
+        onOptionCreated?.(actionResponse.option)
+        close()
+      } else if (actionResponse.status === 200 && actionResponse.result) {
         onResult(actionResponse.result)
         close()
       } else if (actionResponse.status === 422 && actionResponse.errors) {

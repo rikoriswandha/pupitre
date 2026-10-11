@@ -1,0 +1,39 @@
+{{{
+  exports({ to: app.makePath('database/migrations/1791700000002_add_pupitre_columns_to_users.ts') })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+/**
+ * Pupitre M2 user columns (docs/DATABASE.md §2). Existence checks are awaited;
+ * DDL is only queued (never awaited) so Lucid executes it exactly once.
+ */
+export default class extends BaseSchema {
+  protected tableName = 'users'
+
+  async up() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    const missing: string[] = []
+    for (const column of ['email_verified_at', 'avatar', 'timezone', 'current_tenant_id']) {
+      if (!(await this.schema.hasColumn(this.tableName, column))) missing.push(column)
+    }
+    if (missing.length === 0) return
+    this.schema.alterTable(this.tableName, (table) => {
+      for (const column of missing) {
+        if (column === 'email_verified_at') table.timestamp(column, { useTz: true }).nullable()
+        else if (column === 'timezone') table.string(column, 64).nullable()
+        else if (column === 'current_tenant_id') table.integer(column).unsigned().nullable()
+        else table.string(column).nullable()
+      }
+    })
+  }
+
+  async down() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    const present: string[] = []
+    for (const column of ['current_tenant_id', 'timezone', 'avatar', 'email_verified_at']) {
+      if (await this.schema.hasColumn(this.tableName, column)) present.push(column)
+    }
+    if (present.length === 0) return
+    this.schema.alterTable(this.tableName, (table) => table.dropColumns(...present))
+  }
+}

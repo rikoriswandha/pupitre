@@ -1,6 +1,10 @@
 import type { RequestPayload } from '@inertiajs/core'
 import type { StateStore } from '@json-render/core'
-import { actionResult, fileUploadDescriptor } from '@rikology/pupitre/catalog'
+import {
+  actionResult,
+  fileUploadDescriptor,
+  option as optionSchema,
+} from '@rikology/pupitre/catalog'
 import type {
   ActionDescriptor,
   FileUploadDescriptor,
@@ -29,7 +33,7 @@ export function takePendingActionToasts(): Omit<ToastMessage, 'id'>[] {
   pendingActionToasts = []
   return pending
 }
-function xsrfToken(): string {
+export function xsrfToken(): string {
   if (typeof document === 'undefined') return ''
   const cookie = document.cookie
     .split(';')
@@ -42,6 +46,25 @@ function xsrfToken(): string {
     return cookie.slice('XSRF-TOKEN='.length)
   }
 }
+
+export function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
+  const method = (init.method ?? 'GET').toUpperCase()
+  const headers: Record<string, string> =
+    init.headers && !Array.isArray(init.headers) && !(init.headers instanceof Headers)
+      ? { ...init.headers }
+      : Object.fromEntries(new Headers(init.headers).entries())
+  const existingHeaders = new Headers(headers)
+  if (!existingHeaders.has('Accept')) headers.Accept = 'application/json'
+  if (init.body !== undefined && !existingHeaders.has('Content-Type'))
+    headers['Content-Type'] = 'application/json'
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !existingHeaders.has('X-XSRF-TOKEN'))
+    headers['X-XSRF-TOKEN'] = xsrfToken()
+  return activeFetch(input, {
+    ...init,
+    credentials: init.credentials ?? 'same-origin',
+    headers,
+  })
+}
 export async function submitAction(
   url: string,
   body: { data?: Record<string, unknown>; ids?: Array<string | number> },
@@ -49,30 +72,36 @@ export async function submitAction(
 ): Promise<{
   status: number
   result?: ActionResult
+  option?: Option
   errors?: Record<string, unknown>
   message?: string
 }> {
   const pageUrl =
     typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
-  const response = await activeFetch(url, {
+  const response = await jsonFetch(url, {
     method: method.toUpperCase(),
-    credentials: 'same-origin',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'X-Requested-With': 'XMLHttpRequest',
       'X-Pupitre-Action': '1',
       'X-Pupitre-Url': pageUrl,
-      'X-XSRF-TOKEN': xsrfToken(),
     },
     body: JSON.stringify(body),
   })
   const payload: unknown = await response.json().catch(() => ({}))
   if (response.status === 200) {
+    const parsedOption =
+      payload && typeof payload === 'object' && 'option' in payload
+        ? optionSchema.safeParse(payload.option)
+        : undefined
+    const option = parsedOption?.success ? parsedOption.data : undefined
     const parsed = actionResult.safeParse(payload)
     return parsed.success
-      ? { status: response.status, result: parsed.data }
-      : { status: response.status, message: 'Invalid action response.' }
+      ? { status: response.status, result: parsed.data, ...(option ? { option } : {}) }
+      : option
+        ? { status: response.status, option }
+        : { status: response.status, message: 'Invalid action response.' }
   }
   if (response.status === 422 && payload && typeof payload === 'object' && 'errors' in payload) {
     const errors = payload.errors
@@ -173,6 +202,37 @@ export function applyJsonPatch<T>(value: T, patch: JsonPatchOp[]): T {
     } else if ('value' in op) parent[key] = op.value
   }
   return root as T
+}
+export type Option = {
+  value: string | number
+  label: string
+  description?: string
+  disabled?: boolean
+}
+export async function fetchOptions(
+  url: string,
+  params: {
+    search?: string
+    selected?: Array<string | number>
+    page?: number
+    signal?: AbortSignal
+  }
+): Promise<{ options: Option[]; hasMore: boolean }> {
+  const parsed = new URL(url, 'http://pupitre.local')
+  if (params.search) parsed.searchParams.set('q', params.search)
+  for (const value of params.selected ?? []) parsed.searchParams.append('selected[]', String(value))
+  if (params.page) parsed.searchParams.set('page', String(params.page))
+  const response = await activeFetch(`${parsed.pathname}${parsed.search}`, {
+    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+    credentials: 'same-origin',
+    signal: params.signal,
+  })
+  if (!response.ok) throw new Error(`Options request failed (${response.status})`)
+  const result = (await response.json()) as { options?: Option[]; hasMore?: boolean }
+  return {
+    options: Array.isArray(result.options) ? result.options : [],
+    hasMore: result.hasMore === true,
+  }
 }
 
 export function visit(params: Record<string, unknown>): void {

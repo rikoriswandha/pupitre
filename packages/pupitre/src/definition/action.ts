@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { SchemaNodeDefinition } from './schema.js'
 import type { SchemaNodeBuilder } from './schema.js'
 export type ActionColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'gray'
@@ -7,6 +8,7 @@ export type ActionVisibilityContext = { record: unknown; ctx?: HttpContext }
 export interface NotificationBuilder {
   body(value: string): this
   send(): unknown
+  sendToDatabase(user?: LucidRow): Promise<void>
 }
 export type ActionHandleContext = {
   record?: unknown

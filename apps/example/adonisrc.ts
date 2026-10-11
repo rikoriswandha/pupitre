@@ -64,6 +64,7 @@ export default defineConfig({
     () => import('@adonisjs/bouncer/bouncer_provider'),
     () => import('@adonisjs/drive/drive_provider'),
     () => import('#providers/api_provider'),
+    () => import('@rikology/adonisjs-notifications/notification_provider'),
     () => import('@rikology/pupitre/pupitre_provider'),
   ],
 

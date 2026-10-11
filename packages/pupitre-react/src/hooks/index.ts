@@ -22,6 +22,7 @@ export function useFieldError(error: unknown, binding?: string): string | undefi
   return typeof result === 'string' ? result : undefined
 }
 export { useStateValue }
+export { useRuntime } from '../runtime.js'
 export function useSetState(): (path: string, value: unknown) => void {
   const state = useStateStore()
   return useCallback((path: string, value: unknown) => state.set(path, value), [state])
@@ -180,4 +181,6 @@ export function useTable(descriptor: TableDescriptor) {
     descriptor,
   }
 }
+export { useOptions } from './use_options.js'
 export { useBoundValue as useBoundProp }
+export { useNotificationsPolling } from './use_notifications_polling.js'

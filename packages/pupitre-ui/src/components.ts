@@ -1,5 +1,6 @@
 import { ActionBar } from './components/ActionBar.js'
 import { Actions } from './components/Actions.js'
+import { AuthShell } from './components/AuthShell.js'
 import { BadgeEntry } from './components/BadgeEntry.js'
 import { Checkbox } from './components/Checkbox.js'
 import { CheckboxList } from './components/CheckboxList.js'
@@ -82,6 +83,7 @@ export const components = {
   Html,
   Divider,
   Actions,
+  AuthShell,
   View,
   Fragment,
   DataTable,

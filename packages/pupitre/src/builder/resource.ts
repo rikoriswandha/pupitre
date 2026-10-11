@@ -53,9 +53,11 @@ export type ResourceBuilder<M extends ResourceModel> = {
     badge?: (ctx: HttpContext) => unknown | Promise<unknown>
   }): ResourceBuilder<M>
   recordTitle(value: string): ResourceBuilder<M>
+  globallySearchable(value: readonly (ModelField<M> | `${string}.${string}`)[]): ResourceBuilder<M>
+  globalSearchDetails(value: (record: ModelInstance<M>) => string[]): ResourceBuilder<M>
   policy(value: PolicyClass | (() => Promise<{ default: PolicyClass }>)): ResourceBuilder<M>
   scope(
-    value: (query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void
+    value: false | ((query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void)
   ): ResourceBuilder<M>
   form(
     callback: (
@@ -147,11 +149,19 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
   recordTitle(value: string): ResourceBuilder<M> {
     return this.change({ recordTitle: value })
   }
+  globallySearchable(
+    value: readonly (ModelField<M> | `${string}.${string}`)[]
+  ): ResourceBuilder<M> {
+    return this.change({ globallySearchable: [...value] })
+  }
+  globalSearchDetails(value: (record: ModelInstance<M>) => string[]): ResourceBuilder<M> {
+    return this.change({ globalSearchDetails: value })
+  }
   policy(value: PolicyClass | (() => Promise<{ default: PolicyClass }>)): ResourceBuilder<M> {
     return this.change({ policy: value })
   }
   scope(
-    value: (query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void
+    value: false | ((query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void)
   ): ResourceBuilder<M> {
     return this.change({ scope: value })
   }

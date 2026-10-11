@@ -8,6 +8,8 @@ import { compileForm } from './schema_compiler.js'
 import { compileValidator } from './vine_compiler.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { t } from '../i18n.js'
+import { resolveAdapter } from '../define_config.js'
+import type { PupitreConfig } from '../define_config.js'
 
 export type ActionAuthorize = (ability: string, record?: LucidRow) => Promise<boolean>
 export type ActionRoutes = {
@@ -210,11 +212,11 @@ export async function executeAction(
     : (options.data as Record<string, unknown>)
   const flash: PendingFlash[] = []
   const notify = {
-    success: (title: string) => flashBuilder('success', title, flash),
-    danger: (title: string) => flashBuilder('error', title, flash),
-    error: (title: string) => flashBuilder('error', title, flash),
-    warning: (title: string) => flashBuilder('warning', title, flash),
-    info: (title: string) => flashBuilder('info', title, flash),
+    success: (title: string) => flashBuilder('success', title, flash, ctx),
+    danger: (title: string) => flashBuilder('error', title, flash, ctx),
+    error: (title: string) => flashBuilder('error', title, flash, ctx),
+    warning: (title: string) => flashBuilder('warning', title, flash, ctx),
+    info: (title: string) => flashBuilder('info', title, flash, ctx),
   }
   const handleContext = { record, records, data, ctx, notify }
   if (action.handle) await action.handle(handleContext)
@@ -246,7 +248,7 @@ export async function executeAction(
   }
 }
 
-function flashBuilder(type: FlashType, title: string, target: PendingFlash[]) {
+function flashBuilder(type: FlashType, title: string, target: PendingFlash[], ctx: HttpContext) {
   let body: string | undefined
   const builder = {
     body(value: string) {
@@ -255,6 +257,28 @@ function flashBuilder(type: FlashType, title: string, target: PendingFlash[]) {
     },
     send() {
       target.push({ type, title, ...(body !== undefined ? { body } : {}) })
+    },
+    async sendToDatabase(user?: LucidRow) {
+      const recipient = user ?? ctx.pupitre.authUser
+      if (!recipient) {
+        ctx.logger
+          .child({ module: 'pupitre' })
+          .warn('Pupitre notification skipped: no authenticated recipient or notifications adapter')
+        return
+      }
+      const config = (await ctx.containerResolver.make('pupitre.config')) as PupitreConfig
+      const adapter = await resolveAdapter(config.notifications)
+      if (!adapter) {
+        ctx.logger
+          .child({ module: 'pupitre' })
+          .warn('Pupitre notification skipped: no notifications adapter is configured')
+        return
+      }
+      await adapter.toInbox(
+        recipient,
+        { type, title, ...(body !== undefined ? { body } : {}) },
+        ctx
+      )
     },
   }
   return builder

@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre",
-  "version": "0.1.0-beta.0",
+  "version": "0.2.0-beta.0",
   "description": "Filament-like admin panel for AdonisJS v7 + Inertia React, rendered through json-render specs",
   "type": "module",
   "sideEffects": false,
@@ -73,6 +73,11 @@
       "@rikology/source": "./src/discovery/index_admin.ts",
       "types": "./build/src/discovery/index_admin.d.ts",
       "default": "./build/src/discovery/index_admin.js"
+    },
+    "./drivers/*": {
+      "@rikology/source": "./src/drivers/*.ts",
+      "types": "./build/src/drivers/*.d.ts",
+      "default": "./build/src/drivers/*.js"
     }
   },
   "scripts": {
@@ -99,8 +104,12 @@
     "@adonisjs/core": "^7.0.0",
     "@adonisjs/drive": "^4.0.0",
     "@adonisjs/inertia": "^5.0.0",
+    "@adonisjs/limiter": "^3.0.0",
     "@adonisjs/lucid": "^22.0.0",
+    "@adonisjs/mail": "^10.0.0",
     "@adonisjs/session": "^8.0.0",
+    "@rikology/adonisjs-notifications": "^1.5.0",
+    "@rikology/adonisjs-tenant": "^1.0.0",
     "@vinejs/vine": "^4.0.0",
     "luxon": "^3.4.4"
   },
@@ -116,6 +125,18 @@
     },
     "@adonisjs/drive": {
       "optional": true
+    },
+    "@adonisjs/limiter": {
+      "optional": true
+    },
+    "@adonisjs/mail": {
+      "optional": true
+    },
+    "@rikology/adonisjs-notifications": {
+      "optional": true
+    },
+    "@rikology/adonisjs-tenant": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -125,7 +146,9 @@
     "@adonisjs/core": "^7.6.0",
     "@adonisjs/drive": "^4.0.0",
     "@adonisjs/inertia": "^5.0.1",
+    "@adonisjs/limiter": "^3.0.1",
     "@adonisjs/lucid": "^22.4.2",
+    "@adonisjs/mail": "^10.4.0",
     "@adonisjs/session": "^8.1.0",
     "@adonisjs/shield": "^9.0.0",
     "@japa/api-client": "^3.2.1",
@@ -136,6 +159,8 @@
     "@japa/runner": "^5.3.0",
     "@japa/snapshot": "^2.0.10",
     "@poppinss/ts-exec": "^1.5.0",
+    "@rikology/adonisjs-notifications": "^1.5.2",
+    "@rikology/adonisjs-tenant": "^1.0.2",
     "@types/luxon": "^3.7.1",
     "@types/sanitize-html": "^2.16.2",
     "@vinejs/vine": "^4.4.0",

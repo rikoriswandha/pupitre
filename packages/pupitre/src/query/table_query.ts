@@ -8,6 +8,7 @@ import type {
   TableDefinition,
   TableFilterDefinition,
 } from '../definition/table.js'
+import { applySearchColumns } from './like.js'
 
 type ListTabs = Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
 type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs }
@@ -32,24 +33,6 @@ function filterAttribute(filter: TableFilterDefinition) {
   return filter.kind === 'custom' ? undefined : (filter.attribute ?? filter.name)
 }
 
-function applyLike(
-  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
-  column: string,
-  value: string,
-  or = false,
-  model: LucidModel = query.model
-) {
-  const columnName = model.$keys.attributesToColumns.get(column) ?? column
-  if (query.client.dialect.name === 'postgres') {
-    if (or) query.orWhereILike(columnName, `%${value}%`)
-    else query.whereILike(columnName, `%${value}%`)
-  } else if (or) {
-    query.orWhereRaw('lower(??) like ?', [columnName, `%${value.toLocaleLowerCase()}%`])
-  } else {
-    query.whereRaw('lower(??) like ?', [columnName, `%${value.toLocaleLowerCase()}%`])
-  }
-}
-
 function applySearch(
   query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   table: TableDefinition,
@@ -71,10 +54,10 @@ function applySearch(
         ) => unknown
         const relatedModel = query.model.$getRelation(relation).relatedModel()
         whereHas.call(builder, relation, (relationQuery) =>
-          applyLike(relationQuery, attribute, value, false, relatedModel)
+          applySearchColumns(relationQuery, [attribute], value, relatedModel)
         )
       } else {
-        applyLike(builder, column.name, value, index > 0)
+        applySearchColumns(builder, [column.name], value, query.model, index > 0)
       }
     })
   })

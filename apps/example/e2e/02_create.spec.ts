@@ -17,7 +17,7 @@ pupitreTest(
     await admin.fillField('Slug', `e2e-create-${Date.now()}`)
     await admin.fillField('Category', 'Culture')
     await page.getByRole('button', { name: 'Create Post' }).click()
-    await expect(page).toHaveURL(/\/admin\/posts\/\d+\/edit/)
+    await expect(page).toHaveURL(/\/admin\/acme\/posts\/\d+\/edit/)
     await admin.expectToast('created')
   }
 )

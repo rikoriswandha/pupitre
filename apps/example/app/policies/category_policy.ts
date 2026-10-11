@@ -20,4 +20,10 @@ export default class CategoryPolicy {
   delete(user: User) {
     return this.isAdmin(user)
   }
+  restore(user: User) {
+    return this.isAdmin(user)
+  }
+  forceDelete(user: User) {
+    return this.isAdmin(user)
+  }
 }

@@ -1,0 +1,6 @@
+import { definePage } from '@rikology/pupitre'
+
+export default definePage('{{slug}}')
+  .path('/{{slug}}')
+  .title({{title}})
+  .form(() => [])

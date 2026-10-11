@@ -10,6 +10,8 @@ import {
   KeyValueStory,
   LiveBlurStory,
   NativeClearableSelectStory,
+  StaticSelectActionsStory,
+  AsyncSelectControlsStory,
   NumericSelectStory,
   PersistedUploadStory,
   RepeaterErrorStory,
@@ -264,6 +266,52 @@ test('Select supports the native clearable mode', async ({ mount }) => {
   await view.getByRole('button', { name: 'Clear Category' }).click()
   await expect(select).toHaveValue('')
 })
+test('static selects render and run prefix and suffix actions', async ({ mount, page }) => {
+  const view = await mount(<StaticSelectActionsStory />)
+  await expect(view.getByRole('button', { name: 'Prefix action' })).toBeVisible()
+  await expect(view.getByRole('button', { name: 'Suffix action' })).toBeVisible()
+  await view.getByRole('button', { name: 'Prefix action' }).click()
+  await view.getByRole('button', { name: 'Suffix action' }).click()
+  const actions = await page.evaluate(() => {
+    const windowWithActions = window as Window & { __staticSelectActions?: string[] }
+    return windowWithActions.__staticSelectActions
+  })
+  expect(actions).toEqual(['prefix', 'suffix'])
+})
+test('async multi-select options toggle off and expose removable chips', async ({ mount }) => {
+  const view = await mount(<AsyncSelectControlsStory />)
+  const tags = view.getByRole('listbox', { name: 'Tags' })
+  const culture = tags.getByRole('option', { name: 'Culture', exact: true })
+
+  const tagsInput = view.getByRole('textbox', { name: 'Tags' })
+  await expect(tagsInput).toHaveAttribute('id', 'tags')
+  await expect(tagsInput).toHaveAttribute('aria-describedby', 'tags-hint tags-helper tags-error')
+  await expect(tagsInput).toHaveAttribute('aria-invalid', 'true')
+  await expect(tagsInput).toHaveAttribute('aria-required', 'true')
+  await expect(culture).toHaveAttribute('aria-selected', 'true')
+
+  await culture.click()
+  await expect(view.getByRole('button', { name: 'Remove Culture' })).toHaveCount(0)
+  await expect(culture).toHaveAttribute('aria-selected', 'false')
+
+  await culture.click()
+  const removeCulture = view.getByRole('button', { name: 'Remove Culture' })
+  await expect(removeCulture).toBeVisible()
+  await removeCulture.click()
+  await expect(view.getByRole('button', { name: 'Remove Culture' })).toHaveCount(0)
+
+  const disabledOptions = view.getByRole('listbox', { name: 'Disabled' })
+  const readOnlyOptions = view.getByRole('listbox', { name: 'Read only' })
+  await expect(disabledOptions).toHaveAttribute('aria-disabled', 'true')
+  await expect(readOnlyOptions).toHaveAttribute('aria-disabled', 'true')
+  await expect(disabledOptions.getByRole('option', { name: 'Culture' })).toBeDisabled()
+  await expect(readOnlyOptions.getByRole('option', { name: 'Design' })).toBeDisabled()
+  await expect(view.getByRole('button', { name: 'Create option' }).nth(0)).toBeDisabled()
+  await expect(view.getByRole('button', { name: 'Create option' }).nth(1)).toBeDisabled()
+  await expect(view.getByRole('button', { name: 'Load more' }).nth(0)).toBeEnabled()
+  await expect(view.getByRole('button', { name: 'Load more' }).nth(1)).toBeDisabled()
+  await expect(view.getByRole('button', { name: 'Load more' }).nth(2)).toBeDisabled()
+})
 
 test('Text renders its suffix', async ({ mount }) => {
   const view = await mount(<TextSuffixStory />)
@@ -456,15 +504,23 @@ test('dark theme applies to document and portaled Modal; favicon updates and the
   mount,
   page,
 }) => {
-  const initialPrimary = await page.evaluate(() =>
-    document.documentElement.style.getPropertyValue('--primary')
-  )
+  const previousPrimary = await page.evaluate(() => {
+    const style = document.documentElement.style
+    const previous = {
+      value: style.getPropertyValue('--primary'),
+      priority: style.getPropertyPriority('--primary'),
+    }
+    style.setProperty('--primary', 'rgb(1, 2, 3)', 'important')
+    return previous
+  })
   const view = await mount(<ThemeShellStory />)
   await expect(page.locator('html')).toHaveClass(/dark/)
   expect(
     await page.evaluate(() => document.documentElement.style.getPropertyValue('--primary'))
   ).toBe('rgb(12, 34, 56)')
   await expect(page.getByRole('dialog', { name: 'Portal dialog' })).toBeVisible()
+  await page.getByRole('button', { name: 'Modal action' }).click()
+  await expect(page.getByTestId('modal-action')).toHaveText('clicked')
   expect(
     await page
       .getByRole('dialog', { name: 'Portal dialog' })
@@ -474,8 +530,16 @@ test('dark theme applies to document and portaled Modal; favicon updates and the
   await view.unmount()
   await expect(page.locator('html')).not.toHaveClass(/dark/)
   expect(
-    await page.evaluate(() => document.documentElement.style.getPropertyValue('--primary'))
-  ).toBe(initialPrimary)
+    await page.evaluate(() => ({
+      value: document.documentElement.style.getPropertyValue('--primary'),
+      priority: document.documentElement.style.getPropertyPriority('--primary'),
+    }))
+  ).toEqual({ value: 'rgb(1, 2, 3)', priority: 'important' })
+  await page.evaluate((previous: { value: string; priority: string }) => {
+    const style = document.documentElement.style
+    if (previous.value) style.setProperty('--primary', previous.value, previous.priority)
+    else style.removeProperty('--primary')
+  }, previousPrimary)
 })
 
 test('system dark mode follows prefers-color-scheme changes', async ({ mount, page }) => {

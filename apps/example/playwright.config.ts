@@ -17,7 +17,7 @@ export default defineConfig({
     command:
       'npm --prefix ../.. run build && NODE_ENV=development node e2e/setup-db.mjs && node ace build --ignore-ts-errors && cd build && NODE_OPTIONS= node bin/server.js',
     cwd: import.meta.dirname,
-    timeout: 120_000,
+    reuseExistingServer: !process.env.CI,
     url: 'http://localhost:3391/login',
     env: {
       NODE_OPTIONS: '--conditions=@rikology/source',
@@ -25,6 +25,7 @@ export default defineConfig({
       HOST: 'localhost',
       LOG_LEVEL: 'error',
       APP_KEY: 'pupitre-e2e-key-that-is-long-enough-for-tests',
+      PUPITRE_MAIL_DIR: `${import.meta.dirname}/tmp/mails`,
       APP_URL: 'http://localhost:3391',
       SESSION_DRIVER: 'cookie',
       DB_DATABASE: `${import.meta.dirname}/tmp/pupitre-e2e.sqlite`,

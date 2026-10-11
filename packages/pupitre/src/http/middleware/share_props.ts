@@ -1,66 +1,77 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import { authorizeResource } from '../../authz/bouncer.js'
-import type { NavItem } from '../../../catalog/wire.js'
+import type { PupitrePageProps, ThemeVars } from '../../../catalog/wire.js'
+import type { PanelRuntime } from '../../manager.js'
+import { buildNavigation } from '../../navigation/build_nav.js'
+import { buildUserMenu } from '../../navigation/user_menu.js'
+import { authProps } from '../../auth/props.js'
+import { tenancyProps } from '../../tenancy/props.js'
+import { notificationProps } from '../../notifications/props.js'
+import { searchProps } from '../../search/props.js'
+
+type SharedPupitre = PupitrePageProps['pupitre']
+
+/** Flattens the panel theme definition into the wire `ThemeVars` record. */
+export function themeVars(panel: PanelRuntime): ThemeVars {
+  const theme = panel.theme ?? {}
+  return Object.fromEntries(
+    [
+      ...(theme.primary ? [['primary', theme.primary]] : []),
+      ...(theme.darkMode ? [['darkMode', theme.darkMode]] : []),
+      ...(theme.radius ? [['--radius', theme.radius]] : []),
+      ...Object.entries(theme.vars ?? {}),
+    ].filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  )
+}
+
+/** Feature flags the client uses to show/hide built-in shell affordances. */
+export function panelFeatures(panel: PanelRuntime): Record<string, boolean> {
+  return {
+    login: panel.auth.login,
+    registration: panel.auth.registration,
+    passwordReset: panel.auth.passwordReset,
+    emailVerification: panel.auth.emailVerification,
+    profile: panel.auth.profile?.enabled ?? false,
+    tenancy: Boolean(panel.tenancy),
+    notifications: Boolean(panel.notifications),
+    globalSearch: Boolean(panel.globalSearch),
+  }
+}
+
+/** Builds the `pupitre` shared prop for the current request. */
+export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre> {
+  const panel = ctx.pupitre.panel
+  const session = (
+    ctx as HttpContext & { session?: { flashMessages?: { get(key: string): unknown } } }
+  ).session
+  const flashValue = session?.flashMessages?.get('pupitre')
+  const flash = Array.isArray(flashValue) ? flashValue : flashValue ? [flashValue] : []
+  const tenantUnbound = panel.tenancy?.mode === 'url' && panel.path === ctx.pupitre.basePath
+  const search = tenantUnbound ? undefined : searchProps(ctx)
+  const notifications = tenantUnbound ? undefined : await notificationProps(ctx)
+  return {
+    panel: {
+      id: panel.id,
+      path: panel.path,
+      brand: panel.brand ?? { name: panel.id },
+      theme: themeVars(panel),
+      features: panelFeatures(panel),
+      ...authProps(ctx),
+      userMenu: await buildUserMenu(ctx),
+      ...(search ? { search } : {}),
+    },
+    user: ctx.pupitre.user,
+    ...(await tenancyProps(ctx)),
+    nav: tenantUnbound ? [] : await buildNavigation(ctx),
+    flash,
+    ...(notifications ? { notifications } : {}),
+    locale: ctx.pupitre.locale,
+    timezone: ctx.pupitre.timezone,
+  }
+}
 
 export default class SharePropsMiddleware {
   async handle(ctx: HttpContext, next: () => Promise<void>) {
-    const allowed = []
-    for (const resource of ctx.pupitre.panel.resources) {
-      if (await authorizeResource(ctx, resource, 'viewAny')) allowed.push(resource)
-    }
-    const groups = new Map<string, typeof allowed>()
-    for (const resource of allowed) {
-      const group = resource.definition.navigation?.group ?? 'Resources'
-      const items = groups.get(group) ?? []
-      items.push(resource)
-      groups.set(group, items)
-    }
-    const currentUrl = ctx.request.url().split('?')[0]
-    const nav = []
-    for (const [label, resources] of groups) {
-      const items: NavItem[] = []
-      resources.sort(
-        (left, right) =>
-          (left.definition.navigation?.sort ?? 0) - (right.definition.navigation?.sort ?? 0) ||
-          left.label.localeCompare(right.label)
-      )
-      for (const resource of resources) {
-        const badge = resource.definition.navigation?.badge
-          ? await resource.definition.navigation.badge(ctx)
-          : undefined
-        items.push({
-          label: resource.pluralLabel,
-          url: resource.urls.list,
-          active:
-            currentUrl === resource.urls.list || currentUrl.startsWith(`${resource.urls.list}/`),
-          ...(resource.definition.icon ? { icon: resource.definition.icon } : {}),
-          ...(typeof badge === 'string' || typeof badge === 'number' ? { badge } : {}),
-        })
-      }
-      nav.push({ label, items })
-    }
-    const session = (
-      ctx as HttpContext & { session?: { flashMessages?: { get(key: string): unknown } } }
-    ).session
-    const flashValue = session?.flashMessages?.get('pupitre')
-    const flash = Array.isArray(flashValue) ? flashValue : flashValue ? [flashValue] : []
-    ctx.inertia.share({
-      pupitre: {
-        panel: {
-          id: ctx.pupitre.panel.id,
-          path: ctx.pupitre.panel.path,
-          brand: ctx.pupitre.panel.brand ?? { name: ctx.pupitre.panel.id },
-          theme: ctx.pupitre.panel.theme ?? {},
-          features: {},
-        },
-        user: ctx.pupitre.user,
-        tenant: null,
-        nav,
-        flash,
-        locale: ctx.pupitre.locale,
-        timezone: ctx.pupitre.timezone,
-      },
-    })
+    ctx.inertia.share({ pupitre: await buildSharedProps(ctx) })
     await next()
   }
 }

@@ -4,8 +4,13 @@ export { defineConfig } from './src/define_config.js'
 export type { PupitreConfig, PupitreConfigInput } from './src/define_config.js'
 export { definePanel } from './src/builder/panel.js'
 export { defineResource } from './src/builder/resource.js'
-export type { PanelBuilder } from './src/builder/panel.js'
+export type { PanelBuilder, TenancyInput } from './src/builder/panel.js'
+export { definePage } from './src/builder/page.js'
+export type { CustomPageBuilder } from './src/builder/page.js'
+export type { CustomPageDefinition } from './src/definition/custom_page.js'
 export type { ResourceBuilder, ResourceModel, ModelConstructor } from './src/builder/resource.js'
+export { nav } from './src/builder/nav.js'
+export type { NavGroupBuilder, NavItemBuilder } from './src/builder/nav.js'
 export { schema } from './src/builder/schema/schema.js'
 export type {
   SchemaComponent,
@@ -111,10 +116,34 @@ export type {
   ResourceHandlers,
   PolicyClass,
 } from './src/definition/resource.js'
-export type { PanelDefinition } from './src/definition/panel.js'
+export type {
+  PanelDefinition,
+  PanelAuthDefinition,
+  PanelThemeDefinition,
+} from './src/definition/panel.js'
+export type {
+  NavEntryDefinition,
+  NavGroupDefinition,
+  NavItemDefinition,
+  UserMenuItemDefinition,
+} from './src/definition/navigation.js'
+export type {
+  TenancyAdapter,
+  TenancyDefinition,
+  TenancyMode,
+  TenantSummary,
+  ResolvedTenant,
+} from './src/definition/tenancy.js'
+export type { MailAdapter, PupitreMailMessage } from './src/adapters/mail.js'
+export type {
+  NotificationsAdapter,
+  PupitreNotificationItem,
+  PupitreNotificationMessage,
+} from './src/adapters/notifications.js'
+export type { AuthColumns } from './src/define_config.js'
 export type { PageDefinition, PageKind } from './src/definition/page.js'
 export { t } from './src/i18n.js'
 export * from './src/errors.js'
 export { default as PupitreManager } from './src/manager.js'
-export type { PanelRuntime, ResourceRuntime } from './src/manager.js'
+export type { PanelRuntime, ResourceRuntime, PageRuntime } from './src/manager.js'
 export type { PupitreContext, PupitreUser } from './src/types.js'

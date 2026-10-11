@@ -260,6 +260,53 @@ test.group('Vine compiler', () => {
     const error = await captureError(() => validator.validate({ categoryId: 3 }, options))
     assert.deepEqual(errorFields(error), ['categoryId'])
   })
+  test('validates closure-based select values and rejects non-scalar submissions', async ({
+    assert,
+  }) => {
+    const nodes = [
+      field(
+        schema
+          .select('single')
+          .options(({ search, values }) =>
+            [{ value: 'allowed-id', label: 'Allowed option' }].filter(
+              (option) =>
+                values?.some((value) => String(value) === String(option.value)) ||
+                option.label.toLowerCase().includes(search.toLowerCase())
+            )
+          )
+      ),
+      field(
+        schema
+          .multiSelect('multiple')
+          .options(({ search, values }) =>
+            [{ value: 'allowed-id', label: 'Allowed option' }].filter(
+              (option) =>
+                values?.some((value) => String(value) === String(option.value)) ||
+                option.label.toLowerCase().includes(search.toLowerCase())
+            )
+          )
+      ),
+    ]
+    const validator = compileValidator(nodes)
+    const ctx = {} as HttpContext
+    assert.deepEqual(
+      await validator.validate(
+        { single: 'allowed-id', multiple: ['allowed-id'] },
+        { ...options, ctx }
+      ),
+      { single: 'allowed-id', multiple: ['allowed-id'] }
+    )
+    for (const single of ['not-allowed', {}, []]) {
+      const error = await captureError(() =>
+        validator.validate({ single, multiple: [] }, { ...options, ctx })
+      )
+      assert.deepEqual(errorFields(error), ['single'])
+    }
+    const arrayError = await captureError(() =>
+      validator.validate({ single: 'allowed-id', multiple: ['not-allowed'] }, { ...options, ctx })
+    )
+    assert.deepEqual(errorFields(arrayError), ['multiple.0'])
+  })
 
   test('uses numeric values from array options as canonical values', async ({ assert }) => {
     const validator = compileValidator([

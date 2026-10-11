@@ -6,6 +6,10 @@ export const resources = {
   \\"users\\": () => import('#admin/resources/user_resource'),
 } as const
 
+export const pages = {
+  \\"settings\\": () => import('#admin/pages/settings_page'),
+} as const
+
 export const panels = {
   \\"admin\\": () => import('#admin/panels/admin'),
 } as const

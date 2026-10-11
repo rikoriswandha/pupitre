@@ -31,8 +31,17 @@ export async function configure(command: ConfigureCommand) {
     ['app/admin/panels/admin.stub', 'app/admin/panels/admin.ts', { panel, path, auth }],
     ['inertia/pages/pupitre.stub', 'inertia/pages/pupitre.tsx', {}],
     ['inertia/admin/registry.stub', 'inertia/admin/registry.ts', {}],
+    [
+      'database/migrations/1791700000001_create_pupitre_password_resets_table.stub',
+      'database/migrations/1791700000001_create_pupitre_password_resets_table.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000002_add_pupitre_columns_to_users.stub',
+      'database/migrations/1791700000002_add_pupitre_columns_to_users.ts',
+      {},
+    ],
   ] as const
-
   await codemods.installPackages([
     { name: '@rikology/pupitre-react', isDevDependency: false },
     { name: '@rikology/pupitre-ui', isDevDependency: false },

@@ -9,7 +9,10 @@ export default defineResource(User)
   .icon('users')
   .navigation({ group: 'Administration', sort: 1 })
   .recordTitle('email')
+  .globallySearchable(['fullName', 'email'])
+  .globalSearchDetails((record) => [record.email])
   .policy(UserPolicy)
+  .scope(false)
   .form((s) => [
     s
       .section('Account')

@@ -7,8 +7,8 @@ import type {
   FieldDefinitionUnion,
   FormSchema,
   LayoutDefinition,
+  RelationshipOptions,
 } from '../../definition/schema.js'
-
 type AnyBuilder = SchemaNodeBuilder
 const fieldBase = [
   'label',
@@ -58,8 +58,39 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
   number: [...fieldBase, 'min', 'max', 'step', 'prefix', 'suffix', 'unique'],
   textarea: [...fieldBase, 'rows', 'minLength', 'maxLength'],
   hidden: fieldBase,
-  select: [...fieldBase, 'options', 'native', 'clearable', 'multiple', 'in', 'exists'],
-  multiSelect: [...fieldBase, 'options', 'native', 'clearable', 'in', 'exists'],
+  select: [
+    ...fieldBase,
+    'options',
+    'native',
+    'clearable',
+    'multiple',
+    'in',
+    'exists',
+    'relationship',
+    'searchable',
+    'preload',
+    'getOptionLabelUsing',
+    'createOptionForm',
+    'createOptionUsing',
+    'prefixAction',
+    'suffixAction',
+  ],
+  multiSelect: [
+    ...fieldBase,
+    'options',
+    'native',
+    'clearable',
+    'in',
+    'exists',
+    'relationship',
+    'searchable',
+    'preload',
+    'getOptionLabelUsing',
+    'createOptionForm',
+    'createOptionUsing',
+    'prefixAction',
+    'suffixAction',
+  ],
   checkbox: [...fieldBase, 'inline'],
   checkboxList: [...fieldBase, 'options', 'columns'],
   radio: [...fieldBase, 'options', 'descriptions', 'inline'],
@@ -191,8 +222,7 @@ const booleanDefaultMethods: Record<string, true> = Object.fromEntries(
     'dehydratedWhenHidden',
     'searchable',
     'native',
-    'clearable',
-    'multiple',
+    'preload',
     'inline',
     'grouped',
     'seconds',
@@ -214,6 +244,7 @@ const booleanDefaultMethods: Record<string, true> = Object.fromEntries(
     'alpha',
     'alphaNumeric',
     'confirmed',
+    'multiple',
   ].map((name) => [name, true])
 )
 const fieldKinds: Record<string, true> = Object.fromEntries(
@@ -266,7 +297,31 @@ function createNode<D extends SchemaNodeDefinition>(definition: D): SchemaNodeBu
         if (typeof property !== 'string' || !methodMap[definition.kind].includes(property))
           return undefined
         return (...args: unknown[]) => {
+          if (property === 'relationship') {
+            const relationship: RelationshipOptions = {
+              name: String(args[0]),
+              titleColumn: String(args[1]),
+              ...(typeof args[2] === 'function'
+                ? { scope: args[2] as RelationshipOptions['scope'] }
+                : {}),
+            }
+            return createNode(setOption(definition, property, relationship))
+          }
           const value = args[0] === undefined && property in booleanDefaultMethods ? true : args[0]
+          if (property === 'createOptionForm' && Array.isArray(value)) {
+            return createNode(
+              setOption(
+                definition,
+                property,
+                (value as readonly AnyBuilder[]).map((child) => child.toDefinition())
+              )
+            )
+          }
+          if ((property === 'prefixAction' || property === 'suffixAction') && value) {
+            const action =
+              typeof value === 'object' && 'definition' in value ? value.definition : value
+            return createNode(setOption(definition, property, action))
+          }
           if (property === 'components' || (property === 'schema' && Array.isArray(value))) {
             const components = (value as readonly AnyBuilder[]).map((child) => child.toDefinition())
             const key =

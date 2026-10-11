@@ -26,14 +26,13 @@ import { createSpecCacheKey, SpecCache } from '../../compiler/cache.js'
 import type { PupitreConfig } from '../../define_config.js'
 import type { ActionDescriptor, JsonRenderSpec } from '../../../catalog/wire.js'
 import { actions as builtInActions } from '../../builder/action.js'
+import { requestResource, scopedQuery } from '../../query/scoped_query.js'
+import { fillTenantOwnership } from '../../tenancy/runtime.js'
 
 const schemaCache = new SpecCache<JsonRenderSpec>()
 
 async function resource(ctx: HttpContext): Promise<ResourceRuntime> {
-  const manager = (await ctx.containerResolver.make('pupitre.manager')) as {
-    findResource(panelId: string, slug: string): ResourceRuntime | undefined
-  }
-  const result = manager.findResource(ctx.pupitre.panel.id, ctx.params.slug)
+  const result = requestResource(ctx, ctx.params.slug)
   if (!result) throw new Error(`Unknown Pupitre resource "${ctx.params.slug}"`)
   return result
 }
@@ -169,9 +168,7 @@ function keyName(model: LucidModel): string {
 }
 
 async function findRecord(ctx: HttpContext, target: ResourceRuntime): Promise<LucidRow | null> {
-  const query = target.model.query()
-  target.definition.scope?.(query, ctx)
-  return query.where(keyName(target.model), ctx.params.id).first()
+  return scopedQuery(ctx, target).where(keyName(target.model), ctx.params.id).first()
 }
 
 function handleActionValidation(ctx: HttpContext, error: unknown): boolean {
@@ -203,7 +200,7 @@ async function schemaContext(
     app.inProduction || config.cache?.dev
       ? {
           key: createSpecCacheKey(
-            ctx.pupitre.panel.id,
+            `${ctx.pupitre.panel.id}@${ctx.pupitre.panel.path}`,
             target.slug,
             page,
             ctx.pupitre.locale,
@@ -214,6 +211,7 @@ async function schemaContext(
       : null
   return {
     ctx,
+    resourceSlug: target.slug,
     locale: ctx.pupitre.locale,
     timezone: ctx.pupitre.timezone,
     ...(record ? { model: record, record: serialized(record) } : {}),
@@ -312,18 +310,17 @@ export default class ResourceController {
       root: 'table',
       elements: { table: { type: 'DataTable', props: { descriptor } } },
     } as JsonRenderSpec
-    const scopedQuery = target.model.query()
+    const scopedListQuery = scopedQuery(ctx, target)
     const preloaded = new Set<string>()
     for (const column of table.columns) {
       if (column.kind === 'fragment' || !column.name.includes('.')) continue
       const relation = column.name.split('.')[0]!
       if (!preloaded.has(relation) && target.model.$getRelation(relation)) {
-        scopedQuery.preload(relation as never)
+        scopedListQuery.preload(relation as never)
         preloaded.add(relation)
       }
     }
-    target.definition.scope?.(scopedQuery, ctx)
-    const queryResult = applyTableQuery(scopedQuery, table, ctx.request.qs(), {
+    const queryResult = applyTableQuery(scopedListQuery, table, ctx.request.qs(), {
       ctx,
       tabs: pageConfig?.tabs,
     })
@@ -523,6 +520,8 @@ export default class ResourceController {
       data = (await target.definition.hooks.mutateBeforeSave?.(data, null, ctx, trx)) ?? data
       await target.definition.hooks.beforeCreate?.(data, ctx, trx)
       await target.definition.hooks.beforeSave?.(null, data, ctx, trx)
+      // Ownership is applied last so before hooks cannot move a record to another tenant.
+      data = fillTenantOwnership(ctx, target, data)
       const record = target.definition.handlers.create
         ? await target.definition.handlers.create(data, ctx, trx)
         : await target.model.create(data, { client: trx })
@@ -582,8 +581,14 @@ export default class ResourceController {
     )
     let savedRecord = record
     await target.model.transaction(async (trx) => {
-      const data =
+      let data =
         (await target.definition.hooks.mutateBeforeSave?.(validated, record, ctx, trx)) ?? validated
+      const ownership = ctx.pupitre.panel.tenancy?.ownership
+      if (ownership) {
+        const ownershipAttribute =
+          target.model.$keys.columnsToAttributes.get(ownership) ?? ownership
+        delete data[ownershipAttribute]
+      }
       await target.definition.hooks.beforeSave?.(record, data, ctx, trx)
       record.useTransaction(trx)
       savedRecord = target.definition.handlers.update

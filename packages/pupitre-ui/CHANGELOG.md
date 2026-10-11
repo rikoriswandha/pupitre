@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased (0.2.0-beta, milestone M2)
+
+### Added
+
+- `AuthShell`, `TenantSwitcher`, `NotificationTray`, `GlobalSearch` (cmdk, configurable key binding), `UserMenu` (custom items, profile, logout) and `ShellSidebar` (collapsible groups persisted per panel, badges, dark logo); `Shell` composes them.
+- `Select` async mode: remote search with paging, selected-label hydration, create-option modal, prefix/suffix actions.
+- Panel theme variables (`--primary`, `--radius`, custom vars) are applied to the document root so portaled overlays inherit them.
+
 ## Unreleased (0.1.0-beta, milestone M1)
 
 ### Added

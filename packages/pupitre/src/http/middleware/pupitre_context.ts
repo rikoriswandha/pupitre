@@ -1,43 +1,116 @@
+import { createPupitreStorage } from '../../storage/index.js'
 import type { HttpContext } from '@adonisjs/core/http'
+import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type PupitreManager from '../../manager.js'
 import type { PupitreConfig } from '../../define_config.js'
+import { handleUnauthenticated } from '../../auth/unauthenticated.js'
+import { panelGuard } from '../../auth/guard.js'
+import { bindPanel } from '../../manager.js'
+import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
+
+type AuthContext = {
+  auth?: {
+    user?: LucidRow | null
+    use(guard: string): {
+      authenticate(): Promise<LucidRow>
+      check(): Promise<boolean>
+      user?: LucidRow
+    }
+  }
+}
+
+/** Serializable user summary shared with the client. */
+export function userSummary(authUser: LucidRow | null, config: PupitreConfig) {
+  if (!authUser) return null
+  const attributes = authUser as unknown as Record<string, unknown>
+  const columns = config.auth.columns
+  const avatarUrl = attributes.avatarUrl
+  const timezone = attributes[columns.timezone]
+  return {
+    id: attributes.id as string | number,
+    name: String(
+      attributes[columns.name] ??
+        attributes.name ??
+        attributes.fullName ??
+        attributes[columns.email] ??
+        ''
+    ),
+    email: String(attributes[columns.email] ?? ''),
+    ...(typeof avatarUrl === 'string' ? { avatarUrl } : {}),
+    ...(typeof timezone === 'string' && timezone ? { timezone } : {}),
+  }
+}
 
 export default class PupitreContextMiddleware {
+  constructor(private readonly options: { requireUser: boolean } = { requireUser: true }) {}
+
   async handle(ctx: HttpContext, next: () => Promise<void>) {
     const manager = (await ctx.containerResolver.make('pupitre.manager')) as PupitreManager
     const routeName = ctx.route?.name ?? ''
     const panelId = routeName.split('.')[0]
     const panel = manager.getPanel(panelId)
     if (!panel) return ctx.response.notFound()
+    const auth = (ctx as unknown as AuthContext).auth
+    let authUser: LucidRow | null = null
 
-    const auth = ctx as unknown as {
-      auth?: {
-        user?: Record<string, unknown> | null
-        use(guard: string): { authenticate(): Promise<Record<string, unknown>> }
+    const guardName = panelGuard(panel)
+    if (guardName) {
+      if (!auth?.use) throw new Error(`Panel guard "${guardName}" is unavailable`)
+      const guard = auth.use(guardName)
+      if (this.options.requireUser) {
+        try {
+          authUser = await guard.authenticate()
+        } catch (error) {
+          return handleUnauthenticated(ctx, panel, error)
+        }
+      } else if (await guard.check()) {
+        authUser = guard.user ?? null
+      }
+    } else {
+      authUser = auth?.user ?? null
+    }
+    const config = (await ctx.containerResolver.make('pupitre.config')) as PupitreConfig
+    const user = userSummary(authUser, config)
+    if (user && authUser && panel.auth.profile.avatar) {
+      const avatarKey = (authUser as unknown as Record<string, unknown>)[config.auth.columns.avatar]
+      if (typeof avatarKey === 'string' && avatarKey) {
+        user.avatarUrl = await createPupitreStorage().url(avatarKey, { visibility: 'public' })
       }
     }
-    let authUser: Record<string, unknown> | null | undefined
-    if (panel.guard) {
-      if (!auth.auth?.use) throw new Error(`Panel guard "${panel.guard}" is unavailable`)
-      authUser = await auth.auth.use(panel.guard).authenticate()
-    } else {
-      authUser = auth.auth?.user ?? null
-    }
-    const user = authUser
-      ? {
-          id: authUser.id as string | number,
-          name: String(authUser.name ?? authUser.fullName ?? authUser.email ?? ''),
-          email: String(authUser.email ?? ''),
-          ...(typeof authUser.avatarUrl === 'string' ? { avatarUrl: authUser.avatarUrl } : {}),
-          ...(typeof authUser.timezone === 'string' ? { timezone: authUser.timezone } : {}),
-        }
-      : null
-    const config = (await ctx.containerResolver.make('pupitre.config')) as PupitreConfig
     ctx.pupitre = {
       panel,
+      basePath: panel.path,
       locale: panel.locale ?? 'en',
       timezone: user?.timezone ?? panel.timezone ?? config.timezone ?? 'UTC',
       user,
+      authUser,
+      tenant: null,
+    }
+    if (
+      this.options.requireUser &&
+      panel.tenancy?.mode === 'url' &&
+      authUser &&
+      ctx.params.tenant === undefined
+    ) {
+      const adapter = await resolveTenancyAdapter(ctx)
+      const memberships = adapter ? await adapter.listForUser(ctx) : []
+      const membership = memberships[0]
+      if (membership) {
+        ctx.pupitre.tenant = membership
+        ctx.pupitre.panel = bindPanel(
+          panel,
+          `${panel.path}/${membership.slug ?? encodeURIComponent(String(membership.id))}`
+        )
+      }
+    }
+    if (this.options.requireUser && authUser && panel.auth.emailVerification) {
+      const attributes = authUser as unknown as Record<string, unknown>
+      const verified = attributes[config.auth.columns.emailVerifiedAt]
+      const verificationRoute = routeName.includes('.auth.verification.')
+      const logoutRoute = routeName.endsWith('.auth.logout')
+      if (!verified && !verificationRoute && !logoutRoute) {
+        return ctx.response.redirect(`${ctx.pupitre.basePath}/email/verify`)
+      }
     }
     await next()
   }

@@ -19,7 +19,7 @@ export function Toaster({ toasts, dismiss }: ToasterProps) {
         <section
           key={toast.id}
           role={toast.type === 'error' ? 'alert' : 'status'}
-          className={`pointer-events-auto rounded-lg border bg-background p-4 text-foreground shadow-lg ${tone[toast.type ?? 'info']}`}
+          className={`pointer-events-none rounded-lg border bg-background p-4 text-foreground shadow-lg ${tone[toast.type ?? 'info']}`}
         >
           <div className="flex items-start gap-3">
             <div className="min-w-0 flex-1">
@@ -29,7 +29,7 @@ export function Toaster({ toasts, dismiss }: ToasterProps) {
             <button
               type="button"
               aria-label="Dismiss notification"
-              className="rounded p-1 text-muted-foreground hover:bg-muted"
+              className="pointer-events-auto rounded p-1 text-muted-foreground hover:bg-muted"
               onClick={() => dismiss(toast.id)}
             >
               <Icon name="x" className="size-4" />

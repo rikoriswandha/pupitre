@@ -32,7 +32,7 @@ Tiga prinsip:
 | Inertia & SSR | Inertia v3 (`@adonisjs/inertia` 4); tanpa SSR di v1, renderer SSR-safe |
 | API style | Chaining, nama konvensi Adonis/VineJS: `text('name').required()`, `defineResource()` |
 | Distribusi FE | Runtime via npm; komponen UI via shadcn registry, `-ui` npm sebagai default |
-| Ace | `install`, `make:resource` (introspeksi model), `make:page`, `make:widget`, `make:relation-manager`, `make:plugin` |
+| Ace | `install`, `make:resource` (introspeksi model; `--from-migration` untuk tipe dari migrasi), `make:page`, `make:widget`, `make:relation-manager`, `make:plugin` |
 | Bahasa | Inggris saja di v1; i18n belakangan |
 | Stack | Node 24, Lucid (PostgreSQL + SQLite), Tailwind v4, shadcn/ui di atas Base UI (default shadcn sejak Juli 2026), TanStack Table, Recharts, Flydrive |
 
@@ -221,6 +221,7 @@ Tiga aturan reaktivitas, mengikuti keputusan client-first:
 1. `visible`, `hidden`, `disabled`, `label`, `helperText`, `placeholder.content` menerima closure `({ get, record, ctx }) => …`. Compiler mencoba menerjemahkan closure sederhana ke ekspresi json-render (`$cond`, `$template`, `$state`). Closure yang tidak bisa diterjemahkan secara statis jatuh ke `$computed` dengan fungsi yang dikirim sebagai string di spec — dibatasi hanya untuk ekspresi murni tanpa akses `record`/`ctx`.
 2. `live()` menandai field sebagai pemicu. `afterStateUpdated` dikompilasi ke `watch` json-render. Default handler-nya berjalan di client dengan `set`/`get`. `live({ server: true })` mengirim `watch` ke `POST /_pupitre/evaluate` yang menjalankan closure di server dengan state lengkap dan mengembalikan patch state.
 3. Opsi dinamis (`options(closure)`, `relationship(...).searchable()`) selalu lewat endpoint `GET /_pupitre/options/:resource/:field?q=` dengan debounce; tidak pernah dikirim di spec awal kecuali `preload()`.
+   `options(closure)` nhận konteks `{ search, ctx, page, values? }`. Saat server memvalidasi nilai pilihan, `values` berisi nilai yang dikirim dan `search` kosong; closure harus tetap mengembalikan opsi untuk setiap nilai dalam `values`, termasuk yang tidak cocok dengan filter label.
 
 Validasi: setiap rule builder punya padanan VineJS (`required` → tidak optional, `maxLength` → `vine.string().maxLength`, `unique` → `vine.string().unique(...)` dengan query Lucid, `rules([...])` untuk rule custom). Compiler menghasilkan satu `vine.compile()` per form, di-cache per resource. Field di dalam `repeater` menjadi `vine.array(vine.object(...))`; `visible` tidak mempengaruhi validasi kecuali diberi `.dehydratedWhenHidden(false)`, sama seperti Filament.
 
@@ -431,10 +432,9 @@ Batasan SSR-safe: tidak ada akses `window`/`document` di module scope; editor (T
 | Edit page + tombol | `update` |  |
 | Delete / restore / forceDelete | `delete` / `restore` / `forceDelete` |  |
 | Action custom `.can('publish')` | `publish` | Ability dengan nama sama di policy |
-| Reorder, inline edit | `reorder`, `update` |  |
-| Relation manager | `viewAny` policy model relasi | Attach/detach memakai `update` parent |
+| Reorder | reserved `reorder` | Belum ada endpoint reorder M2; inline edit memakai `update` |
 
-Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan peringatan di `pupitre:inspect`. Plugin `pupitre-shield` menambah tabel roles/permissions, UI pengelolaannya, dan policy generik yang membaca permission `posts.update` dari DB.
+Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan peringatan di `pupitre:inspect`. Perintah ini juga melaporkan ability yang dibutuhkan resource tetapi tidak diimplementasikan policy. Plugin `pupitre-shield` menambah tabel roles/permissions, UI pengelolaannya, dan policy generik yang membaca permission `posts.update` dari DB.
 
 **Adapters.** Semua di `config/pupitre.ts`, tipe interface diekspor dari core:
 

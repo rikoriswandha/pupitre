@@ -1,0 +1,9 @@
+import { definePanel } from '@rikology/pupitre'
+import { resources } from '#generated/admin'
+import { middleware } from '#start/kernel'
+
+export default definePanel('{{panel}}')
+  .path('{{path}}')
+  .guard('{{guard}}')
+  .middleware([middleware.auth({ guards: ['{{guard}}'] })])
+  .resources(resources)

@@ -139,8 +139,6 @@ test.group('resource and builder DSL', () => {
     void textField.mask
     // @ts-expect-error unsupported text icons are not exposed by M1 builders
     void textField.prefixIcon
-    // @ts-expect-error select search UI is not implemented in M1
-    void schema.select('status').searchable
     // @ts-expect-error textarea autosize is not implemented in M1
     void schema.textarea('body').autosize
     // @ts-expect-error checkbox-list bulk toggling is not implemented in M1

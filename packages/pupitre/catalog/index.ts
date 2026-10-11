@@ -27,6 +27,7 @@ export {
   jsonRenderSpec,
   navGroup,
   navItem,
+  notificationsProp,
   option,
   pageProps,
   panelFeatures,
@@ -37,8 +38,17 @@ export {
   tableDescriptor,
   tableMeta,
   tableRow,
+  tenantOption,
+  tenantSummary,
   themeVars,
   uploadResponse,
+  userMenuItem,
+  globalSearchGroup,
+  globalSearchResponse,
+  globalSearchResult,
+  notificationItem,
+  notificationListResponse,
+  notificationsReadRequest,
 } from './wire.js'
 export type {
   ActionResult,
@@ -65,8 +75,12 @@ export type {
   TableDescriptor,
   TableMeta,
   TableRow,
+  TenantOption,
   ThemeVars,
   UploadResponse,
+  UserMenuItem,
+  GlobalSearchResponse,
+  NotificationItem,
 } from './wire.js'
 
 export const computedFunctionNames = [

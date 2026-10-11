@@ -1,29 +1,78 @@
-import type { PanelDefinition } from '../definition/panel.js'
+import type {
+  PanelAuthDefinition,
+  PanelDefinition,
+  PanelThemeDefinition,
+} from '../definition/panel.js'
+import type { NavEntryDefinition, UserMenuItemDefinition } from '../definition/navigation.js'
+import type { TenancyDefinition, TenancyMode } from '../definition/tenancy.js'
 import { stableJson } from '../definition/shared.js'
+
+type Definable<T> = T | { toDefinition(): T }
+export type TenancyInput = Partial<Omit<TenancyDefinition, 'mode'>> & { mode: TenancyMode }
+
 export type PanelBuilder = {
   readonly definition: PanelDefinition
   path(value: string): PanelBuilder
+  domain(value: string): PanelBuilder
   guard(value: string): PanelBuilder
   middleware(value: PanelDefinition['middleware']): PanelBuilder
   resources(value: readonly unknown[] | Record<string, unknown>): PanelBuilder
+  pages(value: readonly unknown[] | Record<string, unknown>): PanelBuilder
   brand(value: NonNullable<PanelDefinition['brand']>): PanelBuilder
-  theme(value: NonNullable<PanelDefinition['theme']>): PanelBuilder
+  theme(value: PanelThemeDefinition): PanelBuilder
   timezone(value: string): PanelBuilder
   locale(value: 'en'): PanelBuilder
   breadcrumbs(value: boolean): PanelBuilder
+  /** Serve the panel login/logout pages; `false` keeps the host's own auth. */
+  login(enabled?: boolean): PanelBuilder
+  registration(enabled?: boolean): PanelBuilder
+  passwordReset(enabled?: boolean): PanelBuilder
+  emailVerification(enabled?: boolean): PanelBuilder
+  profile(options?: boolean | { avatar?: boolean }): PanelBuilder
+  navigation(entries: readonly Definable<NavEntryDefinition>[]): PanelBuilder
+  userMenu(items: readonly UserMenuItemDefinition[]): PanelBuilder
+  tenancy(options: TenancyInput | false): PanelBuilder
+  notifications(options?: { interval?: number } | false): PanelBuilder
+  globalSearch(options?: { keyBinding?: string } | false): PanelBuilder
   toDefinition(): PanelDefinition
   toJSON(): string
 }
+
+function unwrap<T>(value: Definable<T> | unknown): T | unknown {
+  if (
+    value &&
+    typeof value === 'object' &&
+    'toDefinition' in value &&
+    typeof value.toDefinition === 'function'
+  ) {
+    return value.toDefinition()
+  }
+  return value
+}
+
+function definitions(value: readonly unknown[] | Record<string, unknown>) {
+  return Array.isArray(value) ? value.map((entry) => unwrap(entry)) : value
+}
+
+function withToJSON(definition: PanelDefinition): PanelDefinition {
+  definition.toJSON = () =>
+    stableJson(Object.fromEntries(Object.entries(definition).filter(([key]) => key !== 'toJSON')))
+  return definition
+}
+
 class Panel implements PanelBuilder {
   constructor(readonly definition: PanelDefinition) {}
   private set(patch: Partial<PanelDefinition>): PanelBuilder {
-    const next = { ...this.definition, ...patch }
-    next.toJSON = () =>
-      stableJson(Object.fromEntries(Object.entries(next).filter(([key]) => key !== 'toJSON')))
-    return new Panel(next)
+    return new Panel(withToJSON({ ...this.definition, ...patch }))
+  }
+  private setAuth(patch: Partial<PanelAuthDefinition>): PanelBuilder {
+    return this.set({ auth: { ...this.definition.auth, ...patch } })
   }
   path(value: string): PanelBuilder {
     return this.set({ path: value })
+  }
+  domain(value: string): PanelBuilder {
+    return this.set({ domain: value })
   }
   guard(value: string): PanelBuilder {
     return this.set({ guard: value })
@@ -32,26 +81,21 @@ class Panel implements PanelBuilder {
     return this.set({ middleware: [...value] })
   }
   resources(value: readonly unknown[] | Record<string, unknown>): PanelBuilder {
-    const resources = Array.isArray(value)
-      ? value.map((resource) => {
-          if (
-            resource &&
-            typeof resource === 'object' &&
-            'toDefinition' in resource &&
-            typeof resource.toDefinition === 'function'
-          ) {
-            return resource.toDefinition()
-          }
-          return resource
-        })
-      : value
-    return this.set({ resources })
+    return this.set({ resources: definitions(value) })
+  }
+  pages(value: readonly unknown[] | Record<string, unknown>): PanelBuilder {
+    return this.set({ pages: definitions(value) })
   }
   brand(value: NonNullable<PanelDefinition['brand']>): PanelBuilder {
     return this.set({ brand: { ...value } })
   }
-  theme(value: NonNullable<PanelDefinition['theme']>): PanelBuilder {
-    return this.set({ theme: { ...value } })
+  theme(value: PanelThemeDefinition): PanelBuilder {
+    const invalid = Object.keys(value.vars ?? {}).find((name) => !/^--[A-Za-z0-9_-]+$/.test(name))
+    if (invalid)
+      throw new Error(`Invalid Pupitre theme CSS variable "${invalid}": names must start with "--"`)
+    return this.set({
+      theme: { ...value, ...(value.vars ? { vars: { ...value.vars } } : {}) },
+    })
   }
   timezone(value: string): PanelBuilder {
     return this.set({ timezone: value })
@@ -62,6 +106,59 @@ class Panel implements PanelBuilder {
   breadcrumbs(value: boolean): PanelBuilder {
     return this.set({ breadcrumbs: value })
   }
+  login(enabled = true): PanelBuilder {
+    return this.setAuth({ login: enabled })
+  }
+  registration(enabled = true): PanelBuilder {
+    return this.setAuth({ registration: enabled })
+  }
+  passwordReset(enabled = true): PanelBuilder {
+    return this.setAuth({ passwordReset: enabled })
+  }
+  emailVerification(enabled = true): PanelBuilder {
+    return this.setAuth({ emailVerification: enabled })
+  }
+  profile(options: boolean | { avatar?: boolean } = true): PanelBuilder {
+    return this.setAuth({
+      profile:
+        typeof options === 'boolean'
+          ? { enabled: options, avatar: options }
+          : { enabled: true, avatar: options.avatar ?? true },
+    })
+  }
+  navigation(entries: readonly Definable<NavEntryDefinition>[]): PanelBuilder {
+    return this.set({ navigation: entries.map((entry) => unwrap(entry) as NavEntryDefinition) })
+  }
+  userMenu(items: readonly UserMenuItemDefinition[]): PanelBuilder {
+    return this.set({ userMenu: items.map((item) => ({ ...item })) })
+  }
+  tenancy(options: TenancyInput | false): PanelBuilder {
+    if (options === false) return this.set({ tenancy: undefined })
+    if (!options.model && !options.adapter)
+      throw new Error('Panel tenancy requires either a tenant model or a custom adapter')
+    if (!options.adapter && !options.tenantsForUser)
+      throw new Error('Column tenancy requires tenantsForUser(user, ctx)')
+    return this.set({
+      tenancy: {
+        ownership: 'tenant_id',
+        slugAttribute: 'slug',
+        titleAttribute: 'name',
+        menu: true,
+        currentTenantAttribute: 'currentTenantId',
+        ...options,
+      },
+    })
+  }
+  notifications(options: { interval?: number } | false = {}): PanelBuilder {
+    return this.set({
+      notifications: options === false ? null : { interval: options.interval ?? 30_000 },
+    })
+  }
+  globalSearch(options: { keyBinding?: string } | false = {}): PanelBuilder {
+    return this.set({
+      globalSearch: options === false ? null : { keyBinding: options.keyBinding ?? 'mod+k' },
+    })
+  }
   toDefinition(): PanelDefinition {
     return this.definition
   }
@@ -69,16 +166,27 @@ class Panel implements PanelBuilder {
     return this.definition.toJSON()
   }
 }
+
 export function definePanel(id: string): PanelBuilder {
-  const definition: PanelDefinition = {
-    id,
-    path: `/${id}`,
-    middleware: [],
-    resources: [],
-    breadcrumbs: true,
-    toJSON: () => '',
-  }
-  definition.toJSON = () =>
-    stableJson(Object.fromEntries(Object.entries(definition).filter(([key]) => key !== 'toJSON')))
-  return new Panel(definition)
+  return new Panel(
+    withToJSON({
+      id,
+      path: `/${id}`,
+      middleware: [],
+      resources: [],
+      pages: [],
+      breadcrumbs: true,
+      auth: {
+        login: false,
+        registration: false,
+        passwordReset: false,
+        emailVerification: false,
+        profile: { enabled: false, avatar: false },
+      },
+      userMenu: [],
+      notifications: null,
+      globalSearch: { keyBinding: 'mod+k' },
+      toJSON: () => '',
+    })
+  )
 }

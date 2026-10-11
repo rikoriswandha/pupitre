@@ -19,12 +19,12 @@ pupitreTest('bulk delete confirms and removes two selected posts', async ({ admi
       .getByRole('button', { name: /create|save/i })
       .last()
       .click()
-    await page.waitForURL(/\/admin\/posts\/\d+\/edit/)
-    await page.goto('/admin/posts')
+    await page.waitForURL(/\/admin\/acme\/posts\/\d+\/edit/)
+    await page.goto('/admin/acme/posts')
   }
 
-  await page.getByLabel('Search').fill(batch)
-  await page.getByLabel('Search').press('Enter')
+  await page.getByRole('searchbox', { name: 'Search' }).fill(batch)
+  await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
   const first = admin.postRow(`${batch} A`)
   const second = admin.postRow(`${batch} B`)
   await expect(first).toBeVisible()

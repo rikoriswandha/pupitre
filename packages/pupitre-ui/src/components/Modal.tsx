@@ -11,6 +11,14 @@ const widthClasses = {
   '2xl': 'max-w-2xl',
   'full': 'max-w-[calc(100vw-2rem)]',
 } as const
+const widthValues = {
+  'sm': '24rem',
+  'md': '28rem',
+  'lg': '32rem',
+  'xl': '36rem',
+  '2xl': '42rem',
+  'full': 'calc(100vw - 2rem)',
+} as const
 
 export function Modal({
   open,
@@ -31,9 +39,37 @@ export function Modal({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/45 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
+        <Dialog.Backdrop
+          className="fixed inset-0 z-50 bg-black/45 transition-opacity data-[starting-style]:opacity-0 data-[ending-style]:opacity-0"
+          style={{ position: 'fixed', inset: 0, zIndex: 49 }}
+        />
         <Dialog.Popup
           className={`fixed z-50 flex max-h-[calc(100dvh-2rem)] flex-col border border-border bg-background shadow-xl outline-none ${slideOver ? 'inset-y-0 right-0 h-dvh w-full max-w-xl rounded-l-xl' : `left-1/2 top-1/2 w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl ${widthClasses[width]}`}`}
+          style={{
+            position: 'fixed',
+            zIndex: 51,
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: 'calc(100dvh - 2rem)',
+            ...(slideOver
+              ? {
+                  insetBlock: 0,
+                  right: 0,
+                  height: '100dvh',
+                  width: '100%',
+                  maxWidth: '36rem',
+                  borderTopLeftRadius: '0.75rem',
+                  borderBottomLeftRadius: '0.75rem',
+                }
+              : {
+                  left: '50%',
+                  top: '50%',
+                  width: 'calc(100% - 2rem)',
+                  maxWidth: widthValues[width],
+                  transform: 'translate(-50%, -50%)',
+                  borderRadius: '0.75rem',
+                }),
+          }}
         >
           <header className="flex items-start gap-3 border-b border-border p-5">
             {icon && (

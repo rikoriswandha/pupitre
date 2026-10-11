@@ -67,7 +67,7 @@ function makePage(
     title,
     breadcrumbs: [],
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
     state,
     spec: {
       root: 'field',
@@ -259,7 +259,7 @@ test.group('Pupitre renderer store lifecycle', () => {
         title: 'Posts',
         breadcrumbs: [],
         actions: { header: [] },
-        catalogVersion: '0.1',
+        catalogVersion: '0.2',
         state: { data: { term: 'outer state' } },
         spec: {
           root: 'table',

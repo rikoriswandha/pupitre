@@ -3,6 +3,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 type ErrorContext = HttpContext & {
   session?: { flash(key: string, value: unknown): void }
+  pupitre?: { panel: { path: string; tenancy?: unknown }; tenant?: unknown }
 }
 
 function handledError(message: string, status: number, code: string) {
@@ -12,15 +13,32 @@ function handledError(message: string, status: number, code: string) {
       handle(error: Error, ctx: ErrorContext): unknown
     }
   ).handle = function (error: Error, ctx: ErrorContext) {
-    const json =
-      ctx.request.header('x-pupitre-action') === '1' ||
-      (!ctx.request.header('x-inertia') && ctx.request.accepts(['json', 'html']) === 'json')
+    const acceptsJson = ctx.request
+      .header('accept')
+      ?.split(',')
+      .some((mediaType) => mediaType.split(';', 1)[0]?.trim() === 'application/json')
+    const json = ctx.request.header('x-pupitre-action') === '1' || acceptsJson
     if (json) return ctx.response.status(status).json({ message: error.message })
+    if (status === 403) {
+      if (ctx.pupitre?.panel.tenancy && !ctx.pupitre.tenant)
+        return ctx.response.status(status).send(error.message)
+      const referer = ctx.request.header('referer')
+      const panelPath = ctx.pupitre?.panel.path
+      if (referer && panelPath) {
+        try {
+          const path = new URL(referer).pathname.replace(/\/$/, '')
+          if (path === panelPath || path === `${panelPath}/login`)
+            return ctx.response.status(status).send(error.message)
+        } catch {}
+      }
+      ctx.session?.flash('pupitre', [{ type: 'error', title: 'Forbidden', body: error.message }])
+      return ctx.response.redirect().back()
+    }
     if (ctx.request.header('x-inertia') && ctx.session) {
       ctx.session.flash('pupitre', [
         {
           type: 'error',
-          title: status === 403 ? 'Forbidden' : 'Request failed',
+          title: 'Request failed',
           body: error.message,
         },
       ])
@@ -37,6 +55,16 @@ export const E_PUPITRE_FORBIDDEN = handledError(
   'E_PUPITRE_FORBIDDEN'
 )
 
+export const E_PUPITRE_MISSING_PEER = createError(
+  'An optional Pupitre peer dependency is required for this feature',
+  'E_PUPITRE_MISSING_PEER',
+  500
+)
+export const E_PUPITRE_MAIL_ADAPTER_REQUIRED = createError(
+  'A mail adapter is required when password reset or email verification is enabled',
+  'E_PUPITRE_MAIL_ADAPTER_REQUIRED',
+  500
+)
 export const E_PUPITRE_BOUNCER_NOT_INITIALIZED = createError(
   'A resource policy is configured but Bouncer is not initialized; register @adonisjs/bouncer initialize middleware',
   'E_PUPITRE_BOUNCER_NOT_INITIALIZED',

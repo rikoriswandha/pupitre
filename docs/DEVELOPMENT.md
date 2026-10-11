@@ -48,17 +48,17 @@ Setiap entri `exports` package punya kondisi `"@rikology/source": "./<file>.ts"`
 
 ## 4. Scripts root
 
-| Script | Isi |
-| --- | --- |
-| `build` | `npm run build -w packages/pupitre -w packages/pupitre-react -w packages/pupitre-ui` |
-| `typecheck` | `tsc --noEmit` per workspace (`npm run typecheck --workspaces`) |
-| `lint` / `format` | eslint + prettier Adonis |
-| `test` | `npm test --workspaces --if-present` |
-| `test:pg` | sama dengan `DB=pg` (butuh `DATABASE_URL`) |
-| `verify:exports` | import tiap subpath setiap package, assert bentuk |
+| Script                              | Isi                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------- |
+| `build`                             | `npm run build -w packages/pupitre -w packages/pupitre-react -w packages/pupitre-ui`     |
+| `typecheck`                         | `tsc --noEmit` per workspace (`npm run typecheck --workspaces`)                          |
+| `lint` / `format`                   | eslint + prettier Adonis                                                                 |
+| `test`                              | `npm test --workspaces --if-present`                                                     |
+| `test:pg`                           | sama dengan `DB=pg` (butuh `DATABASE_URL`)                                               |
+| `verify:exports`                    | import tiap subpath setiap package, assert bentuk                                        |
 | `registry:build` / `registry:check` | M4 (WP40): bangun `packages/pupitre-ui/registry/registry.json`; `check` gagal kalau diff |
-| `e2e` | Playwright terhadap `apps/example` |
-| `release` | `release-it` per package (lihat §9) |
+| `e2e`                               | Playwright terhadap `apps/example`                                                       |
+| `release`                           | `release-it` per package (lihat §9)                                                      |
 
 ## 5. Konvensi package
 
@@ -71,11 +71,21 @@ Mengikuti skill `adonisjs-package-development`:
 
 ```jsonc
 {
-  ".": { "@rikology/source": "./index.ts", "types": "./build/index.d.ts", "default": "./build/index.js" },
-  "./catalog": "...", "./types": "...", "./pupitre_provider": "...", "./services/main": "...",
-  "./commands": "...", "./commands/*": "...", "./middleware/*": "...",
-  "./hooks": "./build/src/discovery/index_admin.js"   // indexAdmin() untuk adonisrc
-  // M2+: "./testing", "./drivers/tenant", "./drivers/notifications", "./drivers/queue", "./drivers/audit"
+  ".": {
+    "@rikology/source": "./index.ts",
+    "types": "./build/index.d.ts",
+    "default": "./build/index.js",
+  },
+  "./catalog": "...",
+  "./types": "...",
+  "./pupitre_provider": "...",
+  "./services/main": "...",
+  "./commands": "...",
+  "./commands/*": "...",
+  "./middleware/*": "...",
+  "./hooks": "./build/src/discovery/index_admin.js", // indexAdmin() untuk adonisrc
+  "./drivers/*": "./build/src/drivers/*.js", // M2: drivers/mail, drivers/tenant, drivers/notifications (optional peers)
+  // M3+: "./testing", "./drivers/queue", "./drivers/audit"
 }
 ```
 
@@ -137,5 +147,11 @@ cd apps/example && cp .env.example .env && node ace migration:fresh --seed && np
 ## 11. Debugging
 
 - `node ace pupitre:routes` — menampilkan route dan namanya.
-- `node ace pupitre:inspect` — fitur M3, belum tersedia di M1.
+- `node ace pupitre:prune` — menghapus token reset password yang sudah kedaluwarsa; jadwalkan command ini sesuai kebijakan host.
+
+`node ace make:page Settings` membuat `app/admin/pages/settings_page.ts` dari stub kosong dan tidak menimpa file yang sudah ada; gunakan `--force` untuk overwrite. File dengan suffix `_page` masuk barrel `pages` dari hook `indexAdmin`, lalu daftarkan dengan `.pages(pages)` pada panel.
+
+- `node ace make:panel <name> [--path /prefix] [--guard web]` — membuat `app/admin/panels/<name>.ts`; file yang sudah ada tidak ditimpa.
+- `node ace make:resource Comment [--model=#models/comment] [--from-migration] [--force]` — membuat `app/admin/resources/comment_resource.ts` dari metadata Lucid (`$columnsDefinitions`, tipe deklarasi model/schema, enum dan belongsTo). Gunakan `--from-migration` saat model tidak mendeklarasikan tipe kolom. File yang sudah ada dilewati kecuali `--force`; relasi selain belongsTo dilewati dan dilaporkan.
+- `node ace pupitre:inspect [resource]` — M2: policy resource, policy hilang (allow-by-default), ability yang dibutuhkan tetapi belum diimplementasikan, serta daftar kolom searchable. `--json` menghasilkan laporan machine-readable. Pemeriksaan closure/index pada kolom searchable adalah M3 (WP31).
 - Di client: `window.__pupitre` (hanya dev) mengekspos store dan spec aktif.

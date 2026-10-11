@@ -188,6 +188,32 @@ test.group('schema compiler', () => {
     })
   })
 
+  test('compiles actions on selects with static options', async ({ assert }) => {
+    const compiled = await compileForm(
+      [
+        node(
+          schema.select('status').options({ draft: 'Draft' }).suffixAction({
+            name: 'help',
+            kind: 'action',
+            context: 'header',
+            url: '/help',
+          })
+        ),
+      ],
+      {
+        ...options,
+        ctx: { pupitre: { panel: { path: '/admin' } } } as never,
+      }
+    )
+    assert.deepEqual(compiled.spec.elements['f.status']?.props.suffixAction, {
+      name: 'help',
+      label: 'help',
+      kind: 'link',
+      url: '/help',
+      method: 'get',
+      enabled: true,
+    })
+  })
   test('lifts supported closures and marks record access static', ({ assert }) => {
     const scope = { pathPrefix: '/data', inRepeater: false }
     const getter = { get: (_path: string): number | string | boolean => 1 }

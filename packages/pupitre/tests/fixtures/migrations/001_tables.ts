@@ -21,6 +21,11 @@ export async function up(database: Database) {
     table.string('name').notNullable()
     table.string('full_name').nullable()
     table.string('email').notNullable().unique()
+    table.string('password').nullable()
+    table.timestamp('email_verified_at', { useTz: true }).nullable()
+    table.string('avatar').nullable()
+    table.string('timezone', 64).nullable()
+    table.integer('current_tenant_id').unsigned().nullable()
     table.timestamps(true, true)
   })
   await createIfMissing(database, 'categories', (table) => {

@@ -1,5 +1,6 @@
-export { Pupitre } from './page/Pupitre.js'
 export type { PupitreProps } from './page/Pupitre.js'
+export { Pupitre } from './page/Pupitre.js'
+export { PupitreShell } from './page/PupitreShell.js'
 export { defineRegistry } from './registry/defineRegistry.js'
 export type { PupitreFunctions, PupitreRegistry } from './registry/defineRegistry.js'
 export { PupitreRenderer } from './renderer/PupitreRenderer.js'
@@ -11,7 +12,7 @@ export { createPupitreStore } from './renderer/store.js'
 export { builtInFunctions } from './renderer/functions.js'
 export { t } from './i18n.js'
 export { setRouter } from './bridge/inertia.js'
-export { setFetch } from './bridge/actions.js'
+export { setFetch, fetchOptions, jsonFetch, xsrfToken } from './bridge/actions.js'
 export { mapErrors } from './bridge/errors.js'
 export {
   useBoundValue,
@@ -29,9 +30,13 @@ export {
   useToast,
   useVisit,
   useNavigationGuard,
+  useOptions,
+  useRuntime,
+  useNotificationsPolling,
 } from './hooks/index.js'
 export type {
   ShellProps,
+  AuthShellProps,
   ToasterProps,
   ToastMessage,
   ModalProps,

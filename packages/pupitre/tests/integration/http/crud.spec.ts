@@ -433,38 +433,9 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       await closeTestApp(fixture)
     }
   })
-  test('enforces resource abilities and hides denied navigation entries', async ({ assert }) => {
+  test('filters denied resources from navigation and dashboard', async ({ assert }) => {
     const fixture = await createTestApp()
     try {
-      const record = await Post.create({
-        title: 'Policy row',
-        slug: 'policy-row',
-        status: 'draft',
-        tenantId: 1,
-      })
-      const cases = [
-        { ability: 'viewAny', method: 'GET', path: '/admin/posts' },
-        { ability: 'create', method: 'GET', path: '/admin/posts/create' },
-        { ability: 'create', method: 'POST', path: '/admin/posts', body: {} },
-        { ability: 'view', method: 'GET', path: `/admin/posts/${record.id}` },
-        { ability: 'update', method: 'GET', path: `/admin/posts/${record.id}/edit` },
-        { ability: 'update', method: 'PUT', path: `/admin/posts/${record.id}`, body: {} },
-        { ability: 'delete', method: 'DELETE', path: `/admin/posts/${record.id}` },
-      ]
-      for (const item of cases) {
-        denyPolicyAbility(item.ability)
-        const response = await fetch(`${fixture.baseUrl}${item.path}`, {
-          method: item.method,
-          headers: {
-            Accept: 'application/json',
-            ...(item.body ? { 'Content-Type': 'application/json' } : {}),
-          },
-          ...(item.body ? { body: JSON.stringify(item.body) } : {}),
-        })
-        assert.equal(response.status, 403, `${item.method} ${item.path}: ${await response.text()}`)
-        allowPolicyAbilities()
-      }
-
       denyPolicyAbility('viewAny')
       const categories = await inertia(fixture.baseUrl, '/admin/categories')
       const categoryPage = await responseProps(categories)

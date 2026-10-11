@@ -220,6 +220,8 @@ export const uploadResponse = z.object({
   mime: z.string(),
 })
 export type UploadResponse = z.infer<typeof uploadResponse>
+export const optionsResponse = z.object({ options: z.array(option), hasMore: z.boolean() })
+export type OptionsResponse = z.infer<typeof optionsResponse>
 
 export const navItem = z.object({
   label: z.string(),
@@ -239,6 +241,7 @@ export const navGroup = z.object({
   icon: z.string().optional(),
   sort: z.number().optional(),
   collapsible: z.boolean().optional(),
+  collapsed: z.boolean().optional(),
 })
 export type NavGroup = z.infer<typeof navGroup>
 export const flashMessage = z.object({
@@ -250,6 +253,7 @@ export type FlashMessage = z.infer<typeof flashMessage>
 export const brand = z.object({
   name: z.string(),
   logo: z.string().optional(),
+  logoDark: z.string().optional(),
   favicon: z.string().optional(),
 })
 export type Brand = z.infer<typeof brand>
@@ -378,6 +382,72 @@ export const actionFormResponse = z.object({
 })
 export type ActionFormResponse = z.infer<typeof actionFormResponse>
 
+export const userMenuItem = z.object({
+  label: z.string(),
+  url: z.string(),
+  icon: z.string().optional(),
+  method: z.enum(['get', 'post']).optional(),
+  external: z.boolean().optional(),
+})
+export type UserMenuItem = z.infer<typeof userMenuItem>
+export const tenantSummary = z.object({
+  id: z.union([z.string(), z.number()]),
+  name: z.string(),
+  slug: z.string().optional(),
+})
+export const tenantOption = z.object({
+  id: z.union([z.string(), z.number()]),
+  name: z.string(),
+  /** mode `url`: tenant home URL (GET); mode `implicit`: switch endpoint (POST `{ tenant: id }`). */
+  url: z.string(),
+  method: z.enum(['get', 'post']).optional(),
+  current: z.boolean().optional(),
+})
+export type TenantOption = z.infer<typeof tenantOption>
+export const notificationsProp = z.object({
+  unread: z.number(),
+  /** `GET` inbox endpoint (`/_pupitre/notifications`). */
+  url: z.string(),
+  /** `POST` mark-read endpoint (`/_pupitre/notifications/read`). */
+  readUrl: z.string(),
+  /** Polling interval in ms (`router.reload({ only: ['pupitre'] })`). */
+  interval: z.number(),
+})
+export const notificationItem = z.object({
+  id: z.string(),
+  type: z.enum(['success', 'error', 'warning', 'info']),
+  title: z.string(),
+  body: z.string().optional(),
+  url: z.string().optional(),
+  readAt: z.string().nullable(),
+  createdAt: z.string(),
+})
+export type NotificationItem = z.infer<typeof notificationItem>
+export const notificationListResponse = z.object({
+  items: z.array(notificationItem),
+  unread: z.number(),
+  meta: z.object({
+    total: z.number(),
+    perPage: z.number(),
+    currentPage: z.number(),
+    lastPage: z.number(),
+  }),
+})
+export const notificationsReadRequest = z.object({
+  ids: z.union([z.array(z.string()), z.literal('all')]),
+})
+export const globalSearchResult = z.object({
+  title: z.string(),
+  details: z.array(z.string()).optional(),
+  url: z.string(),
+})
+export const globalSearchGroup = z.object({
+  resource: z.string(),
+  label: z.string(),
+  results: z.array(globalSearchResult),
+})
+export const globalSearchResponse = z.object({ groups: z.array(globalSearchGroup) })
+export type GlobalSearchResponse = z.infer<typeof globalSearchResponse>
 export const pageProps = z.object({
   pupitre: z.object({
     panel: z.object({
@@ -387,6 +457,9 @@ export const pageProps = z.object({
       theme: themeVars,
       features: panelFeatures,
       logoutUrl: z.string().optional(),
+      profileUrl: z.string().optional(),
+      userMenu: z.array(userMenuItem).optional(),
+      search: z.object({ url: z.string(), keyBinding: z.string() }).optional(),
     }),
     user: z
       .object({
@@ -397,19 +470,11 @@ export const pageProps = z.object({
         timezone: z.string().optional(),
       })
       .nullable(),
-    tenant: z
-      .object({
-        id: z.union([z.string(), z.number()]),
-        name: z.string(),
-        slug: z.string().optional(),
-      })
-      .nullable(),
-    tenants: z
-      .array(z.object({ id: z.union([z.string(), z.number()]), name: z.string(), url: z.string() }))
-      .optional(),
+    tenant: tenantSummary.nullable(),
+    tenants: z.array(tenantOption).optional(),
     nav: z.array(navGroup),
     flash: z.array(flashMessage),
-    notifications: z.object({ unread: z.number() }).optional(),
+    notifications: notificationsProp.optional(),
     locale: z.string(),
     timezone: z.string(),
   }),

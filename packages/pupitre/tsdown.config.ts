@@ -11,6 +11,7 @@ export default defineConfig({
     './commands/*.ts',
     './src/discovery/index_admin.ts',
     './src/http/middleware/*.ts',
+    './src/drivers/*.ts',
     './stubs/main.ts',
   ],
   outDir: './build',

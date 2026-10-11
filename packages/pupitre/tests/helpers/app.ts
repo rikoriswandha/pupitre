@@ -20,6 +20,8 @@ import { defineConfig as defineDriveConfig, services as driveServices } from '@a
 import { defineConfig as defineLucidConfig } from '@adonisjs/lucid'
 import { actions, action, definePanel, defineResource, pages, schema, table } from '../../index.js'
 import { defineConfig } from '../../src/define_config.js'
+import type { PupitreConfigInput } from '../../src/define_config.js'
+import type { HttpRouterService } from '@adonisjs/core/types'
 import Post from '../fixtures/models/post.js'
 import Category from '../fixtures/models/category.js'
 import User from '../fixtures/models/user.js'
@@ -30,6 +32,18 @@ class TestInertiaMiddleware extends BaseInertiaMiddleware {
   }
 
   async handle(ctx: HttpContext, next: NextFn) {
+    const context = ctx as HttpContext & {
+      view?: {
+        render(name: string, props: unknown): Promise<string>
+        share(props: Record<string, unknown>): void
+      }
+    }
+    context.view ??= {
+      async render() {
+        return '<html><body></body></html>'
+      },
+      share() {},
+    }
     await this.init(ctx)
     const output = await next()
     this.dispose(ctx)
@@ -41,9 +55,14 @@ class TestExceptionHandler extends ExceptionHandler {
 }
 class TestBouncerMiddleware {
   async handle(ctx: HttpContext, next: NextFn) {
-    const bouncer = new Bouncer(() => ({ id: 1 }), undefined, {}).setContainerResolver(
-      ctx.containerResolver
-    )
+    const { auth } = ctx as unknown as {
+      auth: { user?: unknown; use(name: string): { user?: unknown } }
+    }
+    const bouncer = new Bouncer(
+      () => auth.user ?? auth.use('web').user ?? { id: 1 },
+      undefined,
+      {}
+    ).setContainerResolver(ctx.containerResolver)
     ;(ctx as HttpContext & { bouncer: unknown }).bouncer = bouncer
     return next()
   }
@@ -57,11 +76,16 @@ async function testSessionAuthentication(ctx: HttpContext, next: NextFn) {
   return next()
 }
 const deniedAbilities = new Set<string>()
+const deniedCategoryAbilities = new Set<string>()
 export function denyPolicyAbility(ability: string) {
   deniedAbilities.add(ability)
 }
+export function denyCategoryPolicyAbility(ability: string) {
+  deniedCategoryAbilities.add(ability)
+}
 export function allowPolicyAbilities() {
   deniedAbilities.clear()
+  deniedCategoryAbilities.clear()
 }
 
 export class PostPolicy {
@@ -82,6 +106,24 @@ export class PostPolicy {
   }
   publish(_user: unknown) {
     return !deniedAbilities.has('publish')
+  }
+}
+
+export class CategoryPolicy {
+  viewAny() {
+    return !deniedCategoryAbilities.has('viewAny')
+  }
+  view() {
+    return !deniedCategoryAbilities.has('view')
+  }
+  create() {
+    return !deniedCategoryAbilities.has('create')
+  }
+  update() {
+    return !deniedCategoryAbilities.has('update')
+  }
+  delete() {
+    return !deniedCategoryAbilities.has('delete')
   }
 }
 const fixtureHookEvents: string[] = []
@@ -138,7 +180,6 @@ export const fixturePublishAction = action('publish')
 export const fixturePostResource = defineResource(Post)
   .slug('posts')
   .label('Post')
-  .pluralLabel('Posts')
   .recordTitle('title')
   .policy(PostPolicy)
   .scope((query) => query.where('tenant_id', 1))
@@ -220,6 +261,7 @@ export const fixtureCategoryResource = defineResource(Category)
   .slug('categories')
   .label('Category')
   .pluralLabel('Categories')
+  .policy(CategoryPolicy)
   .form((form) => form.components([schema.text('name').required()]))
   .table((definition) => definition.columns([table.text('name').sortable()]))
   .infolist((definition) => definition.components([schema.textEntry('name')]))
@@ -246,15 +288,25 @@ export type TestApplication = {
   loginAs(user: User): Promise<string>
 }
 
-export async function createTestApp(
-  options: {
-    csrf?: boolean
-    panelGuard?: string
-    withoutBouncer?: boolean
-    resourceSlug?: string
-    breadcrumbs?: boolean
-  } = {}
-): Promise<TestApplication> {
+export type CreateTestAppOptions = {
+  csrf?: boolean
+  panelGuard?: string
+  withoutBouncer?: boolean
+  resourceSlug?: string
+  breadcrumbs?: boolean
+  /** Replaces the fixture panel barrel (`{ admin: async () => ({ default: panel }) }`). */
+  panels?: Record<string, () => Promise<{ default: unknown }>>
+  /** Merged over the default Pupitre test config. */
+  pupitre?: PupitreConfigInput
+  /** Extra/overridden application config entries (e.g. `limiter`). */
+  config?: Record<string, unknown>
+  /** Extra providers appended to the fixture provider list. */
+  providers?: (() => Promise<unknown>)[]
+  /** Registers extra routes / router middleware before the panels boot. */
+  setup?: (router: HttpRouterService, app: ApplicationService) => void | Promise<void>
+}
+
+export async function createTestApp(options: CreateTestAppOptions = {}): Promise<TestApplication> {
   const root = await mkdtemp(join(tmpdir(), 'pupitre-http-'))
   const storagePath = join(root, 'uploads')
   await mkdir(storagePath, { recursive: true })
@@ -274,12 +326,14 @@ export async function createTestApp(
           () => import('@adonisjs/vite/vite_provider'),
           () => import('@adonisjs/drive/drive_provider'),
           () => import('../../providers/pupitre_provider.js'),
+          ...(options.providers ?? []),
         ],
       },
       config: {
         pupitre: defineConfig({
           cache: { dev: true },
           storage: { disk: 'uploads' },
+          ...options.pupitre,
         }),
         database: defineLucidConfig(testDatabase.config),
         session: defineSessionConfig({
@@ -306,7 +360,7 @@ export async function createTestApp(
           },
         }),
         bouncer: {},
-        inertia: { rootView: 'inertia_layout', sharedData: {} },
+        inertia: { rootView: 'inertia_layout', sharedData: {}, ssr: { enabled: false } },
         drive: defineDriveConfig({
           default: 'uploads',
           services: {
@@ -322,6 +376,7 @@ export async function createTestApp(
           buildDirectory: 'public/assets',
           manifestFile: 'public/assets/.vite/manifest.json',
         }),
+        ...options.config,
       },
     })
     .create(new URL(`file://${root}/`))
@@ -345,6 +400,7 @@ export async function createTestApp(
     await authContext.auth.use('web').login(user)
     return ctx.response.noContent()
   })
+  await options.setup?.(router, app)
   const configuredPanel = options.resourceSlug
     ? fixturePanel.resources({
         posts: fixturePostResource.slug(options.resourceSlug),
@@ -355,17 +411,16 @@ export async function createTestApp(
     ? configuredPanel.guard(options.panelGuard)
     : configuredPanel
   const panels =
-    options.resourceSlug || options.panelGuard || options.breadcrumbs === false
+    options.panels ??
+    (options.resourceSlug || options.panelGuard || options.breadcrumbs === false
       ? {
           admin: async () => ({
             default: guardedPanel.breadcrumbs(options.breadcrumbs ?? true),
           }),
         }
-      : fixturePanels
-  const manager = (await app.container.make('pupitre.manager')) as {
-    boot(panels: typeof fixturePanels): Promise<void>
-  }
-  await manager.boot(panels)
+      : fixturePanels)
+  const manager = await app.container.make('pupitre.manager')
+  await manager.boot(panels as never)
   await app.start(() => {})
   const server = await app.container.make('server')
   server.errorHandler(async () => ({ default: TestExceptionHandler }))

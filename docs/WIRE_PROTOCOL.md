@@ -14,10 +14,11 @@ type PupitrePageProps = {
     panel: { id: string; path: string; brand: Brand; theme: ThemeVars; features: PanelFeatures }
     user: { id: string | number; name: string; email: string; avatarUrl?: string; timezone?: string } | null
     tenant: { id: string | number; name: string; slug?: string } | null
-    tenants?: { id: string | number; name: string; url: string }[]      // untuk switcher
+    tenants?: { id: string | number; name: string; url: string; method?: 'get' | 'post'; current?: boolean }[] // GET tenant home or POST switch `{ tenant: id }`
+
     nav: NavGroup[]
     flash: { type: 'success' | 'error' | 'warning' | 'info'; title: string; body?: string }[]
-    notifications?: { unread: number }                                  // detail via /_pupitre/notifications
+    notifications?: { unread: number; url: string; readUrl: string; interval: number } // tray endpoint URLs + shared-prop polling interval
     locale: string
     timezone: string
   }
@@ -38,6 +39,15 @@ type PupitrePageProps = {
   data?: TableData                     // prop top-level; list page saja; partial reload `only: ['data']`
 }
 ```
+
+```ts
+type NavItem = { label: string; url?: string; icon?: string; badge?: string | number; external?: boolean; active?: boolean }
+type NavGroup = { label: string; items: NavItem[]; icon?: string; sort?: number; collapsible?: boolean; collapsed?: boolean }
+```
+
+`nav` difilter menurut `viewAny`, `canAccess`, dan `visible`; badge closure dievaluasi per request. `active` menunjukkan URL saat ini. Sidebar menyimpan status grup collapsible per panel dan grup di `localStorage`.
+
+`panel.brand.logoDark` adalah logo opsional untuk mode gelap. `panel.theme` memuat `primary`, `darkMode`, `--radius`, dan CSS variables khusus. `panel.userMenu` berisi item yang sudah difilter oleh `visible` dan diurutkan di server; method `post` dikirim melalui Inertia visit, sedangkan `external` dibuka di tab baru.
 
 `pupitre.*` dibagikan lewat `ctx.inertia.share` oleh middleware `share_props`; `page.*` dan `data` disusun controller. `@adonisjs/inertia` 5 hanya menyaring partial reload pada nama prop **top-level** (`inertia_manager` memilih `Object.keys(props)`), karena itu data tabel adalah prop top-level `data` dan refresh tabel memakai `only: ['data']` (ADR-0011). Flash Pupitre dibaca dari session key `pupitre` ke `pupitre.flash`; kanal `flash` Inertia v3 tetap milik middleware host.
 
@@ -210,15 +220,36 @@ Semua di dalam route group panel (prefix panel + tenant), middleware sama.
 | Method & URL | Body/Query | Respons |
 | --- | --- | --- |
 | `POST /_pupitre/evaluate` | `{ resource, page, field, state: StateModel['/data'], record? }` | `{ set: Record<pointer, unknown> }` |
-| `GET /_pupitre/options/:resource/:field` | `q`, `selected[]`, `page` | `{ options: { value, label, description?, disabled? }[]; hasMore: boolean }` |
+| `GET /_pupitre/options/:resource/:field` | `q`, `selected[]`, `page` | `{ options: Option[]; hasMore: boolean }` (`optionsResponse` Zod); page size 20, selected IDs are returned with labels |
+| `GET /_pupitre/options/:resource/:field?create=1` | — | `ActionFormResponse` for the field's `createOptionForm` |
+| `POST /_pupitre/options/:resource/:field` | `{ data }` | `{ option: Option }`; 422 validation, 403 related-model `create` denial |
 | `GET /_pupitre/search` | `q` | `{ groups: { resource: string; label: string; results: { title: string; details?: string[]; url: string }[] }[] }` |
-| `GET /_pupitre/notifications` | `page` | `{ items: NotificationItem[]; unread: number; meta }` |
-| `POST /_pupitre/notifications/read` | `{ ids: string[] \| 'all' }` | 204 |
-| `POST /_pupitre/upload` | multipart `file`, `field`, `resource`, `record?`; header `Accept: application/json`, `X-XSRF-TOKEN` | `{ key: string; url: string; name: string; size: number; mime: string }`; 403 tanpa ability `create`/`update`; 404 bila resource/field tidak dikenal; 413 bila `maxSize` terlampaui; 422 bila MIME hasil sniff byte (`file-type`) tidak sesuai `accept`/`image()` |
+| `GET /_pupitre/notifications?page=` | — | `{ items: NotificationItem[]; unread: number; meta: { total, perPage, currentPage, lastPage } }`; default page 1, 20 items/page; adapter + panel notifications required, otherwise 404 |
+| `POST /_pupitre/notifications/read` | `{ ids: string[] \| 'all' }` | 204; only affects the authenticated user's notifications; 404 when notifications are disabled |
+| `POST /_pupitre/upload` | multipart `file`, `field`, `resource` (slug pemilik form: resource atau custom page), `record?`; header `Accept: application/json`, `X-XSRF-TOKEN` | `{ key: string; url: string; name: string; size: number; mime: string }`; 403 tanpa ability resource atau `canAccess` page; 404 bila pemilik/field tidak dikenal; 413 bila `maxSize` terlampaui; 422 bila MIME hasil sniff byte (`file-type`) tidak sesuai `accept`/`image()` |
 | `DELETE /_pupitre/upload` | `{ key, field, resource }` | 204; 403 bila key bukan unggahan sesi ini (`session` key `pupitre.uploads`) |
 | `GET /_pupitre/widgets/:name` | query filters dashboard | `WidgetData` |
 
-Setiap endpoint memvalidasi `resource`/`field` terhadap definition yang terdaftar dan menjalankan ability yang sesuai (`options` → `viewAny` model relasi, `evaluate` → `create`/`update`).
+
+`NotificationItem` adalah `{ id, type: 'success'|'error'|'warning'|'info', title, body?, url?, readAt: string|null, createdAt: string }`. `notificationListResponse` dan `notificationsReadRequest` di `@rikology/pupitre/catalog` memvalidasi kontrak endpoint ini. Kedua route berada di tenant route group dan bernama `<panel>.notifications` dan `<panel>.notifications.read`.
+
+Tenancy routes live under the panel user route group (without a tenant segment): `GET <panel.path>` redirects to the first authorized tenant home in mode `url`; `POST <panel.path>/_pupitre/tenant` accepts `{ tenant: id }`, persists the current tenant in mode `implicit`, and redirects to the panel home. Tenant resource routes use `<panel.path>/:tenant/...` in mode `url`; tenant membership failures and unknown slugs return 404. In mode `implicit`, a missing current tenant selects and persists the first membership before continuing; users with no membership receive 403.
+
+Setiap endpoint memvalidasi `resource`/`field` terhadap definition yang terdaftar dan menjalankan ability yang sesuai: `options` mewajibkan akses `create` atau `update` pada form owner (resource atau page melalui `findFormOwner`) serta `viewAny` pada model relasi; `evaluate` mewajibkan `create`/`update`.
+
+`GET /_pupitre/search` menerima query minimal dua karakter (setelah trim) dan mengembalikan `globalSearchResponse` dari `@rikology/pupitre/catalog`:
+
+```ts
+type GlobalSearchResponse = {
+  groups: {
+    resource: string
+    label: string
+    results: { title: string; details?: string[]; url: string }[]
+  }[]
+}
+```
+
+Setiap grup memuat hasil resource yang diizinkan `viewAny`; setiap record hanya disertakan bila ability `view` atau `update` mengizinkan navigasi ke URL halaman yang tersedia. Maksimal lima hasil per resource, dengan query yang tetap memakai scope resource dan tenant aktif.
 
 ## 7. Route dan penamaan
 
@@ -226,6 +257,8 @@ Pola nama: `<panel>.<slug>.<page>`; route action memakai nama tetap dengan param
 
 | URL (relatif ke panel path + `/:tenant` opsional) | Nama |
 | --- | --- |
+| `GET /` (user group, mode `url`) | `admin.tenant.home` |
+| `POST /_pupitre/tenant` (user group, mode `implicit`) | `admin.tenant.switch` |
 | `GET /` | `admin.dashboard` |
 | `GET /posts` | `admin.posts.list` |
 | `GET /posts/create` · `POST /posts` | `admin.posts.create` · `admin.posts.store` |
@@ -238,8 +271,20 @@ Pola nama: `<panel>.<slug>.<page>`; route action memakai nama tetap dengan param
 | `GET /posts/:id/relations/:relation` | `admin.posts.relations.<relation>.list` |
 | `GET/POST /posts/:id/relations/:relation/:rid/actions/:action` | `admin.posts.relations.<relation>.actions.<action>` |
 | `GET /posts/:id/revisions/...` | `admin.posts.revisions.<page>` (nested resource) |
-| `GET /settings` (custom page) | `admin.settings` |
-| `GET /login`, `POST /login`, ... | `admin.auth.login`, ... |
+| `GET /settings` · `POST /settings` (custom page with form + save) | `admin.settings` · `admin.settings.store` |
+| `GET /settings/actions/:action` · `POST /settings/actions/:action` | `admin.settings.actions` · `admin.settings.actions.store` (custom page header action) |
+
+| `GET /login` · `POST /login` · `POST /logout` | `admin.auth.login` · `admin.auth.login.store` · `admin.auth.logout` |
+| `GET /password/forgot` · `POST /password/email` · `GET/POST /password/reset/:token` | `admin.auth.password.request` · `admin.auth.password.email` · `admin.auth.password.reset` · `admin.auth.password.update` |
+| `GET/POST /register` | `admin.auth.register` · `admin.auth.register.store` |
+| `GET /email/verify/:id/:hash` · `GET /email/verify` · `POST /email/verification-notification` | `admin.auth.verification.verify` · `admin.auth.verification.notice` · `admin.auth.verification.send` |
+| `GET /profile` · `PUT /profile` · `POST/DELETE /profile/avatar` | `admin.profile` · `admin.profile.update` · `admin.profile.avatar.upload` · `admin.profile.avatar.delete` |
+
+Route auth hanya didaftarkan saat fitur terkait diaktifkan pada panel. Login dan halaman guest forgot/reset/register mengalihkan user yang sudah login ke dashboard panel; `redirect` hanya menerima path relatif satu-origin (`/…`, bukan `//host`). Request halaman terlindungi yang kehilangan sesi mendapat redirect ke `/login?redirect=<path>`, sedangkan request JSON atau `X-Pupitre-Action: 1` mendapat HTTP 401. Login gagal kembali dengan error pada field `email`; forgot-password memberi respons yang sama untuk email dikenal/tidak dikenal. Token reset mentah hanya dikirim lewat mail adapter, tersimpan sebagai SHA-256, terikat guard, kedaluwarsa menurut `auth.passwordResetTtl` menit dan hanya dapat dipakai sekali.
+
+`GET /email/verify` merender form resend; signed URL verifikasi menetapkan kolom `emailVerifiedAt`. Selama belum terverifikasi, user group dialihkan ke notice kecuali route verification/logout. Profil menerima `name`, `email`, `current_password`, `password`, dan bila avatar aktif `PUT /profile` menerima key avatar yang diunggah pada sesi ini. Upload avatar memakai `POST /profile/avatar` multipart `{ file, field: 'avatar', resource: 'profile', record: <user id> }` (maksimum 5 MiB; MIME gambar diverifikasi dari bytes); `DELETE` hanya menghapus unggahan sesi yang sama. File avatar baru disimpan lewat disk storage Pupitre dan file lama dihapus setelah penyimpanan user berhasil.
+
+Untuk custom page dengan `.component('admin/Reports')`, controller merender nama komponen Inertia host tersebut dan mengirim `pupitre` shared props serta `page` (`kind: 'custom'`, `component`, `spec`, `state`, breadcrumbs, actions). Komponen host dapat memakai `<PupitreShell registry={registry}>...</PupitreShell>` dari `@rikology/pupitre-react`; tanpa escape hatch, `Pupitre` merender `spec` custom page di shell standar.
 
 Route action didaftarkan **sebelum** `:id` agar `/posts/actions/x` tidak tertangkap `/posts/:id`; slug action tidak boleh numerik (divalidasi builder).
 

@@ -18,7 +18,9 @@ import {
   isUploadMimeAllowed,
   parseMaxSize,
 } from '../../storage/upload_validation.js'
+import { scopedQuery } from '../../query/scoped_query.js'
 
+import { findFormOwner } from '../../pages/form_owner.js'
 type UploadedSessionFile = {
   key: string
   resource: string
@@ -46,10 +48,8 @@ async function findRecord(
   id: unknown
 ): Promise<LucidRow | null> {
   if (typeof id !== 'string' && typeof id !== 'number') return null
-  const query = resource.model.query()
-  resource.definition.scope?.(query, ctx)
   const keyName = (resource.model as LucidModel & { primaryKey?: string }).primaryKey ?? 'id'
-  return query.where(keyName, id).first()
+  return scopedQuery(ctx, resource).where(keyName, id).first()
 }
 
 export default class UploadController {
@@ -61,14 +61,17 @@ export default class UploadController {
       return ctx.response.status(422).json({ message: 'A resource and field are required' })
     }
 
-    const resource = context.pupitre.panel.resources.find(
-      (candidate) => candidate.slug === resourceSlug
-    )
-    if (!resource) return ctx.response.status(404).json({ message: 'Resource not found' })
-    const field = findUploadField(resource.definition.form, fieldName)
+    const owner = findFormOwner(ctx, resourceSlug)
+    if (!owner) return ctx.response.status(404).json({ message: 'Form owner not found' })
+    const resource =
+      owner.kind === 'resource'
+        ? context.pupitre.panel.resources.find((candidate) => candidate.slug === resourceSlug)
+        : undefined
+    const field = findUploadField(owner.form, fieldName)
     if (!field) return ctx.response.status(404).json({ message: 'Upload field not found' })
 
     let record: LucidRow | undefined
+    let ability: UploadedSessionFile['ability'] = 'create'
     const recordId = ctx.request.input('record')
     if (
       recordId !== undefined &&
@@ -78,12 +81,21 @@ export default class UploadController {
     ) {
       return ctx.response.status(422).json({ message: 'The record identifier is invalid' })
     }
-    if (recordId !== undefined && recordId !== null && recordId !== '') {
-      record = (await findRecord(ctx, resource, recordId)) ?? undefined
-      if (!record) return ctx.response.status(404).json({ message: 'Record not found' })
+    if (owner.kind === 'resource') {
+      if (!resource) return ctx.response.status(404).json({ message: 'Resource not found' })
+      if (recordId !== undefined && recordId !== null && recordId !== '') {
+        if (!(await authorizeResource(ctx, resource, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
+        record = (await findRecord(ctx, resource, recordId)) ?? undefined
+        if (!record) return ctx.response.status(404).json({ message: 'Record not found' })
+      }
+      ability = record ? 'update' : 'create'
+      if (!(await authorizeResource(ctx, resource, ability, record)))
+        throw new E_PUPITRE_FORBIDDEN()
+    } else {
+      if (recordId !== undefined && recordId !== null && recordId !== '')
+        return ctx.response.status(422).json({ message: 'Page uploads do not accept a record' })
+      await owner.authorize('create')
     }
-    const ability = record ? 'update' : 'create'
-    if (!(await authorizeResource(ctx, resource, ability, record))) throw new E_PUPITRE_FORBIDDEN()
 
     const file = ctx.request.file('file') as MultipartFile | null
     if (!file || !file.tmpPath || file.errors.length > 0) {
@@ -165,19 +177,25 @@ export default class UploadController {
     const own = uploads.find((upload) => upload.key === key)
     if (!own) throw new E_PUPITRE_UPLOAD_NOT_OWNED()
 
-    const resource = context.pupitre.panel.resources.find(
-      (candidate) => candidate.slug === own.resource
-    )
-    const field = resource ? findUploadField(resource.definition.form, own.field) : undefined
-    if (!resource || !field) throw new E_PUPITRE_UPLOAD_NOT_OWNED()
-    let record: LucidRow | undefined
-    if (own.ability === 'update') {
-      record = (await findRecord(ctx, resource, own.recordId)) ?? undefined
-      if (!record) throw new E_PUPITRE_UPLOAD_NOT_OWNED()
+    const owner = findFormOwner(ctx, own.resource)
+    const resource =
+      owner?.kind === 'resource'
+        ? context.pupitre.panel.resources.find((candidate) => candidate.slug === own.resource)
+        : undefined
+    const field = owner ? findUploadField(owner.form, own.field) : undefined
+    if (!owner || !field) throw new E_PUPITRE_UPLOAD_NOT_OWNED()
+    if (owner.kind === 'resource' && resource) {
+      let record: LucidRow | undefined
+      if (own.ability === 'update') {
+        if (!(await authorizeResource(ctx, resource, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
+        record = (await findRecord(ctx, resource, own.recordId)) ?? undefined
+        if (!record) throw new E_PUPITRE_UPLOAD_NOT_OWNED()
+      }
+      if (!(await authorizeResource(ctx, resource, own.ability, record)))
+        throw new E_PUPITRE_FORBIDDEN()
+    } else {
+      await owner.authorize(own.ability)
     }
-    if (!(await authorizeResource(ctx, resource, own.ability, record)))
-      throw new E_PUPITRE_FORBIDDEN()
-
     const storage = createPupitreStorage(
       field.kind === 'fileUpload' ? field.disk : field.fileAttachmentsDisk
     )

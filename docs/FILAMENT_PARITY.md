@@ -7,24 +7,24 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Filament v4 | Pupitre | Target | Status | Catatan |
 | --- | --- | --- | --- | --- |
 | `PanelProvider` / multi panel | `definePanel()` di `app/admin/panels/*.ts` | M1 | ✅ | |
-| `->path()`, `->domain()` | `.path()`, `.domain()` | M1 | 🟨 | path ✅; domain M2 |
+| `->path()`, `->domain()` | `.path()`, `.domain()` | M1 | ✅ | domain membatasi host route group per panel |
 | `->login()->registration()->passwordReset()->emailVerification()->profile()` | sama (chaining) | M2 | ⬜ | |
 | `->authGuard()` | `.guard()` | M1 | ✅ | |
 | `->middleware()`, `->authMiddleware()` | `.middleware()` | M1 | ✅ | satu array; `auth` termasuk |
 | `->discoverResources()` dkk | build-time `indexAdmin` barrel | M1 | ✅ | sengaja beda (DESIGN) |
-| `->navigationGroups()`, `->navigationItems()` | `.navigation([...])` | M2 | ⬜ | |
+| `->navigationGroups()`, `->navigationItems()` | `.navigation([...])`, `nav.group()`, `nav.item()` | M2 | ✅ | sort, badge closure, filter `viewAny`/`canAccess`, external link, collapsible state |
 | `->sidebarCollapsibleOnDesktop()`, `->topNavigation()` | theme file `sidebar: 'expanded'\|'collapsed'\|'top-nav'` | M3 | ⬜ | |
 | `->brandName()`, `->brandLogo()`, `->favicon()` | `.brand()` | M1 | ✅ | |
-| `->colors()`, `->darkMode()`, `->font()` | `.theme()` + theme file | M1/M3 | 🟨 | primary + darkMode ✅; font/theme file M3 |
-| `->globalSearch()`, `->globalSearchKeyBindings()` | `.globalSearch({ keyBinding })` | M2 | ⬜ | |
-| `->databaseNotifications()->databaseNotificationsPolling()` | `.notifications({ driver, interval })` | M2 | ⬜ | |
-| `->tenant()`, `->tenantRoutePrefix()`, `->tenantMenu()`, `->tenantRegistration()`, `->tenantProfile()` | `.tenancy({...})` | M2 | ⬜ | |
+| `->colors()`, `->darkMode()`, `->font()` | `.theme()` | M1/M3 | 🟨 | primary, dark mode, radius, dan CSS variables tersedia; font/theme file M3 |
+| `->globalSearch()`, `->globalSearchKeyBindings()` | `.globalSearch({ keyBinding })` + pencarian `cmd+k` | M2 | ✅ | `GET /_pupitre/search`; hanya resource yang searchable dan lolos policy |
+| `->databaseNotifications()->databaseNotificationsPolling()` | `.notifications({ interval })` + database-channel adapter | M2 | ✅ | Tray polling, paginated inbox, and mark-read endpoints; database persistence is optional |
+| `->tenant()`, `->tenantRoutePrefix()`, `->tenantMenu()`, `->tenantRegistration()`, `->tenantProfile()` | `.tenancy({...})` + `TenantSwitcher` | M2 | ✅ | URL/implicit mode, membership-aware routing, resource scoping, ownership fill, and global `.scope(false)` |
 | `->plugins()` | `.plugins([...])` | M4 | ⬜ | API stabil sejak M1 |
 | `->spa()` | — | — | — | Inertia sudah SPA |
 | `->unsavedChangesAlerts()` | `Form.dirtyGuard` | M1 | ✅ | |
 | `->maxContentWidth()` | theme file `contentWidth` | M3 | ⬜ | |
 | `->renderHook()` | — | — | — | ganti komponen via registry |
-| `->userMenuItems()` | `.userMenu([...])` | M2 | ⬜ | |
+| `->userMenuItems()` | `.userMenu([...])` | M2 | ✅ | visible closure, sort, method, external link |
 | `->breadcrumbs()` | otomatis; `.breadcrumbs(false)` | M1 | ✅ | |
 | `->viteTheme()` | — | — | — | Tailwind host |
 
@@ -35,7 +35,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `Resource::$model` | `defineResource(Model)` | M1 | ✅ | |
 | `$slug`, `$modelLabel`, `$pluralModelLabel`, `$navigationIcon/Group/Sort/Badge` | `.slug/.label/.pluralLabel/.icon/.navigation()` | M1 | ✅ | |
 | `$recordTitleAttribute` | `.recordTitle()` | M1 | ✅ | |
-| `getGloballySearchableAttributes()` | `.globallySearchable([...])` | M2 | ⬜ | |
+| `getGloballySearchableAttributes()` | `.globallySearchable([...])` | M2 | ✅ | Dukungan kolom relasi dengan notasi titik |
 | `getEloquentQuery()` | `.scope((q, ctx) => …)` | M1 | ✅ | |
 | `form()`, `table()`, `infolist()` | `.form()/.table()/.infolist()` | M1 | ✅ | |
 | `getPages()` List/Create/Edit/View | `.pages({ list, create, edit, view })` | M1 | ✅ | |
@@ -49,7 +49,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Tabs di list page | `pages.list().tabs({...})` | M1 | ✅ | |
 | Page widgets header/footer | `pages.edit().widgets([...])`, `.footerWidgets()` | M3 | ⬜ | |
 | Custom page class | `pages.edit().component('…')` | M1 | ✅ | escape hatch |
-| `canAccess()`, policy auto-discovery | `.policy()` + default `<Model>Policy` | M1/M2 | 🟨 | policy + `<Model>Policy` via config loader ✅; `pupitre:inspect` M2 |
+| `canAccess()`, policy auto-discovery | `.policy()` + default `<Model>Policy` | M1/M2 | ✅ | `viewAny`/`view`/`create`/`update`/`delete` + custom abilities, `pupitre:inspect` |
 | Resource sub-navigation (`getRecordSubNavigation`) | otomatis: edit/view/relations/nested | M3 | ⬜ | |
 | Simple (modal) resources | `pages.list().modals()` | M3 | ⬜ | create/edit sebagai action form |
 
@@ -59,7 +59,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | --- | --- | --- | --- |
 | `TextInput` + `email/password/numeric/tel/url/mask/prefix/suffix/datalist/revealable` | `s.text` (+ `s.email`, `s.password`, `s.number`) | M1 | 🟨 (mask, tel/url type belum) |
 | `Textarea` autosize | `s.textarea` | M1 | 🟨 (autosize belum) |
-| `Select` searchable/multiple/relationship/preload/createOptionForm/native | `s.select`, `s.multiSelect` | M1 (static) / M2 (relationship, create) | 🟨 (opsi statis + multiple ✅; relationship/search/create M2) |
+| `Select` searchable/multiple/relationship/preload/createOptionForm | `s.select`, `s.multiSelect` | M1 (static) / M2 (options closure, relationship, create, actions) | 🟨 (options endpoint, scope, policy, async UI shipped; validate actual model policies in host) |
 | `Checkbox`, `CheckboxList` | `s.checkbox`, `s.checkboxList` | M1 | ✅ |
 | `Radio` dengan descriptions | `s.radio` | M1 | ✅ |
 | `Toggle`, `ToggleButtons` | `s.toggle`, `s.toggleButtons` | M1 | ✅ |
@@ -156,7 +156,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Widget `pollingInterval`, `columnSpan`, `sort`, `filters` dashboard | sama | M3 | ⬜ |
 | Custom widget Blade | `.component('…')` React host | M3 | ⬜ |
 | Dashboard page custom | `definePage('dashboard')` | M3 | ⬜ |
-| Custom `Page` dengan form/actions | `definePage()` | M2 | ⬜ |
+| Custom `Page` dengan form/actions | `definePage().path().form().fill().save().actions()` + `.component()` | M2 | ✅ | |
 | `RelationManager` (table + form, attach/detach) | `defineRelationManager()` | M3 | ⬜ |
 | Relation manager tabs & badge, `readOnly` | sama | M3 | ⬜ |
 | `RelationGroup` | `.relations([group([...])])` | M3 | ⬜ |
@@ -165,19 +165,19 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 
 | Filament v4 | Pupitre | Target | Status |
 | --- | --- | --- | --- |
-| Login, register, reset, verify, profile | WP13 | M2 | ⬜ |
+| Login, register, reset, verify, profile | `.login().registration().passwordReset().emailVerification().profile()` | WP17 | ✅ |
 | MFA (v4: app + email) | TOTP app + recovery codes; email code — | M3 | ⬜ (email MFA tidak di v1) |
 | Passkeys | ya (WebAuthn) | M3 | ⬜ (Filament tidak punya bawaan) |
 | Social login | via Ally | M3 | ⬜ (Filament via plugin) |
 | Flash notifications | `notify.*` → toast | M1 | ✅ |
 | Database notifications + actions di notif | adapter `notifications` | M2 | ⬜ |
 | Broadcast notifications (Echo) | `pupitre-transmit` | M4 | ⬜ |
-| Global search + `getGlobalSearchResultDetails/Actions/Url` | `.globallySearchable()`, `.globalSearchResult()` | M2 | ⬜ |
-| Tenancy: `HasTenants`, scoping, `ownershipRelationship`, billing | adapter tenancy; billing — | M2 | ⬜ |
+| Global search + `getGlobalSearchResultDetails/Actions/Url` | `.globallySearchable()`, `.globalSearchDetails()` | M2 | ✅ | URL mengikuti ability `view`/`update`; maksimal 5 hasil/resource |
+| Tenancy: `HasTenants`, scoping, `ownershipRelationship`, billing | `TenancyAdapter` + column / `@rikology/adonisjs-tenant` drivers; billing — | M2 | ✅ | |
 | Shield plugin (roles/permissions) | `pupitre-shield` | M4 | ⬜ |
 | Activity log plugin | `pupitre-audit` | M4 | ⬜ |
 | Multi-language (`->locales()`) | — | post-1.0 | — |
 | Theming custom CSS | theme file + CSS vars | M3 | ⬜ |
 | Testing helpers (`livewire()` assertions) | `@rikology/pupitre/testing` | M3 | ⬜ |
-| `make:*` commands | `make:resource/page/widget/relation-manager/panel/plugin` | M2–M4 | ⬜ |
+| `make:*` commands | `make:panel <name>` (stub, idempotent); `make:resource` (Lucid introspection + `--from-migration`); `make:page/widget/relation-manager/plugin` | M2–M4 | 🟡 |
 | Plugin ecosystem | `definePlugin`, `create-pupitre-plugin` | M4 | ⬜ |

@@ -1,4 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import type { ActionBuilder, ActionDefinition } from './action.js'
+import type { ModelQueryBuilderContract, LucidModel } from '@adonisjs/lucid/types/model'
+
 export type SchemaKind =
   | 'text'
   | 'email'
@@ -126,21 +129,58 @@ export type TextFieldDefinition =
     >
 export type NumberFieldDefinition = FieldDefinition<'number', { prefix?: string; suffix?: string }>
 export type TextareaFieldDefinition = FieldDefinition<'textarea', { rows?: number }>
+export type SelectOptions = Record<string, unknown> | readonly unknown[]
+export type SelectOptionsContext = {
+  search: string
+  ctx?: HttpContext
+  page: number
+  /** Requested option values to resolve alongside the current search. */
+  values?: (string | number)[]
+}
+export type RelationshipOptions = {
+  name: string
+  titleColumn: string
+  scope?: (query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => unknown
+}
 export type SelectFieldDefinition =
   | FieldDefinition<
       'select',
       {
-        options?: Record<string, unknown> | readonly unknown[]
+        options?: SelectOptions | ((args: SelectOptionsContext) => unknown | Promise<unknown>)
         native?: boolean
         clearable?: boolean
+        searchable?: boolean | readonly string[]
+        preload?: boolean
+        relationship?: RelationshipOptions
+        getOptionLabelUsing?: (value: unknown, ctx?: HttpContext) => unknown | Promise<unknown>
+        createOptionForm?: SchemaNodeDefinition[]
+        createOptionUsing?: (args: {
+          data: Record<string, unknown>
+          ctx: HttpContext
+          model: unknown
+        }) => unknown | Promise<unknown>
+        prefixAction?: ActionDefinition
+        suffixAction?: ActionDefinition
       }
     >
   | FieldDefinition<
       'multiSelect',
       {
-        options?: Record<string, unknown> | readonly unknown[]
+        options?: SelectOptions | ((args: SelectOptionsContext) => unknown | Promise<unknown>)
         native?: boolean
         clearable?: boolean
+        searchable?: boolean | readonly string[]
+        preload?: boolean
+        relationship?: RelationshipOptions
+        getOptionLabelUsing?: (value: unknown, ctx?: HttpContext) => unknown | Promise<unknown>
+        createOptionForm?: SchemaNodeDefinition[]
+        createOptionUsing?: (args: {
+          data: Record<string, unknown>
+          ctx: HttpContext
+          model: unknown
+        }) => unknown | Promise<unknown>
+        prefixAction?: ActionDefinition
+        suffixAction?: ActionDefinition
       }
     >
 export type CheckboxFieldDefinition = FieldDefinition<'checkbox', { inline?: boolean }>
@@ -512,7 +552,19 @@ export interface TextareaBuilder extends FieldBuilderBase<TextareaFieldDefinitio
 export interface SelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'select' }>
 > {
-  options(value: Record<string, unknown> | readonly unknown[]): this
+  options(value: SelectOptions | ((args: SelectOptionsContext) => unknown | Promise<unknown>)): this
+  relationship(name: string, titleColumn: string, scope?: RelationshipOptions['scope']): this
+  searchable(columns?: readonly string[]): this
+  preload(value?: boolean): this
+  getOptionLabelUsing(
+    callback: NonNullable<Extract<SelectFieldDefinition, { kind: 'select' }>['getOptionLabelUsing']>
+  ): this
+  createOptionForm(value: readonly SchemaNodeBuilder[]): this
+  createOptionUsing(
+    callback: NonNullable<Extract<SelectFieldDefinition, { kind: 'select' }>['createOptionUsing']>
+  ): this
+  prefixAction(value: ActionDefinition | ActionBuilder): this
+  suffixAction(value: ActionDefinition | ActionBuilder): this
   clearable(value?: boolean): this
   multiple(value?: boolean): this
   in(value: readonly unknown[]): this
@@ -521,7 +573,23 @@ export interface SelectBuilder extends FieldBuilderBase<
 export interface MultiSelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'multiSelect' }>
 > {
-  options(value: Record<string, unknown> | readonly unknown[]): this
+  options(value: SelectOptions | ((args: SelectOptionsContext) => unknown | Promise<unknown>)): this
+  relationship(name: string, titleColumn: string, scope?: RelationshipOptions['scope']): this
+  searchable(columns?: readonly string[]): this
+  preload(value?: boolean): this
+  getOptionLabelUsing(
+    callback: NonNullable<
+      Extract<SelectFieldDefinition, { kind: 'multiSelect' }>['getOptionLabelUsing']
+    >
+  ): this
+  createOptionForm(value: readonly SchemaNodeBuilder[]): this
+  createOptionUsing(
+    callback: NonNullable<
+      Extract<SelectFieldDefinition, { kind: 'multiSelect' }>['createOptionUsing']
+    >
+  ): this
+  prefixAction(value: ActionDefinition | ActionBuilder): this
+  suffixAction(value: ActionDefinition | ActionBuilder): this
   clearable(value?: boolean): this
   in(value: readonly unknown[]): this
   exists(value: NonNullable<ValidationRules['exists']>): this

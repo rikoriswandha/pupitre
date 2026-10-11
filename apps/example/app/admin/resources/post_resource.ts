@@ -3,6 +3,9 @@ import { DateTime } from 'luxon'
 import Post from '#models/post'
 import PostPolicy from '#policies/post_policy'
 
+const manageCategories = action('manage-categories')
+  .label('Manage categories')
+  .url(({ ctx }) => `${ctx?.pupitre.panel.path}/categories`)
 const publish = action('publish')
   .label('Publish')
   .color('success')
@@ -17,7 +20,7 @@ const publish = action('publish')
     publishedAt: (record as Post).publishedAt?.toISO() ?? DateTime.now().toISO(),
     notify: false,
   }))
-  .handle(async ({ record, data }) => {
+  .handle(async ({ record, data, notify }) => {
     const post = record as Post
     await Post.transaction(async (trx) => {
       post.useTransaction(trx)
@@ -27,6 +30,9 @@ const publish = action('publish')
       }).toUTC()
       await post.save()
     })
+    const notification = notify?.success('Post published').body(post.title)
+    notification?.send()
+    await notification?.sendToDatabase()
   })
   .after(({ refresh }) => {
     refresh.table()
@@ -39,6 +45,10 @@ export default defineResource(Post)
   .icon('file-text')
   .navigation({ group: 'Content', sort: 1 })
   .recordTitle('title')
+  .globallySearchable(['title', 'slug', 'category.name'])
+  .globalSearchDetails((record) =>
+    [record.category?.name, record.status].filter((detail): detail is string => Boolean(detail))
+  )
   .policy(PostPolicy)
   .fill((record) => ({ ...record.serialize() }))
   .mutateBeforeCreate((data, ctx) => ({
@@ -61,7 +71,15 @@ export default defineResource(Post)
         s
           .select('status')
           .label('Status')
-          .options({ draft: 'Draft', published: 'Published' })
+          .options(async ({ search }) =>
+            ['draft', 'published']
+              .filter((status) => status.includes(search.toLowerCase()))
+              .map((status) => ({
+                value: status,
+                label: status === 'draft' ? 'Draft' : 'Published',
+              }))
+          )
+          .searchable()
           .default('draft')
           .live(),
         s
@@ -71,12 +89,14 @@ export default defineResource(Post)
           .visible(({ get }) => get('status') === 'published'),
         s
           .select('categoryId')
-          .label('Category (seeded IDs)')
-          .options({
-            '1': 'Culture',
-            '2': 'Design',
-            '3': 'Technology',
-          })
+          .label('Category')
+          .relationship('category', 'name')
+          .searchable()
+          .createOptionForm([
+            schema.text('name').label('Name').required(),
+            schema.text('slug').label('Slug').required(),
+          ])
+          .suffixAction(manageCategories)
           .required(),
         s.checkbox('isFeatured').label('Featured'),
         s.number('viewsCount').label('Views').min(0).default(0),
@@ -156,7 +176,7 @@ export default defineResource(Post)
     s.html().content(({ get }) => String(get('body') ?? '')),
   ])
   .actions({
-    header: [actions.create()],
+    header: [actions.create(), manageCategories],
     row: [actions.edit(), actions.view(), publish],
     bulk: [actions.delete()],
   })

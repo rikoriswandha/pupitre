@@ -13,8 +13,9 @@ const hostFiles = [
   'inertia/admin/registry.ts',
   'vite.config.ts',
   'inertia/css/app.css',
+  'database/migrations/1791700000001_create_pupitre_password_resets_table.ts',
+  'database/migrations/1791700000002_add_pupitre_columns_to_users.ts',
 ]
-
 test.group('Pupitre configure', () => {
   test('creates host wiring and is idempotent with real codemods', async ({ assert }) => {
     const fixturesRoot = join(import.meta.dirname, '../../tmp')

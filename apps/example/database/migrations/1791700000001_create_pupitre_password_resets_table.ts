@@ -1,0 +1,29 @@
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'pupitre_password_resets'
+
+  async up() {
+    if (await this.schema.hasTable(this.tableName)) return
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments('id')
+      table
+        .integer('user_id')
+        .unsigned()
+        .notNullable()
+        .references('id')
+        .inTable('users')
+        .onDelete('CASCADE')
+      table.string('guard', 50).notNullable()
+      table.string('token_hash', 64).notNullable()
+      table.timestamp('expires_at', { useTz: true }).notNullable()
+      table.timestamp('created_at', { useTz: true }).notNullable()
+      table.unique(['token_hash'], 'pupitre_password_resets_token_hash_unique')
+      table.index(['user_id', 'guard'], 'pupitre_password_resets_user_guard_index')
+    })
+  }
+
+  async down() {
+    if (await this.schema.hasTable(this.tableName)) this.schema.dropTable(this.tableName)
+  }
+}

@@ -1,3 +1,4 @@
+type SelectField = Extract<FieldDefinitionUnion, { kind: 'select' | 'multiSelect' }>
 import vine from '@vinejs/vine'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { Database } from '@adonisjs/lucid/database'
@@ -15,6 +16,7 @@ import type {
 import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
 import { parseInZone } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
+import { scopedQuery } from '../query/scoped_query.js'
 type ValidatorOptions = {
   record?: LucidRow | null
   /** Resource model: default table + attribute→column mapping for `unique` on create. */
@@ -39,13 +41,18 @@ type UploadedSessionFile = {
 type ValidatorContext = HttpContext & {
   session?: { get(key: string): unknown }
   pupitre?: {
-    panel?: { resources?: { slug: string; definition: { form: SchemaNodeDefinition[] } }[] }
+    panel?: {
+      resources?: { slug: string; definition: { form: SchemaNodeDefinition[] } }[]
+      pages?: { slug: string; definition: { form?: SchemaNodeDefinition[] } }[]
+    }
   }
 }
 
 function resourceSlug(nodes: SchemaNodeDefinition[], ctx?: HttpContext): string | undefined {
-  const resources = (ctx as ValidatorContext | undefined)?.pupitre?.panel?.resources ?? []
-  return resources.find((resource) => resource.definition.form === nodes)?.slug
+  const panel = (ctx as ValidatorContext | undefined)?.pupitre?.panel
+  const resource = panel?.resources?.find((item) => item.definition.form === nodes)
+  if (resource) return resource.slug
+  return panel?.pages?.find((item) => item.definition.form === nodes)?.slug
 }
 
 function persistedAt(record: Record<string, unknown> | null, path: string): unknown[] {
@@ -231,6 +238,63 @@ function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeD
   })
 }
 
+function relationshipValue(field: SelectField) {
+  return vine.any().use(
+    vine.createRule(async (value: unknown, _args: unknown, vineField: FieldContext) => {
+      if (!field.relationship || (typeof value !== 'string' && typeof value !== 'number')) {
+        vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+        return
+      }
+      const meta = vineField.meta as { ctx?: HttpContext; resource?: string } | undefined
+      const ctx = meta?.ctx
+      const owner = meta?.resource
+        ? ctx?.pupitre.panel.resources.find((resource) => resource.slug === meta.resource)
+        : undefined
+      if (!ctx || !owner) {
+        vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+        return
+      }
+      let model: LucidModel
+      try {
+        model = owner.model.$getRelation(field.relationship.name).relatedModel() as LucidModel
+      } catch {
+        vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+        return
+      }
+      const relatedResource = ctx.pupitre.panel.resources.find(
+        (resource) => resource.model === model
+      )
+      const query = relatedResource ? scopedQuery(ctx, relatedResource) : model.query()
+      field.relationship.scope?.(query, ctx)
+      if (!(await query.where(model.primaryKey, value).first()))
+        vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+    })()
+  )
+}
+function closureOptionValue(field: SelectField) {
+  return vine.any().use(
+    vine.createRule(async (value: unknown, _args: unknown, vineField: FieldContext) => {
+      if (
+        (typeof value !== 'string' && typeof value !== 'number') ||
+        !field.options ||
+        typeof field.options !== 'function'
+      ) {
+        vineField.report('The selected {{ field }} is invalid', 'options', vineField)
+        return
+      }
+      const ctx = (vineField.meta as { ctx?: HttpContext } | undefined)?.ctx
+      const output = normalizeOptions(
+        await field.options({ search: '', values: [value], ctx, page: 1 })
+      )
+      const accepted = output.some((option) => String(option) === String(value))
+      if (!accepted && field.getOptionLabelUsing) {
+        const label = await field.getOptionLabelUsing(value, ctx)
+        if (label !== null && label !== undefined) return
+      }
+      if (!accepted) vineField.report('The selected {{ field }} is invalid', 'options', vineField)
+    })()
+  )
+}
 function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
   const rules = field.rules ?? {}
   let schema: any
@@ -258,12 +322,24 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
       break
     case 'select':
     case 'radio':
-      schema = stringComparableEnum(normalizeOptions(field.options))
+      schema =
+        field.kind === 'select' && field.relationship
+          ? relationshipValue(field)
+          : field.kind === 'select' && typeof field.options === 'function'
+            ? closureOptionValue(field)
+            : stringComparableEnum(normalizeOptions(field.options))
       break
     case 'multiSelect': {
-      const allowed = normalizeOptions(field.options)
-      const item = allowed.length ? vine.enum(allowed as [any, ...any[]]) : vine.any()
-      schema = vine.array(item)
+      if (field.relationship) {
+        schema = vine.array(relationshipValue(field))
+      } else {
+        const allowed = typeof field.options === 'function' ? [] : normalizeOptions(field.options)
+        const item =
+          typeof field.options === 'function'
+            ? closureOptionValue(field)
+            : stringComparableEnum(allowed)
+        schema = vine.array(item)
+      }
       break
     }
     case 'checkboxList':

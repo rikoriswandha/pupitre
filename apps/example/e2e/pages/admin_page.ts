@@ -3,18 +3,28 @@ import { expect, type Locator, type Page } from '@playwright/test'
 export class AdminPage {
   constructor(readonly page: Page) {}
 
-  async login() {
-    await this.page.goto('/login')
-    await this.page.getByLabel('Email').fill('admin@example.com')
+  static readonly tenantPath = '/admin/acme'
+  url(path: string) {
+    return `${AdminPage.tenantPath}${path.startsWith('/') ? path : `/${path}`}`
+  }
+
+  async login(email = 'admin@example.com') {
+    await this.page.goto(
+      `/admin/login?redirect=${encodeURIComponent(`${AdminPage.tenantPath}/posts`)}`
+    )
+    await this.page.getByLabel('Email').fill(email)
     await this.page.getByLabel('Password').fill('password')
     await this.page.getByRole('button', { name: 'Sign in' }).click()
-    await this.page.waitForURL('**/dashboard')
-    await this.page.goto('/admin/posts')
+    await this.page.waitForURL(`**${AdminPage.tenantPath}/posts`)
     await expect(this.postRow('Field Notes 01')).toBeVisible()
   }
 
   async fillField(label: string, value: string | number) {
-    const field = this.page.getByLabel(label, { exact: false }).first()
+    const dialogField = this.page.getByRole('dialog').getByLabel(label, { exact: false }).first()
+    const field =
+      (await dialogField.count()) > 0
+        ? dialogField
+        : this.page.getByLabel(label, { exact: false }).first()
     const control = await field.evaluate((element) => {
       const fieldElement = element as unknown as { tagName: string }
       return fieldElement.tagName
@@ -23,9 +33,18 @@ export class AdminPage {
       await field.selectOption(String(value))
       return
     }
+    const asyncOptions = await field.getAttribute('data-options-search')
+    if (asyncOptions !== null) {
+      await field.click()
+      await field.fill(String(value))
+      await this.page.getByRole('option', { name: String(value), exact: true }).click()
+      return
+    }
     const role = await field.getAttribute('role')
     if (role === 'combobox' || control === 'BUTTON') {
       await field.click()
+      const search = this.page.getByRole('textbox', { name: 'Search options' }).last()
+      if (await search.isVisible().catch(() => false)) await search.fill(String(value))
       await this.page.getByRole('option', { name: String(value), exact: true }).click()
       return
     }

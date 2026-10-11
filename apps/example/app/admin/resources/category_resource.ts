@@ -9,6 +9,8 @@ export default defineResource(Category)
   .icon('tag')
   .navigation({ group: 'Content', sort: 2 })
   .recordTitle('name')
+  .globallySearchable(['name', 'slug'])
+  .globalSearchDetails((record) => [record.slug])
   .policy(CategoryPolicy)
   .form((s) => [
     s.section('Category').components([

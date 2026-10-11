@@ -10,7 +10,9 @@ import { authorizeResource, ensureAuthorized } from '../../authz/bouncer.js'
 import { isPupitreActionRequest, actionJson, errorJson, setPupitreFlash } from '../responses.js'
 import type { ResourceRuntime } from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
+import type { SchemaNodeDefinition } from '../../definition/schema.js'
 import { E_PUPITRE_FORBIDDEN } from '../../errors.js'
+import { requestResource, scopedQuery } from '../../query/scoped_query.js'
 
 function isJsonRequest(ctx: HttpContext): boolean {
   return isPupitreActionRequest(ctx) || ctx.request.accepts(['json', 'html']) === 'json'
@@ -22,16 +24,32 @@ function currentPageUrl(ctx: HttpContext, fallback: string): string {
 }
 
 async function getResource(ctx: HttpContext): Promise<ResourceRuntime | undefined> {
-  const manager = (await ctx.containerResolver.make('pupitre.manager')) as {
-    findResource(panelId: string, slug: string): ResourceRuntime | undefined
-  }
-  return manager.findResource(ctx.pupitre.panel.id, ctx.params.slug)
+  return requestResource(ctx, ctx.params.slug)
 }
 
 function modelKey(model: LucidModel): string {
   return (model as LucidModel & { primaryKey?: string }).primaryKey ?? 'id'
 }
 
+function findFormAction(nodes: SchemaNodeDefinition[], name: string): ActionDefinition | undefined {
+  for (const node of nodes) {
+    if (
+      (node.kind === 'select' || node.kind === 'multiSelect') &&
+      (node.prefixAction?.name === name || node.suffixAction?.name === name)
+    ) {
+      return node.prefixAction?.name === name ? node.prefixAction : node.suffixAction
+    }
+    if ('children' in node) {
+      const action = findFormAction(node.children, name)
+      if (action) return action
+    }
+    if (node.kind === 'repeater' && Array.isArray(node.schema)) {
+      const action = findFormAction(node.schema, name)
+      if (action) return action
+    }
+  }
+  return undefined
+}
 function findAction(
   resource: ResourceRuntime,
   name: string,
@@ -43,13 +61,11 @@ function findAction(
     const action = group?.find((candidate) => candidate.name === name)
     if (action) return action
   }
-  return undefined
+  return findFormAction(resource.definition.form ?? [], name)
 }
 
 async function scopedRecord(ctx: HttpContext, resource: ResourceRuntime): Promise<LucidRow | null> {
-  const query = resource.model.query()
-  resource.definition.scope?.(query, ctx)
-  return query.where(modelKey(resource.model), ctx.params.id).first()
+  return scopedQuery(ctx, resource).where(modelKey(resource.model), ctx.params.id).first()
 }
 
 async function scopedRecords(
@@ -63,9 +79,10 @@ async function scopedRecords(
     ids.some((id) => typeof id !== 'string' && typeof id !== 'number')
   )
     return null
-  const query = resource.model.query()
-  resource.definition.scope?.(query, ctx)
-  const records = await query.whereIn(modelKey(resource.model), ids as (string | number)[])
+  const records = await scopedQuery(ctx, resource).whereIn(
+    modelKey(resource.model),
+    ids as (string | number)[]
+  )
   return records.length === ids.length ? records : null
 }
 
@@ -162,11 +179,6 @@ export default class ActionController {
       if (result.redirect) return ctx.response.redirect(result.redirect)
       return ctx.response.redirect().back()
     } catch (error) {
-      if (
-        error instanceof E_PUPITRE_FORBIDDEN ||
-        (error as { code?: string })?.code === 'E_PUPITRE_FORBIDDEN'
-      )
-        return errorJson(ctx, 'You are not authorized to perform this action', 403)
       if ((error as { status?: number })?.status === 422) {
         const messages =
           (error as { messages?: { field?: string; message: string }[] }).messages ?? []

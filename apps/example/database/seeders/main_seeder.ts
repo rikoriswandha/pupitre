@@ -1,48 +1,113 @@
 import { BaseSeeder } from '@adonisjs/lucid/seeders'
+import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Category from '#models/category'
 import Post from '#models/post'
+import Tenant from '#models/tenant'
 import User from '#models/user'
 
 export default class MainSeeder extends BaseSeeder {
   async run() {
     const admin = await User.updateOrCreate(
       { email: 'admin@example.com' },
-      { fullName: 'Editorial Admin', password: 'password', timezone: 'Asia/Jakarta' }
+      {
+        fullName: 'Editorial Admin',
+        password: 'password',
+        timezone: 'Asia/Jakarta',
+        emailVerifiedAt: DateTime.now(),
+      }
     )
-    await User.updateOrCreate(
+    const editor = await User.updateOrCreate(
       { email: 'editor@example.com' },
-      { fullName: 'Editorial Editor', password: 'password', timezone: null }
+      {
+        fullName: 'Editorial Editor',
+        password: 'password',
+        timezone: null,
+        emailVerifiedAt: DateTime.now(),
+      }
     )
+    // Dedicated account for the password-reset e2e flow so it can't affect other logins.
+    const resetUser = await User.updateOrCreate(
+      { email: 'reset@example.com' },
+      {
+        fullName: 'Password Reset Demo',
+        password: 'password',
+        timezone: null,
+        emailVerifiedAt: DateTime.now(),
+      }
+    )
+    const [acme, globex] = await Promise.all([
+      Tenant.updateOrCreate({ slug: 'acme' }, { name: 'Acme', slug: 'acme' }),
+      Tenant.updateOrCreate({ slug: 'globex' }, { name: 'Globex', slug: 'globex' }),
+    ])
 
-    const categories = await Promise.all([
-      Category.updateOrCreate({ slug: 'culture' }, { name: 'Culture', slug: 'culture' }),
-      Category.updateOrCreate({ slug: 'design' }, { name: 'Design', slug: 'design' }),
-      Category.updateOrCreate({ slug: 'technology' }, { name: 'Technology', slug: 'technology' }),
+    await db.from('tenant_user').delete()
+    await db.table('tenant_user').insert([
+      {
+        tenant_id: acme.id,
+        user_id: admin.id,
+        created_at: DateTime.now().toSQL(),
+        updated_at: null,
+      },
+      {
+        tenant_id: globex.id,
+        user_id: admin.id,
+        created_at: DateTime.now().toSQL(),
+        updated_at: null,
+      },
+      {
+        tenant_id: acme.id,
+        user_id: editor.id,
+        created_at: DateTime.now().toSQL(),
+        updated_at: null,
+      },
+      {
+        tenant_id: acme.id,
+        user_id: resetUser.id,
+        created_at: DateTime.now().toSQL(),
+        updated_at: null,
+      },
     ])
 
     const seedDate = DateTime.fromISO('2026-10-10T12:00:00.000Z', { zone: 'utc' })
-    for (let index = 1; index <= 30; index++) {
-      const published = index % 3 !== 0
-      const publishedAt = published ? seedDate.minus({ days: index * 3 }) : null
-      await Post.updateOrCreate(
-        { slug: `field-notes-${index.toString().padStart(2, '0')}` },
-        {
-          title: `Field Notes ${index.toString().padStart(2, '0')}`,
-          slug: `field-notes-${index.toString().padStart(2, '0')}`,
-          status: published ? 'published' : 'draft',
-          body: `<p>Editorial note ${index} from the Pupitre dogfood journal.</p>`,
-          isFeatured: index % 5 === 0,
-          publishedAt,
-          viewsCount: index * 17,
-          categoryId: categories[(index - 1) % categories.length]!.id,
-          authorId: admin.id,
-          items: [
-            { sku: `NOTE-${index}`, qty: (index % 4) + 1, price: index * 1250 },
-            { sku: `INK-${index}`, qty: 2, price: 8500 },
-          ],
-        }
+    for (const tenant of [acme, globex]) {
+      const prefix = tenant.slug === 'acme' ? '' : 'globex-'
+      const categories = await Promise.all(
+        ['culture', 'design', 'technology'].map((category) =>
+          Category.updateOrCreate(
+            { slug: `${prefix}${category}` },
+            {
+              name: category[0]!.toUpperCase() + category.slice(1),
+              slug: `${prefix}${category}`,
+              tenantId: tenant.id,
+            }
+          )
+        )
       )
+      for (let index = 1; index <= 30; index++) {
+        const published = index % 3 !== 0
+        const publishedAt = published ? seedDate.minus({ days: index * 3 }) : null
+        const number = index.toString().padStart(2, '0')
+        await Post.updateOrCreate(
+          { slug: `${prefix}field-notes-${number}` },
+          {
+            title: `${tenant.slug === 'acme' ? '' : 'Globex '}Field Notes ${number}`,
+            slug: `${prefix}field-notes-${number}`,
+            status: published ? 'published' : 'draft',
+            body: `<p>Editorial note ${index} from the ${tenant.name} dogfood journal.</p>`,
+            isFeatured: index % 5 === 0,
+            publishedAt,
+            viewsCount: index * 17,
+            categoryId: categories[(index - 1) % categories.length]!.id,
+            authorId: admin.id,
+            tenantId: tenant.id,
+            items: [
+              { sku: `NOTE-${index}`, qty: (index % 4) + 1, price: index * 1250 },
+              { sku: `INK-${index}`, qty: 2, price: 8500 },
+            ],
+          }
+        )
+      }
     }
   }
 }

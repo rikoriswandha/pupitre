@@ -72,7 +72,7 @@ function fixturePage(name: string): PupitrePageProps['page'] {
     spec: fixture,
     state: fixture.state ?? {},
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   }
 }
 
@@ -150,7 +150,7 @@ function RepeaterFixture({
     },
     state: { data: { items: initialItems } },
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   }
   return (
     <PupitreRenderer
@@ -220,7 +220,7 @@ export function TabsStory() {
     },
     state: { data: {}, ui: { tabs: { 'interaction-tabs': 'details' } } },
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   }
   return (
     <PupitreRenderer
@@ -262,7 +262,7 @@ export function ActionStory() {
           ? {
               spec: catalogFixtures.Text,
               state: catalogFixtures.Text.state ?? {},
-              catalogVersion: '0.1',
+              catalogVersion: '0.2',
             }
           : { flash: [], reload: false }
       return new Response(JSON.stringify(payload), {
@@ -331,7 +331,7 @@ export function FormStory() {
     },
     state: { data: { title: 'Draft' }, errors: {}, meta: {} },
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   }
   return (
     <div>
@@ -369,7 +369,7 @@ function standalonePage(
     spec,
     state,
     actions: { header: [] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   }
   return (
     <div>
@@ -623,6 +623,108 @@ export function NativeClearableSelectStory() {
       },
     } as never,
     { data: { category: '1' } }
+  )
+}
+export function StaticSelectActionsStory() {
+  return standalonePage(
+    'static-select-actions',
+    {
+      root: 'category',
+      elements: {
+        category: {
+          type: 'Select',
+          props: {
+            name: 'category',
+            label: 'Category',
+            value: { $bindState: '/data/category' },
+            options: [{ value: '1', label: 'One' }],
+            prefixAction: { ...actionDescriptor, name: 'prefix', label: 'Prefix action' },
+            suffixAction: { ...actionDescriptor, name: 'suffix', label: 'Suffix action' },
+          },
+        },
+      },
+    } as never,
+    { data: { category: '1' } },
+    undefined,
+    undefined,
+    {
+      runAction: async (action) => {
+        const log = window as Window & { __staticSelectActions?: string[] }
+        log.__staticSelectActions ??= []
+        log.__staticSelectActions.push(action.name)
+      },
+    }
+  )
+}
+export function AsyncSelectControlsStory() {
+  useEffect(
+    () =>
+      setFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              options: [
+                { value: 'culture', label: 'Culture' },
+                { value: 'design', label: 'Design' },
+              ],
+              hasMore: true,
+            })
+          )
+      ),
+    []
+  )
+  return standalonePage(
+    'async-select-controls',
+    {
+      root: 'fields',
+      elements: {
+        fields: {
+          type: 'Group',
+          props: {},
+          children: ['tags', 'disabled', 'readonly'],
+        },
+        tags: {
+          type: 'Select',
+          props: {
+            name: 'tags',
+            label: 'Tags',
+            value: { $bindState: '/data/tags' },
+            optionsUrl: '/options',
+            multiple: true,
+            searchable: true,
+            required: true,
+            hint: 'Choose tags',
+            helperText: 'Tag selection',
+            error: 'Choose at least one tag',
+          },
+        },
+        disabled: {
+          type: 'Select',
+          props: {
+            name: 'disabled',
+            label: 'Disabled',
+            value: { $bindState: '/data/disabled' },
+            optionsUrl: '/options',
+            searchable: true,
+            disabled: true,
+            createOption: { url: '/options/create' },
+          },
+        },
+        readonly: {
+          type: 'Select',
+          props: {
+            name: 'readonly',
+            label: 'Read only',
+            value: { $bindState: '/data/readonly' },
+            optionsUrl: '/options',
+            searchable: true,
+            readOnly: true,
+            createOption: { url: '/options/create' },
+          },
+        },
+      },
+    } as never,
+    { data: { tags: ['culture'], disabled: 'culture', readonly: 'design' } }
   )
 }
 
@@ -925,6 +1027,7 @@ export function NestedNamesStory() {
 }
 
 export function ThemeShellStory({ darkMode = 'dark' }: { darkMode?: 'dark' | 'light' | 'system' }) {
+  const [modalActionClicked, setModalActionClicked] = useState(false)
   return (
     <Shell
       panel={{
@@ -940,9 +1043,16 @@ export function ThemeShellStory({ darkMode = 'dark' }: { darkMode?: 'dark' | 'li
       title="Theme"
       headerActions={[]}
       currentUrl="/admin"
+      tenant={null}
+      tenants={[]}
     >
       <Modal open heading="Portal dialog" onClose={() => {}}>
-        Dialog content
+        <div>
+          <button type="button" onClick={() => setModalActionClicked(true)}>
+            Modal action
+          </button>
+          <output data-testid="modal-action">{modalActionClicked ? 'clicked' : ''}</output>
+        </div>
       </Modal>
     </Shell>
   )

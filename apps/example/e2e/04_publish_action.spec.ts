@@ -2,8 +2,8 @@ import { pupitreTest, expect } from './fixtures/pupitre_test.js'
 
 pupitreTest('publish action updates its row without a full reload', async ({ admin, page }) => {
   await admin.login()
-  await page.getByLabel('Search').fill('Field Notes 03')
-  await page.getByLabel('Search').press('Enter')
+  await page.getByRole('searchbox', { name: 'Search' }).fill('Field Notes 03')
+  await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
   const row = await admin.postRow('Field Notes 03')
   await expect(row).toBeVisible()
   const reloads: string[] = []

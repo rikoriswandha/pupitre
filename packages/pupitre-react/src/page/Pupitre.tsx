@@ -174,9 +174,11 @@ export function PupitreContent({
   const closeAction = useCallback(() => setFormAction(null), [])
   const pageActions = useMemo(() => ({ runAction, toast: pushToast }), [runAction, pushToast])
   const ShellComponent = registry.shell.Shell
+  const AuthShell = registry.shell.AuthShell
   const Toaster = registry.shell.Toaster
   const NotFound = registry.shell.NotFound
-  if (page.kind === 'custom') return null
+  // Host-owned component pages are rendered by their Inertia component; a
+  // custom page sent to this generic renderer still uses its declared spec.
   if (major(page.catalogVersion) !== major(catalogVersion))
     return <Toaster toasts={toasts} dismiss={dismiss} />
   const content = page.spec ? (
@@ -197,21 +199,29 @@ export function PupitreContent({
   ) : (
     <NotFound title={t('Not found')} message={t('The requested page could not be found.')} />
   )
-  const main = (
-    <ShellComponent
-      panel={panel.panel}
-      user={panel.user}
-      nav={panel.nav}
-      breadcrumbs={page.breadcrumbs}
-      title={page.title}
-      headerActions={page.actions?.header ?? []}
-      currentUrl={
-        typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
-      }
-    >
-      {content}
-    </ShellComponent>
-  )
+  const main =
+    page.kind === 'auth' ? (
+      <AuthShell panel={panel.panel} title={page.title}>
+        {content}
+      </AuthShell>
+    ) : (
+      <ShellComponent
+        panel={panel.panel}
+        user={panel.user}
+        nav={panel.nav}
+        breadcrumbs={page.breadcrumbs}
+        title={page.title}
+        headerActions={page.actions?.header ?? []}
+        currentUrl={
+          typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
+        }
+        tenant={panel.tenant}
+        tenants={panel.tenants ?? []}
+        notifications={panel.notifications}
+      >
+        {content}
+      </ShellComponent>
+    )
   const modal = confirm ? (
     <ActionConfirm
       action={confirm.action}

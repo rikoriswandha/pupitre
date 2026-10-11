@@ -4,8 +4,8 @@ pupitreTest(
   'status filter, search and sort persist in the URL and history',
   async ({ admin, page }) => {
     await admin.login()
-    await page.getByLabel('Search').fill('Field Notes 0')
-    await page.getByLabel('Search').press('Enter')
+    await page.getByRole('searchbox', { name: 'Search' }).fill('Field Notes 0')
+    await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
     await expect(page).toHaveURL(/q=Field(?:%20|\+)Notes(?:%20|\+)0/)
     await page.getByText('Filters', { exact: true }).click()
     await page.getByLabel(/status/i).selectOption('published')

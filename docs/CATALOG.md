@@ -38,7 +38,7 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | `Textarea` | `rows`, `autosize`, `maxLength`, `placeholder` | `string \| null` |
 | `Number` | `min`, `max`, `step`, `prefix`, `suffix`, `inputMode` | `number \| null` |
 | `Hidden` | — | any |
-| `Select` | `options: Option[]`, `searchable`, `multiple`, `native`, `placeholder`, `optionsUrl` (dinamis), `preload`, `createOption?: { url }`, `clearable` | `string \| number \| null` atau array kalau `multiple` |
+| `Select` | `options: Option[]`, `searchable: boolean \| string[]`, `multiple`, `native`, `placeholder`, `optionsUrl`, `preload`, `createOption?: { url }`, `prefixAction`/`suffixAction: ActionDescriptor`, `clearable` | `string \| number \| null` atau array kalau `multiple`; async mode debounces `q`, hydrates selected labels, dan mengambil halaman berikutnya |
 | `Checkbox` | `inline` | `boolean` |
 | `CheckboxList` | `options`, `columns`, `searchable`, `bulkToggleable` | `(string\|number)[]` |
 | `Radio` | `options`, `inline`, `descriptions` | scalar |
@@ -55,6 +55,7 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | `Slider` | `min`, `max`, `step`, `marks`, `range` | number / `[number, number]` |
 
 `Option = { value: string | number; label: string; description?: string; disabled?: boolean; icon?: string; color?: string }`.
+Opsi closure menerima `{ search, ctx, page, values? }`; saat validasi, `search` kosong dan `values` berisi pilihan yang harus tetap dikembalikan meski labelnya tidak cocok dengan filter pencarian.
 
 ### 2.2 Layout
 

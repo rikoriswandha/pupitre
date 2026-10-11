@@ -60,10 +60,28 @@ const props = {
     spec: { root: 'form', elements: { form: { type: 'Form', props: {} } } },
     state: {},
     actions: { header: [create] },
-    catalogVersion: '0.1',
+    catalogVersion: '0.2',
   },
 } as unknown as PupitrePageProps
 
+test('custom page specs render in the standard shell', async ({ assert }) => {
+  const dom = new Window()
+  Object.assign(globalThis, { window: dom, document: dom.document, IS_REACT_ACT_ENVIRONMENT: true })
+  const container = dom.document.createElement('div')
+  dom.document.body.append(container)
+  const root = createRoot(container as unknown as Element)
+  const customProps = {
+    ...props,
+    page: { ...props.page, kind: 'custom' as const, component: 'admin/Reports' },
+  } as unknown as PupitrePageProps
+  try {
+    await act(async () => root.render(<PupitreContent registry={registry} props={customProps} />))
+    assert.isNotNull(container.querySelector('form'))
+  } finally {
+    await act(async () => root.unmount())
+    dom.happyDOM.abort()
+  }
+})
 test('shell header actions run outside the spec renderer store', async ({ assert }) => {
   const dom = new Window()
   Object.assign(globalThis, { window: dom, document: dom.document, IS_REACT_ACT_ENVIRONMENT: true })

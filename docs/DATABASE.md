@@ -53,20 +53,22 @@ Tanpa adapter `jobs`, export sinkron dan tabel ini tidak dibuat.
 
 ## 2. Kolom yang ditambahkan ke `users` host
 
-Migrasi `add_pupitre_columns_to_users` memakai `hasColumn` sebelum setiap `alter`:
+Migrasi `add_pupitre_columns_to_users` memakai `hasColumn` sebelum setiap `alter` dan hanya menambahkan kolom M2 Pupitre berikut (kolom kredensial standar tetap tanggung jawab host):
 
 | Kolom | Tipe | Fitur | Wajib? |
 | --- | --- | --- | --- |
-| `mfa_secret` | text nullable | TOTP; dienkripsi dengan `encryption` Adonis | kalau `.mfa()` |
-| `mfa_recovery_codes` | json nullable | hash argon2 per kode | kalau `.mfa()` |
-| `mfa_confirmed_at` | timestamptz nullable | | kalau `.mfa()` |
 | `email_verified_at` | timestamptz nullable | email verification | kalau `.emailVerification()` |
 | `avatar` | string nullable | key storage adapter | kalau profile avatar aktif |
 | `timezone` | string(64) nullable | override timezone panel | opsional; dibaca kalau ada |
-| `current_tenant_id` | FK nullable | tenancy mode `implicit` | kalau tenancy implicit tanpa `adonisjs-tenant` |
-| `provider`, `provider_id` | string nullable | social login | kalau `.social()`; tanpa kolom ini, login sosial hanya mencocokkan email |
+| `current_tenant_id` | integer nullable | tenancy mode `implicit` | kalau tenancy implicit tanpa `adonisjs-tenant` |
 
-Nama kolom bisa diubah di `config/pupitre.ts` → `auth.columns`. Model `User` host tidak perlu mixin; Pupitre membaca kolom lewat `$attributes` dengan nama dari config.
+Untuk `.login()` host harus menyediakan kolom email dan password pada model, serta model auth yang mengimplementasikan `verifyCredentials(email, password)` (umumnya `withAuthFinder`). `auth.columns` berisi **nama properti model Lucid**, bukan nama fisik SQL. Perubahan email/password profil memerlukan password saat ini; avatar harus berupa image dan disimpan sebagai key pada storage disk Pupitre.
+
+Nama kolom bisa diubah di `config/pupitre.ts` → `auth.columns`. Properti `emailVerifiedAt`, `avatar`, `timezone`, dan lainnya dibaca melalui atribut model sesuai konfigurasi; migrasi hanya menambahkan kolom fisik standar di atas.
+
+Panel tenancy dikonfigurasi lewat `.tenancy({ mode, model, ownership, tenantsForUser })`. Driver kolom default membutuhkan `model` tenant dan callback `tenantsForUser(user, ctx)` yang hanya mengembalikan tenant tempat user menjadi anggota; Pupitre menolak anggota yang tidak ada pada hasil callback. `ownership` default `tenant_id` harus berupa kolom nyata pada tiap tabel resource yang terscope. Mode `implicit` juga membutuhkan kolom user yang dapat ditulis pada `currentTenantAttribute` (default `currentTenantId`) untuk menyimpan pilihan aktif. `scope(false)` menandai resource global yang sengaja tidak memiliki tenancy.
+
+Pupitre tidak membuat tabel tenant atau membership. Host menyediakan tenant model, relasi/pivot membership, ownership columns dan indeks tenant-leading sesuai access path. Driver opsional `@rikology/pupitre/drivers/tenant` memakai konteks `TenantService` dan `TenantScope` dari `@rikology/adonisjs-tenant`; kolom ownership Pupitre tetap diterapkan untuk model tanpa mixin.
 
 ## 3. Kolom yang diasumsikan pada model resource
 
@@ -87,6 +89,8 @@ Nama kolom bisa diubah di `config/pupitre.ts` → `auth.columns`. Model `User` h
 | Tenants / memberships | `@rikology/adonisjs-tenant` | sesuai package; Pupitre hanya memanggil resolver + `listForUser` |
 | Roles & permissions | `@rikology/pupitre-shield` (plugin) | `pupitre_roles`, `pupitre_permissions`, `pupitre_role_user`, `pupitre_permission_role` |
 | Sessions, remember-me | `@adonisjs/session`, `@adonisjs/auth` | milik host |
+
+Catatan: Pupitre tidak mengelola atau memigrasikan tabel `notifications`. Host harus mendaftarkan provider dan migrasi peer; adapter Pupitre hanya membaca/menulis inbox milik user saat ini. Tanpa `config.pupitre.notifications`, tray dan endpoint inbox tidak tersedia dan notifikasi aksi tetap menjadi flash saja.
 
 ## 5. Cross-dialect
 

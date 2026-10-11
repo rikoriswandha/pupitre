@@ -61,7 +61,7 @@ packages/pupitre/
   stubs/
   src/
     builder/                   # DSL murni: menghasilkan "definition" (plain object + closures)
-      panel.ts  resource.ts  page.ts  widget.ts  relation_manager.ts
+      panel.ts  resource.ts  pages.ts (resource page builder)  page.ts (custom page)  widget.ts  relation_manager.ts
       schema/   table/   action.ts   nav.ts
     definition/                # tipe hasil builder (ResourceDefinition, FieldDefinition, ...)
     compiler/
@@ -74,9 +74,9 @@ packages/pupitre/
     http/
       router.ts                # registrasi route group per panel, nama route
       middleware/              # pupitre_context, tenancy_resolver, share_props
-      controllers/             # resource_controller, action_controller, table_controller,
-                               # internal_controller (/_pupitre/*), auth/*
+      controllers/             # resource_controller, action_controller, custom_page_controller, internal_controller, auth/*
       page_props.ts            # merakit props `page` untuk Inertia
+    pages/                     # custom page routes, owner resolver untuk form/options/upload
     query/
       table_query.ts           # URL query → Lucid query (sort/search/filter/group/paginate)
       search.ts                # global search
@@ -206,10 +206,10 @@ Urutan middleware group panel (dipasang oleh `router.ts`):
 
 1. Middleware host dari `.middleware([...])` — referensi middleware asli (`middleware.auth({ guards: ['web'] })` dari `#start/kernel`), bukan string, karena package tidak bisa mengimpor koleksi named middleware host.
 2. `pupitre_context`: membangun `ctx.pupitre = { panel, locale, timezone, user }`.
-3. `tenancy_resolver`: `adapter.tenancy.resolve(ctx)` → `ctx.pupitre.tenant`; 404 kalau mode `url` dan tenant tidak ditemukan / user bukan anggota.
-4. `share_props`: `inertia.share({ user, tenant, nav, flash, notifications })`. `nav` sudah difilter `viewAny`.
+3. `tenancy_resolver`: resolves the configured `TenancyAdapter`, confirms membership, sets `ctx.pupitre.tenant`, and request-binds the panel path in URL mode. The `@rikology/adonisjs-tenant` driver runs downstream work in `TenantService` context.
+4. `share_props`: `inertia.share({ user, tenant, tenants, nav, flash, notifications })`. `nav` sudah difilter `viewAny`.
 
-Controller selalu memanggil `bouncer.with(policy).authorize(ability, ...)` **sebelum** query. Query selalu lewat `resource.scopedQuery(ctx)` yang menerapkan `.scope()` resource atau default tenancy; tidak ada controller yang memanggil `Model.query()` langsung. Ini diuji oleh test `tests/authz/*.spec.ts` yang menjalankan setiap route tanpa izin dan mengharapkan 403.
+Controller selalu mengotorisasi ability tingkat resource sebelum query (`viewAny` untuk list, `create` untuk create, serta `viewAny` sebelum pencarian record); setelah record ditemukan lewat query terscope, ability record (`view`/`update`/`delete` atau custom action) diperiksa sebelum data dipakai atau dimutasi. Query selalu lewat `scopedQuery(ctx, resource)`: callback `.scope(fn)` berjalan terlebih dahulu, lalu default adapter scope; `.scope(false)` sengaja melewati tenancy untuk resource global. Ownership create diterapkan lagi setelah mutation hooks, sementara update menghapus kolom ownership dari data sebelum handler/merge agar record tidak dapat dipindahkan tenant. Policy relasi memakai policy model terkait (`viewAny`). Matriks test memeriksa semua route panel yang diklasifikasikan dan gagal bila ada route baru tanpa mapping.
 
 ## 7. Auth bawaan
 

@@ -1,6 +1,35 @@
 {
   "commands": [
     {
+      "commandName": "pupitre:inspect",
+      "description": "Inspect authorization policies used by Pupitre panels",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "json",
+          "flagName": "json",
+          "required": false,
+          "type": "boolean",
+          "description": "Print machine-readable JSON"
+        }
+      ],
+      "args": [
+        {
+          "name": "resource",
+          "argumentName": "resource",
+          "required": false,
+          "description": "Limit output to one resource slug",
+          "type": "string"
+        }
+      ],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "inspect.js"
+    },
+    {
       "commandName": "pupitre:install",
       "description": "Install Pupitre host files and configuration",
       "help": "",
@@ -35,6 +64,124 @@
       "args": [],
       "options": {},
       "filePath": "install.js"
+    },
+    {
+      "commandName": "make:page",
+      "description": "Generate a Pupitre custom page",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing page file"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Custom page name",
+          "type": "string"
+        }
+      ],
+      "options": {},
+      "filePath": "make_page.js"
+    },
+    {
+      "commandName": "make:panel",
+      "description": "Create a Pupitre panel definition",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "path",
+          "flagName": "path",
+          "required": false,
+          "type": "string",
+          "description": "URL prefix (defaults to /<name>)"
+        },
+        {
+          "name": "guard",
+          "flagName": "guard",
+          "required": false,
+          "type": "string",
+          "description": "Authentication guard",
+          "default": "web"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Panel identifier",
+          "type": "string"
+        }
+      ],
+      "options": {},
+      "filePath": "make_panel.js"
+    },
+    {
+      "commandName": "make:resource",
+      "description": "Generate a Pupitre resource from a Lucid model",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "model",
+          "flagName": "model",
+          "required": false,
+          "type": "string",
+          "description": "Model module path (defaults to #models/<model>)"
+        },
+        {
+          "name": "fromMigration",
+          "flagName": "from-migration",
+          "required": false,
+          "type": "boolean",
+          "description": "Use the model table migration for columns"
+        },
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing resource file"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Lucid model name",
+          "type": "string"
+        }
+      ],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "make_resource.js"
+    },
+    {
+      "commandName": "pupitre:prune",
+      "description": "Delete expired Pupitre password reset tokens",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [],
+      "args": [],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "prune.js"
     },
     {
       "commandName": "pupitre:routes",

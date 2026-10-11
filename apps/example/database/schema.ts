@@ -8,7 +8,7 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class CategorySchema extends BaseModel {
-  static $columns = ['createdAt', 'id', 'name', 'slug', 'updatedAt'] as const
+  static $columns = ['createdAt', 'id', 'name', 'slug', 'tenantId', 'updatedAt'] as const
   $columns = CategorySchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -18,12 +18,56 @@ export class CategorySchema extends BaseModel {
   declare name: string
   @column()
   declare slug: string
+  @column()
+  declare tenantId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class CommentSchema extends BaseModel {
+  static $columns = ['body', 'createdAt', 'id', 'postId', 'title', 'updatedAt'] as const
+  $columns = CommentSchema.$columns
+  @column()
+  declare body: string
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare postId: number
+  @column()
+  declare title: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class NotificationSchema extends BaseModel {
+  static $columns = ['createdAt', 'data', 'id', 'metadata', 'notifiableId', 'notifiableType', 'readAt', 'seenAt', 'type', 'updatedAt'] as const
+  $columns = NotificationSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare data: any
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare metadata: any | null
+  @column()
+  declare notifiableId: string
+  @column()
+  declare notifiableType: string
+  @column.dateTime()
+  declare readAt: DateTime | null
+  @column.dateTime()
+  declare seenAt: DateTime | null
+  @column()
+  declare type: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
 }
 
 export class PostSchema extends BaseModel {
-  static $columns = ['authorId', 'body', 'categoryId', 'cover', 'createdAt', 'id', 'isFeatured', 'items', 'publishedAt', 'slug', 'status', 'title', 'updatedAt', 'viewsCount'] as const
+  static $columns = ['authorId', 'body', 'categoryId', 'cover', 'createdAt', 'id', 'isFeatured', 'items', 'publishedAt', 'slug', 'status', 'tenantId', 'title', 'updatedAt', 'viewsCount'] as const
   $columns = PostSchema.$columns
   @column()
   declare authorId: number
@@ -48,6 +92,8 @@ export class PostSchema extends BaseModel {
   @column()
   declare status: string
   @column()
+  declare tenantId: number
+  @column()
   declare title: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
@@ -55,13 +101,79 @@ export class PostSchema extends BaseModel {
   declare viewsCount: number
 }
 
+export class PupitrePasswordResetSchema extends BaseModel {
+  static $columns = ['createdAt', 'expiresAt', 'guard', 'id', 'tokenHash', 'userId'] as const
+  $columns = PupitrePasswordResetSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare guard: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare tokenHash: string
+  @column()
+  declare userId: number
+}
+
+export class SettingSchema extends BaseModel {
+  static $columns = ['createdAt', 'key', 'updatedAt', 'value'] as const
+  $columns = SettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare key: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare value: string
+}
+
+export class TenantUserSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'tenantId', 'updatedAt', 'userId'] as const
+  $columns = TenantUserSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare tenantId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare userId: number
+}
+
+export class TenantSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'name', 'slug', 'updatedAt'] as const
+  $columns = TenantSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column()
+  declare slug: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'email', 'fullName', 'id', 'password', 'timezone', 'updatedAt'] as const
+  static $columns = ['avatar', 'createdAt', 'currentTenantId', 'email', 'emailVerifiedAt', 'fullName', 'id', 'password', 'timezone', 'updatedAt'] as const
   $columns = UserSchema.$columns
+  @column()
+  declare avatar: string | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column()
+  declare currentTenantId: number | null
+  @column()
   declare email: string
+  @column.dateTime()
+  declare emailVerifiedAt: DateTime | null
   @column()
   declare fullName: string | null
   @column({ isPrimary: true })

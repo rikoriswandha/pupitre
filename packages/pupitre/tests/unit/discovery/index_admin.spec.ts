@@ -11,6 +11,7 @@ test.group('indexAdmin', () => {
       'resources/post_resource.ts': '/app/admin/resources/post_resource.ts',
       'resources/category_resource.ts': '/app/admin/resources/category_resource.ts',
       'resources/APIKey_resource.ts': '/app/admin/resources/APIKey_resource.ts',
+      'pages/settings_page.ts': '/app/admin/pages/settings_page.ts',
     }
     const generate = () => {
       const sources = new Map<string, Parameters<IndexGenerator['add']>[1]>()
@@ -61,6 +62,10 @@ export const resources = {
   "categories": () => import('#admin/resources/category_resource'),
   "posts": () => import('#admin/resources/post_resource'),
   "users": () => import('#admin/resources/user_resource'),
+} as const
+
+export const pages = {
+  "settings": () => import('#admin/pages/settings_page'),
 } as const
 
 export const panels = {
