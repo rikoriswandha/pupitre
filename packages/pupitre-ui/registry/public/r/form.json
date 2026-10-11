@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "form",
+  "type": "registry:component",
+  "title": "Form",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Form.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Form.tsx",
+      "content": "import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'\nimport {\n  useNavigationGuard,\n  useSetState,\n  useStateValue,\n  useEmbedded,\n  useSubmitForm,\n  useVisit,\n  matchesKeyBinding,\n} from '@rikology/pupitre-react'\nimport { Button } from '../primitives/index.js'\nimport { cn } from '../primitives/index.js'\n\ntype Props = Record<string, unknown>\ntype RuntimeProps = {\n  props: Props\n  children?: ReactNode\n  on?: unknown\n  bindings?: Record<string, string | undefined>\n  loading?: boolean\n}\n\nexport function Form({ props, children, bindings, loading = false }: RuntimeProps) {\n  const visit = useVisit()\n  const setState = useSetState()\n  const submitForm = useSubmitForm()\n  const embedded = useEmbedded()\n  const submitting = useStateValue('/meta/submitting') === true\n  const submitted = useStateValue('/meta/submitted') === true\n  const errors = useStateValue('/errors')\n  const formData = useStateValue('/data')\n  const [initialState, setInitialState] = useState(() => JSON.stringify(formData))\n  const succeeded =\n    submitted && (!errors || (typeof errors === 'object' && Object.keys(errors).length === 0))\n  // A successful submit (bridge sets `/meta/submitted`, no errors) makes the\n  // saved data the new clean baseline; a 422 keeps the old one so the guard stays.\n  if (succeeded && JSON.stringify(formData) !== initialState) {\n    setInitialState(JSON.stringify(formData))\n  }\n  const dirty = JSON.stringify(formData) !== initialState\n  useNavigationGuard(\n    useCallback(\n      () => !embedded && props.dirtyGuard === true && dirty,\n      [dirty, embedded, props.dirtyGuard]\n    ),\n    'You have unsaved changes. Leave this page?'\n  )\n  const submit = (event: FormEvent<HTMLFormElement>) => {\n    event.preventDefault()\n    submitForm()\n  }\n  useEffect(() => {\n    if (succeeded) setState('/meta/submitted', false)\n  }, [succeeded, setState])\n  useEffect(() => {\n    setState('/meta/dirty', dirty)\n  }, [dirty, setState])\n  useEffect(() => {\n    const keyBindings = Array.isArray(props.keyBindings)\n      ? props.keyBindings.filter((binding): binding is string => typeof binding === 'string')\n      : []\n    if (keyBindings.length === 0) return\n    const handler = (event: KeyboardEvent) => {\n      if (keyBindings.some((binding) => matchesKeyBinding(event, binding))) {\n        event.preventDefault()\n        submitForm()\n      }\n    }\n    window.addEventListener('keydown', handler)\n    return () => window.removeEventListener('keydown', handler)\n  }, [formData, props.keyBindings, setState, submitForm])\n  const cancel = () => {\n    if (typeof props.cancelUrl === 'string') visit(props.cancelUrl)\n  }\n  return (\n    <form\n      noValidate\n      className={cn('space-y-6', typeof props.className === 'string' ? props.className : undefined)}\n      action={typeof props.url === 'string' ? props.url : undefined}\n      method={typeof props.method === 'string' ? props.method : undefined}\n      onSubmit={submit}\n      data-dirty={dirty || undefined}\n      data-binding={bindings?.value}\n    >\n      {children}\n      {/* Inside an action modal the modal footer owns submit/cancel. */}\n      {!embedded && (\n        <div className=\"flex flex-wrap justify-end gap-2\">\n          {typeof props.cancelUrl === 'string' && (\n            <Button type=\"button\" variant=\"outline\" onClick={cancel} disabled={loading}>\n              Cancel\n            </Button>\n          )}\n          <Button type=\"submit\" disabled={loading || submitting}>\n            {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}\n          </Button>\n        </div>\n      )}\n    </form>\n  )\n}\nexport default Form\n"
+    }
+  ]
+}

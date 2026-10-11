@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "widget-catalog-adapters",
+  "type": "registry:component",
+  "title": "WidgetCatalogAdapters",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/widget-chart.json",
+    "https://pupitre.dev/r/widget-stats.json",
+    "https://pupitre.dev/r/widget-table.json",
+    "https://pupitre.dev/r/widget-timeline.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/WidgetCatalogAdapters.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/WidgetCatalogAdapters.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport {\n  widgetData as widgetDataSchema,\n  widgetDescriptor as widgetDescriptorSchema,\n} from '@rikology/pupitre/catalog'\nimport type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { WidgetChart } from './WidgetChart.js'\nimport { WidgetStats } from './WidgetStats.js'\nimport { WidgetTable } from './WidgetTable.js'\nimport { WidgetTimeline } from './WidgetTimeline.js'\n\ntype Props = {\n  props: { descriptor: WidgetDescriptor; data?: unknown }\n  children?: ReactNode\n  emit?: (event: string, payload?: unknown) => void\n  loading?: boolean\n}\n\nfunction widgetParts(props: Props['props']): { descriptor: WidgetDescriptor; data?: WidgetData } {\n  const descriptor = widgetDescriptorSchema.parse(props.descriptor)\n  return {\n    descriptor,\n    ...(props.data === undefined ? {} : { data: widgetDataSchema.parse(props.data) }),\n  }\n}\n\nexport function WidgetStatsRenderer({ props }: Props) {\n  const widget = widgetParts(props)\n  return <WidgetStats {...widget} />\n}\n\nexport function WidgetChartRenderer({ props }: Props) {\n  const widget = widgetParts(props)\n  return <WidgetChart {...widget} />\n}\n\nexport function WidgetTableRenderer({ props }: Props) {\n  const widget = widgetParts(props)\n  return <WidgetTable {...widget} />\n}\n\nexport function WidgetTimelineRenderer({ props }: Props) {\n  const widget = widgetParts(props)\n  return <WidgetTimeline {...widget} />\n}\n"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-panel-theme",
+  "type": "registry:hook",
+  "title": "use_panel_theme",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/use_panel_theme.ts",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/use_panel_theme.ts",
+      "content": "import { useEffect, useState } from 'react'\nimport type { CSSProperties } from 'react'\nimport type { ShellProps } from '@rikology/pupitre-react'\nconst EMPTY_THEME: NonNullable<ShellProps['panel']['theme']> = {}\n\nexport function usePanelTheme(panel: ShellProps['panel']): CSSProperties {\n  const [dark, setDark] = useState(false)\n  const panelBrand = panel.brand\n  const theme = panel.theme ?? EMPTY_THEME\n  const darkMode = theme.darkMode ?? 'system'\n  useEffect(() => {\n    const media = window.matchMedia('(prefers-color-scheme: dark)')\n    const update = () => setDark(darkMode === 'dark' || (darkMode === 'system' && media.matches))\n    update()\n    media.addEventListener('change', update)\n    return () => media.removeEventListener('change', update)\n  }, [darkMode])\n  useEffect(() => {\n    const root = document.documentElement\n    const previousDark = root.classList.contains('dark')\n    if (dark) root.classList.add('dark')\n    else root.classList.remove('dark')\n    return () => {\n      if (previousDark) root.classList.add('dark')\n      else root.classList.remove('dark')\n    }\n  }, [dark])\n  useEffect(() => {\n    const root = document.documentElement\n    const variables = Object.entries({\n      ...(theme.primary ? { '--primary': theme.primary } : {}),\n      ...(theme.radius ? { '--radius': theme.radius } : {}),\n      ...(theme.vars ?? {}),\n    })\n    const previous = variables.map(\n      ([key]) =>\n        [key, root.style.getPropertyValue(key), root.style.getPropertyPriority(key)] as const\n    )\n    for (const [key, value] of variables) root.style.setProperty(key, value)\n    return () => {\n      for (const [key, value, priority] of previous) {\n        if (value) root.style.setProperty(key, value, priority)\n        else root.style.removeProperty(key)\n      }\n    }\n  }, [theme])\n  useEffect(() => {\n    const links: HTMLLinkElement[] = []\n    for (const [rel, href] of [\n      ['stylesheet', theme.stylesheet],\n      ['stylesheet', theme.fontUrl],\n    ] as const) {\n      if (!href || typeof document === 'undefined') continue\n      const link = document.createElement('link')\n      link.rel = rel\n      link.href = href\n      link.dataset.pupitreTheme = panel.id\n      document.head.append(link)\n      links.push(link)\n    }\n    return () => links.forEach((link) => link.remove())\n  }, [panel.id, theme.stylesheet, theme.fontUrl])\n  useEffect(() => {\n    if (!panelBrand?.favicon || typeof document === 'undefined') return\n    let link = document.querySelector<HTMLLinkElement>('link[rel=\"icon\"]')\n    if (!link) {\n      link = document.createElement('link')\n      link.rel = 'icon'\n      document.head.append(link)\n    }\n    link.href = panelBrand.favicon\n  }, [panelBrand?.favicon])\n  return {\n    ...theme.vars,\n    ...(theme.primary ? { '--primary': theme.primary } : {}),\n    ...(theme.radius ? { '--radius': theme.radius } : {}),\n    ...(theme.fontFamily ? { fontFamily: 'var(--font-sans)' } : {}),\n  } as CSSProperties\n}\n"
+    }
+  ]
+}

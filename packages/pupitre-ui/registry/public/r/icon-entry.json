@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icon-entry",
+  "type": "registry:component",
+  "title": "IconEntry",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json",
+    "https://pupitre.dev/r/icons.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/IconEntry.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/IconEntry.tsx",
+      "content": "import { Icon } from '../icons.js'\nimport type { EntryProps } from './EntryShell.js'\nimport { EntryShell } from './EntryShell.js'\n\nexport function IconEntry({ props = {} }: { props?: EntryProps }) {\n  const name = typeof props.value === 'string' ? props.value : props.icon\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      <span className=\"inline-flex items-center gap-2\">\n        {name ? (\n          <Icon\n            name={name}\n            className=\"size-5\"\n            style={props.color ? { color: props.color } : undefined}\n          />\n        ) : (\n          <span>{props.placeholder ?? '—'}</span>\n        )}\n        {props.copyable && name && (\n          <button\n            type=\"button\"\n            aria-label={`Copy ${props.label ?? 'icon name'}`}\n            onClick={() => {\n              if (typeof navigator !== 'undefined') void navigator.clipboard?.writeText(name)\n            }}\n            className=\"text-xs text-muted-foreground\"\n          >\n            Copy\n          </button>\n        )}\n      </span>\n    </EntryShell>\n  )\n}\n"
+    }
+  ]
+}

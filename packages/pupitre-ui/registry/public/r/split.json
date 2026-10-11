@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "split",
+  "type": "registry:component",
+  "title": "Split",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Split.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Split.tsx",
+      "content": "import type { CSSProperties, ReactNode } from 'react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Split({ props, children }: RuntimeProps) {\n  const breakpoint = props.from === 'lg' ? 'lg' : 'md'\n  const ratio =\n    typeof props.ratio === 'number' && Number.isFinite(props.ratio)\n      ? Math.max(0.2, Math.min(0.8, props.ratio))\n      : 0.5\n  const style = {\n    '--split-ratio': `${ratio}fr`,\n    '--split-remainder': `${1 - ratio}fr`,\n  } as CSSProperties\n  return (\n    <div\n      className={`grid min-w-0 grid-cols-1 gap-6 ${breakpoint}:grid-cols-[minmax(0,var(--split-ratio,1fr))_minmax(0,var(--split-remainder,1fr))]`}\n      style={style}\n    >\n      {children}\n    </div>\n  )\n}\nexport default Split\n"
+    }
+  ]
+}

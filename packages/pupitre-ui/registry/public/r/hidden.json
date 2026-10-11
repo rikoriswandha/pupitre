@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "hidden",
+  "type": "registry:component",
+  "title": "Hidden",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3",
+    "zod@^4.3.6"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Hidden.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Hidden.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport { useBoundValue } from '@rikology/pupitre-react'\nimport type { components } from '@rikology/pupitre/catalog'\nimport type { infer as Infer } from 'zod'\n\ntype Props = Infer<typeof components.Hidden.props>\ntype Runtime = {\n  props: Props\n  children?: ReactNode\n  emit?: (event: string, payload?: unknown) => void\n  on?: unknown\n  bindings?: Record<string, string | undefined>\n  loading?: boolean\n}\n\nexport function Hidden({ props, bindings }: Runtime) {\n  const [value, setValue] = useBoundValue(props.value ?? '', bindings?.value)\n  return (\n    <input\n      type=\"hidden\"\n      name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}\n      value={\n        typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value ?? '')\n      }\n      onChange={(event) => setValue(event.currentTarget.value)}\n      {...props.extraAttributes}\n    />\n  )\n}\nexport default Hidden\n"
+    }
+  ]
+}

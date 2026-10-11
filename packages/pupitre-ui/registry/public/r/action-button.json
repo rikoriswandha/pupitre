@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "action-button",
+  "type": "registry:component",
+  "title": "ActionButton",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/icons.json",
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/ActionButton.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/ActionButton.tsx",
+      "content": "import { useRunAction } from '@rikology/pupitre-react'\nimport type { ActionDescriptor } from '@rikology/pupitre/catalog'\nimport { Icon } from '../icons.js'\nimport { Button } from '../primitives/index.js'\n\nexport function ActionButton({\n  action,\n  ids,\n  record,\n}: {\n  action: ActionDescriptor\n  ids?: Array<string | number>\n  record?: Record<string, unknown>\n}) {\n  const runAction = useRunAction()\n  const variant = action.variant ?? 'button'\n  return (\n    <Button\n      type=\"button\"\n      aria-label={variant === 'iconButton' ? action.label : undefined}\n      title={variant === 'iconButton' ? action.label : undefined}\n      disabled={!action.enabled}\n      variant={\n        variant === 'link'\n          ? 'ghost'\n          : action.color === 'danger'\n            ? 'destructive'\n            : action.color === 'gray'\n              ? 'outline'\n              : 'default'\n      }\n      className={variant === 'link' ? 'text-primary underline-offset-4 hover:underline' : undefined}\n      onClick={() => void runAction(action, { ids, record })}\n    >\n      {action.icon && <Icon name={action.icon} className=\"size-4\" />}\n      {variant === 'iconButton' ? <span className=\"sr-only\">{action.label}</span> : action.label}\n    </Button>\n  )\n}\n"
+    }
+  ]
+}

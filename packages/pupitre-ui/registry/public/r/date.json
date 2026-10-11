@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "date",
+  "type": "registry:component",
+  "title": "Date",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3",
+    "zod@^4.3.6"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Date.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Date.tsx",
+      "content": "import { useId, type ReactNode } from 'react'\nimport { useBoundValue, useFieldError } from '@rikology/pupitre-react'\nimport type { components } from '@rikology/pupitre/catalog'\nimport type { infer as Infer } from 'zod'\nimport { Field, FieldError, Input, Label } from '../primitives/index.js'\nimport { timezoneHint, toInputValue } from '../primitives/date_value.js'\n\ntype Props = Infer<typeof components.Date.props>\ntype Runtime = {\n  props: Props\n  children?: ReactNode\n  emit?: (event: string, payload?: unknown) => void\n  on?: unknown\n  bindings?: Record<string, string | undefined>\n  loading?: boolean\n}\n\nexport function Date({ props, bindings }: Runtime) {\n  const [value, setValue] = useBoundValue<string | null>(props.value ?? null, bindings?.value)\n  const error = useFieldError(props.error, bindings?.value)\n  const generatedId = useId()\n  const id = bindings?.value\n    ? bindings.value.split('/').slice(2).join('.')\n    : (props.name ?? generatedId)\n  const zoneHint = timezoneHint(props.timezone)\n  const describedBy =\n    [\n      props.hint && `${id}-hint`,\n      props.helperText && `${id}-helper`,\n      zoneHint && `${id}-timezone`,\n      error && `${id}-error`,\n    ]\n      .filter(Boolean)\n      .join(' ') || undefined\n  const columnStyle =\n    props.columnSpan === null || props.columnSpan === undefined\n      ? undefined\n      : {\n          gridColumn:\n            props.columnSpan === 'full'\n              ? '1 / -1'\n              : `span ${props.columnSpan} / span ${props.columnSpan}`,\n        }\n  return (\n    <div style={columnStyle}>\n      <Field invalid={!!error}>\n        {props.label !== null && props.label !== undefined && (\n          <Label htmlFor={id}>\n            {props.label}\n            {props.required && <span aria-hidden=\"true\"> *</span>}\n          </Label>\n        )}\n        <Input\n          aria-label={props.label ?? id}\n          {...props.extraAttributes}\n          id={id}\n          name={id}\n          type=\"date\"\n          value={toInputValue(value, 'date', props.seconds === true)}\n          min={props.min}\n          max={props.max}\n          disabled={props.disabled}\n          required={props.required}\n          readOnly={props.readOnly}\n          onChange={(event) => setValue(event.currentTarget.value || null)}\n          aria-required={props.required}\n          aria-describedby={describedBy}\n          aria-invalid={!!error}\n          className=\"h-10 w-full\"\n        />\n        {zoneHint && (\n          <p id={`${id}-timezone`} className=\"text-sm text-muted-foreground\">\n            {zoneHint}\n          </p>\n        )}\n        {props.hint && (\n          <p id={`${id}-hint`} className=\"text-sm text-muted-foreground\">\n            {props.hint}\n          </p>\n        )}\n        {props.helperText && (\n          <p id={`${id}-helper`} className=\"text-sm text-muted-foreground\">\n            {props.helperText}\n          </p>\n        )}\n        {error && (\n          <div id={`${id}-error`}>\n            <FieldError>{error}</FieldError>\n          </div>\n        )}\n      </Field>\n    </div>\n  )\n}\nexport default Date\n"
+    }
+  ]
+}

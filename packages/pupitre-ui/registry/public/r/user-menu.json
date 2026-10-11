@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "user-menu",
+  "type": "registry:component",
+  "title": "UserMenu",
+  "dependencies": [
+    "@base-ui/react@^1.9.0",
+    "@rikology/pupitre-react@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/icons.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/UserMenu.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/UserMenu.tsx",
+      "content": "import { t } from '@rikology/pupitre-react'\nimport { Menu } from '@base-ui/react/menu'\nimport { useVisit } from '@rikology/pupitre-react'\nimport type { ShellProps } from '@rikology/pupitre-react'\nimport { Icon } from '../icons.js'\n\nexport type UserMenuProps = { panel: ShellProps['panel']; user: ShellProps['user'] }\n\nexport function UserMenu({ panel, user }: UserMenuProps) {\n  const visit = useVisit()\n  const userName = user?.name ?? ''\n  const userEmail = user?.email ?? ''\n  const userAvatar = user?.avatarUrl\n  if (!user) return null\n  return (\n    <Menu.Root modal={false}>\n      <Menu.Trigger\n        className=\"inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted\"\n        aria-label={t('Open user menu')}\n      >\n        {userAvatar ? (\n          <img src={userAvatar} alt=\"\" className=\"size-6 rounded-full object-cover\" />\n        ) : (\n          <Icon name=\"user\" className=\"size-4\" />\n        )}\n        <span className=\"max-w-40 truncate\">{userName}</span>\n        <Icon name=\"chevron-down\" className=\"size-3\" />\n      </Menu.Trigger>\n      <Menu.Portal container={typeof document === 'undefined' ? undefined : document.body}>\n        <Menu.Positioner\n          className=\"z-[110]\"\n          style={{ zIndex: 110 }}\n          side=\"bottom\"\n          align=\"end\"\n          sideOffset={6}\n        >\n          <Menu.Popup className=\"z-50 min-w-56 rounded-md border border-border bg-background p-1 text-foreground shadow-lg outline-none\">\n            <div className=\"px-3 py-2\">\n              <p className=\"text-sm font-medium\">{userName}</p>\n              <p className=\"truncate text-xs text-muted-foreground\">{userEmail}</p>\n            </div>\n            {panel.profileUrl && (\n              <Menu.Item\n                className=\"flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-muted focus:bg-muted\"\n                onClick={() => visit(panel.profileUrl!)}\n              >\n                <Icon name=\"user\" className=\"size-4\" />\n                {t('Profile')}\n              </Menu.Item>\n            )}\n            {panel.userMenu?.map((item) => (\n              <Menu.Item\n                key={`${item.label}:${item.url}`}\n                className=\"flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-muted focus:bg-muted\"\n                onClick={() =>\n                  item.external\n                    ? window.open(item.url, '_blank', 'noopener,noreferrer')\n                    : visit(item.url, { method: item.method ?? 'get' })\n                }\n              >\n                {item.icon && <Icon name={item.icon} className=\"size-4\" />}\n                {item.label}\n              </Menu.Item>\n            ))}\n            {panel.logoutUrl && (\n              <Menu.Item\n                className=\"flex w-full cursor-pointer items-center gap-2 rounded px-3 py-2 text-left text-sm text-foreground outline-none hover:bg-muted focus:bg-muted\"\n                onClick={() => visit(panel.logoutUrl!, { method: 'post' })}\n              >\n                <Icon name=\"log-out\" className=\"size-4\" />\n                {t('Log out')}\n              </Menu.Item>\n            )}\n          </Menu.Popup>\n        </Menu.Positioner>\n      </Menu.Portal>\n    </Menu.Root>\n  )\n}\n"
+    }
+  ]
+}

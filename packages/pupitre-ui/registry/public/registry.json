@@ -1,0 +1,1687 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "pupitre",
+  "homepage": "https://pupitre.dev",
+  "items": [
+    {
+      "name": "action-bar",
+      "type": "registry:component",
+      "title": "ActionBar",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ActionBar.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ActionBar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "action-button",
+      "type": "registry:component",
+      "title": "ActionButton",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ActionButton.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ActionButton.tsx"
+        }
+      ]
+    },
+    {
+      "name": "actions",
+      "type": "registry:component",
+      "title": "Actions",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Actions.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Actions.tsx"
+        }
+      ]
+    },
+    {
+      "name": "auth-shell",
+      "type": "registry:component",
+      "title": "AuthShell",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/passkey-login.json",
+        "https://pupitre.dev/r/use-panel-theme.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/AuthShell.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/AuthShell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "badge-entry",
+      "type": "registry:component",
+      "title": "BadgeEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/BadgeEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/BadgeEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "builder",
+      "type": "registry:component",
+      "title": "Builder",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Builder.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Builder.tsx"
+        }
+      ]
+    },
+    {
+      "name": "builder-item",
+      "type": "registry:component",
+      "title": "BuilderItem",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/builder.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/BuilderItem.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/BuilderItem.tsx"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:component",
+      "title": "Checkbox",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Checkbox.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Checkbox.tsx"
+        }
+      ]
+    },
+    {
+      "name": "checkbox-list",
+      "type": "registry:component",
+      "title": "CheckboxList",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/CheckboxList.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/CheckboxList.tsx"
+        }
+      ]
+    },
+    {
+      "name": "code-editor",
+      "type": "registry:component",
+      "title": "CodeEditor",
+      "dependencies": [
+        "@codemirror/commands@^6.11.1",
+        "@codemirror/lang-css@^6.3.1",
+        "@codemirror/lang-html@^6.4.12",
+        "@codemirror/lang-javascript@^6.2.5",
+        "@codemirror/lang-json@^6.0.2",
+        "@codemirror/lang-markdown@^6.5.2",
+        "@codemirror/lang-php@^6.0.2",
+        "@codemirror/lang-python@^6.2.1",
+        "@codemirror/lang-sql@^6.10.0",
+        "@codemirror/language@^6.13.1",
+        "@codemirror/state@^6.7.6",
+        "@codemirror/view@^6.43.14",
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/CodeEditor.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/CodeEditor.tsx"
+        }
+      ]
+    },
+    {
+      "name": "code-entry",
+      "type": "registry:component",
+      "title": "CodeEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/CodeEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/CodeEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "color",
+      "type": "registry:component",
+      "title": "Color",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Color.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Color.tsx"
+        }
+      ]
+    },
+    {
+      "name": "color-entry",
+      "type": "registry:component",
+      "title": "ColorEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ColorEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ColorEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "confirm-dialog",
+      "type": "registry:component",
+      "title": "ConfirmDialog",
+      "dependencies": [
+        "@base-ui/react@^1.9.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ConfirmDialog.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ConfirmDialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table",
+      "type": "registry:component",
+      "title": "DataTable",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "@tanstack/react-table@^8.21.3",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/data-table-editable-cell.json",
+        "https://pupitre.dev/r/data-table-grid.json",
+        "https://pupitre.dev/r/data-table-groups.json",
+        "https://pupitre.dev/r/data-table-summary.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/DataTable.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTable.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-editable-cell",
+      "type": "registry:component",
+      "title": "DataTableEditableCell",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/DataTableEditableCell.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTableEditableCell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-grid",
+      "type": "registry:component",
+      "title": "DataTableGrid",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/DataTableGrid.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTableGrid.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-groups",
+      "type": "registry:component",
+      "title": "DataTableGroups",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/DataTableGroups.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTableGroups.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-summary",
+      "type": "registry:component",
+      "title": "DataTableSummary",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/DataTableSummary.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTableSummary.tsx"
+        }
+      ]
+    },
+    {
+      "name": "date",
+      "type": "registry:component",
+      "title": "Date",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Date.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Date.tsx"
+        }
+      ]
+    },
+    {
+      "name": "date-time",
+      "type": "registry:component",
+      "title": "DateTime",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/DateTime.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DateTime.tsx"
+        }
+      ]
+    },
+    {
+      "name": "divider",
+      "type": "registry:component",
+      "title": "Divider",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Divider.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Divider.tsx"
+        }
+      ]
+    },
+    {
+      "name": "entry-shell",
+      "type": "registry:component",
+      "title": "EntryShell",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/EntryShell.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/EntryShell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "fieldset",
+      "type": "registry:component",
+      "title": "Fieldset",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Fieldset.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Fieldset.tsx"
+        }
+      ]
+    },
+    {
+      "name": "file-upload",
+      "type": "registry:component",
+      "title": "FileUpload",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/image-cropper.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/FileUpload.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/FileUpload.tsx"
+        }
+      ]
+    },
+    {
+      "name": "form",
+      "type": "registry:component",
+      "title": "Form",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Form.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "fragment",
+      "type": "registry:component",
+      "title": "Fragment",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Fragment.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Fragment.tsx"
+        }
+      ]
+    },
+    {
+      "name": "global-search",
+      "type": "registry:component",
+      "title": "GlobalSearch",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "cmdk@^1.1.1",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/GlobalSearch.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/GlobalSearch.tsx"
+        }
+      ]
+    },
+    {
+      "name": "grid",
+      "type": "registry:component",
+      "title": "Grid",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Grid.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Grid.tsx"
+        }
+      ]
+    },
+    {
+      "name": "group",
+      "type": "registry:component",
+      "title": "Group",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Group.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Group.tsx"
+        }
+      ]
+    },
+    {
+      "name": "hidden",
+      "type": "registry:component",
+      "title": "Hidden",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Hidden.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Hidden.tsx"
+        }
+      ]
+    },
+    {
+      "name": "html",
+      "type": "registry:component",
+      "title": "Html",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Html.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Html.tsx"
+        }
+      ]
+    },
+    {
+      "name": "icon-entry",
+      "type": "registry:component",
+      "title": "IconEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/IconEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/IconEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "icons",
+      "type": "registry:lib",
+      "title": "icons",
+      "dependencies": [
+        "lucide-react@^1.55.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/icons.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/icons.tsx"
+        }
+      ]
+    },
+    {
+      "name": "image-cropper",
+      "type": "registry:component",
+      "title": "ImageCropper",
+      "dependencies": [
+        "react-easy-crop@^6.2.4",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/modal.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ImageCropper.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ImageCropper.tsx"
+        }
+      ]
+    },
+    {
+      "name": "image-entry",
+      "type": "registry:component",
+      "title": "ImageEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ImageEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ImageEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "import-modal",
+      "type": "registry:component",
+      "title": "ImportModal",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ImportModal.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ImportModal.tsx"
+        }
+      ]
+    },
+    {
+      "name": "infolist",
+      "type": "registry:component",
+      "title": "Infolist",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Infolist.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Infolist.tsx"
+        }
+      ]
+    },
+    {
+      "name": "key-value",
+      "type": "registry:component",
+      "title": "KeyValue",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/use-live-field.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/KeyValue.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/KeyValue.tsx"
+        }
+      ]
+    },
+    {
+      "name": "key-value-entry",
+      "type": "registry:component",
+      "title": "KeyValueEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/KeyValueEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/KeyValueEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "markdown-editor",
+      "type": "registry:component",
+      "title": "MarkdownEditor",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "dompurify@^3.4.16",
+        "marked@^18.1.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/MarkdownEditor.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/MarkdownEditor.tsx"
+        }
+      ]
+    },
+    {
+      "name": "modal",
+      "type": "registry:component",
+      "title": "Modal",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Modal.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Modal.tsx"
+        }
+      ]
+    },
+    {
+      "name": "not-found",
+      "type": "registry:component",
+      "title": "NotFound",
+      "dependencies": [
+        "lucide-react@^1.55.0"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/NotFound.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/NotFound.tsx"
+        }
+      ]
+    },
+    {
+      "name": "notification-tray",
+      "type": "registry:component",
+      "title": "NotificationTray",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/NotificationTray.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/NotificationTray.tsx"
+        }
+      ]
+    },
+    {
+      "name": "number",
+      "type": "registry:component",
+      "title": "Number",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/use-live-field.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Number.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Number.tsx"
+        }
+      ]
+    },
+    {
+      "name": "passkey-login",
+      "type": "registry:component",
+      "title": "PasskeyLogin",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@simplewebauthn/browser@^14.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/PasskeyLogin.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/PasskeyLogin.tsx"
+        }
+      ]
+    },
+    {
+      "name": "placeholder",
+      "type": "registry:component",
+      "title": "Placeholder",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Placeholder.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Placeholder.tsx"
+        }
+      ]
+    },
+    {
+      "name": "primitives",
+      "type": "registry:ui",
+      "title": "Pupitre primitives",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/primitives/date_value.ts",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/primitives/date_value.ts"
+        },
+        {
+          "path": "../src/primitives/index.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/primitives/index.tsx"
+        },
+        {
+          "path": "../src/primitives/nav_link.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/primitives/nav_link.tsx"
+        }
+      ]
+    },
+    {
+      "name": "profile-security",
+      "type": "registry:component",
+      "title": "ProfileSecurity",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@simplewebauthn/browser@^14.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/ProfileSecurity.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ProfileSecurity.tsx"
+        }
+      ]
+    },
+    {
+      "name": "radio",
+      "type": "registry:component",
+      "title": "Radio",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Radio.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Radio.tsx"
+        }
+      ]
+    },
+    {
+      "name": "relation-manager",
+      "type": "registry:component",
+      "title": "RelationManager",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-bar.json",
+        "https://pupitre.dev/r/data-table.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/RelationManager.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/RelationManager.tsx"
+        }
+      ]
+    },
+    {
+      "name": "repeatable-entry",
+      "type": "registry:component",
+      "title": "RepeatableEntry",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/RepeatableEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/RepeatableEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "repeater",
+      "type": "registry:component",
+      "title": "Repeater",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Repeater.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Repeater.tsx"
+        }
+      ]
+    },
+    {
+      "name": "repeater-item",
+      "type": "registry:component",
+      "title": "RepeaterItem",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/repeater.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/RepeaterItem.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/RepeaterItem.tsx"
+        }
+      ]
+    },
+    {
+      "name": "rich-editor",
+      "type": "registry:component",
+      "title": "RichEditor",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "@tiptap/extension-image@^3.31.4",
+        "@tiptap/extension-link@^3.31.4",
+        "@tiptap/react@^3.31.4",
+        "@tiptap/starter-kit@^3.31.4",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/RichEditor.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/RichEditor.tsx"
+        }
+      ]
+    },
+    {
+      "name": "section",
+      "type": "registry:component",
+      "title": "Section",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Section.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Section.tsx"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:component",
+      "title": "Select",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Select.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Select.tsx"
+        }
+      ]
+    },
+    {
+      "name": "shell",
+      "type": "registry:component",
+      "title": "Shell",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/global-search.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/notification-tray.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/shell-sidebar.json",
+        "https://pupitre.dev/r/tenant-switcher.json",
+        "https://pupitre.dev/r/use-panel-theme.json",
+        "https://pupitre.dev/r/user-menu.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Shell.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Shell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "shell-sidebar",
+      "type": "registry:component",
+      "title": "ShellSidebar",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ShellSidebar.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ShellSidebar.tsx"
+        }
+      ]
+    },
+    {
+      "name": "slider",
+      "type": "registry:component",
+      "title": "Slider",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Slider.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Slider.tsx"
+        }
+      ]
+    },
+    {
+      "name": "split",
+      "type": "registry:component",
+      "title": "Split",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Split.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Split.tsx"
+        }
+      ]
+    },
+    {
+      "name": "step",
+      "type": "registry:component",
+      "title": "Step",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/wizard.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Step.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Step.tsx"
+        }
+      ]
+    },
+    {
+      "name": "styles",
+      "type": "registry:style",
+      "title": "styles",
+      "dependencies": [],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/styles.css",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/styles.css"
+        }
+      ]
+    },
+    {
+      "name": "tab",
+      "type": "registry:component",
+      "title": "Tab",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/tabs.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Tab.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Tab.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:component",
+      "title": "Tabs",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/Tabs.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Tabs.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tags",
+      "type": "registry:component",
+      "title": "Tags",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/use-live-field.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Tags.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Tags.tsx"
+        }
+      ]
+    },
+    {
+      "name": "tenant-switcher",
+      "type": "registry:component",
+      "title": "TenantSwitcher",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/TenantSwitcher.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/TenantSwitcher.tsx"
+        }
+      ]
+    },
+    {
+      "name": "text",
+      "type": "registry:component",
+      "title": "Text",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/use-live-field.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Text.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Text.tsx"
+        }
+      ]
+    },
+    {
+      "name": "text-entry",
+      "type": "registry:component",
+      "title": "TextEntry",
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/TextEntry.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/TextEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:component",
+      "title": "Textarea",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/use-live-field.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Textarea.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Textarea.tsx"
+        }
+      ]
+    },
+    {
+      "name": "time",
+      "type": "registry:component",
+      "title": "Time",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Time.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Time.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toaster",
+      "type": "registry:component",
+      "title": "Toaster",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Toaster.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Toaster.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:component",
+      "title": "Toggle",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Toggle.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Toggle.tsx"
+        }
+      ]
+    },
+    {
+      "name": "toggle-buttons",
+      "type": "registry:component",
+      "title": "ToggleButtons",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3",
+        "zod@^4.3.6"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ToggleButtons.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ToggleButtons.tsx"
+        }
+      ]
+    },
+    {
+      "name": "use-live-field",
+      "type": "registry:hook",
+      "title": "use_live_field",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/use_live_field.ts",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/use_live_field.ts"
+        }
+      ]
+    },
+    {
+      "name": "use-panel-theme",
+      "type": "registry:hook",
+      "title": "use_panel_theme",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/use_panel_theme.ts",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/use_panel_theme.ts"
+        }
+      ]
+    },
+    {
+      "name": "user-menu",
+      "type": "registry:component",
+      "title": "UserMenu",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/UserMenu.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/UserMenu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "view",
+      "type": "registry:component",
+      "title": "View",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/profile-security.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/View.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/View.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-catalog-adapters",
+      "type": "registry:component",
+      "title": "WidgetCatalogAdapters",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/widget-chart.json",
+        "https://pupitre.dev/r/widget-stats.json",
+        "https://pupitre.dev/r/widget-table.json",
+        "https://pupitre.dev/r/widget-timeline.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetCatalogAdapters.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetCatalogAdapters.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-chart",
+      "type": "registry:component",
+      "title": "WidgetChart",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/widget-chart-body.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetChart.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetChart.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-chart-body",
+      "type": "registry:component",
+      "title": "WidgetChartBody",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "recharts@^3.10.1"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/WidgetChartBody.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetChartBody.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-custom",
+      "type": "registry:component",
+      "title": "WidgetCustom",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [],
+      "files": [
+        {
+          "path": "../src/components/WidgetCustom.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetCustom.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-grid",
+      "type": "registry:component",
+      "title": "WidgetGrid",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/widget-chart.json",
+        "https://pupitre.dev/r/widget-stats.json",
+        "https://pupitre.dev/r/widget-table.json",
+        "https://pupitre.dev/r/widget-timeline.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetGrid.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetGrid.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-stats",
+      "type": "registry:component",
+      "title": "WidgetStats",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetStats.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetStats.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-table",
+      "type": "registry:component",
+      "title": "WidgetTable",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/data-table.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetTable.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetTable.tsx"
+        }
+      ]
+    },
+    {
+      "name": "widget-timeline",
+      "type": "registry:component",
+      "title": "WidgetTimeline",
+      "dependencies": [
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/WidgetTimeline.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/WidgetTimeline.tsx"
+        }
+      ]
+    },
+    {
+      "name": "wizard",
+      "type": "registry:component",
+      "title": "Wizard",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/Wizard.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/Wizard.tsx"
+        }
+      ]
+    }
+  ]
+}

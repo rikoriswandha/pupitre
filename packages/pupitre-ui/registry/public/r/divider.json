@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "divider",
+  "type": "registry:component",
+  "title": "Divider",
+  "dependencies": [],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Divider.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Divider.tsx",
+      "content": "export function Divider() {\n  return (\n    <hr\n      className=\"my-4 border-0 border-t border-border\"\n      role=\"separator\"\n      aria-orientation=\"horizontal\"\n    />\n  )\n}\nexport default Divider\n"
+    }
+  ]
+}

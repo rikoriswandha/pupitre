@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "widget-custom",
+  "type": "registry:component",
+  "title": "WidgetCustom",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/WidgetCustom.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/WidgetCustom.tsx",
+      "content": "import type { ComponentType } from 'react'\nimport type { WidgetDescriptor } from '@rikology/pupitre/catalog'\ntype Props = {\n  descriptor: WidgetDescriptor\n  component: ComponentType<{ data: unknown; descriptor: WidgetDescriptor }>\n  data: unknown\n}\nexport function WidgetCustom({ descriptor, component: Custom, data }: Props) {\n  return <Custom descriptor={descriptor} data={data} />\n}\n"
+    }
+  ]
+}

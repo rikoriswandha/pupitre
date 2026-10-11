@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "fragment",
+  "type": "registry:component",
+  "title": "Fragment",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Fragment.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Fragment.tsx",
+      "content": "import { Fragment as ReactFragment, type ReactNode } from 'react'\nexport function Fragment({ children }: { props?: Record<string, unknown>; children?: ReactNode }) {\n  return <ReactFragment>{children}</ReactFragment>\n}\nexport default Fragment\n"
+    }
+  ]
+}

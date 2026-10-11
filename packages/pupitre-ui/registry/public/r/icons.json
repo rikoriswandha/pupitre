@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "icons",
+  "type": "registry:lib",
+  "title": "icons",
+  "dependencies": [
+    "lucide-react@^1.55.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/icons.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/icons.tsx",
+      "content": "import type { ComponentType, SVGProps } from 'react'\nimport {\n  Activity,\n  ArrowDown,\n  ArrowLeft,\n  ArrowRight,\n  ArrowUp,\n  Bell,\n  Calendar,\n  Check,\n  ChevronDown,\n  ChevronLeft,\n  ChevronRight,\n  ChevronsUpDown,\n  CircleHelp,\n  Clipboard,\n  Copy,\n  ExternalLink,\n  Eye,\n  EyeOff,\n  File,\n  FileText,\n  Filter,\n  Hash,\n  Home,\n  Image,\n  Info,\n  LayoutDashboard,\n  LoaderCircle,\n  LogOut,\n  Menu,\n  MoreHorizontal,\n  Pencil,\n  Plus,\n  Search,\n  Settings,\n  Trash2,\n  Upload,\n  User,\n  X,\n} from 'lucide-react'\n\nconst iconMap: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {\n  'activity': Activity,\n  'arrow-down': ArrowDown,\n  'arrow-left': ArrowLeft,\n  'arrow-right': ArrowRight,\n  'arrow-up': ArrowUp,\n  'bell': Bell,\n  'calendar': Calendar,\n  'check': Check,\n  'chevron-down': ChevronDown,\n  'chevron-left': ChevronLeft,\n  'chevron-right': ChevronRight,\n  'chevrons-up-down': ChevronsUpDown,\n  'circle-help': CircleHelp,\n  'clipboard': Clipboard,\n  'copy': Copy,\n  'external-link': ExternalLink,\n  'eye': Eye,\n  'eye-off': EyeOff,\n  'file': File,\n  'file-text': FileText,\n  'filter': Filter,\n  'hash': Hash,\n  'home': Home,\n  'image': Image,\n  'info': Info,\n  'layout-dashboard': LayoutDashboard,\n  'loader-circle': LoaderCircle,\n  'log-out': LogOut,\n  'menu': Menu,\n  'more-horizontal': MoreHorizontal,\n  'pencil': Pencil,\n  'plus': Plus,\n  'search': Search,\n  'settings': Settings,\n  'trash-2': Trash2,\n  'upload': Upload,\n  'user': User,\n  'x': X,\n}\n\nexport function Icon({ name, ...props }: SVGProps<SVGSVGElement> & { name?: string }) {\n  const IconComponent = name ? iconMap[name] : undefined\n  if (!IconComponent) return null\n  return <IconComponent aria-hidden=\"true\" {...props} />\n}\n"
+    }
+  ]
+}

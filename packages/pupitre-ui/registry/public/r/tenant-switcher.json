@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "tenant-switcher",
+  "type": "registry:component",
+  "title": "TenantSwitcher",
+  "dependencies": [
+    "@base-ui/react@^1.9.0",
+    "@rikology/pupitre-react@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/icons.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/TenantSwitcher.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/TenantSwitcher.tsx",
+      "content": "import { Menu } from '@base-ui/react/menu'\nimport { t, useVisit } from '@rikology/pupitre-react'\nimport type { ShellProps } from '@rikology/pupitre-react'\nimport { Icon } from '../icons.js'\n\nexport type TenantSwitcherProps = { tenant: ShellProps['tenant']; tenants: ShellProps['tenants'] }\n\n/** Sidebar menu for switching between authorized tenants. */\nexport function TenantSwitcher({ tenant, tenants }: TenantSwitcherProps) {\n  const visit = useVisit()\n  if (!tenant || tenants.length < 2) return null\n  return (\n    <Menu.Root modal={false}>\n      <Menu.Trigger\n        className=\"mb-3 flex w-full items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted\"\n        aria-label={t('Switch tenant')}\n      >\n        <span className=\"flex min-w-0 items-center gap-2\">\n          <Icon name=\"home\" className=\"size-4 shrink-0\" />\n          <span className=\"truncate\">{tenant.name}</span>\n        </span>\n        <Icon name=\"chevron-down\" className=\"size-3 shrink-0\" />\n      </Menu.Trigger>\n      <Menu.Portal container={typeof document === 'undefined' ? undefined : document.body}>\n        <Menu.Positioner\n          className=\"z-[110]\"\n          style={{ zIndex: 110 }}\n          side=\"bottom\"\n          align=\"start\"\n          sideOffset={4}\n        >\n          <Menu.Popup className=\"z-50 min-w-56 rounded-md border border-border bg-background p-1 text-foreground shadow-lg outline-none\">\n            {tenants.map((option) => (\n              <Menu.Item\n                key={option.id}\n                disabled={option.current}\n                className=\"flex w-full cursor-pointer items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm outline-none hover:bg-muted focus:bg-muted disabled:cursor-default disabled:opacity-60\"\n                onClick={() =>\n                  !option.current &&\n                  visit(option.url, {\n                    method: option.method ?? 'get',\n                    ...(option.method === 'post' ? { data: { tenant: option.id } } : {}),\n                  })\n                }\n              >\n                <span>{option.name}</span>\n                {option.current && (\n                  <span className=\"text-xs text-muted-foreground\">{t('Current')}</span>\n                )}\n              </Menu.Item>\n            ))}\n          </Menu.Popup>\n        </Menu.Positioner>\n      </Menu.Portal>\n    </Menu.Root>\n  )\n}\n"
+    }
+  ]
+}

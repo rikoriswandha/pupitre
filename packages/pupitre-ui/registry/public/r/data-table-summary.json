@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "data-table-summary",
+  "type": "registry:component",
+  "title": "DataTableSummary",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/DataTableSummary.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/DataTableSummary.tsx",
+      "content": "import type { ColumnDescriptor, TableData } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\n\ntype Props = { summary: NonNullable<TableData['summary']>; columns: ColumnDescriptor[] }\n\nexport function DataTableSummary({ summary, columns }: Props) {\n  return (\n    <div\n      role=\"region\"\n      aria-label={t('Table summary')}\n      className=\"flex flex-wrap gap-4 rounded-md border bg-muted/20 p-3 text-sm\"\n    >\n      {Object.entries(summary).flatMap(([column, summaries]) =>\n        Object.entries(summaries).map(([name, value]) => (\n          <div key={`${column}-${name}`}>\n            <span className=\"text-muted-foreground\">\n              {columns.find((item) => item.name === column)?.label ?? column} {name}:{' '}\n            </span>\n            <strong>{value}</strong>\n          </div>\n        ))\n      )}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

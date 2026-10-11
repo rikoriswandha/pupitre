@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "key-value-entry",
+  "type": "registry:component",
+  "title": "KeyValueEntry",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/KeyValueEntry.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/KeyValueEntry.tsx",
+      "content": "import type { EntryProps } from './EntryShell.js'\nimport { EntryShell } from './EntryShell.js'\n\nexport function KeyValueEntry({ props = {} }: { props?: EntryProps }) {\n  const entries =\n    props.value && typeof props.value === 'object' && !Array.isArray(props.value)\n      ? Object.entries(props.value)\n      : []\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      {entries.length ? (\n        <dl className=\"grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-2\">\n          {entries.map(([key, value]) => (\n            <div key={key} className=\"contents\">\n              <dt className=\"truncate text-muted-foreground\">{key}</dt>\n              <dd className=\"break-words\">{String(value ?? '')}</dd>\n            </div>\n          ))}\n        </dl>\n      ) : (\n        <span className=\"text-muted-foreground\">{props.placeholder ?? '—'}</span>\n      )}\n    </EntryShell>\n  )\n}\n"
+    }
+  ]
+}

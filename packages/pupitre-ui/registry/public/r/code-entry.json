@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "code-entry",
+  "type": "registry:component",
+  "title": "CodeEntry",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/CodeEntry.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/CodeEntry.tsx",
+      "content": "import type { EntryProps } from './EntryShell.js'\nimport { EntryShell } from './EntryShell.js'\n\nexport function CodeEntry({ props = {} }: { props?: EntryProps }) {\n  const value =\n    typeof props.value === 'string'\n      ? props.value\n      : props.value === null || props.value === undefined\n        ? ''\n        : JSON.stringify(props.value, null, 2)\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      {value ? (\n        <pre className=\"max-h-96 overflow-auto rounded-md border border-border bg-muted p-3 font-mono text-xs leading-relaxed\">\n          {value}\n        </pre>\n      ) : (\n        <span className=\"text-muted-foreground\">{props.placeholder ?? '—'}</span>\n      )}\n    </EntryShell>\n  )\n}\n"
+    }
+  ]
+}

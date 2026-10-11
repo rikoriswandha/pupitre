@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "widget-stats",
+  "type": "registry:component",
+  "title": "WidgetStats",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/icons.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/WidgetStats.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/WidgetStats.tsx",
+      "content": "import { Icon } from '../icons.js'\nimport type { WidgetData, WidgetDescriptor, WidgetStat } from '@rikology/pupitre/catalog'\n\ntype Props = { descriptor: WidgetDescriptor; data?: WidgetData }\nconst statColors: Record<string, string> = {\n  primary: 'text-primary',\n  success: 'text-emerald-700 dark:text-emerald-300',\n  warning: 'text-amber-800 dark:text-amber-200',\n  danger: 'text-destructive',\n  gray: 'text-muted-foreground',\n}\nfunction Sparkline({ values }: { values: number[] }) {\n  if (values.length < 2) return null\n  const max = Math.max(...values)\n  const min = Math.min(...values)\n  const range = max - min || 1\n  const points = values\n    .map(\n      (value, index) =>\n        `${(index / (values.length - 1)) * 100},${30 - ((value - min) / range) * 26}`\n    )\n    .join(' ')\n  return (\n    <svg\n      aria-label={`Trend: ${values.join(', ')}`}\n      role=\"img\"\n      viewBox=\"0 0 100 34\"\n      className=\"h-9 w-24 text-primary\"\n    >\n      <polyline\n        points={points}\n        fill=\"none\"\n        stroke=\"currentColor\"\n        strokeWidth=\"3\"\n        strokeLinecap=\"round\"\n        strokeLinejoin=\"round\"\n      />\n    </svg>\n  )\n}\nfunction StatCard({ stat }: { stat: WidgetStat }) {\n  const colorClass = stat.color ? statColors[stat.color] : undefined\n  return (\n    <article className=\"rounded-lg border bg-card p-4\">\n      <div className=\"flex items-center justify-between gap-2\">\n        <p className=\"text-sm text-muted-foreground\">{stat.label}</p>\n        {stat.descriptionIcon && (\n          <Icon\n            name={stat.descriptionIcon}\n            className=\"size-4 text-muted-foreground\"\n            aria-hidden=\"true\"\n          />\n        )}\n      </div>\n      <p\n        className={`mt-2 text-2xl font-semibold${colorClass ? ` ${colorClass}` : ''}`}\n        style={stat.color && !colorClass ? { color: stat.color } : undefined}\n      >\n        {stat.value}\n      </p>\n      {stat.description && <p className=\"mt-1 text-sm text-muted-foreground\">{stat.description}</p>}\n      {stat.chart && (\n        <div className=\"mt-3\">\n          <Sparkline values={stat.chart} />\n        </div>\n      )}\n    </article>\n  )\n}\nexport function WidgetStats({ descriptor, data }: Props) {\n  const stats = data?.kind === 'stats' ? data.stats : []\n  return (\n    <section aria-label={descriptor.heading ?? 'Statistics'} className=\"space-y-3\">\n      {descriptor.heading && <h2 className=\"text-base font-semibold\">{descriptor.heading}</h2>}\n      {descriptor.description && (\n        <p className=\"text-sm text-muted-foreground\">{descriptor.description}</p>\n      )}\n      <div className=\"grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3\">\n        {stats.map((stat) => (\n          <StatCard key={stat.label} stat={stat} />\n        ))}\n      </div>\n    </section>\n  )\n}\n"
+    }
+  ]
+}

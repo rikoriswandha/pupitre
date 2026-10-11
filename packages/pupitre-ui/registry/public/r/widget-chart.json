@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "widget-chart",
+  "type": "registry:component",
+  "title": "WidgetChart",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/widget-chart-body.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/WidgetChart.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/WidgetChart.tsx",
+      "content": "import { lazy, Suspense } from 'react'\nimport type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'\nconst ChartBody = lazy(() =>\n  import('./WidgetChartBody.js').then((module) => ({ default: module.WidgetChartBody }))\n)\ntype Props = { descriptor: WidgetDescriptor; data?: WidgetData }\nexport function WidgetChart({ descriptor, data }: Props) {\n  return (\n    <section aria-label={descriptor.heading ?? 'Chart'} className=\"rounded-lg border bg-card p-4\">\n      {(descriptor.heading || descriptor.description) && (\n        <header className=\"mb-4\">\n          <h2 className=\"font-semibold\">{descriptor.heading}</h2>\n          {descriptor.description && (\n            <p className=\"text-sm text-muted-foreground\">{descriptor.description}</p>\n          )}\n        </header>\n      )}\n      <Suspense fallback={<div aria-busy=\"true\" className=\"h-64 animate-pulse rounded bg-muted\" />}>\n        <ChartBody chartType={descriptor.chartType ?? 'line'} data={data} />\n      </Suspense>\n      {data?.kind === 'chart' && (\n        <div className=\"sr-only\">\n          <table>\n            <caption>{descriptor.heading ?? 'Chart'} data</caption>\n            <thead>\n              <tr>\n                <th scope=\"col\">Period</th>\n                {data.datasets.map((dataset, index) => (\n                  <th scope=\"col\" key={index}>\n                    {dataset.label}\n                  </th>\n                ))}\n              </tr>\n            </thead>\n            <tbody>\n              {data.labels.map((label, index) => (\n                <tr key={index}>\n                  <th scope=\"row\">{label}</th>\n                  {data.datasets.map((dataset, seriesIndex) => (\n                    <td key={seriesIndex}>{dataset.data[index] ?? 0}</td>\n                  ))}\n                </tr>\n              ))}\n            </tbody>\n          </table>\n        </div>\n      )}\n    </section>\n  )\n}\n"
+    }
+  ]
+}

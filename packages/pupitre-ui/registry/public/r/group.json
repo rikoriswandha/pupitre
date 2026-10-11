@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "group",
+  "type": "registry:component",
+  "title": "Group",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Group.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Group.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport { cn } from '../primitives/index.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Group({ props, children }: RuntimeProps) {\n  return (\n    <div\n      className={cn('min-w-0 space-y-4', props.className as string | undefined)}\n      data-relationship={typeof props.relationship === 'string' ? props.relationship : undefined}\n    >\n      {typeof props.label === 'string' && (\n        <h3 className=\"text-sm font-medium text-foreground\">{props.label}</h3>\n      )}\n      {typeof props.helperText === 'string' && (\n        <p className=\"text-sm text-muted-foreground\">{props.helperText}</p>\n      )}\n      {children}\n    </div>\n  )\n}\nexport default Group\n"
+    }
+  ]
+}

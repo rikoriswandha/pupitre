@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "entry-shell",
+  "type": "registry:component",
+  "title": "EntryShell",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/EntryShell.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/EntryShell.tsx",
+      "content": "import type { ReactNode } from 'react'\n\nexport type EntryProps = {\n  label?: string | null\n  value?: unknown\n  copyable?: boolean\n  url?: string\n  color?: string\n  icon?: string\n  placeholder?: string\n  columnSpan?: number | 'full'\n  html?: boolean\n}\n\nexport function EntryShell({\n  label,\n  children,\n  columnSpan,\n}: {\n  label?: string | null\n  children: ReactNode\n  columnSpan?: number | 'full'\n}) {\n  const style =\n    columnSpan === 'full'\n      ? { gridColumn: '1 / -1' }\n      : typeof columnSpan === 'number'\n        ? { gridColumn: `span ${columnSpan} / span ${columnSpan}` }\n        : undefined\n  return (\n    <dl className=\"min-w-0 space-y-1\" style={style}>\n      <dt className={label ? 'text-sm font-medium text-muted-foreground' : 'sr-only'}>\n        {label ?? 'Value'}\n      </dt>\n      <dd className=\"min-w-0 text-sm text-foreground\">{children}</dd>\n    </dl>\n  )\n}\n"
+    }
+  ]
+}

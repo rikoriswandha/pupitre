@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "placeholder",
+  "type": "registry:component",
+  "title": "Placeholder",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Placeholder.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Placeholder.tsx",
+      "content": "import type { ReactNode } from 'react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Placeholder({ props, children }: RuntimeProps) {\n  const value = props.content\n  const content =\n    value === null || value === undefined\n      ? children\n      : typeof value === 'boolean'\n        ? String(value)\n        : typeof value === 'object'\n          ? ''\n          : String(value)\n  const output =\n    content === null || content === undefined || content === '' ? 'No content available' : content\n  return (\n    <div\n      className=\"min-w-0 rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground\"\n      aria-live=\"polite\"\n    >\n      {output}\n    </div>\n  )\n}\nexport default Placeholder\n"
+    }
+  ]
+}

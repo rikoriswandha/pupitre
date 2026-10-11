@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "infolist",
+  "type": "registry:component",
+  "title": "Infolist",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3",
+    "zod@^4.3.6"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Infolist.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Infolist.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport type { components } from '@rikology/pupitre/catalog'\nimport type { infer as Infer } from 'zod'\n\ntype Props = Infer<typeof components.Infolist.props>\n\nexport function Infolist({ children }: { props: Props; children?: ReactNode }) {\n  return <div className=\"grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2\">{children}</div>\n}\n"
+    }
+  ]
+}

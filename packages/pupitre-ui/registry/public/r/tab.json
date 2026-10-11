@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "tab",
+  "type": "registry:component",
+  "title": "Tab",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/tabs.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Tab.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Tab.tsx",
+      "content": "import { useContext, type ReactNode } from 'react'\nimport { TabContext } from './Tabs.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Tab({ props, children }: RuntimeProps) {\n  const context = useContext(TabContext)\n  const key = typeof props.key === 'string' ? props.key : ''\n  const label = typeof props.label === 'string' ? props.label : key\n  if (!context)\n    return (\n      <section aria-label={label} className=\"space-y-3\">\n        {children}\n      </section>\n    )\n  const selected = context.active === key\n  return (\n    <section\n      role=\"tabpanel\"\n      id={`${context.id}-${key}-panel`}\n      aria-labelledby={`${context.id}-${key}-tab`}\n      hidden={!selected}\n      tabIndex={0}\n      className=\"min-w-0 space-y-3\"\n    >\n      {children}\n    </section>\n  )\n}\nexport default Tab\n"
+    }
+  ]
+}

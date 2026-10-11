@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "repeatable-entry",
+  "type": "registry:component",
+  "title": "RepeatableEntry",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/RepeatableEntry.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/RepeatableEntry.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport type { EntryProps } from './EntryShell.js'\nimport { EntryShell } from './EntryShell.js'\n\nexport function RepeatableEntry({\n  props = {},\n  children,\n}: {\n  props?: EntryProps\n  children?: ReactNode\n}) {\n  const values = Array.isArray(props.value) ? props.value : []\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      {values.length ? (\n        <ol className=\"space-y-3\">\n          {values.map((item, index) => (\n            <li key={index} className=\"rounded-md border border-border p-3\">\n              {item && typeof item === 'object' ? (\n                <dl className=\"grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-2\">\n                  {Object.entries(item).map(([key, value]) => (\n                    <div key={key} className=\"contents\">\n                      <dt className=\"text-muted-foreground\">{key}</dt>\n                      <dd className=\"break-words\">{String(value ?? '')}</dd>\n                    </div>\n                  ))}\n                </dl>\n              ) : (\n                String(item ?? '')\n              )}\n            </li>\n          ))}\n        </ol>\n      ) : (\n        (children ?? <span className=\"text-muted-foreground\">{props.placeholder ?? '—'}</span>)\n      )}\n    </EntryShell>\n  )\n}\n"
+    }
+  ]
+}

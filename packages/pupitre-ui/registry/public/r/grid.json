@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "grid",
+  "type": "registry:component",
+  "title": "Grid",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Grid.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Grid.tsx",
+      "content": "import type { CSSProperties, ReactNode } from 'react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\ntype ResponsiveColumns = { default?: number; sm?: number; md?: number; lg?: number; xl?: number }\nfunction isResponsiveColumns(value: unknown): value is ResponsiveColumns {\n  return value !== null && typeof value === 'object' && !Array.isArray(value)\n}\nconst validColumns = (value: unknown): number | undefined =>\n  typeof value === 'number' && Number.isFinite(value)\n    ? Math.max(1, Math.min(12, Math.floor(value)))\n    : undefined\n\nexport function Grid({ props, children }: RuntimeProps) {\n  const columns = props.columns\n  const responsive = isResponsiveColumns(columns)\n  const responsiveColumns = responsive ? columns : {}\n  const customProperties = {} as Record<\n    '--grid-default' | '--grid-sm' | '--grid-md' | '--grid-lg' | '--grid-xl',\n    string\n  >\n  if (responsive) {\n    for (const key of ['default', 'sm', 'md', 'lg', 'xl'] as const) {\n      const count = validColumns(responsiveColumns[key])\n      if (count) customProperties[`--grid-${key}` as keyof typeof customProperties] = String(count)\n    }\n  }\n  const style = (\n    responsive\n      ? customProperties\n      : { gridTemplateColumns: `repeat(${validColumns(columns) ?? 1}, minmax(0, 1fr))` }\n  ) as CSSProperties\n  const gap = typeof props.gap === 'number' ? `${Math.max(0, props.gap) * 0.25}rem` : undefined\n  return (\n    <div\n      className=\"grid min-w-0 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]\"\n      style={{ ...style, gap }}\n    >\n      {children}\n    </div>\n  )\n}\nexport default Grid\n"
+    }
+  ]
+}

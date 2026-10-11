@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "use-live-field",
+  "type": "registry:hook",
+  "title": "use_live_field",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/use_live_field.ts",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/use_live_field.ts",
+      "content": "import { useEffect, useRef, useState } from 'react'\n\ntype LiveOptions = boolean | { onBlur?: boolean; debounce?: number } | null | undefined\n\n/**\n * Local draft for `live({ onBlur, debounce })` fields. Without options every\n * change is written to the bound state immediately; with `onBlur` the draft is\n * written when `commit()` runs (on blur); with `debounce` it is written after\n * the delay (and flushed early by `commit()`).\n */\nexport function useLiveField<T>(\n  value: T | undefined,\n  setValue: (value: T) => void,\n  live: LiveOptions\n): [T | undefined, (value: T) => void, () => void] {\n  const onBlur = typeof live === 'object' && live !== null && live.onBlur === true\n  const debounce = typeof live === 'object' && live !== null ? live.debounce : undefined\n  const [draft, setDraft] = useState(value)\n  const [pending, setPending] = useState(false)\n  const [previous, setPrevious] = useState(value)\n  // The bound value changed outside this input (reset, server state, set()):\n  // adopt it as the new draft.\n  if (!Object.is(previous, value)) {\n    setPrevious(value)\n    setDraft(value)\n    setPending(false)\n  }\n  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)\n  useEffect(() => () => clearTimeout(timer.current), [])\n  const change = (next: T) => {\n    setDraft(next)\n    if (onBlur) {\n      setPending(true)\n      return\n    }\n    if (debounce !== undefined) {\n      setPending(true)\n      clearTimeout(timer.current)\n      timer.current = setTimeout(() => {\n        setPending(false)\n        setValue(next)\n      }, debounce)\n      return\n    }\n    setValue(next)\n  }\n  const commit = () => {\n    clearTimeout(timer.current)\n    if (pending && draft !== undefined) {\n      setPending(false)\n      setValue(draft)\n    }\n  }\n  return [draft, change, commit]\n}\n"
+    }
+  ]
+}

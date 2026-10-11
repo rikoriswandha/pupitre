@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "toaster",
+  "type": "registry:component",
+  "title": "Toaster",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/icons.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Toaster.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Toaster.tsx",
+      "content": "import type { ToasterProps, ToastMessage } from '@rikology/pupitre-react'\nimport { useVisit } from '@rikology/pupitre-react'\nimport { Icon } from '../icons.js'\n\nconst tone: Record<ToastMessage['type'], string> = {\n  success: 'border-emerald-500/40',\n  error: 'border-destructive/50',\n  warning: 'border-amber-500/50',\n  info: 'border-primary/40',\n}\nexport function Toaster({ toasts, dismiss }: ToasterProps) {\n  const visit = useVisit()\n  return (\n    <div\n      aria-live=\"polite\"\n      aria-relevant=\"additions removals\"\n      className=\"pointer-events-none fixed right-4 top-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2\"\n    >\n      {toasts.map((toast) => (\n        <section\n          key={toast.id}\n          role={toast.type === 'error' ? 'alert' : 'status'}\n          className={`pointer-events-none rounded-lg border bg-background p-4 text-foreground shadow-lg ${tone[toast.type ?? 'info']}`}\n        >\n          <div className=\"flex items-start gap-3\">\n            <div className=\"min-w-0 flex-1\">\n              <h2 className=\"text-sm font-semibold\">{toast.title}</h2>\n              {toast.body && <p className=\"mt-1 text-sm text-muted-foreground\">{toast.body}</p>}\n              {toast.actions?.length ? (\n                <div className=\"pointer-events-auto mt-2 flex gap-2\">\n                  {toast.actions.map((action, index) => (\n                    <button\n                      key={`${action.label}:${index}`}\n                      type=\"button\"\n                      className=\"text-xs font-medium text-primary hover:underline\"\n                      onClick={() => {\n                        if (action.url)\n                          visit(action.url, {\n                            method: action.method ?? 'get',\n                            preserveScroll: true,\n                          })\n                        dismiss(toast.id)\n                      }}\n                    >\n                      {action.label}\n                    </button>\n                  ))}\n                </div>\n              ) : null}\n            </div>\n            <button\n              type=\"button\"\n              aria-label={`Dismiss notification: ${toast.title}`}\n              className=\"pointer-events-auto rounded p-1 text-muted-foreground hover:bg-muted\"\n              onClick={() => dismiss(toast.id)}\n            >\n              <Icon name=\"x\" className=\"size-4\" />\n            </button>\n          </div>\n        </section>\n      ))}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

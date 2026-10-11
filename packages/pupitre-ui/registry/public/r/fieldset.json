@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "fieldset",
+  "type": "registry:component",
+  "title": "Fieldset",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/Fieldset.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Fieldset.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport { cn } from '../primitives/index.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Fieldset({ props, children }: RuntimeProps) {\n  const className = typeof props.className === 'string' ? props.className : undefined\n  const columns =\n    typeof props.columns === 'number'\n      ? Math.max(1, Math.min(6, Math.floor(props.columns)))\n      : undefined\n  return (\n    <fieldset disabled={props.disabled === true} className={cn('min-w-0 space-y-4', className)}>\n      {typeof props.label === 'string' && (\n        <legend className=\"mb-3 px-1 text-sm font-semibold text-foreground\">{props.label}</legend>\n      )}\n      {typeof props.helperText === 'string' && (\n        <p className=\"text-sm text-muted-foreground\">{props.helperText}</p>\n      )}\n      <div\n        className=\"grid gap-4\"\n        style={columns ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` } : undefined}\n      >\n        {children}\n      </div>\n    </fieldset>\n  )\n}\nexport default Fieldset\n"
+    }
+  ]
+}

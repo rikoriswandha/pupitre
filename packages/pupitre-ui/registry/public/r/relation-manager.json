@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "relation-manager",
+  "type": "registry:component",
+  "title": "RelationManager",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/action-bar.json",
+    "https://pupitre.dev/r/data-table.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/RelationManager.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/RelationManager.tsx",
+      "content": "import { ActionBar } from './ActionBar.js'\nimport { DataTable } from './DataTable.js'\nimport type { RelationDescriptor } from '@rikology/pupitre/catalog'\n\nexport type RelationManagerProps = {\n  props: { descriptor: RelationDescriptor }\n  emit: (event: string, payload?: unknown) => void\n}\n\nexport function RelationManager({ props, emit }: RelationManagerProps) {\n  const descriptor = props.descriptor\n  const table = descriptor.readOnly\n    ? { ...descriptor.table, selectable: false, bulkActions: [] }\n    : descriptor.table\n  return (\n    <section\n      aria-label={descriptor.label}\n      className=\"space-y-4\"\n      data-relation={descriptor.relation}\n    >\n      <header className=\"flex items-center justify-between gap-3\">\n        <h2 className=\"text-base font-semibold\">{descriptor.label}</h2>\n        {descriptor.badge !== undefined && (\n          <span className=\"rounded-full bg-muted px-2 py-0.5 text-xs\">{descriptor.badge}</span>\n        )}\n      </header>\n      {!descriptor.readOnly && (\n        <ActionBar props={{ actions: descriptor.actions.header }} emit={emit} />\n      )}\n      <DataTable props={{ descriptor: table }} emit={emit} />\n    </section>\n  )\n}\n"
+    }
+  ]
+}

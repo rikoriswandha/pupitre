@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "widget-table",
+  "type": "registry:component",
+  "title": "WidgetTable",
+  "dependencies": [
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/data-table.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/WidgetTable.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/WidgetTable.tsx",
+      "content": "import { tableData as tableDataSchema } from '@rikology/pupitre/catalog'\nimport type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { DataTable } from './DataTable.js'\n\ntype Props = { descriptor: WidgetDescriptor; data?: WidgetData }\n\nexport function WidgetTable({ descriptor, data }: Props) {\n  if (!descriptor.table) return null\n  const parsed = data?.kind === 'table' ? tableDataSchema.safeParse(data.data) : undefined\n  return (\n    <section className=\"space-y-3\">\n      {(descriptor.heading || descriptor.description) && (\n        <header>\n          {descriptor.heading && <h2 className=\"font-semibold\">{descriptor.heading}</h2>}\n          {descriptor.description && (\n            <p className=\"text-sm text-muted-foreground\">{descriptor.description}</p>\n          )}\n        </header>\n      )}\n      <DataTable\n        props={{ descriptor: descriptor.table }}\n        tableData={parsed?.success ? parsed.data : undefined}\n        emit={() => {}}\n      />\n    </section>\n  )\n}\n"
+    }
+  ]
+}

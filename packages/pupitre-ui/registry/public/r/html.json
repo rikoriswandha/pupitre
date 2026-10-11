@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "html",
+  "type": "registry:component",
+  "title": "Html",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [],
+  "files": [
+    {
+      "path": "../src/components/Html.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/Html.tsx",
+      "content": "import type { ReactNode } from 'react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Html({ props, children }: RuntimeProps) {\n  const content = typeof props.content === 'string' ? props.content : ''\n  return (\n    <div\n      className=\"min-w-0 text-sm [&_a]:text-primary [&_a]:underline [&_p]:my-2 [&_ul]:list-disc [&_ul]:pl-5\"\n      dangerouslySetInnerHTML={content ? { __html: content } : undefined}\n    >\n      {content ? undefined : children}\n    </div>\n  )\n}\nexport default Html\n"
+    }
+  ]
+}

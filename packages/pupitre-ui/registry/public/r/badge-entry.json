@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "badge-entry",
+  "type": "registry:component",
+  "title": "BadgeEntry",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json",
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/BadgeEntry.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/BadgeEntry.tsx",
+      "content": "import type { EntryProps } from './EntryShell.js'\nimport { Badge } from '../primitives/index.js'\nimport { EntryShell } from './EntryShell.js'\n\nconst badgeColors: Record<string, string> = {\n  primary: 'bg-primary text-primary-foreground',\n  success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',\n  warning: 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200',\n  danger: 'border-destructive/30 bg-destructive/10 text-destructive',\n  gray: 'bg-muted text-muted-foreground',\n}\n\nexport function BadgeEntry({ props = {} }: { props?: EntryProps }) {\n  const text =\n    props.value === null || props.value === undefined || props.value === ''\n      ? (props.placeholder ?? '—')\n      : String(props.value)\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      <Badge className={badgeColors[props.color ?? 'gray'] ?? 'bg-muted text-foreground'}>\n        {text}\n      </Badge>\n    </EntryShell>\n  )\n}\n"
+    }
+  ]
+}
