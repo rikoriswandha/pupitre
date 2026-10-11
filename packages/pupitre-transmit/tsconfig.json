@@ -1,0 +1,10 @@
+{
+  "extends": "@adonisjs/tsconfig/tsconfig.package.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "rootDir": "./",
+    "outDir": "./build",
+    "customConditions": ["@rikology/source"]
+  },
+  "exclude": ["build", "node_modules", "tmp"]
+}
