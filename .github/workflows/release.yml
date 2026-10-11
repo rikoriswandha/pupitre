@@ -1,0 +1,61 @@
+name: release
+
+# Publishes already-versioned packages (versions are bumped and committed beforehand,
+# see docs/DEVELOPMENT.md §9) through npm trusted publishing (OIDC, no token).
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Package set to publish
+        required: true
+        type: choice
+        options:
+          - core
+          - pupitre-shield
+          - pupitre-audit
+          - pupitre-transmit
+          - create-pupitre-plugin
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run build
+      - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
+        working-directory: apps/example
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run verify:exports
+      - run: npm run registry:check
+      - name: Resolve workspaces
+        id: workspaces
+        run: |
+          if [ "${{ inputs.target }}" = "core" ]; then
+            echo "list=packages/pupitre packages/pupitre-react packages/pupitre-ui" >> "$GITHUB_OUTPUT"
+          else
+            echo "list=packages/${{ inputs.target }}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for workspace in ${{ steps.workspaces.outputs.list }}; do
+            name=$(node -p "require('./$workspace/package.json').name")
+            version=$(node -p "require('./$workspace/package.json').version")
+            tag=$(node -p "/-/.test('$version') ? 'next' : 'latest'")
+            npm publish --workspace "$workspace" --provenance --access public --tag "$tag"
+            git tag "$name@$version"
+          done
+          git push origin --tags

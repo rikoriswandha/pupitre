@@ -20,10 +20,12 @@ jobs:
       - run: npm run build
       - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
         working-directory: apps/example
+      - run: npm run bundle:budget
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run verify:exports
+      - run: npm run registry:check
 
   test-pg:
     runs-on: ubuntu-latest
