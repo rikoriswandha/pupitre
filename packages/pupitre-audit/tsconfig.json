@@ -1,0 +1,9 @@
+{
+  "extends": "@adonisjs/tsconfig/tsconfig.package.json",
+  "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./build",
+    "customConditions": ["@rikology/source"]
+  },
+  "exclude": ["build", "node_modules", "tmp"]
+}
