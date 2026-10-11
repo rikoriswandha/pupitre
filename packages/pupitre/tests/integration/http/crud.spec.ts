@@ -14,6 +14,7 @@ import {
   Category,
   User,
 } from '../../helpers/app.js'
+import PostLink from '../../fixtures/models/post_link.js'
 
 function sessionCookie(response: Response) {
   return response.headers
@@ -199,6 +200,69 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       )
       const afterDestroyProps = await responseProps(noFlashAfterDestroy)
       assert.deepEqual(afterDestroyProps.pupitre.flash, [])
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+  test('creates and updates hasMany repeater rows through the resource routes', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp()
+    try {
+      const values = {
+        title: 'HTTP repeater relationship',
+        slug: 'http-repeater-relationship',
+        status: 'draft',
+        links: [{ label: 'Project', url: 'https://example.test/project' }],
+      }
+      const created = await inertia(fixture.baseUrl, '/admin/posts', 'POST', values, '', true)
+      assert.equal(created.status, 200, await created.clone().text())
+      const createResult = actionResult.parse(await created.json())
+      const id = Number(createResult.redirect?.match(/posts\/(\d+)\/edit$/)?.[1])
+      assert.isNumber(id)
+
+      let rows = await PostLink.query().where('post_id', id)
+      assert.lengthOf(rows, 1)
+      assert.equal(rows[0]?.label, 'Project')
+
+      const updated = await inertia(
+        fixture.baseUrl,
+        `/admin/posts/${id}`,
+        'PUT',
+        {
+          ...values,
+          title: 'Updated HTTP repeater relationship',
+          links: [
+            {
+              _relationKey: rows[0]!.id,
+              label: 'Updated project',
+              url: 'https://example.test/new',
+            },
+            { label: 'Documentation', url: 'https://example.test/docs' },
+          ],
+        },
+        '',
+        true
+      )
+      assert.equal(updated.status, 200, await updated.clone().text())
+      rows = await PostLink.query().where('post_id', id).orderBy('sort')
+      assert.deepEqual(
+        rows.map((row) => ({ label: row.label, sort: row.sort })),
+        [
+          { label: 'Updated project', sort: 0 },
+          { label: 'Documentation', sort: 1 },
+        ]
+      )
+      const edit = await inertia(fixture.baseUrl, `/admin/posts/${id}/edit`)
+      const editProps = await responseProps(edit)
+      assert.equal(edit.status, 200)
+      const relationState = z
+        .object({ links: z.array(z.object({ label: z.string() })) })
+        .parse(editProps.page.state.data)
+      assert.deepEqual(
+        relationState.links.map((row) => row.label),
+        ['Updated project', 'Documentation']
+      )
     } finally {
       await closeTestApp(fixture)
     }

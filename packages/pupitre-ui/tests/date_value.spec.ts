@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { fromDateTimeInput, toInputValue } from '../src/primitives/date_value.js'
+import { fromDateTimeInput, timezoneHint, toInputValue } from '../src/primitives/date_value.js'
 
 test.group('date input values', () => {
   test('shows the wall-clock part of zoned ISO state', ({ assert }) => {
@@ -10,17 +10,13 @@ test.group('date input values', () => {
     assert.equal(toInputValue(null, 'datetime'), '')
   })
 
-  test('sends edits back as ISO with the zone offset at that instant', ({ assert }) => {
-    assert.equal(fromDateTimeInput('2026-10-07T19:00', 'Asia/Jakarta'), '2026-10-07T19:00:00+07:00')
-    assert.equal(
-      fromDateTimeInput('2026-03-29T01:30', 'Europe/Amsterdam'),
-      '2026-03-29T01:30:00+01:00'
-    )
-    assert.equal(
-      fromDateTimeInput('2026-03-29T03:30', 'Europe/Amsterdam'),
-      '2026-03-29T03:30:00+02:00'
-    )
+  test('keeps datetime edits as wall-clock strings for server-side timezone parsing', ({
+    assert,
+  }) => {
+    assert.equal(fromDateTimeInput('2026-10-07T19:00', 'Asia/Jakarta'), '2026-10-07T19:00')
+    assert.equal(fromDateTimeInput('2026-03-29T02:30', 'Europe/Amsterdam'), '2026-03-29T02:30')
     assert.isNull(fromDateTimeInput('', 'Asia/Jakarta'))
     assert.equal(fromDateTimeInput('2026-10-07T19:00', undefined), '2026-10-07T19:00')
+    assert.isNull(timezoneHint(Intl.DateTimeFormat().resolvedOptions().timeZone))
   })
 })

@@ -7,9 +7,11 @@ import {
   formatMoney,
   formatNumber,
   formatSince,
+  resolveTimezone,
   truncate,
 } from '../format/index.js'
 
+export type TableSummary = Record<string, Record<string, number | string>>
 export type TableDataOptions = {
   locale: string
   timezone: string
@@ -17,6 +19,9 @@ export type TableDataOptions = {
   rowUrl(record: LucidRow): string | undefined
   normalized: Record<string, unknown>
   resolveFileUrl?: (key: string, column: TableColumnDefinition) => Promise<string | null>
+  summaryRows?: LucidRow[]
+  summary?: TableSummary
+  groupSummaries?: Record<string, TableSummary>
 }
 
 function valueAt(serialized: Record<string, unknown>, path: string): unknown {
@@ -31,6 +36,16 @@ function valueAt(serialized: Record<string, unknown>, path: string): unknown {
 function stringValue(value: unknown): string {
   return value === null || value === undefined ? '' : String(value)
 }
+function editableDisplay(column: TableColumnDefinition, value: unknown): string {
+  if ((column.kind === 'toggle' || column.kind === 'checkbox') && typeof value === 'boolean')
+    return value ? 'On' : 'Off'
+  if (column.kind === 'select') {
+    const option = column.options?.[stringValue(value)]
+    if (option && typeof option === 'object' && 'label' in option) return stringValue(option.label)
+    if (option !== undefined) return stringValue(option)
+  }
+  return stringValue(value)
+}
 
 async function formatCell(
   column: TableColumnDefinition,
@@ -38,7 +53,12 @@ async function formatCell(
   serialized: Record<string, unknown>,
   options: TableDataOptions
 ): Promise<unknown> {
-  const value = column.kind === 'fragment' ? undefined : valueAt(serialized, column.name)
+  const value =
+    column.kind !== 'fragment' && column.countRelation
+      ? (record.$extras?.[`${column.countRelation}_count`] ?? valueAt(serialized, column.name))
+      : column.kind === 'fragment'
+        ? undefined
+        : valueAt(serialized, column.name)
   if (column.kind === 'badge') {
     return { value, color: column.colors?.[stringValue(value)] }
   }
@@ -63,7 +83,13 @@ async function formatCell(
     return options.resolveFileUrl ? ((await options.resolveFileUrl(value, column)) ?? value) : value
   }
   if (column.kind !== 'text') return value
-  const context = { locale: options.locale, timezone: options.timezone }
+  const context = {
+    locale: options.locale,
+    timezone:
+      column.kind === 'text'
+        ? resolveTimezone(column.timezone, options.timezone)
+        : options.timezone,
+  }
   if (column.money)
     return formatMoney(value as string | number | null, context, { currency: column.money })
   if (column.numeric) return formatNumber(value as string | number | null, context)
@@ -78,6 +104,13 @@ async function formatCell(
     }
   }
   return value
+}
+function safeClassName(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const tokens = value
+    .split(/\s+/)
+    .filter((token) => token.length > 0 && /^[A-Za-z0-9_-]+$/.test(token))
+  return tokens.length ? tokens.join(' ') : undefined
 }
 
 function metaFrom(input: unknown, count: number): TableMeta {
@@ -105,6 +138,58 @@ function metaFrom(input: unknown, count: number): TableMeta {
     to: count,
   }
 }
+function aggregateSummary(
+  table: TableDefinition,
+  records: LucidRow[],
+  options: TableDataOptions
+): Record<string, Record<string, number | string>> | undefined {
+  const columns = table.columns.filter(
+    (column): column is Exclude<TableColumnDefinition, { kind: 'fragment' }> =>
+      column.kind !== 'fragment' && 'summaries' in column && Boolean(column.summaries?.length)
+  )
+  if (!columns.length) return undefined
+  const summary: Record<string, Record<string, number | string>> = {}
+  for (const column of columns) {
+    const values = records
+      .map((record) => valueAt(record.serialize() as Record<string, unknown>, column.name))
+      .map(Number)
+      .filter(Number.isFinite)
+    const result: Record<string, number | string> = {}
+    for (const kind of column.summaries ?? []) {
+      const sum = values.reduce((total, item) => total + item, 0)
+      const value =
+        kind === 'count'
+          ? values.length
+          : kind === 'sum'
+            ? sum
+            : kind === 'avg'
+              ? values.length
+                ? sum / values.length
+                : 0
+              : kind === 'min'
+                ? values.length
+                  ? Math.min(...values)
+                  : 0
+                : kind === 'max'
+                  ? values.length
+                    ? Math.max(...values)
+                    : 0
+                  : undefined
+      if (kind === 'range') {
+        result[kind] = values.length
+          ? `${formatNumber(Math.min(...values), { locale: options.locale }) ?? ''} – ${formatNumber(Math.max(...values), { locale: options.locale }) ?? ''}`
+          : '—'
+      } else if (value !== undefined) {
+        result[kind] =
+          column.kind === 'text' && column.money
+            ? (formatMoney(value, { locale: options.locale }, { currency: column.money }) ?? '')
+            : (formatNumber(value, { locale: options.locale }) ?? '')
+      }
+    }
+    summary[column.name] = result
+  }
+  return summary
+}
 
 export async function buildTableData(
   table: TableDefinition,
@@ -112,13 +197,29 @@ export async function buildTableData(
   meta: unknown,
   options: TableDataOptions
 ): Promise<TableData> {
+  const serializedRows = rows.map((record) => ({
+    record,
+    serialized: record.serialize() as Record<string, unknown>,
+  }))
   const tableRows: TableRow[] = await Promise.all(
-    rows.map(async (record) => {
-      const serialized = record.serialize() as Record<string, unknown>
+    serializedRows.map(async ({ record, serialized }) => {
       const cells: Record<string, unknown> = {}
       for (const column of table.columns) {
         const name = column.kind === 'fragment' ? column.component : column.name
-        cells[name] = await formatCell(column, record, serialized, options)
+        if ('editable' in column && column.editable) {
+          const rawValue = valueAt(serialized, column.name)
+          const value =
+            column.kind === 'toggle' || column.kind === 'checkbox'
+              ? rawValue === true || rawValue === 1 || rawValue === '1'
+              : rawValue
+          cells[name] = {
+            value,
+            display: editableDisplay(column, value),
+            ...(column.disabled?.({ record: serialized }) ? { disabled: true } : {}),
+          }
+        } else {
+          cells[name] = await formatCell(column, record, serialized, options)
+        }
       }
       const key = record.$primaryKeyValue
       if (typeof key !== 'string' && typeof key !== 'number') {
@@ -130,14 +231,62 @@ export async function buildTableData(
           : typeof table.recordUrl === 'function'
             ? table.recordUrl({ record })
             : options.rowUrl(record)
+      const className = safeClassName(table.rowClass?.({ record }))
       return {
         key,
         cells,
         actions: await options.rowActions(record),
         ...(url ? { url } : {}),
+        ...(className ? { className } : {}),
         selectable: true,
       }
     })
   )
-  return { rows: tableRows, meta: metaFrom(meta, rows.length), query: options.normalized }
+  const queryGroup = options.normalized.groupBy
+  const activeGroup =
+    typeof queryGroup === 'string' ? table.groups?.find((group) => group.key === queryGroup) : null
+  const summaryRows = options.summaryRows ?? rows
+  const hasSummaries = table.columns.some(
+    (column) => column.kind !== 'fragment' && column.summaries?.length
+  )
+  const summary = hasSummaries
+    ? (options.summary ?? aggregateSummary(table, summaryRows, options))
+    : undefined
+  const groups = activeGroup
+    ? (() => {
+        const grouped = new Map<string, { label: string; rows: TableRow[] }>()
+        serializedRows.forEach(({ serialized }, index) => {
+          const raw = valueAt(serialized, activeGroup.key)
+          const key = raw === null || raw === undefined ? '' : String(raw)
+          const item = grouped.get(key) ?? {
+            label: activeGroup.label ? `${activeGroup.label}: ${key || '—'}` : key || '—',
+            rows: [],
+          }
+          item.rows.push(tableRows[index]!)
+          grouped.set(key, item)
+        })
+        return [...grouped].map(([key, group]) => {
+          const groupRecords =
+            options.groupSummaries?.[key] === undefined
+              ? summaryRows.filter((record) => {
+                  const value = valueAt(
+                    record.serialize() as Record<string, unknown>,
+                    activeGroup.key
+                  )
+                  return (value === null || value === undefined ? '' : String(value)) === key
+                })
+              : undefined
+          const groupSummary =
+            options.groupSummaries?.[key] ?? aggregateSummary(table, groupRecords ?? [], options)
+          return { key, ...group, ...(groupSummary ? { summary: groupSummary } : {}) }
+        })
+      })()
+    : undefined
+  return {
+    rows: tableRows,
+    meta: metaFrom(meta, rows.length),
+    ...(summary ? { summary } : {}),
+    ...(groups ? { groups } : {}),
+    query: options.normalized,
+  }
 }

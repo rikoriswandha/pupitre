@@ -1,8 +1,14 @@
 import app from '@adonisjs/core/services/app'
 import type { DriveService } from '@adonisjs/drive/types'
-import type { FileUploadFieldDefinition, RichEditorFieldDefinition } from '../definition/schema.js'
+import type {
+  FileUploadFieldDefinition,
+  MarkdownEditorFieldDefinition,
+  RichEditorFieldDefinition,
+} from '../definition/schema.js'
+import type { Readable } from 'node:stream'
 
-export type UploadField = FileUploadFieldDefinition | RichEditorFieldDefinition
+export type UploadField =
+  FileUploadFieldDefinition | RichEditorFieldDefinition | MarkdownEditorFieldDefinition
 
 export interface PupitreStorage {
   put(
@@ -13,6 +19,7 @@ export interface PupitreStorage {
   delete(key: string): Promise<void>
   exists(key: string): Promise<boolean>
   url(key: string, options: { visibility: 'public' | 'private' }): Promise<string>
+  getStream(key: string): Promise<Readable>
 }
 
 export function createPupitreStorage(diskName?: string): PupitreStorage {
@@ -34,6 +41,10 @@ export function createPupitreStorage(diskName?: string): PupitreStorage {
     async exists(key) {
       const disk = await getDisk()
       return disk.exists(key)
+    },
+    async getStream(key) {
+      const disk = await getDisk()
+      return disk.getStream(key)
     },
     async url(key, options) {
       const disk = await getDisk()

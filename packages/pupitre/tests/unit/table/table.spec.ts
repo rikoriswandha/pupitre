@@ -64,6 +64,10 @@ test.group('table compiler', () => {
       compileFilterForm: async () => spec,
     })
     assert.deepEqual(tableDescriptor.parse(descriptor), descriptor)
+    assert.deepEqual(descriptor.columns.find((column) => column.type === 'image')?.props, {
+      circular: true,
+      stacked: true,
+    })
     assert.snapshot(descriptor).match()
     assert.equal(descriptor.columns[0].props.hasDescription, true)
     assert.deepEqual(descriptor.perPageOptions, [10, 25, 'all'])

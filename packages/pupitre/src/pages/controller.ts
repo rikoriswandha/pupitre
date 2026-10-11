@@ -7,6 +7,7 @@ import {
   executeAction,
 } from '../compiler/action_compiler.js'
 import { compileValidator } from '../compiler/vine_compiler.js'
+import { prepareWidgets } from '../widgets/controller.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
 import { actionJson, errorJson, setPupitreFlash } from '../http/responses.js'
 import { authorizeAbility } from '../authz/bouncer.js'
@@ -73,6 +74,9 @@ async function renderPage(ctx: HttpContext, page: PageRuntime) {
       })
     )
   )
+  const prepared = await prepareWidgets(ctx, definition.widgets ?? [], undefined, undefined, {
+    customPage: page.slug,
+  })
   const props = buildPanelPageProps({
     ctx,
     key: pageKey(ctx, page.slug, 'page'),
@@ -82,6 +86,10 @@ async function renderPage(ctx: HttpContext, page: PageRuntime) {
     spec: compiled.spec,
     state: compiled.state,
     headerActions: actions,
+    widgets: prepared.widgets,
+    deferred: prepared.deferred,
+    filters: definition.filters,
+    extraProps: prepared.extraProps,
     ...(definition.component ? { component: definition.component } : {}),
   })
   return ctx.inertia.render((definition.component ?? 'pupitre') as never, props as never)

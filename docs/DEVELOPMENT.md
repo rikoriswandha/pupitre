@@ -66,7 +66,9 @@ Mengikuti skill `adonisjs-package-development`:
 
 - `"type": "module"`, `"sideEffects": false`, `engines.node >= 24`.
 - `peerDependencies`: `@adonisjs/core`, `@adonisjs/lucid`, `@adonisjs/inertia`, `@adonisjs/bouncer`, `@vinejs/vine`, `luxon`; optional (`peerDependenciesMeta`): `@adonisjs/queue`, `@adonisjs/transmit`, `@adonisjs/ally`, `@adonisjs/mail`, `@rikology/adonisjs-tenant`, `@rikology/adonisjs-notifications`, `@rikology/adonisjs-audit-trail`, `otplib`, `@simplewebauthn/server`.
-- Optional peer **tidak pernah** di-import top-level; hanya di `src/drivers/*` lewat `await import()` dengan error peer yang jelas.
+- Optional peer **tidak pernah** di-import top-level; hanya di `src/drivers/*` lewat `await import()` dengan error peer yang jelas. Driver jobs tersedia melalui `jobsAdapter()` dari `@rikology/pupitre/drivers/queue`, dan dikonfigurasi dengan `defineConfig({ jobs: jobsAdapter() })`.
+- `actions.export()` dan `actions.import()` CSV memakai `exports.maxSyncRows` (default 1.000); ekspor sampai ambang itu berjalan sinkron, ekspor lebih besar memakai jobs bila tersedia hingga `exports.maxAsyncRows` (default 100.000), dan tanpa adapter mengembalikan error limit. `exports.retentionMinutes` default 1.440. Handlers tetap `pupitre.export`, `pupitre.import`, dan `pupitre.bulk` diregistrasikan saat boot agar worker terpisah dapat menyelesaikan payload serializable. Import/bulk dapat memakai `.async()`; tanpa adapter keduanya tetap sinkron.
+- Social login uses the optional `@adonisjs/ally` peer. Add `ally_provider` and `config/ally.ts` to the host; Pupitre loads the peer only when a configured social route is used. Provider email fallback requires Ally to report a verified email.
 - `exports` dengan `@rikology/source` + `types` + `default` untuk setiap subpath:
 
 ```jsonc
@@ -84,10 +86,12 @@ Mengikuti skill `adonisjs-package-development`:
   "./commands/*": "...",
   "./middleware/*": "...",
   "./hooks": "./build/src/discovery/index_admin.js", // indexAdmin() untuk adonisrc
-  "./drivers/*": "./build/src/drivers/*.js", // M2: drivers/mail, drivers/tenant, drivers/notifications (optional peers)
-  // M3+: "./testing", "./drivers/queue", "./drivers/audit"
+  "./drivers/*": "...",
+  "./testing": "./build/testing/index.js" // assertion wire spec
 }
 ```
+
+`@rikology/pupitre-ui/testing` mengekspor fixture Playwright dari subpath terpisah; `@playwright/test` merupakan peer opsional sehingga tidak dimuat oleh entry utama package.
 
 - Build: `tsdown` (`unbundle: true`, entry = semua subpath) → `tsc -p tsconfig.build.json` (deklarasi saja) → `copyfiles stubs/**/*.stub commands/commands.json build` + regenerasi manifest command.
 - `pupitre-react` dan `pupitre-ui`: `tsdown` dengan `external: ['react', 'react-dom', '@inertiajs/react']`, JSX `react-jsx`, emit `.js` + `.d.ts`; **tanpa CSS** di `pupitre-react`; `pupitre-ui` mengekspor `styles.css` berisi `@source` Tailwind v4 untuk kelas yang dipakai.
@@ -115,6 +119,12 @@ Untuk `packages/pupitre/catalog/**`: hanya `zod` yang boleh. `pupitre-react` dan
 - Semua string UI yang kelak di-i18n lewat `t('...')` internal (identity function di v1) agar M-i18n tidak perlu grep ulang.
 - Error class: `E_PUPITRE_*` di `src/errors.ts` memakai `@adonisjs/core/exceptions` `createError`.
 - Log lewat `app.logger.child({ module: 'pupitre' })`.
+- Schema editor: `s.markdownEditor(name).toolbar([...]).fileAttachments({ disk, directory })` menyimpan string Markdown; `s.codeEditor(name).language(...).lineNumbers().minHeight(...)` menyimpan source string, dengan Vine rules yang sama seperti input string. File image dapat mengaktifkan `.imageEditor().imageEditorAspectRatios([...])`; file hasil crop diunggah lagi ke endpoint Pupitre dan MIME/maxSize tetap ditegakkan server.
+- Schema parity: `.tel().telRegex(regex)` dan `.url()` memvalidasi teks dengan VineJS; `.mask('99/99/9999')` hanya memformat input sehingga bound/dehydrate tetap raw. `s.textarea(name).autosize()` tumbuh dari `rows`; `s.slider(name).min().max().step().marks([...]).range()` mendukung angka atau tuple. `hintIcon(icon, { tooltip })`, `.hintColor()`, `.hintAction(action)`, `.prefixAction()` dan `.suffixAction()` masuk ke catalog/action protocol. Repeater Lucid `.relationship('hasManyName', { orderColumn })` menyinkronkan child records dalam transaksi parent dan menolak key asing.
+- Schema Builder/Wizard: `s.builder('content').blocks([s.block('heading').label('Heading').schema((fields) => [fields.text('title').required()])])` menyimpan array block `{ _key, type, data }` pada kolom JSON model; `fields` memakai namespace block yang nama field-nya bukan kolom model. Setiap block divalidasi dengan schema Vine sesuai tipenya, dan `s.block()` immutable. `s.wizard([s.step('Account').schema([...])]).startOnStep(1).submitLabel('Finish')` menampilkan semua langkah ter-mount; validasi tetap di server dan 422 mengaktifkan langkah error pertama.
+
+- Relation manager/hierarki resource (WP28): `defineRelationManager(Post, 'comments').table(...).form(...).actions({ header, row, bulk })`, `defineResource(Revision).parent(PostResource, 'post')` + `PostResource.nested([RevisionResource])`, dan `PostResource.relations([relationGroup('Content', [...])])`. `pages.list().modals()` menjaga create/edit resource sederhana di `ActionModal` tanpa mendaftarkan route halaman.
+Pengujian host memakai `@rikology/pupitre/testing`: `visitResource(slug, page, { user, tenant?, query?, record?, panel? })` dan `visitPage(slug, { user })` mengembalikan page wire, `spec`, `state`, serta data; `submitForm` mengirim create/edit melalui controller resource dengan validasi VineJS dan mengembalikan `FormResult` (`assertErrors`, `assertOk`, `errors`, `record`); `runAction` melewati controller action dan menghasilkan `ActionResult` dengan validasi 422 serta penolakan forbidden yang mengikuti HTTP. Jalur ini memakai konteks HTTP test Adonis dan container aplikasi yang sudah boot.
 
 ## 8. CI
 
@@ -137,7 +147,8 @@ Untuk `packages/pupitre/catalog/**`: hanya `zod` yang boleh. `pupitre-react` dan
 
 ## 10. Example app
 
-`apps/example` adalah host AdonisJS v7 + Inertia React (starter kit) yang sudah menjalankan `node ace add @rikology/pupitre` (hasilnya di-commit). Isi: model `User`, `Post`, `Category`, `Comment`, `Tenant`; policy; seeder deterministik (`node ace db:seed`); panel `admin` (tenancy url) dan `app` (tanpa tenancy). Dipakai oleh Playwright dan sebagai referensi dokumentasi — setiap fitur baru wajib tampil di sini.
+`apps/example` adalah host AdonisJS v7 + Inertia React (starter kit) yang sudah menjalankan `node ace add @rikology/pupitre` (hasilnya di-commit). Isi: model `User`, `Post`, `Category`, `Comment`, `Tag`, `Revision`, `Tenant`; policy; seeder deterministik (`node ace db:seed`); panel `admin` (tenancy url) dan `app` (tanpa tenancy). Post menampilkan relation manager Comments (`hasMany`) dan Tags (`manyToMany`, pivot note), serta nested Revisions; Tags memakai halaman list dengan create/edit modal. Dipakai oleh Playwright dan sebagai referensi dokumentasi — setiap fitur baru wajib tampil di sini.
+Contoh Post memakai kolom `summary` (ditambah migrasi contoh idempotent) untuk `MarkdownEditor` dan `TextEntry.markdown()`; field `body` tetap memakai `RichEditor` HTML. Halaman Settings menunjukkan `CodeEditor` JSON, dan cover Post mengaktifkan editor crop gambar.
 
 ```bash
 cd apps/example && cp .env.example .env && node ace migration:fresh --seed && npm run dev
@@ -147,11 +158,11 @@ cd apps/example && cp .env.example .env && node ace migration:fresh --seed && np
 ## 11. Debugging
 
 - `node ace pupitre:routes` — menampilkan route dan namanya.
-- `node ace pupitre:prune` — menghapus token reset password yang sudah kedaluwarsa; jadwalkan command ini sesuai kebijakan host.
+- `node ace pupitre:prune` — menghapus token reset password dan file/row export yang sudah kedaluwarsa; jadwalkan command ini sesuai kebijakan host.
 
-`node ace make:page Settings` membuat `app/admin/pages/settings_page.ts` dari stub kosong dan tidak menimpa file yang sudah ada; gunakan `--force` untuk overwrite. File dengan suffix `_page` masuk barrel `pages` dari hook `indexAdmin`, lalu daftarkan dengan `.pages(pages)` pada panel.
+`node ace make:page Settings` membuat `app/admin/pages/settings_page.ts`; `node ace make:widget PostsByStatus --type=stats|chart|table` membuat `app/admin/widgets/posts_by_status_widget.ts`. File generator tidak menimpa keluaran yang sudah ada; gunakan `--force` untuk overwrite. `indexAdmin()` menemukan suffix `_page` dan `_widget` dan menerbitkan barrel terkait. Widget dapat didaftarkan ke panel atau resource page melalui `.widgets([...])`; custom page dapat memakai `definePage(...).widgets([...]).filters([...])`. Table widget harus memilih model terdaftar dan mendefinisikan schema/query melalui `defineWidget('latest-posts', Post).table((t) => t.query((query) => query.where(...)).columns([...]))`; sorting, pagination, dan format cell memakai pipeline tabel resource yang sama.
 
 - `node ace make:panel <name> [--path /prefix] [--guard web]` — membuat `app/admin/panels/<name>.ts`; file yang sudah ada tidak ditimpa.
 - `node ace make:resource Comment [--model=#models/comment] [--from-migration] [--force]` — membuat `app/admin/resources/comment_resource.ts` dari metadata Lucid (`$columnsDefinitions`, tipe deklarasi model/schema, enum dan belongsTo). Gunakan `--from-migration` saat model tidak mendeklarasikan tipe kolom. File yang sudah ada dilewati kecuali `--force`; relasi selain belongsTo dilewati dan dilaporkan.
-- `node ace pupitre:inspect [resource]` — M2: policy resource, policy hilang (allow-by-default), ability yang dibutuhkan tetapi belum diimplementasikan, serta daftar kolom searchable. `--json` menghasilkan laporan machine-readable. Pemeriksaan closure/index pada kolom searchable adalah M3 (WP31).
+- `node ace pupitre:inspect [resource] [--json]` — policy/ability report, hasil lift closure tiap field (`expression`, `computed`, `static`, `server`) dan kolom searchable tanpa indeks (SQLite `PRAGMA index_list/index_info`, PostgreSQL `pg_indexes`). JSON memuat laporan yang sama; action modal forms tidak dievaluasi oleh endpoint server.
 - Di client: `window.__pupitre` (hanya dev) mengekspos store dan spec aktif.

@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('publishedAt appears immediately when status changes', async ({ admin, page }) => {
   await admin.login()
@@ -7,18 +7,27 @@ pupitreTest('publishedAt appears immediately when status changes', async ({ admi
   await page.goto('/admin/acme/posts/3/edit')
   const publishedAt = page.getByLabel(/published at/i)
   await expect(publishedAt).toBeHidden()
-  const requests: string[] = []
+  const saveRequests: string[] = []
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname.startsWith('/admin/')) requests.push(request.url())
+    if (request.method() === 'PUT' && new URL(request.url()).pathname === '/admin/acme/posts/3')
+      saveRequests.push(request.url())
   })
   await admin.fillField('Status', 'Published')
   await expect(publishedAt).toBeVisible()
-  expect(requests).toHaveLength(0)
+  expect(saveRequests).toHaveLength(0)
   const saved = page.waitForResponse(
     (response) =>
       response.request().method() === 'PUT' &&
       new URL(response.url()).pathname === '/admin/acme/posts/3'
   )
-  await page.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Save post' }).click()
   await saved
+  await admin.fillField('Status', 'Draft')
+  const restored = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' &&
+      new URL(response.url()).pathname === '/admin/acme/posts/3'
+  )
+  await page.getByRole('button', { name: 'Save post' }).click()
+  await restored
 })

@@ -1,9 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { usePage as useInertiaPage } from '@inertiajs/react'
 import type { ActionDescriptor, ActionResult, PupitrePageProps } from '@rikology/pupitre/catalog'
 import {
+  actionDescriptor as actionDescriptorSchema,
+  tableData as tableDataSchema,
+} from '@rikology/pupitre/catalog'
+import {
   findUploadDescriptor,
   handleActionResult as applyActionResult,
+  downloadExportFile,
+  waitForExport,
   submitAction,
   takePendingActionToasts,
   uploadFiles,
@@ -12,11 +18,14 @@ import { catalogVersion } from '@rikology/pupitre/catalog'
 import { t } from '../i18n.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
 import type { ToastMessage } from '../shell/types.js'
+import type { WidgetGridProps } from '../shell/types.js'
+import type { ImportResultResponse } from '@rikology/pupitre/catalog'
 import { ActionConfirm } from '../renderer/ActionConfirm.js'
 import { PupitreRenderer } from '../renderer/PupitreRenderer.js'
 import { ActionModal } from '../renderer/ActionModal.js'
 import { getRouter } from '../bridge/inertia.js'
 import { PageActionsContext } from '../runtime.js'
+import { matchesKeyBinding } from '../key_bindings.js'
 
 type InertiaPupitreProps = PupitrePageProps & { errors?: Record<string, string> }
 export type PupitreProps = { registry: PupitreRegistry }
@@ -43,6 +52,20 @@ function major(version: string): string {
 }
 export function isSafeNewTabUrl(url: string): boolean {
   return /^https?:\/\//i.test(url) || !/^[a-z][a-z\d+.-]*:/i.test(url)
+}
+function syncDeepLink(action?: ActionDescriptor, ids?: Array<string | number>): void {
+  if (typeof window === 'undefined') return
+  const url = new URL(window.location.href)
+  if (action?.deepLink) {
+    url.searchParams.set('action', action.name)
+    const record = ids?.[0] ?? new URL(action.url, url.href).searchParams.get('record')
+    if (record !== undefined && record !== null) url.searchParams.set('record', String(record))
+    else url.searchParams.delete('record')
+  } else {
+    url.searchParams.delete('action')
+    url.searchParams.delete('record')
+  }
+  window.history.replaceState(window.history.state, '', url)
 }
 const catalogReloaded: Record<string, true> = {}
 export function ensureCatalogVersion(
@@ -86,6 +109,7 @@ export function PupitreContent({
   props: InertiaPupitreProps
 }) {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => emptyToasts)
+  const initialDeepLinkHandled = useRef(false)
   const [optimisticData, setOptimisticData] = useState<{
     base: PupitrePageProps['data']
     value: unknown
@@ -98,6 +122,15 @@ export function PupitreContent({
     action: ActionDescriptor
     ids?: Array<string | number>
   } | null>(null)
+  const [importAction, setImportAction] = useState<ActionDescriptor | null>(null)
+  const exportPoll = useRef<AbortController | null>(null)
+  const currentPageKey = useRef(props.page.key)
+  useEffect(() => {
+    if (currentPageKey.current !== props.page.key) exportPoll.current?.abort()
+    currentPageKey.current = props.page.key
+    return () => exportPoll.current?.abort()
+  }, [props.page.key])
+  useEffect(() => () => exportPoll.current?.abort(), [])
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
     updateToasts((current) => [...current, { ...toast, id: String(++toastId) }])
   }, [])
@@ -143,16 +176,58 @@ export function PupitreContent({
       options: { ids?: Array<string | number>; record?: Record<string, unknown> } = {}
     ) => {
       if (!action.enabled) return
+      if (
+        action.kind === 'direct' &&
+        new URL(action.url, 'http://pupitre.local').pathname.endsWith('/import')
+      ) {
+        if (!registry.shell.ImportModal) {
+          pushToast({ type: 'error', title: t('Import modal is unavailable in this registry') })
+          return
+        }
+        setImportAction(action)
+        return
+      }
       if (action.kind === 'link') {
         if (action.openInNewTab && typeof window !== 'undefined' && isSafeNewTabUrl(action.url))
           window.open(action.url, '_blank', 'noopener,noreferrer')
         else getRouter().visit(action.url)
-      } else if (action.kind === 'confirm') setConfirm({ action, ids: options.ids })
-      else if (action.kind === 'form') setFormAction({ action, ids: options.ids })
-      else {
+      } else if (action.kind === 'confirm') {
+        syncDeepLink(action, options.ids)
+        setConfirm({ action, ids: options.ids })
+      } else if (action.kind === 'form') {
+        syncDeepLink(action, options.ids)
+        setFormAction({ action, ids: options.ids })
+      } else {
+        let pollingController: AbortController | undefined
         try {
           const response = await submitAction(action.url, { ids: options.ids }, action.method)
-          if (response.result) handleActionResult(response.result)
+          if (response.exportJob) {
+            pushToast({ type: 'info', title: t('Export queued') })
+            let lastProgressToast = 0
+            exportPoll.current?.abort()
+            const controller = new AbortController()
+            pollingController = controller
+            exportPoll.current = controller
+            const progress = await waitForExport(
+              response.exportJob,
+              (state) => {
+                if (state.status !== 'processing' || Date.now() - lastProgressToast < 3000) return
+                lastProgressToast = Date.now()
+                pushToast({
+                  type: 'info',
+                  title: t('Export in progress'),
+                  body: `${state.processedRows} / ${state.totalRows}`,
+                })
+              },
+              { signal: controller.signal }
+            )
+            if (exportPoll.current === controller) exportPoll.current = null
+            const downloadUrl = progress.downloadUrl ?? response.exportJob.downloadUrl
+            await downloadExportFile(downloadUrl)
+            pushToast({ type: 'success', title: t('Export downloaded') })
+          } else if (response.downloaded)
+            pushToast({ type: 'success', title: t('Export downloaded') })
+          else if (response.result) handleActionResult(response.result)
           else {
             const first = response.errors ? Object.values(response.errors)[0] : undefined
             pushToast({
@@ -164,25 +239,133 @@ export function PupitreContent({
               ),
             })
           }
-        } catch {
-          pushToast({ type: 'error', title: 'Unable to perform action.' })
+        } catch (cause) {
+          if (!pollingController?.signal.aborted)
+            pushToast({
+              type: 'error',
+              title: cause instanceof Error ? cause.message : 'Unable to perform action.',
+            })
+        } finally {
+          if (exportPoll.current === pollingController) exportPoll.current = null
         }
       }
     },
-    [handleActionResult, pushToast]
+    [handleActionResult, pushToast, registry]
   )
-  const closeAction = useCallback(() => setFormAction(null), [])
+  const completeImport = useCallback(
+    (result: ImportResultResponse) => {
+      handleActionResult({
+        flash: [
+          {
+            type: result.failed > 0 ? 'warning' : 'success',
+            title: t('Import finished'),
+            body: `${result.created} created, ${result.updated} updated, ${result.failed} failed.`,
+          },
+        ],
+        reload: true,
+      })
+    },
+    [handleActionResult]
+  )
+  useEffect(() => {
+    if (initialDeepLinkHandled.current || typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const name = params.get('action')
+    if (!name) {
+      initialDeepLinkHandled.current = true
+      return
+    }
+    const record = params.get('record')
+    const parsedData = tableDataSchema.safeParse(props.data)
+    if (record && page.kind === 'list' && !parsedData.success) return
+    initialDeepLinkHandled.current = true
+    const rows = parsedData.success ? parsedData.data.rows : []
+    const row = record ? rows.find((item) => String(item.key) === record) : undefined
+    const candidates =
+      record && page.kind === 'list' ? (row?.actions ?? []) : (page.actions?.header ?? [])
+    const selected = candidates.find((item) => item.name === name && item.deepLink && item.enabled)
+    if (selected) window.setTimeout(() => void runAction(selected), 0)
+  }, [page.actions, page.kind, props.data, runAction])
+  useEffect(() => {
+    const actions: ActionDescriptor[] = [...(page.actions?.header ?? [])]
+    for (const element of Object.values(page.spec?.elements ?? {})) {
+      if (!element || typeof element !== 'object' || !('props' in element)) continue
+      const elementProps = element.props
+      if (!elementProps || typeof elementProps !== 'object') continue
+      for (const key of ['actions', 'footerActions']) {
+        if (!(key in elementProps) || !Array.isArray(elementProps[key])) continue
+        const parsed = actionDescriptorSchema.array().safeParse(elementProps[key])
+        if (parsed.success) actions.push(...parsed.data)
+      }
+      for (const key of ['prefixAction', 'suffixAction', 'hintAction']) {
+        if (!(key in elementProps)) continue
+        const parsed = actionDescriptorSchema.safeParse(elementProps[key])
+        if (parsed.success) actions.push(parsed.data)
+      }
+    }
+    const byIdentity: Record<string, ActionDescriptor> = {}
+    for (const action of actions) byIdentity[`${action.name}:${action.url}`] = action
+    const unique = Object.values(byIdentity)
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      )
+        return
+      const action = unique.find(
+        (item) =>
+          item.enabled && item.keyBindings?.some((binding) => matchesKeyBinding(event, binding))
+      )
+      if (!action) return
+      event.preventDefault()
+      void runAction(action)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [page.actions, page.spec, runAction])
+  const closeAction = useCallback(() => {
+    if (formAction?.action.deepLink) syncDeepLink()
+    setFormAction(null)
+  }, [formAction])
   const pageActions = useMemo(() => ({ runAction, toast: pushToast }), [runAction, pushToast])
   const ShellComponent = registry.shell.Shell
   const AuthShell = registry.shell.AuthShell
   const Toaster = registry.shell.Toaster
   const NotFound = registry.shell.NotFound
+  const WidgetGrid = registry.shell.WidgetGrid
   // Host-owned component pages are rendered by their Inertia component; a
   // custom page sent to this generic renderer still uses its declared spec.
+  const relationTableData = useMemo(
+    () =>
+      Object.fromEntries(
+        (page.relations ?? []).map((relation) => [relation.dataProp, props[relation.dataProp]])
+      ),
+    [page.relations, props]
+  )
+  const [widgetData, setWidgetData] = useState<Record<string, unknown>>(() =>
+    Object.fromEntries(
+      (page.widgets ?? []).map((widget) => [widget.dataProp, props[widget.dataProp]])
+    )
+  )
+  const widgets = page.widgets ?? []
+  if (
+    Object.keys(widgetData).length !== widgets.length ||
+    widgets.some(
+      (widget) =>
+        !Object.hasOwn(widgetData, widget.dataProp) ||
+        !Object.is(widgetData[widget.dataProp], props[widget.dataProp])
+    )
+  ) {
+    setWidgetData(
+      Object.fromEntries(widgets.map((widget) => [widget.dataProp, props[widget.dataProp]]))
+    )
+  }
   if (major(page.catalogVersion) !== major(catalogVersion))
     return <Toaster toasts={toasts} dismiss={dismiss} />
   const content = page.spec ? (
     <PupitreRenderer
+      tableDataProps={relationTableData}
       page={page}
       data={data}
       errors={props.errors}
@@ -199,6 +382,28 @@ export function PupitreContent({
   ) : (
     <NotFound title={t('Not found')} message={t('The requested page could not be found.')} />
   )
+  const headerWidgets = page.widgets?.filter((widget) => widget.placement === 'header') ?? []
+  const footerWidgets = page.widgets?.filter((widget) => widget.placement !== 'header') ?? []
+  const headerWidgetContent =
+    headerWidgets.length && WidgetGrid ? (
+      <WidgetGrid
+        widgets={headerWidgets}
+        data={widgetData}
+        deferred={page.deferred}
+        filters={page.filters}
+        customWidgets={registry.shell as unknown as WidgetGridProps['customWidgets']}
+      />
+    ) : null
+  const footerWidgetContent =
+    footerWidgets.length && WidgetGrid ? (
+      <WidgetGrid
+        widgets={footerWidgets}
+        data={widgetData}
+        deferred={page.deferred}
+        filters={page.filters}
+        customWidgets={registry.shell as unknown as WidgetGridProps['customWidgets']}
+      />
+    ) : null
   const main =
     page.kind === 'auth' ? (
       <AuthShell panel={panel.panel} title={page.title}>
@@ -212,6 +417,7 @@ export function PupitreContent({
         breadcrumbs={page.breadcrumbs}
         title={page.title}
         headerActions={page.actions?.header ?? []}
+        subNavigation={page.subNavigation ?? []}
         currentUrl={
           typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
         }
@@ -219,7 +425,9 @@ export function PupitreContent({
         tenants={panel.tenants ?? []}
         notifications={panel.notifications}
       >
+        {headerWidgetContent}
         {content}
+        {footerWidgetContent}
       </ShellComponent>
     )
   const modal = confirm ? (
@@ -228,7 +436,10 @@ export function PupitreContent({
       ids={confirm.ids}
       registry={registry.shell}
       onResult={handleActionResult}
-      onCancel={() => setConfirm(null)}
+      onCancel={() => {
+        if (confirm.action.deepLink) syncDeepLink()
+        setConfirm(null)
+      }}
       toast={pushToast}
     />
   ) : null
@@ -244,11 +455,22 @@ export function PupitreContent({
       onResult={handleActionResult}
     />
   ) : null
+  const ImportModal = registry.shell.ImportModal
+  const importModal =
+    importAction && ImportModal ? (
+      <ImportModal
+        open
+        action={importAction}
+        onClose={() => setImportAction(null)}
+        onComplete={completeImport}
+      />
+    ) : null
   return (
     <PageActionsContext.Provider value={pageActions}>
       {main}
       {modal}
       {actionModal}
+      {importModal}
       <Toaster toasts={toasts} dismiss={dismiss} />
     </PageActionsContext.Provider>
   )

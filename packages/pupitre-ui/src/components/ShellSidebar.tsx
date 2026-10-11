@@ -34,11 +34,19 @@ export type ShellSidebarProps = {
   panel: ShellProps['panel']
   nav: ShellProps['nav']
   currentUrl: string
-  /** Closes the mobile drawer after a navigation click. */
   onNavigate: () => void
+  collapsed?: boolean
+  topNav?: boolean
 }
 
-export function ShellSidebar({ panel, nav, currentUrl, onNavigate }: ShellSidebarProps) {
+export function ShellSidebar({
+  panel,
+  nav,
+  currentUrl,
+  onNavigate,
+  collapsed: railCollapsed = false,
+  topNav = false,
+}: ShellSidebarProps) {
   const panelPath = panel.path || '/'
   const panelBrand = panel.brand
   const panelId = panel.id || 'Pupitre'
@@ -49,7 +57,7 @@ export function ShellSidebar({ panel, nav, currentUrl, onNavigate }: ShellSideba
     () => '[]'
   )
   const storedCollapsed = new Map(JSON.parse(storageSnapshot) as [string, string | null][])
-  const collapsed = Object.fromEntries(
+  const collapsedGroups = Object.fromEntries(
     nav
       .filter((group) => group.collapsible)
       .map((group) => {
@@ -64,7 +72,7 @@ export function ShellSidebar({ panel, nav, currentUrl, onNavigate }: ShellSideba
       })
   )
   function toggleGroup(label: string) {
-    const nextValue = !collapsed[label]
+    const nextValue = !collapsedGroups[label]
     setFallbackCollapsed((current) => ({ ...current, [label]: nextValue }))
     try {
       window.localStorage.setItem(`pupitre:${panel.id}:nav:${label}`, String(nextValue))
@@ -75,7 +83,11 @@ export function ShellSidebar({ panel, nav, currentUrl, onNavigate }: ShellSideba
   }
   return (
     <>
-      <a href={panelPath} className="mb-6 flex min-h-10 items-center gap-3 px-2 font-semibold">
+      <a
+        href={panelPath}
+        aria-label={railCollapsed ? (panelBrand?.name ?? panelId) : undefined}
+        className={`mb-6 flex min-h-10 items-center gap-3 px-2 font-semibold ${railCollapsed ? 'justify-center' : ''}`}
+      >
         {panelBrand?.logo || panelBrand?.logoDark ? (
           <>
             {panelBrand.logo && (
@@ -94,78 +106,125 @@ export function ShellSidebar({ panel, nav, currentUrl, onNavigate }: ShellSideba
             <Icon name="layout-dashboard" className="size-4" />
           </span>
         )}
-        <span>{panelBrand?.name ?? panelId}</span>
+        {!railCollapsed && <span>{panelBrand?.name ?? panelId}</span>}
       </a>
-      <nav aria-label="Main navigation" className="flex-1 space-y-5 overflow-y-auto">
+      <nav
+        aria-label="Main navigation"
+        className={`flex-1 overflow-y-auto ${topNav ? 'flex items-center gap-2' : 'space-y-5'}`}
+      >
         {nav.map((group, groupIndex) => {
-          const groupCollapsed = group.collapsible && collapsed[group.label]
+          const groupCollapsed = group.collapsible && collapsedGroups[group.label]
           return (
-            <section key={`${group.label}:${groupIndex}`}>
-              {group.label &&
-                (group.collapsible ? (
-                  <button
-                    type="button"
-                    className="mb-2 flex w-full items-center gap-2 px-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                    aria-expanded={!groupCollapsed}
-                    onClick={() => toggleGroup(group.label)}
-                  >
+            <section key={`${group.label}:${groupIndex}`} className={topNav ? 'relative' : ''}>
+              {topNav ? (
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
                     {group.icon && <Icon name={group.icon} className="size-4" />}
-                    <span className="flex-1">{group.label}</span>
-                    <Icon
-                      name={groupCollapsed ? 'chevron-right' : 'chevron-down'}
-                      className="size-3"
-                    />
-                  </button>
-                ) : group.label ? (
-                  <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.label}
-                  </h2>
-                ) : null)}
-              {!groupCollapsed && (
-                <ul className="space-y-1">
-                  {group.items.map((item) => {
-                    const active =
-                      item.active ??
-                      Boolean(
-                        item.url &&
-                        (currentUrl === item.url || currentUrl.startsWith(`${item.url}/`))
-                      )
-                    return (
+                    <span>{group.label || 'Menu'}</span>
+                    <Icon name="chevron-down" className="size-3" />
+                  </summary>
+                  <ul className="absolute left-0 top-full z-40 mt-1 min-w-48 rounded-md border border-border bg-background p-1 shadow-lg">
+                    {group.items.map((item) => (
                       <li key={`${item.label}:${item.url ?? ''}`}>
                         <a
                           href={item.url ?? '#'}
-                          target={item.external ? '_blank' : undefined}
-                          rel={item.external ? 'noreferrer' : undefined}
-                          aria-current={active ? 'page' : undefined}
                           onClick={onNavigate}
-                          className={`flex min-h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${active ? 'bg-primary/10 font-medium text-primary' : 'text-foreground hover:bg-muted'}`}
+                          className="block rounded px-3 py-2 text-sm hover:bg-muted"
                         >
-                          {item.icon && <Icon name={item.icon} className="size-4 shrink-0" />}
-                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                          {item.badge !== undefined && (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                              {item.badge}
-                            </span>
-                          )}
+                          {item.label}
                         </a>
-                        {item.children?.length ? (
-                          <ul className="ml-5 mt-1 space-y-1 border-l border-border pl-3">
-                            {item.children.map((child) => (
-                              <li key={child.label}>
-                                <a
-                                  href={child.url ?? '#'}
-                                  className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-                                >
-                                  {child.label}
-                                </a>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
                       </li>
-                    )
-                  })}
-                </ul>
+                    ))}
+                  </ul>
+                </details>
+              ) : (
+                <>
+                  {group.label &&
+                    (group.collapsible ? (
+                      <button
+                        type="button"
+                        className={`mb-2 flex w-full items-center gap-2 px-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ${railCollapsed ? 'justify-center' : ''}`}
+                        aria-expanded={!groupCollapsed}
+                        title={railCollapsed ? group.label : undefined}
+                        onClick={() => toggleGroup(group.label)}
+                      >
+                        {group.icon && <Icon name={group.icon} className="size-4" />}
+                        {!railCollapsed && <span className="flex-1">{group.label}</span>}
+                        {!railCollapsed && (
+                          <Icon
+                            name={groupCollapsed ? 'chevron-right' : 'chevron-down'}
+                            className="size-3"
+                          />
+                        )}
+                      </button>
+                    ) : group.label && !railCollapsed ? (
+                      <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </h2>
+                    ) : null)}
+                  {!groupCollapsed && (
+                    <ul className="space-y-1">
+                      {group.items.map((item) => {
+                        const active =
+                          item.active ??
+                          Boolean(
+                            item.url &&
+                            (currentUrl === item.url || currentUrl.startsWith(`${item.url}/`))
+                          )
+                        return (
+                          <li key={`${item.label}:${item.url ?? ''}`}>
+                            <a
+                              href={item.url ?? '#'}
+                              target={item.external ? '_blank' : undefined}
+                              rel={item.external ? 'noreferrer' : undefined}
+                              aria-current={active ? 'page' : undefined}
+                              aria-label={`${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`}
+                              title={
+                                railCollapsed
+                                  ? `${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`
+                                  : undefined
+                              }
+                              onClick={onNavigate}
+                              className={`flex min-h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${railCollapsed ? 'justify-center px-2' : ''} ${active ? 'bg-primary/10 font-medium text-primary' : 'text-foreground hover:bg-muted'}`}
+                            >
+                              {item.icon && <Icon name={item.icon} className="size-4 shrink-0" />}
+                              {railCollapsed && !item.icon && (
+                                <span
+                                  aria-hidden="true"
+                                  className="size-4 text-center font-semibold"
+                                >
+                                  {item.label.slice(0, 1).toUpperCase()}
+                                </span>
+                              )}
+                              {!railCollapsed && (
+                                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                              )}
+                              {!railCollapsed && item.badge !== undefined && (
+                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </a>
+                            {item.children?.length ? (
+                              <ul className="ml-5 mt-1 space-y-1 border-l border-border pl-3">
+                                {item.children.map((child) => (
+                                  <li key={child.label}>
+                                    <a
+                                      href={child.url ?? '#'}
+                                      className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
+                                    >
+                                      {child.label}
+                                    </a>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </>
               )}
             </section>
           )

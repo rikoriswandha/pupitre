@@ -625,6 +625,22 @@ test.group('Pupitre auth runtime', () => {
       providers: [() => import('@adonisjs/limiter/limiter_provider')],
     })
     try {
+      await User.create({
+        name: 'Repeat Login',
+        fullName: 'Repeat Login',
+        email: 'repeat@example.test',
+        password: 'correct-password',
+      })
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const response = await fetch(`${limited.baseUrl}/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'text/html' },
+          body: new URLSearchParams({ email: 'repeat@example.test', password: 'correct-password' }),
+          redirect: 'manual',
+        })
+        assert.equal(response.status, 302)
+        assert.equal(response.headers.get('location'), '/admin')
+      }
       let lastResponse: Response | undefined
       for (let attempt = 0; attempt < 6; attempt++) {
         lastResponse = await fetch(`${limited.baseUrl}/admin/login`, {

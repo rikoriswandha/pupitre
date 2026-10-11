@@ -36,6 +36,15 @@ const shapeChecks = {
     assert.equal(typeof mod.getMetaData, 'function')
     assert.equal(typeof mod.getCommand, 'function')
   },
+  '@rikology/pupitre/testing': (mod) => {
+    assert.equal(typeof mod.assertSpecHas, 'function')
+    assert.equal(typeof mod.assertVisible, 'function')
+    assert.equal(typeof mod.assertHidden, 'function')
+  },
+  '@rikology/pupitre-ui/testing': (mod) => {
+    assert.equal(typeof mod.pupitreTest, 'function')
+    assert.equal(typeof mod.AdminPage, 'function')
+  },
 }
 
 function runtimeTarget(target) {

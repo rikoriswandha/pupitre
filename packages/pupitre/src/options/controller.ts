@@ -9,23 +9,14 @@ import { queryOptions } from './query.js'
 import { findFormOwner } from '../pages/form_owner.js'
 import type { FormOwner } from '../pages/form_owner.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
+import { walkSchema } from '../definition/walk.js'
 import { fillTenantOwnership } from '../tenancy/runtime.js'
 type SelectField = Extract<FieldDefinitionUnion, { kind: 'select' | 'multiSelect' }>
-function fields(
-  nodes: SchemaNodeDefinition[],
-  parent = ''
-): Array<{ path: string; field: SelectField }> {
+function fields(nodes: SchemaNodeDefinition[]): Array<{ path: string; field: SelectField }> {
   const output: Array<{ path: string; field: SelectField }> = []
-  for (const node of nodes) {
-    if ('children' in node) output.push(...fields(node.children, parent))
-    if (node.kind === 'select' || node.kind === 'multiSelect') {
-      const path = parent ? `${parent}.${node.name}` : node.name
-      output.push({ path, field: node })
-    }
-    if (node.kind === 'repeater' && Array.isArray(node.schema)) {
-      output.push(...fields(node.schema, parent ? `${parent}.${node.name}` : node.name))
-    }
-  }
+  walkSchema(nodes, (node, path) => {
+    if (node.kind === 'select' || node.kind === 'multiSelect') output.push({ path, field: node })
+  })
   return output
 }
 

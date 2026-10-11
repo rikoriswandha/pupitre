@@ -3,6 +3,8 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Button, Field, FieldError, Input, Label } from '../primitives/index.js'
+import { ActionButton } from './ActionButton.js'
+import { Icon } from '../icons.js'
 import { useLiveField } from './use_live_field.js'
 
 type Props = Infer<typeof components.Text.props>
@@ -15,6 +17,53 @@ type Runtime = {
   loading?: boolean
 }
 
+export function formatInputMask(value: string, mask: string): string {
+  let valueIndex = 0
+  let formatted = ''
+  for (let maskIndex = 0; maskIndex < mask.length && valueIndex < value.length; maskIndex++) {
+    const token = mask[maskIndex]!
+    if (token === '9' || token === 'a' || token === '*') {
+      while (valueIndex < value.length) {
+        const character = value[valueIndex++]!
+        if (
+          (token === '9' && /\d/.test(character)) ||
+          (token === 'a' && /[a-z]/i.test(character)) ||
+          (token === '*' && /[a-z0-9]/i.test(character))
+        ) {
+          formatted += character
+          break
+        }
+      }
+    } else {
+      formatted += token
+    }
+  }
+  return formatted
+}
+
+export function unmaskInput(value: string, mask: string): string {
+  let inputIndex = 0
+  let result = ''
+  for (const token of mask) {
+    if (inputIndex >= value.length) break
+    if (token !== '9' && token !== 'a' && token !== '*') {
+      if (value[inputIndex] === token) inputIndex++
+      continue
+    }
+    while (inputIndex < value.length) {
+      const character = value[inputIndex++]!
+      if (
+        (token === '9' && /\d/.test(character)) ||
+        (token === 'a' && /[a-z]/i.test(character)) ||
+        (token === '*' && /[a-z0-9]/i.test(character))
+      ) {
+        result += character
+        break
+      }
+    }
+  }
+  return result
+}
 export function Text({ props, bindings }: Runtime) {
   const [showPassword, setShowPassword] = useState(false)
   const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
@@ -29,6 +78,9 @@ export function Text({ props, bindings }: Runtime) {
     [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
       .filter(Boolean)
       .join(' ') || undefined
+  const displayedValue = props.mask
+    ? formatInputMask(String(value ?? ''), props.mask)
+    : String(value ?? '')
   const columnStyle =
     props.columnSpan === null || props.columnSpan === undefined
       ? undefined
@@ -42,12 +94,16 @@ export function Text({ props, bindings }: Runtime) {
     <div style={columnStyle}>
       <Field invalid={!!error}>
         {props.label !== null && props.label !== undefined && (
-          <Label htmlFor={id}>
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label htmlFor={id}>
+              {props.label}
+              {props.required && <span aria-hidden="true"> *</span>}
+            </Label>
+            {props.hintAction && <ActionButton action={props.hintAction} />}
+          </div>
         )}
         <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
+          {props.prefixAction && <ActionButton action={props.prefixAction} />}
           {props.prefix && <span className="text-sm text-muted-foreground">{props.prefix}</span>}
           <Input
             {...props.extraAttributes}
@@ -58,11 +114,14 @@ export function Text({ props, bindings }: Runtime) {
                 ? 'text'
                 : (props.type ?? 'text')
             }
-            value={value ?? ''}
-            onChange={(event) => changeValue(event.currentTarget.value)}
+            value={displayedValue}
+            onChange={(event) => {
+              const inputValue = event.currentTarget.value
+              changeValue(props.mask ? unmaskInput(inputValue, props.mask) : inputValue)
+            }}
             onBlur={() => commitValue()}
             placeholder={props.placeholder}
-            maxLength={props.maxLength}
+            maxLength={props.mask ? undefined : props.maxLength}
             autoComplete={props.autocomplete}
             list={listId}
             required={props.required}
@@ -74,6 +133,7 @@ export function Text({ props, bindings }: Runtime) {
             className="h-10 min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus-visible:ring-0"
           />
           {props.suffix && <span className="text-sm text-muted-foreground">{props.suffix}</span>}
+          {props.suffixAction && <ActionButton action={props.suffixAction} />}
           {props.revealable && props.type === 'password' && (
             <Button
               variant="ghost"
@@ -95,7 +155,16 @@ export function Text({ props, bindings }: Runtime) {
           </datalist>
         )}
         {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
+          <p
+            id={`${id}-hint`}
+            className="flex items-center gap-1 text-sm text-muted-foreground"
+            style={props.hintColor ? { color: props.hintColor } : undefined}
+          >
+            {props.hintIcon && (
+              <span title={props.hintTooltip} aria-label={props.hintTooltip ?? undefined}>
+                <Icon name={props.hintIcon} className="size-4" />
+              </span>
+            )}
             {props.hint}
           </p>
         )}

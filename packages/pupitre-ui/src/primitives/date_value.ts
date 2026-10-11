@@ -1,11 +1,12 @@
+import { t } from '@rikology/pupitre-react'
 /**
  * Conversion between form state and native date inputs (ADR-0009).
  *
- * Form state holds ISO 8601 strings with the offset of the field's timezone
- * (the server compiles `2026-10-07T19:00:00+07:00` for Asia/Jakarta). Native
- * `date`/`datetime-local`/`time` inputs only accept wall-clock values, so the
- * wall-clock part is shown as-is and edits are sent back as ISO with the offset
- * that timezone has at the chosen instant (DST-aware via `Intl`).
+ * Form state holds ISO 8601 strings with the offset of the effective field
+ * timezone (the server compiles `2026-10-07T19:00:00+07:00` for Asia/Jakarta).
+ * Native date/time inputs show only the wall-clock part. Datetime edits remain
+ * timezone-free local strings until the server validates and resolves their
+ * zone, which allows it to reject nonexistent times during DST transitions.
  */
 export type DateInputKind = 'date' | 'datetime' | 'time'
 
@@ -32,56 +33,20 @@ export function toInputValue(
 }
 
 /**
- * Offset in minutes between `timeZone` and UTC at `utcMillis`.
+ * Returns a compact hint only when the effective zone differs from the
+ * browser's zone. Input values themselves remain wall-clock strings; the
+ * server parses them in the effective zone and rejects DST gaps.
  */
-function zoneOffsetMinutes(utcMillis: number, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).formatToParts(new Date(utcMillis))
-  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value)
-  const asUtc = Date.UTC(
-    part('year'),
-    part('month') - 1,
-    part('day'),
-    part('hour'),
-    part('minute'),
-    part('second')
-  )
-  return Math.round((asUtc - utcMillis) / 60_000)
+export function timezoneHint(timeZone: string | null | undefined): string | null {
+  if (!timeZone) return null
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (!browserZone || browserZone === timeZone) return null
+  return t('Times shown in {timezone} (browser: {browser})')
+    .replace('{timezone}', timeZone)
+    .replace('{browser}', browserZone)
 }
 
-function formatOffset(minutes: number): string {
-  const sign = minutes < 0 ? '-' : '+'
-  const absolute = Math.abs(minutes)
-  const hours = String(Math.floor(absolute / 60)).padStart(2, '0')
-  return `${sign}${hours}:${String(absolute % 60).padStart(2, '0')}`
-}
-
-/**
- * Turns a native datetime-local value (`2026-10-07T19:00`) into ISO with the
- * timezone's offset at that wall-clock time. Without a timezone the wall-clock
- * value is returned unchanged and the server interprets it in the field zone.
- */
-export function fromDateTimeInput(local: string, timeZone: string | undefined): string | null {
-  if (!local) {
-    return null
-  }
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(local)
-  if (!match || !timeZone) {
-    return local
-  }
-  const [, year, month, day, hour, minute, second = '00'] = match
-  const wallClock = Date.UTC(+year!, +month! - 1, +day!, +hour!, +minute!, +second)
-  // Two passes settle the offset around DST transitions.
-  let utc = wallClock - zoneOffsetMinutes(wallClock, timeZone) * 60_000
-  utc = wallClock - zoneOffsetMinutes(utc, timeZone) * 60_000
-  const time = local.length > 16 ? local.slice(11) : `${local.slice(11)}:00`
-  return `${local.slice(0, 10)}T${time}${formatOffset(zoneOffsetMinutes(utc, timeZone))}`
+/** Native datetime-local values are deliberately submitted without an offset. */
+export function fromDateTimeInput(local: string, _timeZone?: string): string | null {
+  return local || null
 }

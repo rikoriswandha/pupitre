@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest(
   'status filter, search and sort persist in the URL and history',
@@ -8,7 +8,9 @@ pupitreTest(
     await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
     await expect(page).toHaveURL(/q=Field(?:%20|\+)Notes(?:%20|\+)0/)
     await page.getByText('Filters', { exact: true }).click()
-    await page.getByLabel(/status/i).selectOption('published')
+    await page.getByLabel('Filter Status', { exact: true }).selectOption('published')
+    await expect(page).not.toHaveURL(/published/)
+    await page.getByRole('button', { name: 'Apply', exact: true }).click()
     await expect(page).toHaveURL(/published/)
     await expect(page).toHaveURL(/q=Field(?:%20|\+)Notes(?:%20|\+)0/)
     await page.getByRole('button', { name: 'Title', exact: true }).click()

@@ -30,20 +30,29 @@ test('official notifications driver persists, lists, counts, and marks peer inbo
       email: 'driver@example.com',
     })
     const adapter = notificationsAdapter()
+    const adapterContext = { containerResolver: fixture.app.container } as never
     await adapter.toInbox(user, {
       type: 'success',
       title: 'Persisted',
       body: 'Stored by the peer',
       url: '/admin/posts/1',
+      actions: [
+        { label: 'View', url: '/admin/posts/1' },
+        { label: 'Mark read', markAsRead: true },
+      ],
     })
-    const inbox = await adapter.inbox(user, { page: 1, perPage: 10 })
+    const inbox = await adapter.inbox(user, { page: 1, perPage: 10 }, adapterContext)
     assert.lengthOf(inbox.items, 1)
+    assert.deepEqual(inbox.items[0].actions, [
+      { label: 'View', url: '/admin/posts/1' },
+      { label: 'Mark read', markAsRead: true },
+    ])
     assert.equal(inbox.items[0].title, 'Persisted')
     assert.equal(inbox.items[0].body, 'Stored by the peer')
     assert.equal(inbox.items[0].type, 'success')
-    assert.equal(await adapter.unreadCount(user), 1)
-    await adapter.markRead(user, [inbox.items[0].id])
-    assert.equal(await adapter.unreadCount(user), 0)
+    assert.equal(await adapter.unreadCount(user, adapterContext), 1)
+    await adapter.markRead(user, [inbox.items[0].id], adapterContext)
+    assert.equal(await adapter.unreadCount(user, adapterContext), 0)
     const { Notification } = await import('@rikology/adonisjs-notifications')
     class HostNotification extends Notification {
       via() {
@@ -57,9 +66,9 @@ test('official notifications driver persists, lists, counts, and marks peer inbo
     const { default: notifications } =
       await import('@rikology/adonisjs-notifications/services/main')
     await notifications.sendNow(user, new HostNotification())
-    const hostInbox = await adapter.inbox(user, { page: 1, perPage: 10 })
+    const hostInbox = await adapter.inbox(user, { page: 1, perPage: 10 }, adapterContext)
     assert.equal(hostInbox.items.find((item) => item.title === 'Host notice')?.type, 'info')
-    assert.equal(await adapter.unreadCount(user), 1)
+    assert.equal(await adapter.unreadCount(user, adapterContext), 1)
   } finally {
     await closeTestApp(fixture)
   }

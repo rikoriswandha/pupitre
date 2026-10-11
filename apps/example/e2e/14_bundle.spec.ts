@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 type ManifestChunk = {
   file: string
@@ -46,5 +46,48 @@ pupitreTest('the inertia entry keeps TipTap code in dynamically imported chunks'
     expect(dynamicEntry.has(key), `${key} must be reachable only through a dynamic import`).toBe(
       true
     )
+  }
+})
+
+pupitreTest('M3 heavy clients load only through dynamic chunks', async () => {
+  const manifest = JSON.parse(
+    await readFile(resolve(import.meta.dirname, '../public/assets/.vite/manifest.json'), 'utf8')
+  ) as Manifest
+  const entry = manifest['inertia/app.tsx']
+  expect(entry?.file).toBeTruthy()
+  const traverse = (roots: string[], followDynamic: boolean) => {
+    const visited = new Set<string>()
+    const pending = [...roots]
+    while (pending.length > 0) {
+      const key = pending.pop()!
+      if (visited.has(key) || !manifest[key]) continue
+      visited.add(key)
+      pending.push(...(manifest[key].imports ?? []))
+      if (followDynamic) pending.push(...(manifest[key].dynamicImports ?? []))
+    }
+    return visited
+  }
+  const staticEntry = traverse(entry.imports ?? [], false)
+  const dynamicEntry = traverse(entry.dynamicImports ?? [], true)
+  const lazyFeatures = [
+    /@codemirror|codemirror/,
+    /marked/,
+    /dompurify/,
+    /ImageCropper/,
+    /WidgetChartBody/,
+    /@simplewebauthn\/browser/,
+  ]
+  const editorChunks = lazyFeatures.flatMap((pattern) => {
+    const keys = Object.entries(manifest)
+      .filter(([key, chunk]) => pattern.test(`${key} ${chunk.src ?? ''} ${chunk.name ?? ''}`))
+      .map(([key]) => key)
+    expect(keys.length, `${pattern} must have a lazy build chunk`).toBeGreaterThan(0)
+    return keys
+  })
+  for (const key of editorChunks) {
+    expect(staticEntry.has(key), `${key} must not be statically imported by the main entry`).toBe(
+      false
+    )
+    expect(dynamicEntry.has(key), `${key} must be reachable through dynamic imports`).toBe(true)
   }
 })

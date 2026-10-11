@@ -37,6 +37,7 @@ export function NotificationTrayStory() {
               body: 'Field Notes 03 is live',
               url: '/admin/posts/3',
               readAt: null,
+              actions: [{ label: 'Mark as read from action', markAsRead: true }],
               createdAt: '2026-10-11T00:00:00.000Z',
             },
           ],

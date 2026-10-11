@@ -11,7 +11,7 @@ import type {
 import { applySearchColumns } from './like.js'
 
 type ListTabs = Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
-type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs }
+type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs; prefix?: string }
 type QueryResult = {
   query: ModelQueryBuilderContract<LucidModel, LucidRow>
   normalized: Record<string, unknown>
@@ -30,7 +30,9 @@ function getColumn(table: TableDefinition, name: string) {
 }
 
 function filterAttribute(filter: TableFilterDefinition) {
-  return filter.kind === 'custom' ? undefined : (filter.attribute ?? filter.name)
+  return filter.kind === 'custom' || filter.kind === 'trashed'
+    ? undefined
+    : (filter.attribute ?? filter.name)
 }
 
 function applySearch(
@@ -88,15 +90,40 @@ function timezone(ctx?: HttpContext) {
   return 'UTC'
 }
 
+export function parseTableParams(
+  params: Record<string, unknown>,
+  prefix?: string
+): Record<string, unknown> {
+  if (!prefix) return params
+  const nested = params[prefix]
+  if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+    return nested as Record<string, unknown>
+  }
+  const marker = `${prefix}[`
+  const parsed: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(params)) {
+    if (!key.startsWith(marker) || !key.endsWith(']')) continue
+    const path = key.slice(marker.length, -1).split('][')
+    let target = parsed
+    for (const segment of path.slice(0, -1)) {
+      const child = target[segment]
+      if (!child || typeof child !== 'object' || Array.isArray(child)) target[segment] = {}
+      target = target[segment] as Record<string, unknown>
+    }
+    target[path[path.length - 1]!] = value
+  }
+  return parsed
+}
+
 export function applyTableQuery(
   query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   table: TableDefinition,
   params: Record<string, unknown>,
   options: QueryOptions = {}
 ): QueryResult {
+  params = parseTableParams(params, options.prefix)
   const normalized: Record<string, unknown> = {}
   if (table.query) table.query(query, options.ctx as HttpContext)
-
   const sort = typeof params.sort === 'string' && params.sort.length ? params.sort : undefined
   const requestedSort =
     sort ??
@@ -114,10 +141,51 @@ export function applyTableQuery(
     else query.orderBy(name, direction)
     normalized.sort = requestedSort
   }
+  if (!requestedSort && table.reorderable) query.orderBy(table.reorderable, 'asc')
 
   if (table.columns.some((column) => column.kind !== 'fragment' && column.searchable)) {
     applySearch(query, table, params.q)
     if (typeof params.q === 'string' && params.q.length > 0) normalized.q = params.q
+  }
+  const individualSearches =
+    params.columns && typeof params.columns === 'object'
+      ? (params.columns as Record<string, unknown>)
+      : {}
+  for (const column of table.columns) {
+    if (
+      column.kind === 'fragment' ||
+      !column.individuallySearchable ||
+      !Object.hasOwn(individualSearches, column.name)
+    )
+      continue
+    const entry = individualSearches[column.name]
+    const value =
+      entry && typeof entry === 'object' ? (entry as Record<string, unknown>).search : undefined
+    if (typeof value !== 'string' || !value.trim()) continue
+    const [relation, attribute] = column.name.split('.', 2)
+    if (relation && attribute) {
+      const whereHas = query.whereHas as unknown as (
+        relation: string,
+        callback: (query: ModelQueryBuilderContract<LucidModel, LucidRow>) => void
+      ) => unknown
+      whereHas.call(query, relation, (relatedQuery) => {
+        const relatedModel = query.model.$getRelation(relation).relatedModel()
+        applySearchColumns(relatedQuery, [attribute], value, relatedModel)
+      })
+    } else applySearchColumns(query, [column.name], value, query.model)
+    normalized.columns = {
+      ...(normalized.columns as Record<string, unknown> | undefined),
+      [column.name]: { search: value },
+    }
+  }
+  const requestedGroup = typeof params.groupBy === 'string' ? params.groupBy : undefined
+  if (requestedGroup && table.groups?.some((group) => group.key === requestedGroup)) {
+    normalized.groupBy = requestedGroup
+  } else if (
+    table.defaultGroup &&
+    table.groups?.some((group) => group.key === table.defaultGroup)
+  ) {
+    normalized.groupBy = table.defaultGroup
   }
 
   const filters =
@@ -127,6 +195,14 @@ export function applyTableQuery(
   for (const filter of table.filters) {
     if (!Object.hasOwn(filters, filter.name)) continue
     const value = filters[filter.name]
+    if (filter.kind === 'trashed') {
+      if (value === 'only' || value === 'with' || value === 'without')
+        normalized.filters = {
+          ...(normalized.filters as Record<string, unknown> | undefined),
+          [filter.name]: value,
+        }
+      continue
+    }
     const attribute = filterAttribute(filter)
     if (filter.kind === 'custom') {
       if (!filter.query) continue
@@ -146,7 +222,10 @@ export function applyTableQuery(
     } else {
       if (!value || typeof value !== 'object') continue
       const range = value as { from?: unknown; to?: unknown }
-      const zone = timezone(options.ctx)
+      const zone =
+        'timezone' in filter && typeof filter.timezone === 'string'
+          ? filter.timezone
+          : timezone(options.ctx)
       const fromDate =
         typeof range.from === 'string'
           ? DateTime.fromISO(range.from, { zone }).startOf('day')

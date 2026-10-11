@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre",
-  "version": "0.2.0-beta.0",
+  "version": "0.3.0-beta.0",
   "description": "Filament-like admin panel for AdonisJS v7 + Inertia React, rendered through json-render specs",
   "type": "module",
   "sideEffects": false,
@@ -78,6 +78,11 @@
       "@rikology/source": "./src/drivers/*.ts",
       "types": "./build/src/drivers/*.d.ts",
       "default": "./build/src/drivers/*.js"
+    },
+    "./testing": {
+      "@rikology/source": "./testing/index.ts",
+      "types": "./build/testing/index.d.ts",
+      "default": "./build/testing/index.js"
     }
   },
   "scripts": {
@@ -93,11 +98,15 @@
   "dependencies": {
     "@json-render/core": "0.21.0",
     "acorn": "^8.19.0",
+    "csv-parse": "^7.0.3",
+    "csv-stringify": "^6.9.0",
     "file-type": "^22.1.1",
+    "marked": "^18.1.0",
     "sanitize-html": "^2.18.0",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
+    "@adonisjs/ally": "^6.0.0",
     "@adonisjs/assembler": "^8.0.0",
     "@adonisjs/auth": "^10.0.0",
     "@adonisjs/bouncer": "^4.0.0",
@@ -107,13 +116,20 @@
     "@adonisjs/limiter": "^3.0.0",
     "@adonisjs/lucid": "^22.0.0",
     "@adonisjs/mail": "^10.0.0",
+    "@adonisjs/queue": "~0.6.2",
     "@adonisjs/session": "^8.0.0",
     "@rikology/adonisjs-notifications": "^1.5.0",
     "@rikology/adonisjs-tenant": "^1.0.0",
+    "@simplewebauthn/server": "^14.0.0",
     "@vinejs/vine": "^4.0.0",
-    "luxon": "^3.4.4"
+    "luxon": "^3.4.4",
+    "otplib": "^13.0.0",
+    "qrcode": "^1.5.0"
   },
   "peerDependenciesMeta": {
+    "@adonisjs/ally": {
+      "optional": true
+    },
     "@adonisjs/assembler": {
       "optional": true
     },
@@ -132,14 +148,27 @@
     "@adonisjs/mail": {
       "optional": true
     },
+    "@adonisjs/queue": {
+      "optional": true
+    },
     "@rikology/adonisjs-notifications": {
       "optional": true
     },
     "@rikology/adonisjs-tenant": {
       "optional": true
+    },
+    "@simplewebauthn/server": {
+      "optional": true
+    },
+    "otplib": {
+      "optional": true
+    },
+    "qrcode": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@adonisjs/ally": "^6.3.2",
     "@adonisjs/assembler": "^8.5.2",
     "@adonisjs/auth": "^10.1.0",
     "@adonisjs/bouncer": "^4.0.1",
@@ -149,6 +178,7 @@
     "@adonisjs/limiter": "^3.0.1",
     "@adonisjs/lucid": "^22.4.2",
     "@adonisjs/mail": "^10.4.0",
+    "@adonisjs/queue": "^0.6.2",
     "@adonisjs/session": "^8.1.0",
     "@adonisjs/shield": "^9.0.0",
     "@japa/api-client": "^3.2.1",
@@ -161,7 +191,9 @@
     "@poppinss/ts-exec": "^1.5.0",
     "@rikology/adonisjs-notifications": "^1.5.2",
     "@rikology/adonisjs-tenant": "^1.0.2",
+    "@simplewebauthn/server": "^14.0.3",
     "@types/luxon": "^3.7.1",
+    "@types/qrcode": "^1.5.6",
     "@types/sanitize-html": "^2.16.2",
     "@vinejs/vine": "^4.4.0",
     "better-sqlite3": "^13.0.3",
@@ -169,7 +201,9 @@
     "copyfiles": "^2.4.1",
     "flydrive": "^2.2.0",
     "luxon": "^3.7.2",
+    "otplib": "^13.5.0",
     "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
     "reflect-metadata": "^0.2.2",
     "tsdown": "^0.23.0"
   },

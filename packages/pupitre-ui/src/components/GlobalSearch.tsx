@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Command } from 'cmdk'
 import type { GlobalSearchResponse } from '@rikology/pupitre/catalog'
 import { globalSearchResponse } from '@rikology/pupitre/catalog'
-import { jsonFetch, t, useVisit } from '@rikology/pupitre-react'
+import { jsonFetch, matchesKeyBinding, t, useVisit } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
-import { matchesKeyBinding } from '../primitives/key_bindings.js'
 import { Button } from '../primitives/index.js'
 
 export type GlobalSearchProps = { search: { url: string; keyBinding: string } | undefined }

@@ -1,0 +1,31 @@
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'users'
+
+  async up() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    const missing: string[] = []
+    for (const column of ['mfa_secret', 'mfa_recovery_codes', 'mfa_enabled_at']) {
+      if (!(await this.schema.hasColumn(this.tableName, column))) missing.push(column)
+    }
+    if (missing.length === 0) return
+    this.schema.alterTable(this.tableName, (table) => {
+      for (const column of missing) {
+        if (column === 'mfa_secret' || column === 'mfa_recovery_codes')
+          table.text(column).nullable()
+        else table.timestamp(column, { useTz: true }).nullable()
+      }
+    })
+  }
+
+  async down() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    const present: string[] = []
+    for (const column of ['mfa_enabled_at', 'mfa_recovery_codes', 'mfa_secret']) {
+      if (await this.schema.hasColumn(this.tableName, column)) present.push(column)
+    }
+    if (present.length === 0) return
+    this.schema.alterTable(this.tableName, (table) => table.dropColumns(...present))
+  }
+}

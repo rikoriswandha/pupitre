@@ -304,6 +304,11 @@ actions.bulk('archive').handle(({ records }) => ...).deselectAfter()
 // bawaan
 actions.create() / edit() / view() / delete() / restore() / forceDelete() / replicate() / export() / import()
 ```
+`actions.export()` tersedia di header maupun bulk; kolom default berasal dari kolom tabel yang tampak, dan `.columns([exportColumn('title').label('Title').formatStateUsing(...)])` dapat mengubah label/format nilai. Ekspor memakai query tabel aktif (search/filter/sort/tab/prefix), format CSV, dan batas `exports.maxSyncRows` (default 1.000): jumlah hingga ambang itu diekspor sinkron. Di atas ambang, bila `jobs` tersedia dan jumlahnya tidak melebihi `exports.maxAsyncRows` (default 100.000), endpoint mengantrekan ekspor; tanpa adapter, ekspor di atas ambang sinkron menghasilkan error limit yang jelas. Progress dicatat per bagian dan file CSV disimpan privat; adapter notifikasi opsional dapat mengabarkan penyelesaian.
+
+`actions.import()` memakai definisi field form resource sebagai import columns (field layout/repeater/file tidak dijadikan kolom langsung). UI menampilkan header CSV dan meminta mapping ke field; kolom dengan mapping kosong (`''`, Skip) diabaikan, baris dipetakan lalu divalidasi dengan VineJS dari schema form yang sama. `.resolveRecord(({ data, ctx }) => ...)` opsional menentukan record untuk update/upsert; tanpa callback row menjadi record baru. Setiap row memakai ability `create` atau `update`, ownership tenancy diisi server, dan transaction/hook resource berjalan per row. Ringkasan menyertakan URL CSV untuk baris gagal. `.async()` pada import + jobs adapter mengembalikan job ID dan menyimpan ringkasan untuk endpoint progress.
+
+`action.async()` berlaku pada bulk action serta `actions.import()`. Handler tetap (`pupitre.export`, `pupitre.import`, `pupitre.bulk`) diregistrasikan saat Pupitre boot, bukan dalam request; payload queue hanya berisi identitas serializable (panel/resource/action, ids, user/tenant IDs, row/file IDs, storage key, mapping, dan query options). Worker memuat ulang user, tenant, definisi dan record lewat query scoped yang sama. Action callbacks pada worker menerima job context (`ctx.pupitre` dengan panel, user, tenant, locale/timezone serta `ctx.params` untuk nested parent), bukan request HTTP; callback tidak boleh mengandalkan response, session atau upload temporer. Tanpa adapter, bulk/import tetap berjalan sinkron.
 
 Protokol di jaringan:
 
@@ -431,6 +436,7 @@ Batasan SSR-safe: tidak ada akses `window`/`document` di module scope; editor (T
 | Create page + tombol | `create` |  |
 | Edit page + tombol | `update` |  |
 | Delete / restore / forceDelete | `delete` / `restore` / `forceDelete` |  |
+| Replicate action | `replicate` lalu fallback `create` | Salinan dibuat dari record dalam scope/tenant aktif; primary key, timestamps, dan kolom soft-delete tidak disalin |
 | Action custom `.can('publish')` | `publish` | Ability dengan nama sama di policy |
 | Reorder | reserved `reorder` | Belum ada endpoint reorder M2; inline edit memakai `update` |
 
@@ -438,7 +444,7 @@ Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan perin
 
 **Adapters.** Semua di `config/pupitre.ts`, tipe interface diekspor dari core:
 
-- `jobs`: `{ dispatch(job, payload): Promise<void> }` untuk export/import besar, scheduled report, bulk action `.async()`. Driver resmi di atas @adonisjs/queue (optional peer, import dari @rikology/pupitre/drivers/queue); kalau `null`, fitur yang membutuhkannya berjalan sinkron dengan batas baris dan menampilkan peringatan.
+- `jobs`: `{ dispatch(job, payload): Promise<void>; register(job, handler): void }` untuk export/import besar, scheduled report, bulk action `.async()`. Driver resmi memakai @adonisjs/queue (optional peer, lazy import dari @rikology/pupitre/drivers/queue); handler harus diregistrasi saat boot agar worker dapat menjalankan job. Tanpa adapter, jalur sinkron dibatasi konfigurasi baris.
 - `realtime`: `{ subscribe(channel, cb), publish(channel, payload) }`; bawaan `polling` (tanpa server push, interval dari panel). `pupitre-transmit` mengimplementasikannya di atas `@adonisjs/transmit`.
 - `storage`: disk Flydrive untuk `fileUpload`, `export`, avatar.
 - `mail`: mailer `@adonisjs/mail` untuk reset password, verifikasi, notifikasi email.
@@ -467,7 +473,7 @@ Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan perin
 
 Hook discovery mengikuti pola `indexPolicies` v7: `indexAdmin()` di `adonisrc.ts` memindai `app/admin/{resources,pages,widgets,relation_managers,panels}` saat dev dan build, menulis `.adonisjs/server/admin.ts` berisi `resources`, `pages`, `widgets` sebagai objek bertipe dengan key slug. Panel mengimpor dari situ; salah ketik slug di `nav.items([...])` jadi error TypeScript.
 
-**Testing utilities.** Subpath `@rikology/pupitre/testing` untuk Japa: `visitResource('posts', 'list')` mengembalikan spec + data terparse, `submitForm('posts', 'create', data)` menjalankan validasi dan hooks tanpa HTTP, `runAction('posts', 'publish', { record })`, serta assertion `assertSpecHas(spec, { type: 'Select', name: 'status' })` dan `assertVisible(spec, state, 'publishedAt')`. Untuk `pupitre-ui`, package menyediakan fixture Playwright (`pupitreTest`, page object `AdminPage` dengan `fillField`, `openAction`, `expectToast`) yang dipakai juga oleh CI Pupitre sendiri terhadap app contoh.
+**Testing utilities.** `@rikology/pupitre/testing` menyediakan helper Japa `visitResource`, `submitForm`, `runAction`, `visitPage` yang berjalan lewat controller asli (authz, tenancy, hooks, transaksi) serta assertion wire-spec `assertSpecHas`, `assertVisible`, dan `assertHidden` (lihat [TESTING.md §7](./TESTING.md)). `@rikology/pupitre-ui/testing` mengekspor fixture Playwright `pupitreTest` (option `pupitre: { panelPath, basePath?, landingPath?, email?, password? }` di `use` config) dan page object `AdminPage` untuk login, navigasi resource, field/action/modal, toast, dan row/table helpers.
 
 ## Spike, roadmap, risiko, open questions
 

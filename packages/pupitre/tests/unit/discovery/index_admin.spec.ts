@@ -7,11 +7,13 @@ test.group('indexAdmin', () => {
   test('generates deterministic resource and panel registries', async ({ assert }) => {
     const files = {
       'panels/admin.ts': '/app/admin/panels/admin.ts',
+      'themes/admin.ts': '/app/admin/themes/admin.ts',
       'resources/user_resource.ts': '/app/admin/resources/user_resource.ts',
       'resources/post_resource.ts': '/app/admin/resources/post_resource.ts',
       'resources/category_resource.ts': '/app/admin/resources/category_resource.ts',
       'resources/APIKey_resource.ts': '/app/admin/resources/APIKey_resource.ts',
       'pages/settings_page.ts': '/app/admin/pages/settings_page.ts',
+      'widgets/posts_by_status_widget.ts': '/app/admin/widgets/posts_by_status_widget.ts',
     }
     const generate = () => {
       const sources = new Map<string, Parameters<IndexGenerator['add']>[1]>()
@@ -70,6 +72,14 @@ export const pages = {
 
 export const panels = {
   "admin": () => import('#admin/panels/admin'),
+} as const
+
+export const themes = {
+  "admin": () => import('#admin/themes/admin'),
+} as const
+
+export const widgets = {
+  "posts-by-status": () => import('#admin/widgets/posts_by_status_widget'),
 } as const
 `
     )

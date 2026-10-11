@@ -16,7 +16,7 @@ Tiga lapis: unit murni (builder, compiler, catalog), integrasi dalam container A
 
 ## 2. Unit: builder & compiler
 
-- **Snapshot spec**: `tests/compiler/fixtures/<name>.resource.ts` → `compile()` → bandingkan dengan `<name>.spec.json`. Snapshot diperbarui eksplisit (`UPDATE_SNAPSHOTS=1`), diff di PR wajib direview.
+- **Snapshot spec**: `tests/compiler/fixtures/<name>.resource.ts` → `compile()` → bandingkan dengan `<name>.spec.json`. Snapshot diperbarui eksplisit (`bin/test.ts --files=<spec> --update-snapshots`, flag `@japa/snapshot`), diff di PR wajib direview.
 - **Closure lifter** diuji dengan tabel kasus:
 
 | Closure | Hasil |
@@ -80,18 +80,31 @@ M2+: auth lengkap (reset password via mail fake), MFA, passkeys (virtual authent
 
 ## 7. Helper publik `@rikology/pupitre/testing`
 
-Dipakai host app, maka diuji di example app:
+Subpath ini menyediakan assertion atas spec wire dan helper integrasi Japa. `assertSpecHas`
+mencari komponen berdasarkan `type`, nama element opsional, dan subset `props`;
+`assertVisible`/`assertHidden` mengevaluasi ekspresi visibility compiler (`$state`, operator
+perbandingan, `$and`, `$or`) terhadap state wire.
 
 ```ts
-const { spec, data } = await visitResource('posts', 'list', { user, tenant, query: { sort: '-createdAt' } })
-assertSpecHas(spec, { type: 'DataTable' })
-const result = await submitForm('posts', 'create', { title: '' }, { user })   // tanpa HTTP
-result.assertErrors({ title: 'required' })
-await runAction('posts', 'publish', { record: post, data: {}, user })
-assertVisible(spec, state, 'publishedAt')
+const page = await visitResource('posts', 'edit', { user, record: post, tenant })
+assertSpecHas(page.spec, { type: 'TextInput', name: 'title' })
+assertVisible(page.spec, page.state, 'publishedAt')
+
+const invalid = await submitForm('posts', 'create', data, { user })
+invalid.assertErrors({ 'items.0.sku': 'required' })
+const saved = await submitForm('posts', 'edit', nextData, { user, record: post })
+saved.assertOk()
+
+const result = await runAction('posts', 'publish', { user, record: post, data })
+await visitPage('analytics', { user })
 ```
 
-Helper berjalan di dalam container test host (`testUtils`), memakai `HttpContextFactory` untuk `ctx` palsu dengan user & tenant.
+`visitResource`/`visitPage` render through the registered controllers. `submitForm` uses the
+resource controller's VineJS validation, authorization, hooks, transaction and persistence;
+`runAction` uses the action controller and returns validation errors for HTTP 422, while denied
+abilities fail as forbidden. Supply `user` for every call; record/page helpers also accept
+`tenant`, and resource helpers accept `panel`. Tests should use an isolated SQLite test database.
+
 
 ## 8. Aturan
 

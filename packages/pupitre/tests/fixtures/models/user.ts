@@ -15,6 +15,11 @@ export default class User extends BaseModel {
   @column() declare avatar: string | null
   @column() declare timezone: string | null
   @column({ columnName: 'current_tenant_id' }) declare currentTenantId: number | null
+  @column() declare provider: string | null
+  @column({ columnName: 'provider_id' }) declare providerId: string | null
+  @column.dateTime({ columnName: 'mfa_enabled_at' }) declare mfaEnabledAt: DateTime | null
+  @column() declare mfaSecret: string | null
+  @column() declare mfaRecoveryCodes: string | null
   @column.dateTime({ autoCreate: true }) declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true }) declare updatedAt: DateTime
 

@@ -102,6 +102,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
 
   const groups = new Map<string, { item: NavItem; sort: number }[]>()
   for (const resource of panel.resources) {
+    if (resource.parent) continue
     if (!(await authorizeResource(ctx, resource, 'viewAny'))) continue
     const group = resource.definition.navigation?.group ?? 'Resources'
     const items = groups.get(group) ?? []

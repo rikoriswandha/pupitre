@@ -3,6 +3,8 @@ import type { ActionBuilder } from '../definition/action.js'
 import type { CustomPageDefinition } from '../definition/custom_page.js'
 import { stableJson } from '../definition/shared.js'
 import { createFormSchema, getComponentDefinition } from './schema/schema.js'
+import type { WidgetBuilder } from './widget.js'
+import type { WidgetFilterDefinition } from '../definition/widget.js'
 
 type FormInput = readonly SchemaNodeBuilder[] | { components?: ComponentDefinition[] }
 
@@ -22,6 +24,8 @@ export type CustomPageBuilder = {
   save(value: NonNullable<CustomPageDefinition['save']>): CustomPageBuilder
   actions(value: readonly ActionBuilder[]): CustomPageBuilder
   component(value: string): CustomPageBuilder
+  widgets(value: readonly WidgetBuilder[]): CustomPageBuilder
+  filters(value: readonly WidgetFilterDefinition[]): CustomPageBuilder
   toDefinition(): CustomPageDefinition
   toJSON(): string
 }
@@ -71,6 +75,14 @@ class PageBuilder implements CustomPageBuilder {
   }
   component(value: string) {
     return this.change({ component: value })
+  }
+  widgets(value: readonly WidgetBuilder[]) {
+    return this.change({ widgets: value.map((widget) => widget.toDefinition()) })
+  }
+  filters(value: readonly WidgetFilterDefinition[]) {
+    return this.change({
+      filters: value.map((filter) => ({ ...filter, options: [...filter.options] })),
+    })
   }
   toDefinition() {
     return this.definition

@@ -68,12 +68,39 @@ export function parseInZone(value: string | null | undefined, timezone: string):
   const hasOffset = /([zZ]|[+-]\d{2}:?\d{2})$/.test(value)
   const parsed = hasOffset
     ? DateTime.fromISO(value, { setZone: true })
-    : DateTime.fromISO(value, { zone: timezone })
-  return parsed.isValid ? parsed.toUTC() : null
+    : DateTime.fromISO(value, { zone: timezone, setZone: true })
+  if (!parsed.isValid) return null
+  const possible = parsed.getPossibleOffsets()
+  const local = possible.reduce((earlier, candidate) =>
+    candidate.toMillis() < earlier.toMillis() ? candidate : earlier
+  )
+  // Luxon normalizes nonexistent wall times across a DST gap. Reject that
+  // normalization rather than silently storing a different clock time.
+  if (!hasOffset && /T/.test(value)) {
+    const wall = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?$/)
+    if (wall) {
+      const [, year, month, day, hour, minute, second = '0', fraction = '0'] = wall
+      if (
+        local.year !== Number(year) ||
+        local.month !== Number(month) ||
+        local.day !== Number(day) ||
+        local.hour !== Number(hour) ||
+        local.minute !== Number(minute) ||
+        local.second !== Number(second) ||
+        local.millisecond !== Number((fraction + '000').slice(0, 3))
+      ) {
+        return null
+      }
+    }
+  }
+  return local.toUTC()
 }
 
 export function formatDate(value: DateInput, context: FormatContext, format?: string) {
-  const dt = toDateTime(value)
+  const calendarDate = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const dt = calendarDate
+    ? DateTime.fromISO(value as string, { zone: context.timezone })
+    : toDateTime(value)
   if (!dt) {
     return null
   }

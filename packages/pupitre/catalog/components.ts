@@ -4,9 +4,12 @@ import {
   actionDescriptor,
   fileUploadDescriptor,
   formDescriptor,
+  builderDescriptor,
   option,
   repeaterDescriptor,
   tableDescriptor,
+  widgetDescriptor,
+  relationDescriptor,
 } from './wire.js'
 
 const str = dynamic(z.string())
@@ -24,6 +27,10 @@ const common = {
   label: nullableStr.optional(),
   helperText: nullableStr.optional(),
   hint: nullableStr.optional(),
+  hintIcon: str.optional(),
+  hintColor: str.optional(),
+  hintAction: actionDescriptor.optional(),
+  hintTooltip: str.optional(),
   required: bool.optional(),
   disabled: bool.optional(),
   readOnly: bool.optional(),
@@ -70,7 +77,7 @@ export const catalogEvents = {
 } as const
 
 export const components = {
-  Text: leaf({
+  'Text': leaf({
     ...valueProps(z.string().nullable()),
     live: liveProp,
     type: z.enum(['text', 'email', 'password', 'url', 'tel']).optional(),
@@ -81,11 +88,13 @@ export const components = {
     suffixIcon: str.optional(),
     maxLength: num.optional(),
     mask: str.optional(),
+    prefixAction: actionDescriptor.optional(),
+    suffixAction: actionDescriptor.optional(),
     autocomplete: str.optional(),
     datalist: dynamic(z.array(z.string())).optional(),
     revealable: bool.optional(),
   }),
-  Textarea: leaf({
+  'Textarea': leaf({
     ...valueProps(z.string().nullable()),
     live: liveProp,
     rows: num.optional(),
@@ -93,7 +102,7 @@ export const components = {
     maxLength: num.optional(),
     placeholder: str.optional(),
   }),
-  Number: leaf({
+  'Number': leaf({
     ...valueProps(z.number().nullable()),
     live: liveProp,
     min: num.optional(),
@@ -103,8 +112,16 @@ export const components = {
     suffix: str.optional(),
     inputMode: z.enum(['numeric', 'decimal']).optional(),
   }),
-  Hidden: leaf({ ...valueProps(z.unknown()) }),
-  Select: leaf({
+  'Slider': leaf({
+    ...valueProps(z.union([z.number(), z.tuple([z.number(), z.number()]), z.null()])),
+    min: num.optional(),
+    max: num.optional(),
+    step: num.optional(),
+    marks: dynamic(z.array(z.number())).optional(),
+    range: bool.optional(),
+  }),
+  'Hidden': leaf({ ...valueProps(z.unknown()) }),
+  'Select': leaf({
     ...valueProps(
       z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()])), z.null()])
     ),
@@ -120,21 +137,21 @@ export const components = {
     suffixAction: actionDescriptor.optional(),
     clearable: bool.optional(),
   }),
-  Checkbox: leaf({ ...valueProps(z.boolean()), inline: bool.optional() }),
-  CheckboxList: leaf({
+  'Checkbox': leaf({ ...valueProps(z.boolean()), inline: bool.optional() }),
+  'CheckboxList': leaf({
     ...valueProps(z.array(z.union([z.string(), z.number()]))),
     options: optionList.optional(),
     columns: num.optional(),
     searchable: bool.optional(),
     bulkToggleable: bool.optional(),
   }),
-  Radio: leaf({
+  'Radio': leaf({
     ...valueProps(z.union([z.string(), z.number(), z.null()])),
     options: optionList.optional(),
     inline: bool.optional(),
     descriptions: dynamic(z.record(z.string(), z.string())).optional(),
   }),
-  Toggle: leaf({
+  'Toggle': leaf({
     ...valueProps(z.boolean()),
     onIcon: str.optional(),
     offIcon: str.optional(),
@@ -142,7 +159,7 @@ export const components = {
     offColor: str.optional(),
     inline: bool.optional(),
   }),
-  ToggleButtons: leaf({
+  'ToggleButtons': leaf({
     ...valueProps(
       z.union([z.string(), z.number(), z.array(z.union([z.string(), z.number()])), z.null()])
     ),
@@ -152,7 +169,7 @@ export const components = {
     icons: dynamic(z.record(z.string(), z.string())).optional(),
     colors: dynamic(z.record(z.string(), z.string())).optional(),
   }),
-  Date: leaf({
+  'Date': leaf({
     ...valueProps(z.string().nullable()),
     min: str.optional(),
     max: str.optional(),
@@ -163,7 +180,7 @@ export const components = {
     weekStartsOn: num.optional(),
     disabledDates: dynamic(z.array(z.string())).optional(),
   }),
-  DateTime: leaf({
+  'DateTime': leaf({
     ...valueProps(z.string().nullable()),
     min: str.optional(),
     max: str.optional(),
@@ -174,7 +191,7 @@ export const components = {
     weekStartsOn: num.optional(),
     disabledDates: dynamic(z.array(z.string())).optional(),
   }),
-  Time: leaf({
+  'Time': leaf({
     ...valueProps(z.string().nullable()),
     min: str.optional(),
     max: str.optional(),
@@ -185,12 +202,12 @@ export const components = {
     weekStartsOn: num.optional(),
     disabledDates: dynamic(z.array(z.string())).optional(),
   }),
-  Color: leaf({
+  'Color': leaf({
     ...valueProps(z.string()),
     format: z.enum(['hex', 'rgb', 'hsl']).optional(),
     presets: dynamic(z.array(z.string())).optional(),
   }),
-  Tags: leaf({
+  'Tags': leaf({
     ...valueProps(z.array(z.string())),
     live: liveProp,
     suggestions: dynamic(z.array(z.string())).optional(),
@@ -198,7 +215,7 @@ export const components = {
     maxTags: num.optional(),
     reorderable: bool.optional(),
   }),
-  KeyValue: leaf({
+  'KeyValue': leaf({
     ...valueProps(z.record(z.string(), z.string())),
     keyLabel: str.optional(),
     live: liveProp,
@@ -209,22 +226,36 @@ export const components = {
     keyPlaceholder: str.optional(),
     valuePlaceholder: str.optional(),
   }),
-  RichEditor: leaf({
+  'RichEditor': leaf({
     ...valueProps(z.string().nullable()),
     toolbar: dynamic(z.array(z.string())).optional(),
     uploadUrl: str.optional(),
     minHeight: num.optional(),
     maxHeight: num.optional(),
   }),
-  FileUpload: leaf({
+  'MarkdownEditor': leaf({
+    ...valueProps(z.string().nullable()),
+    toolbar: dynamic(z.array(z.string())).optional(),
+    uploadUrl: str.optional(),
+    preview: bool.optional(),
+  }),
+  'CodeEditor': leaf({
+    ...valueProps(z.string().nullable()),
+    language: z
+      .enum(['json', 'javascript', 'typescript', 'html', 'css', 'markdown', 'sql', 'python', 'php'])
+      .optional(),
+    lineNumbers: bool.optional(),
+    minHeight: num.optional(),
+  }),
+  'FileUpload': leaf({
     ...valueProps(z.union([z.string(), z.array(z.string()), z.null()])),
     descriptor: fileUploadDescriptor,
   }),
-  Repeater: container(
+  'Repeater': container(
     { descriptor: repeaterDescriptor, value: dynamic(z.array(z.unknown())).optional() },
     'Repeater emits add, remove, move, clone, and collapse events.'
   ),
-  RepeaterItem: container(
+  'RepeaterItem': container(
     {
       index: dynamic(z.number()),
       collapsed: bool.optional(),
@@ -232,8 +263,16 @@ export const components = {
     },
     'RepeaterItem emits remove, move, clone, and collapse events.'
   ),
-  Form: container({ ...formDescriptor.shape, ...common }, 'Form emits submit and cancel events.'),
-  Grid: container({
+  'Builder': container(
+    { descriptor: builderDescriptor, value: dynamic(z.array(z.unknown())).optional() },
+    'Builder manages typed content blocks using block templates.'
+  ),
+  'BuilderItem': container(
+    { block: z.string(), index: dynamic(z.number()) },
+    'BuilderItem renders one typed content block.'
+  ),
+  'Form': container({ ...formDescriptor.shape, ...common }, 'Form emits submit and cancel events.'),
+  'Grid': container({
     columns: dynamic(
       z.union([
         z.number(),
@@ -248,7 +287,7 @@ export const components = {
     ).optional(),
     gap: num.optional(),
   }),
-  Section: container({
+  'Section': container({
     heading: str.optional(),
     description: str.optional(),
     icon: str.optional(),
@@ -260,8 +299,8 @@ export const components = {
     footerActions: dynamic(z.array(actionDescriptor)).optional(),
     ...common,
   }),
-  Fieldset: container({ ...common, columns: num.optional() }),
-  Tabs: container({
+  'Fieldset': container({ ...common, columns: num.optional() }),
+  'Tabs': container({
     id: z.string(),
     tabs: dynamic(
       z.array(
@@ -276,7 +315,7 @@ export const components = {
     active: str.optional(),
     persistInUrl: bool.optional(),
   }),
-  Tab: container({
+  'Tab': container({
     key: z.string(),
     label: str,
     helperText: nullableStr.optional(),
@@ -289,35 +328,74 @@ export const components = {
     columnSpan: common.columnSpan,
     extraAttributes: common.extraAttributes,
   }),
-  Group: container({ relationship: str.optional(), ...common }),
-  Split: container({ from: z.enum(['md', 'lg']), ratio: num.optional(), ...common }),
-  Placeholder: leaf({
+  'Wizard': container({
+    id: z.string(),
+    steps: dynamic(
+      z.array(
+        z.object({
+          key: z.string(),
+          label: z.string(),
+          description: z.string().optional(),
+          icon: z.string().optional(),
+          fields: z.array(z.string()).optional(),
+        })
+      )
+    ),
+    step: dynamic(z.number()),
+    skippable: bool.optional(),
+    submitLabel: str.optional(),
+  }),
+  'Step': container({
+    key: z.string(),
+    label: str,
+    description: str.optional(),
+    icon: str.optional(),
+  }),
+  'Group': container({ relationship: str.optional(), ...common }),
+  'Split': container({ from: z.enum(['md', 'lg']), ratio: num.optional(), ...common }),
+  'Placeholder': leaf({
     content: dynamic(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
     ...common,
   }),
-  Html: leaf({ content: str, ...common }),
-  Divider: leaf({ ...common }),
-  Actions: leaf({
+  'Html': leaf({ content: str, ...common }),
+  'Divider': leaf({ ...common }),
+  'Actions': leaf({
     actions: dynamic(z.array(actionDescriptor)),
     alignment: z.enum(['start', 'center', 'end']).optional(),
     fullWidth: bool.optional(),
   }),
-  View: container({
+  'View': container({
     component: z.string(),
     props: z.record(z.string(), z.unknown()).optional(),
     ...common,
   }),
-  Fragment: container({ ...common }),
-  DataTable: leaf(
+  'Fragment': container({ ...common }),
+  'DataTable': leaf(
     { descriptor: tableDescriptor, ...common },
     'DataTable emits reload, column, reorder, and action events.'
   ),
-  ActionBar: leaf(
+  'Widget.Stats': leaf(
+    { descriptor: widgetDescriptor, data: z.unknown().optional() },
+    'Displays statistics and optional sparkline data.'
+  ),
+  'Widget.Chart': leaf(
+    { descriptor: widgetDescriptor, data: z.unknown().optional() },
+    'Displays chart data using a lazy chart renderer.'
+  ),
+  'Widget.Table': leaf(
+    { descriptor: widgetDescriptor, data: z.unknown().optional() },
+    'Displays table widget data.'
+  ),
+  'RelationManager': leaf(
+    { descriptor: relationDescriptor, ...common },
+    'RelationManager shows one related table with contextual badge, actions, and read-only state.'
+  ),
+  'ActionBar': leaf(
     { actions: dynamic(z.array(actionDescriptor)), ...common },
     'ActionBar emits action events.'
   ),
-  Infolist: container({ ...common }),
-  TextEntry: leaf({
+  'Infolist': container({ ...common }),
+  'TextEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -326,9 +404,10 @@ export const components = {
     icon: str.optional(),
     placeholder: str.optional(),
     html: bool.optional(),
+    markdown: bool.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  IconEntry: leaf({
+  'IconEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -338,7 +417,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  ImageEntry: leaf({
+  'ImageEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -348,7 +427,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  ColorEntry: leaf({
+  'ColorEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -358,7 +437,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  KeyValueEntry: leaf({
+  'KeyValueEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -368,7 +447,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  RepeatableEntry: container({
+  'RepeatableEntry': container({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -378,7 +457,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  CodeEntry: leaf({
+  'CodeEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -388,7 +467,7 @@ export const components = {
     placeholder: str.optional(),
     columnSpan: dynamic(z.union([z.number(), z.literal('full')])).optional(),
   }),
-  BadgeEntry: leaf({
+  'BadgeEntry': leaf({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
     copyable: bool.optional(),
@@ -400,52 +479,63 @@ export const components = {
   }),
 } satisfies Record<string, { props: z.ZodObject<any>; slots: string[]; description: string }>
 const componentDescriptions: Record<keyof typeof components, string> = {
-  Text: 'Captures one line of text with optional input affordances.',
-  Textarea: 'Captures multiline text with optional autosizing.',
-  Number: 'Captures a numeric value with range and step constraints.',
-  Hidden: 'Carries a value in form state without rendering a visible control.',
-  Select: 'Selects one or more values from static or fetched options.',
-  Checkbox: 'Captures a single boolean choice.',
-  CheckboxList: 'Selects multiple values from a visible option list.',
-  Radio: 'Selects one value from mutually exclusive options.',
-  Toggle: 'Switches a boolean setting on or off.',
-  ToggleButtons: 'Selects one or multiple values using a button group.',
-  Date: 'Captures a calendar date.',
-  DateTime: 'Captures a date and time in the configured timezone.',
-  Time: 'Captures a time of day.',
-  Color: 'Captures a color value in the selected color format.',
-  Tags: 'Edits an ordered list of text tags.',
-  KeyValue: 'Edits a string-to-string key-value collection.',
-  RichEditor: 'Edits formatted HTML content with a configurable toolbar.',
-  FileUpload: 'Uploads, previews, reorders, and manages file keys.',
-  Repeater:
+  'Text': 'Captures one line of text with optional input affordances.',
+  'Textarea': 'Captures multiline text with optional autosizing.',
+  'Number': 'Captures a numeric value with range and step constraints.',
+  'Slider': 'Adjusts one value or a bounded pair using accessible range controls.',
+  'MarkdownEditor': 'Edits Markdown source and renders a sanitized preview.',
+  'CodeEditor': 'Edits source code using a language-specific code editor.',
+  'Hidden': 'Carries a value in form state without rendering a visible control.',
+  'Select': 'Selects one or more values from static or fetched options.',
+  'Checkbox': 'Captures a single boolean choice.',
+  'CheckboxList': 'Selects multiple values from a visible option list.',
+  'Radio': 'Selects one value from mutually exclusive options.',
+  'Toggle': 'Switches a boolean setting on or off.',
+  'ToggleButtons': 'Selects one or multiple values using a button group.',
+  'Date': 'Captures a calendar date.',
+  'DateTime': 'Captures a date and time in the configured timezone.',
+  'Time': 'Captures a time of day.',
+  'Color': 'Captures a color value in the selected color format.',
+  'Tags': 'Edits an ordered list of text tags.',
+  'KeyValue': 'Edits a string-to-string key-value collection.',
+  'RichEditor': 'Edits formatted HTML content with a configurable toolbar.',
+  'FileUpload': 'Uploads, previews, reorders, and manages file keys.',
+  'Repeater':
     'Renders and manages a repeated collection; emits add, remove, move, clone, and collapse.',
-  RepeaterItem: 'Renders one repeated item; emits remove, move, clone, and collapse.',
-  Form: 'Submits form state to its configured endpoint; emits submit and cancel.',
-  Grid: 'Arranges child components in a responsive column grid.',
-  Section: 'Groups related content under an optional heading and collapse control.',
-  Fieldset: 'Groups related fields under a fieldset label.',
-  Tabs: 'Selects a tab while keeping each tab panel mounted.',
-  Tab: 'Defines one panel within its parent Tabs component.',
-  Group: 'Groups child components and may annotate a relationship.',
-  Split: 'Places two child regions side by side at a responsive breakpoint.',
-  Placeholder: 'Displays literal or expression-derived placeholder content.',
-  Html: 'Displays server-sanitized HTML content.',
-  Divider: 'Separates adjacent content visually.',
-  Actions: 'Renders a collection of action descriptors.',
-  View: 'Renders a named host-registered component with supplied props.',
-  Fragment: 'Groups child components without adding a wrapper.',
-  DataTable: 'Renders server-provided table data; emits reload, column, reorder, and action.',
-  ActionBar: 'Renders available actions; emits action when one is selected.',
-  Infolist: 'Groups read-only entries describing a record.',
-  TextEntry: 'Displays a formatted text value with optional copy and link actions.',
-  IconEntry: 'Displays a formatted icon value.',
-  ImageEntry: 'Displays an image value.',
-  ColorEntry: 'Displays a formatted color value.',
-  KeyValueEntry: 'Displays a formatted key-value collection.',
-  RepeatableEntry: 'Renders a read-only repeated collection.',
-  CodeEntry: 'Displays a formatted code value.',
-  BadgeEntry: 'Displays a formatted value as a badge.',
+  'RepeaterItem': 'Renders one repeated item; emits remove, move, clone, and collapse.',
+  'Builder': 'Adds and edits typed content blocks.',
+  'BuilderItem': 'Renders the fields for one content block.',
+  'Form': 'Submits form state to its configured endpoint; emits submit and cancel.',
+  'Grid': 'Arranges child components in a responsive column grid.',
+  'Section': 'Groups related content under an optional heading and collapse control.',
+  'Fieldset': 'Groups related fields under a fieldset label.',
+  'Tabs': 'Selects a tab while keeping each tab panel mounted.',
+  'Tab': 'Defines one panel within its parent Tabs component.',
+  'Wizard': 'Shows one step of a multi-step form while keeping every step mounted.',
+  'Step': 'Defines one wizard step.',
+  'Group': 'Groups child components and may annotate a relationship.',
+  'Split': 'Places two child regions side by side at a responsive breakpoint.',
+  'Placeholder': 'Displays literal or expression-derived placeholder content.',
+  'Html': 'Displays server-sanitized HTML content.',
+  'Divider': 'Separates adjacent content visually.',
+  'Actions': 'Renders a collection of action descriptors.',
+  'View': 'Renders a named host-registered component with supplied props.',
+  'Fragment': 'Groups child components without adding a wrapper.',
+  'DataTable': 'Renders server-provided table data; emits reload, column, reorder, and action.',
+  'Widget.Stats': 'Displays statistics and sparkline data.',
+  'Widget.Chart': 'Displays a chart widget.',
+  'Widget.Table': 'Displays table widget data.',
+  'RelationManager': 'Renders one relation-manager table and its contextual badge.',
+  'ActionBar': 'Renders available actions; emits action when one is selected.',
+  'Infolist': 'Groups read-only entries describing a record.',
+  'TextEntry': 'Displays a formatted text value with optional copy and link actions.',
+  'IconEntry': 'Displays a formatted icon value.',
+  'ImageEntry': 'Displays an image value.',
+  'ColorEntry': 'Displays a formatted color value.',
+  'KeyValueEntry': 'Displays a formatted key-value collection.',
+  'RepeatableEntry': 'Renders a read-only repeated collection.',
+  'CodeEntry': 'Displays a formatted code value.',
+  'BadgeEntry': 'Displays a formatted value as a badge.',
 }
 
 for (const name of Object.keys(components) as Array<keyof typeof components>) {

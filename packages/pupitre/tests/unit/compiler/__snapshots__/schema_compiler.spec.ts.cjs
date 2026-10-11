@@ -508,6 +508,8 @@ exports[`schema compiler > snapshots every compiler-emitted catalog component an
           "directory": undefined,
           "downloadable": false,
           "image": false,
+          "imageEditor": false,
+          "imageEditorAspectRatios": undefined,
           "maxFiles": undefined,
           "maxSize": undefined,
           "multiple": false,

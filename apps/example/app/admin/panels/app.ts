@@ -1,6 +1,7 @@
 import { actions, definePanel, nav, pages } from '@rikology/pupitre'
 import { middleware } from '#start/kernel'
 import userResource from '../resources/user_resource.js'
+import appTheme from '../themes/app.js'
 
 export default definePanel('app')
   .path('/app')
@@ -13,3 +14,4 @@ export default definePanel('app')
   ])
   .navigation([nav.group('Administration').items(['users'])])
   .brand({ name: 'Pupitre App' })
+  .theme(appTheme)

@@ -1,14 +1,27 @@
+import { Builder } from './components/Builder.js'
+import { BuilderItem } from './components/BuilderItem.js'
+import { Step } from './components/Step.js'
+import { Wizard } from './components/Wizard.js'
 import { ActionBar } from './components/ActionBar.js'
 import { Actions } from './components/Actions.js'
 import { AuthShell } from './components/AuthShell.js'
 import { BadgeEntry } from './components/BadgeEntry.js'
 import { Checkbox } from './components/Checkbox.js'
 import { CheckboxList } from './components/CheckboxList.js'
+import { CodeEditor } from './components/CodeEditor.js'
+import { ImportModal } from './components/ImportModal.js'
 import { CodeEntry } from './components/CodeEntry.js'
 import { Color } from './components/Color.js'
 import { ColorEntry } from './components/ColorEntry.js'
 import { ConfirmDialog } from './components/ConfirmDialog.js'
 import { DataTable } from './components/DataTable.js'
+import { RelationManager } from './components/RelationManager.js'
+import { WidgetGrid } from './components/WidgetGrid.js'
+import {
+  WidgetStatsRenderer,
+  WidgetChartRenderer,
+  WidgetTableRenderer,
+} from './components/WidgetCatalogAdapters.js'
 import { Date } from './components/Date.js'
 import { DateTime } from './components/DateTime.js'
 import { Divider } from './components/Divider.js'
@@ -24,10 +37,12 @@ import { IconEntry } from './components/IconEntry.js'
 import { ImageEntry } from './components/ImageEntry.js'
 import { Infolist } from './components/Infolist.js'
 import { KeyValue } from './components/KeyValue.js'
+import { MarkdownEditor } from './components/MarkdownEditor.js'
 import { KeyValueEntry } from './components/KeyValueEntry.js'
 import { Modal } from './components/Modal.js'
 import { NotFound } from './components/NotFound.js'
 import { Number } from './components/Number.js'
+import { Slider } from './components/Slider.js'
 import { Placeholder } from './components/Placeholder.js'
 import { Radio } from './components/Radio.js'
 import { RepeatableEntry } from './components/RepeatableEntry.js'
@@ -54,6 +69,7 @@ export const components = {
   Text,
   Textarea,
   Number,
+  Slider,
   Hidden,
   Select,
   Checkbox,
@@ -67,14 +83,20 @@ export const components = {
   Color,
   Tags,
   KeyValue,
+  MarkdownEditor,
+  CodeEditor,
   RichEditor,
   FileUpload,
+  Builder,
+  BuilderItem,
   Repeater,
   RepeaterItem,
   Form,
   Grid,
   Section,
   Fieldset,
+  Wizard,
+  Step,
   Tabs,
   Tab,
   Group,
@@ -87,6 +109,10 @@ export const components = {
   View,
   Fragment,
   DataTable,
+  'Widget.Stats': WidgetStatsRenderer,
+  'Widget.Chart': WidgetChartRenderer,
+  'Widget.Table': WidgetTableRenderer,
+  RelationManager,
   ActionBar,
   Infolist,
   TextEntry,
@@ -102,14 +128,22 @@ export const components = {
   Modal,
   ConfirmDialog,
   NotFound,
+  ImportModal,
+  WidgetGrid,
 } as const
 
 export {
+  RelationManager,
+  Builder,
+  BuilderItem,
+  Step,
+  Wizard,
   ActionBar,
   Actions,
   BadgeEntry,
   Checkbox,
   CheckboxList,
+  CodeEditor,
   CodeEntry,
   Color,
   ColorEntry,
@@ -130,6 +164,7 @@ export {
   ImageEntry,
   Infolist,
   KeyValue,
+  MarkdownEditor,
   KeyValueEntry,
   Modal,
   NotFound,
@@ -141,6 +176,7 @@ export {
   RepeaterItem,
   RichEditor,
   Section,
+  Slider,
   Select,
   Shell,
   Split,
@@ -155,6 +191,8 @@ export {
   Toggle,
   ToggleButtons,
   View,
+  ImportModal,
+  WidgetGrid,
 }
 export {
   ViewRegistryProvider,

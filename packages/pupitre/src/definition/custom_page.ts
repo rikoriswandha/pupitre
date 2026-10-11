@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import type { WidgetDefinition, WidgetFilterDefinition } from './widget.js'
 import type { ActionDefinition } from './action.js'
 import type { SchemaNodeDefinition } from './schema.js'
 
@@ -20,6 +21,8 @@ export type CustomPageDefinition = {
   fill?: (ctx: HttpContext) => Record<string, unknown> | Promise<Record<string, unknown>>
   save?: (args: { data: Record<string, unknown>; ctx: HttpContext }) => unknown | Promise<unknown>
   actions: ActionDefinition[]
+  widgets?: WidgetDefinition[]
+  filters?: WidgetFilterDefinition[]
   component?: string
   toJSON(): string
 }

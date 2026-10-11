@@ -42,6 +42,24 @@ function item(row: NotificationRow): PupitreNotificationItem {
     type,
     title: String(data.title ?? row.type),
     ...(typeof data.body === 'string' ? { body: data.body } : {}),
+    ...(Array.isArray(data.actions)
+      ? {
+          actions: data.actions.flatMap((entry) => {
+            if (!entry || typeof entry !== 'object' || !('label' in entry)) return []
+            const value = entry as Record<string, unknown>
+            return [
+              {
+                label: String(value.label),
+                ...(typeof value.url === 'string' ? { url: value.url } : {}),
+                ...(value.method === 'get' || value.method === 'post'
+                  ? { method: value.method }
+                  : {}),
+                ...(value.markAsRead === true ? { markAsRead: true } : {}),
+              },
+            ]
+          }),
+        }
+      : {}),
     ...(typeof data.url === 'string' ? { url: data.url } : {}),
     readAt: timestamp(row.read_at),
     createdAt,
@@ -67,7 +85,8 @@ export function notificationsAdapter(): NotificationsAdapter {
     }
   }
 
-  async function queryDatabase() {
+  async function queryDatabase(ctx?: HttpContext) {
+    if (ctx) return ctx.containerResolver.make('lucid.db')
     try {
       const { default: db } = await import('@adonisjs/lucid/services/db')
       return db
@@ -98,9 +117,9 @@ export function notificationsAdapter(): NotificationsAdapter {
         await import('@rikology/adonisjs-notifications/services/main')
       await notifications.sendNow(user, new PupitreNotification())
     },
-    async inbox(user, options) {
+    async inbox(user, options, ctx?: HttpContext) {
       await loadPeer()
-      const db = await queryDatabase()
+      const db = await queryDatabase(ctx)
       const owner = serializedOwner(user)
       const page = Math.max(1, options.page)
       const perPage = Math.max(1, options.perPage)
@@ -130,9 +149,9 @@ export function notificationsAdapter(): NotificationsAdapter {
         },
       }
     },
-    async unreadCount(user) {
+    async unreadCount(user, ctx?: HttpContext) {
       await loadPeer()
-      const db = await queryDatabase()
+      const db = await queryDatabase(ctx)
       const owner = serializedOwner(user)
       const result = await db
         .from('notifications')
@@ -143,9 +162,9 @@ export function notificationsAdapter(): NotificationsAdapter {
         .first()
       return Number(result?.total ?? 0)
     },
-    async markRead(user, ids) {
+    async markRead(user, ids, ctx?: HttpContext) {
       await loadPeer()
-      const db = await queryDatabase()
+      const db = await queryDatabase(ctx)
       const owner = serializedOwner(user)
       const query = db
         .from('notifications')

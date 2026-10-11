@@ -1,3 +1,4 @@
+import type { WidgetDefinition } from './widget.js'
 import type { QueryCallback } from './table.js'
 export type PageKind = 'list' | 'create' | 'edit' | 'view'
 export type PageDefinition = {
@@ -5,4 +6,7 @@ export type PageDefinition = {
   component?: string
   redirectTo?: 'edit' | 'list' | 'view'
   tabs?: Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
+  widgets?: WidgetDefinition[]
+  footerWidgets?: WidgetDefinition[]
+  modals?: boolean
 }

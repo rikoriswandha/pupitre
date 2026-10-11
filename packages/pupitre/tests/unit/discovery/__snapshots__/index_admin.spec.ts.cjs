@@ -13,5 +13,13 @@ export const pages = {
 export const panels = {
   \\"admin\\": () => import('#admin/panels/admin'),
 } as const
+
+export const themes = {
+  \\"admin\\": () => import('#admin/themes/admin'),
+} as const
+
+export const widgets = {
+  \\"posts-by-status\\": () => import('#admin/widgets/posts_by_status_widget'),
+} as const
 "`
 

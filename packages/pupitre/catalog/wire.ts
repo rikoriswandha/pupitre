@@ -50,9 +50,16 @@ export const actionDescriptor = z.object({
             kind: z.enum(['link', 'direct', 'confirm', 'form']),
             url: z.string(),
             enabled: z.boolean(),
+            method: z.enum(['get', 'post', 'put', 'patch', 'delete']).optional(),
+            openInNewTab: z.boolean().optional(),
+            confirm: z
+              .object({ heading: z.string(), description: z.string().optional() })
+              .optional(),
           })
         )
         .optional(),
+      submit: z.boolean().optional(),
+      cancel: z.boolean().optional(),
     })
     .optional(),
   deepLink: z.boolean().optional(),
@@ -77,18 +84,21 @@ export const columnDescriptor = z.object({
     'color',
     'toggle',
     'select',
+    'checkbox',
+    'textInput',
     'custom',
     'fragment',
   ]),
   sortable: z.boolean(),
   searchable: z.boolean(),
   toggleable: z.object({ hiddenByDefault: z.boolean() }).optional(),
+  individuallySearchable: z.boolean().optional(),
   alignment: z.enum(['start', 'center', 'end']).optional(),
   wrap: z.boolean().optional(),
   width: z.string().optional(),
   props: z.record(z.string(), z.unknown()),
   editable: z.object({ url: z.string() }).optional(),
-  summarize: z.array(z.enum(['sum', 'avg', 'count', 'min', 'max'])).optional(),
+  summarize: z.array(z.enum(['sum', 'avg', 'count', 'min', 'max', 'range'])).optional(),
 })
 export type ColumnDescriptor = z.infer<typeof columnDescriptor>
 const filterForm = z
@@ -104,25 +114,32 @@ export const filterDescriptor = z.discriminatedUnion('type', [
   }),
   z.object({ type: z.literal('ternary'), name: z.string(), label: z.string(), form: filterForm }),
   z.object({ type: z.literal('dateRange'), name: z.string(), label: z.string(), form: filterForm }),
+  z.object({ type: z.literal('trashed'), name: z.string(), label: z.string(), form: filterForm }),
   z.object({ type: z.literal('custom'), name: z.string(), label: z.string(), form: filterForm }),
 ])
 export type FilterDescriptor = z.infer<typeof filterDescriptor>
 export const tableDescriptor = z.object({
   id: z.string(),
   url: z.string(),
+  dataProp: z.string().optional(),
+  queryPrefix: z.string().optional(),
   columns: z.array(columnDescriptor),
   filters: z.array(filterDescriptor),
   filtersLayout: z.enum(['dropdown', 'above', 'slideover']),
   tabs: z
     .array(z.object({ key: z.string(), label: z.string(), badge: z.number().optional() }))
     .optional(),
-  groups: z.array(z.object({ key: z.string(), label: z.string() })).optional(),
+  groups: z
+    .array(z.object({ key: z.string(), label: z.string(), collapsible: z.boolean().optional() }))
+    .optional(),
   defaultSort: z.object({ column: z.string(), direction: z.enum(['asc', 'desc']) }).optional(),
   perPageOptions: z.array(z.union([z.number(), z.literal('all')])),
   searchable: z.boolean(),
   searchDebounce: z.number(),
   reorderable: z.object({ url: z.string() }).optional(),
   poll: z.number().optional(),
+  deferFilters: z.boolean().optional(),
+  deferLoading: z.boolean().optional(),
   selectable: z.boolean(),
   striped: z.boolean().optional(),
   bulkActions: z.array(actionDescriptor),
@@ -135,14 +152,42 @@ export const tableDescriptor = z.object({
     })
     .optional(),
   layout: z.enum(['table', 'grid']),
+  gridColumns: z
+    .object({
+      default: z.number().optional(),
+      md: z.number().optional(),
+      xl: z.number().optional(),
+    })
+    .optional(),
 })
 export type TableDescriptor = z.infer<typeof tableDescriptor>
+export const relationDescriptor = z.object({
+  key: z.string(),
+  relation: z.string(),
+  label: z.string(),
+  group: z.string().optional(),
+  icon: z.string().optional(),
+  badge: z.union([z.string(), z.number()]).optional(),
+  url: z.string(),
+  dataProp: z.string(),
+  queryPrefix: z.string(),
+  readOnly: z.boolean(),
+  table: tableDescriptor,
+  actions: z.object({
+    header: z.array(actionDescriptor),
+    row: z.array(actionDescriptor),
+    bulk: z.array(actionDescriptor),
+  }),
+})
+export type RelationDescriptor = z.infer<typeof relationDescriptor>
+
 export const tableRow = z.object({
   key: z.union([z.string(), z.number()]),
   cells: z.record(z.string(), z.unknown()),
   actions: z.array(actionDescriptor),
   url: z.string().optional(),
   selectable: z.boolean(),
+  className: z.string().optional(),
 })
 export type TableRow = z.infer<typeof tableRow>
 export const tableMeta = z.object({
@@ -173,6 +218,50 @@ export const tableData = z.object({
   query: z.record(z.string(), z.unknown()),
 })
 export type TableData = z.infer<typeof tableData>
+export const widgetStat = z.object({
+  label: z.string(),
+  value: z.union([z.string(), z.number()]),
+  description: z.string().optional(),
+  descriptionIcon: z.string().optional(),
+  color: z.string().optional(),
+  chart: z.array(z.number()).optional(),
+})
+export const widgetData = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('stats'), stats: z.array(widgetStat) }),
+  z.object({
+    kind: z.literal('chart'),
+    labels: z.array(z.string()),
+    datasets: z.array(
+      z.object({ label: z.string(), data: z.array(z.number()), color: z.string().optional() })
+    ),
+  }),
+  z.object({ kind: z.literal('table'), data: tableData }),
+  z.object({ kind: z.literal('component'), data: z.unknown() }),
+])
+export const widgetDescriptor = z.object({
+  name: z.string(),
+  kind: z.enum(['stats', 'chart', 'table', 'component']),
+  dataProp: z.string(),
+  dataUrl: z.string().optional(),
+  heading: z.string().optional(),
+  description: z.string().optional(),
+  span: z.union([z.number(), z.literal('full')]),
+  sort: z.number(),
+  poll: z.number().optional(),
+  placement: z.enum(['header', 'footer']).optional(),
+  chartType: z.enum(['line', 'bar', 'area', 'pie', 'doughnut']).optional(),
+  component: z.string().optional(),
+  table: tableDescriptor.optional(),
+})
+export type WidgetStat = z.infer<typeof widgetStat>
+export type WidgetData = z.infer<typeof widgetData>
+export type WidgetDescriptor = z.infer<typeof widgetDescriptor>
+export const widgetFilter = z.object({
+  name: z.string(),
+  label: z.string(),
+  options: z.array(z.object({ value: z.string(), label: z.string() })),
+})
+export type WidgetFilter = z.infer<typeof widgetFilter>
 
 export const formDescriptor = z.object({
   method: z.enum(['get', 'post', 'put', 'patch']),
@@ -195,6 +284,25 @@ export const repeaterDescriptor = z.object({
   grid: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
   defaultItems: z.array(z.record(z.string(), z.unknown())).optional(),
 })
+export const builderDescriptor = z.object({
+  name: z.string(),
+  blocks: z.array(
+    z.object({
+      key: z.string(),
+      label: z.string(),
+      icon: z.string().optional(),
+      template: z.string(),
+    })
+  ),
+  minItems: z.number().optional(),
+  maxItems: z.number().optional(),
+  reorderable: z.boolean(),
+  collapsible: z.boolean(),
+  cloneable: z.boolean(),
+  addLabel: z.string().optional(),
+  blockPickerColumns: z.number().optional(),
+})
+export type BuilderDescriptor = z.infer<typeof builderDescriptor>
 export type RepeaterDescriptor = z.infer<typeof repeaterDescriptor>
 export const fileUploadDescriptor = z.object({
   name: z.string(),
@@ -210,6 +318,8 @@ export const fileUploadDescriptor = z.object({
   reorderable: z.boolean(),
   downloadable: z.boolean(),
   previewable: z.boolean(),
+  imageEditor: z.boolean().optional(),
+  imageEditorAspectRatios: z.array(z.string().nullable()).optional(),
 })
 export type FileUploadDescriptor = z.infer<typeof fileUploadDescriptor>
 export const uploadResponse = z.object({
@@ -244,10 +354,17 @@ export const navGroup = z.object({
   collapsed: z.boolean().optional(),
 })
 export type NavGroup = z.infer<typeof navGroup>
+export const notificationAction = z.object({
+  label: z.string(),
+  url: z.string().optional(),
+  method: z.enum(['get', 'post']).optional(),
+  markAsRead: z.boolean().optional(),
+})
 export const flashMessage = z.object({
   type: z.enum(['success', 'error', 'warning', 'info']),
   title: z.string(),
   body: z.string().optional(),
+  actions: z.array(notificationAction).optional(),
 })
 export type FlashMessage = z.infer<typeof flashMessage>
 export const brand = z.object({
@@ -257,12 +374,33 @@ export const brand = z.object({
   favicon: z.string().optional(),
 })
 export type Brand = z.infer<typeof brand>
-export const themeVars = z.record(z.string(), z.string())
+export const themeVars = z.object({
+  primary: z.string().optional(),
+  darkMode: z.enum(['light', 'dark', 'system']).optional(),
+  radius: z.string().optional(),
+  vars: z.record(z.string(), z.string()).optional(),
+  fontFamily: z.string().optional(),
+  fontUrl: z.string().optional(),
+  density: z.enum(['compact', 'comfortable']).optional(),
+  sidebar: z.enum(['expanded', 'collapsed', 'top-nav']).optional(),
+  sidebarCollapsibleOnDesktop: z.boolean().optional(),
+  contentWidth: z
+    .enum(['md', 'lg', 'xl', '2xl', '3xl', '4xl', '5xl', '6xl', '7xl', 'full', 'screen'])
+    .optional(),
+  stylesheet: z.string().optional(),
+})
 export type ThemeVars = z.infer<typeof themeVars>
 export const panelFeatures = z.record(z.string(), z.boolean())
 export type PanelFeatures = z.infer<typeof panelFeatures>
 export const breadcrumb = z.object({ label: z.string(), url: z.string().optional() })
 export type Breadcrumb = z.infer<typeof breadcrumb>
+export const subNavigationItem = z.object({
+  key: z.string(),
+  label: z.string(),
+  url: z.string(),
+  active: z.boolean().optional(),
+})
+export type SubNavigationItem = z.infer<typeof subNavigationItem>
 
 export const stateModel = z.record(z.string(), z.unknown())
 export type StateModel = z.infer<typeof stateModel>
@@ -273,6 +411,8 @@ export const jsonPatchOp = z.discriminatedUnion('op', [
 ])
 export type JsonPatchOp = z.infer<typeof jsonPatchOp>
 export const patchResponse = z.object({ patch: z.array(jsonPatchOp) })
+export const evaluateResponse = z.object({ set: z.record(z.string(), z.unknown()) })
+export type EvaluateResponse = z.infer<typeof evaluateResponse>
 export const actionResult = z.object({
   flash: z.array(flashMessage),
   redirect: z.string().optional(),
@@ -288,6 +428,7 @@ export const elementSchema = z.object({
     'Text',
     'Textarea',
     'Number',
+    'Slider',
     'Hidden',
     'Select',
     'Checkbox',
@@ -302,14 +443,20 @@ export const elementSchema = z.object({
     'Tags',
     'KeyValue',
     'RichEditor',
+    'MarkdownEditor',
+    'CodeEditor',
     'FileUpload',
     'Repeater',
+    'Builder',
+    'BuilderItem',
     'RepeaterItem',
     'Form',
     'Grid',
     'Section',
     'Fieldset',
     'Tabs',
+    'Wizard',
+    'Step',
     'Tab',
     'Group',
     'Split',
@@ -320,6 +467,10 @@ export const elementSchema = z.object({
     'View',
     'Fragment',
     'DataTable',
+    'Widget.Stats',
+    'Widget.Chart',
+    'Widget.Table',
+    'RelationManager',
     'ActionBar',
     'Infolist',
     'TextEntry',
@@ -419,6 +570,7 @@ export const notificationItem = z.object({
   title: z.string(),
   body: z.string().optional(),
   url: z.string().optional(),
+  actions: z.array(notificationAction).optional(),
   readAt: z.string().nullable(),
   createdAt: z.string(),
 })
@@ -436,6 +588,44 @@ export const notificationListResponse = z.object({
 export const notificationsReadRequest = z.object({
   ids: z.union([z.array(z.string()), z.literal('all')]),
 })
+export const exportJobResponse = z.object({
+  jobId: z.string(),
+  progressUrl: z.string(),
+  downloadUrl: z.string(),
+})
+export const importJobResponse = z.object({
+  jobId: z.string(),
+  progressUrl: z.string(),
+})
+export type ImportJobResponse = z.infer<typeof importJobResponse>
+export const exportProgressResponse = z.object({
+  id: z.string(),
+  status: z.enum(['queued', 'processing', 'done', 'failed']),
+  totalRows: z.number(),
+  processedRows: z.number(),
+  error: z.string().optional(),
+  downloadUrl: z.string().optional(),
+  createdRows: z.number().optional(),
+  updatedRows: z.number().optional(),
+  failedRows: z.number().optional(),
+  failedRowsUrl: z.string().optional(),
+})
+export type ExportJobResponse = z.infer<typeof exportJobResponse>
+export type ExportProgressResponse = z.infer<typeof exportProgressResponse>
+export const importPreviewResponse = z.object({
+  headers: z.array(z.string()),
+  preview: z.array(z.record(z.string(), z.string())),
+  fields: z.array(z.object({ name: z.string(), label: z.string(), required: z.boolean() })),
+})
+export const importResultResponse = z.object({
+  total: z.number(),
+  created: z.number(),
+  updated: z.number(),
+  failed: z.number(),
+  failedRowsUrl: z.string().optional(),
+})
+export type ImportPreviewResponse = z.infer<typeof importPreviewResponse>
+export type ImportResultResponse = z.infer<typeof importResultResponse>
 export const globalSearchResult = z.object({
   title: z.string(),
   details: z.array(z.string()).optional(),
@@ -448,52 +638,56 @@ export const globalSearchGroup = z.object({
 })
 export const globalSearchResponse = z.object({ groups: z.array(globalSearchGroup) })
 export type GlobalSearchResponse = z.infer<typeof globalSearchResponse>
-export const pageProps = z.object({
-  pupitre: z.object({
-    panel: z.object({
-      id: z.string(),
-      path: z.string(),
-      brand,
-      theme: themeVars,
-      features: panelFeatures,
-      logoutUrl: z.string().optional(),
-      profileUrl: z.string().optional(),
-      userMenu: z.array(userMenuItem).optional(),
-      search: z.object({ url: z.string(), keyBinding: z.string() }).optional(),
+export const pageProps = z
+  .object({
+    pupitre: z.object({
+      panel: z.object({
+        id: z.string(),
+        path: z.string(),
+        brand,
+        theme: themeVars,
+        features: panelFeatures,
+        logoutUrl: z.string().optional(),
+        profileUrl: z.string().optional(),
+        userMenu: z.array(userMenuItem).optional(),
+        search: z.object({ url: z.string(), keyBinding: z.string() }).optional(),
+      }),
+      user: z
+        .object({
+          id: z.union([z.string(), z.number()]),
+          name: z.string(),
+          email: z.string(),
+          avatarUrl: z.string().optional(),
+          timezone: z.string().optional(),
+        })
+        .nullable(),
+      tenant: tenantSummary.nullable(),
+      tenants: z.array(tenantOption).optional(),
+      nav: z.array(navGroup),
+      flash: z.array(flashMessage),
+      notifications: notificationsProp.optional(),
+      locale: z.string(),
+      timezone: z.string(),
     }),
-    user: z
-      .object({
-        id: z.union([z.string(), z.number()]),
-        name: z.string(),
-        email: z.string(),
-        avatarUrl: z.string().optional(),
-        timezone: z.string().optional(),
-      })
-      .nullable(),
-    tenant: tenantSummary.nullable(),
-    tenants: z.array(tenantOption).optional(),
-    nav: z.array(navGroup),
-    flash: z.array(flashMessage),
-    notifications: notificationsProp.optional(),
-    locale: z.string(),
-    timezone: z.string(),
-  }),
-  page: z.object({
-    key: z.string(),
-    kind: z.enum(['list', 'create', 'edit', 'view', 'page', 'dashboard', 'auth', 'custom']),
-    title: z.string(),
-    breadcrumbs: z.array(breadcrumb),
-    spec: jsonRenderSpec,
-    state: stateModel,
-    actions: z.object({ header: z.array(actionDescriptor) }),
-    widgets: z.array(z.unknown()).optional(),
-    relations: z.array(z.unknown()).optional(),
-    deferred: z.array(z.string()).optional(),
-    catalogVersion: z.string(),
-    component: z.string().optional(),
-  }),
-  data: z.union([tableData, z.record(z.string(), z.unknown())]).optional(),
-})
+    page: z.object({
+      key: z.string(),
+      kind: z.enum(['list', 'create', 'edit', 'view', 'page', 'dashboard', 'auth', 'custom']),
+      title: z.string(),
+      breadcrumbs: z.array(breadcrumb),
+      spec: jsonRenderSpec,
+      state: stateModel,
+      actions: z.object({ header: z.array(actionDescriptor) }),
+      widgets: z.array(widgetDescriptor).optional(),
+      filters: z.array(widgetFilter).optional(),
+      relations: z.array(relationDescriptor).optional(),
+      subNavigation: z.array(subNavigationItem).optional(),
+      deferred: z.array(z.string()).optional(),
+      catalogVersion: z.string(),
+      component: z.string().optional(),
+    }),
+    data: z.union([tableData, z.record(z.string(), z.unknown())]).optional(),
+  })
+  .catchall(z.unknown())
 export type PupitrePageProps = z.infer<typeof pageProps>
 
 export const expressionProp = dynamic(z.unknown())

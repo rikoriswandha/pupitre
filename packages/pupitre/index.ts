@@ -3,11 +3,23 @@ export { configure } from './configure.js'
 export { defineConfig } from './src/define_config.js'
 export type { PupitreConfig, PupitreConfigInput } from './src/define_config.js'
 export { definePanel } from './src/builder/panel.js'
+export { defineTheme } from './src/definition/theme.js'
+export type { ThemeDefinition } from './src/definition/theme.js'
 export { defineResource } from './src/builder/resource.js'
+export { defineRelationManager, relationGroup } from './src/builder/relation_manager.js'
+export type { RelationManagerBuilder } from './src/builder/relation_manager.js'
 export type { PanelBuilder, TenancyInput } from './src/builder/panel.js'
 export { definePage } from './src/builder/page.js'
 export type { CustomPageBuilder } from './src/builder/page.js'
 export type { CustomPageDefinition } from './src/definition/custom_page.js'
+export { defineWidget, stat } from './src/builder/widget.js'
+export type { WidgetBuilder, StatBuilder } from './src/builder/widget.js'
+export type {
+  WidgetDefinition,
+  WidgetStat,
+  WidgetData,
+  WidgetContext,
+} from './src/definition/widget.js'
 export type { ResourceBuilder, ResourceModel, ModelConstructor } from './src/builder/resource.js'
 export { nav } from './src/builder/nav.js'
 export type { NavGroupBuilder, NavItemBuilder } from './src/builder/nav.js'
@@ -96,6 +108,8 @@ export type {
   QueryCallback,
 } from './src/definition/table.js'
 export { action, actions } from './src/builder/action.js'
+export { exportColumn } from './src/builder/export_column.js'
+export { notificationAction } from './src/builder/notification_action.js'
 export type {
   ActionBuilder,
   ActionDefinition,
@@ -106,6 +120,10 @@ export type {
   ActionVisibilityContext,
   ActionAfterContext,
   NotificationBuilder,
+  NotificationAction,
+  NotificationActionBuilder,
+  ExportColumnBuilder,
+  ExportColumnDefinition,
 } from './src/definition/action.js'
 export { pages } from './src/builder/pages.js'
 export type { PageBuilder } from './src/builder/pages.js'
@@ -116,6 +134,12 @@ export type {
   ResourceHandlers,
   PolicyClass,
 } from './src/definition/resource.js'
+export type {
+  RelationActions,
+  RelationGroupDefinition,
+  RelationManagerDefinition,
+  RelationManagerEntry,
+} from './src/definition/relation_manager.js'
 export type {
   PanelDefinition,
   PanelAuthDefinition,
@@ -140,6 +164,7 @@ export type {
   PupitreNotificationItem,
   PupitreNotificationMessage,
 } from './src/adapters/notifications.js'
+export type { JobsAdapter } from './src/adapters/jobs.js'
 export type { AuthColumns } from './src/define_config.js'
 export type { PageDefinition, PageKind } from './src/definition/page.js'
 export { t } from './src/i18n.js'

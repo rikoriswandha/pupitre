@@ -30,6 +30,7 @@ export default defineResource(User)
         table.text('timezone').label('Timezone'),
       ])
       .defaultSort('email', 'asc')
+      .layout.grid({ default: 1, md: 2, xl: 3 })
   )
   .infolist((s) => [
     s.textEntry('fullName').label('Name'),

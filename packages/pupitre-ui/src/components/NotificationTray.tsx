@@ -141,6 +141,29 @@ export function NotificationTray({ notifications }: NotificationTrayProps) {
                     ) : (
                       <p className="text-sm font-medium">{item.title}</p>
                     )}
+                    {item.actions?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {item.actions.map((action, index) => (
+                          <button
+                            key={`${action.label}:${index}`}
+                            type="button"
+                            className="text-xs text-primary hover:underline"
+                            onClick={async () => {
+                              if (action.markAsRead && !item.readAt) await markRead([item.id])
+                              if (action.url) {
+                                setOpen(false)
+                                visit(action.url, {
+                                  method: action.method ?? 'get',
+                                  preserveScroll: true,
+                                })
+                              }
+                            }}
+                          >
+                            {action.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
                     {item.body && <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>}
                     {!item.readAt && (
                       <button

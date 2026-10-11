@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre-react",
-  "version": "0.2.0-beta.0",
+  "version": "0.3.0-beta.0",
   "description": "React client runtime for Pupitre: generic Inertia page, json-render renderer, Inertia bridge",
   "type": "module",
   "sideEffects": false,
@@ -44,7 +44,7 @@
   },
   "peerDependencies": {
     "@inertiajs/react": "^3.4.0",
-    "@rikology/pupitre": "^0.2.0-beta.0",
+    "@rikology/pupitre": "^0.3.0-beta.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
   },
@@ -54,7 +54,7 @@
     "@japa/assert": "^4.2.0",
     "@japa/runner": "^5.3.0",
     "@poppinss/ts-exec": "^1.5.0",
-    "@rikology/pupitre": "^0.2.0-beta.0",
+    "@rikology/pupitre": "^0.3.0-beta.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "happy-dom": "^20.14.6",

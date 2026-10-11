@@ -70,3 +70,52 @@
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
 }
+
+@layer components {
+  /* Density adjusts minimum touch size without distorting intrinsic or icon-sized controls. */
+  [data-density='compact']
+    :where(
+      input:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='range']):not(
+          [type='color']
+        ):not([type='file']),
+      select,
+      textarea,
+      button:not([class*='size-'])
+    ) {
+    min-height: 2rem;
+  }
+  [data-density='comfortable']
+    :where(
+      input:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='range']):not(
+          [type='color']
+        ):not([type='file']),
+      select,
+      textarea,
+      button:not([class*='size-'])
+    ) {
+    min-height: 2.5rem;
+  }
+}
+[data-sidebar='top-nav'] > header nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: visible;
+}
+[data-sidebar='top-nav'] > header nav section {
+  flex: 0 0 auto;
+}
+
+.pupitre-table-grid {
+  grid-template-columns: var(--pupitre-grid-default);
+}
+@media (min-width: 768px) {
+  .pupitre-table-grid {
+    grid-template-columns: var(--pupitre-grid-md);
+  }
+}
+@media (min-width: 1280px) {
+  .pupitre-table-grid {
+    grid-template-columns: var(--pupitre-grid-xl);
+  }
+}

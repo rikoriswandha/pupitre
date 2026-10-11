@@ -15,6 +15,11 @@ type RouteClass = { kind: string; ability?: string; expected: string }
 function classifyPanelRoute(name: string): RouteClass | undefined {
   if (name === 'admin.dashboard')
     return { kind: 'dashboard', ability: 'viewAny', expected: '404 when denied' }
+  if (name === 'admin.widgets.data')
+    return {
+      kind: 'widget data',
+      expected: 'widget visibility and contextual resource authorization',
+    }
   if (name === 'admin.upload.store')
     return { kind: 'upload', ability: 'create/update', expected: '403 when denied' }
   if (name === 'admin.upload.destroy')
@@ -40,6 +45,8 @@ function classifyPanelRoute(name: string): RouteClass | undefined {
     return { kind: 'profile', expected: 'authenticated user endpoint' }
   if (name === 'admin.tenant.home' || name === 'admin.tenant.switch')
     return { kind: 'tenant membership', expected: 'membership-scoped' }
+  if (name === 'admin.exports.progress' || name === 'admin.exports.download')
+    return { kind: 'export file', expected: 'owner and tenant scoped' }
   if (name.includes('.relations.'))
     return {
       kind: 'relation manager',
@@ -51,7 +58,7 @@ function classifyPanelRoute(name: string): RouteClass | undefined {
   if (/^admin\.[a-z][a-z0-9-]*$/.test(name))
     return { kind: 'custom page', expected: 'page access gate' }
   const resourceRoute =
-    /^admin\.(posts|categories)\.(list|create|store|edit|update|view|destroy|actions|actions\.store|record\.actions|record\.actions\.store)$/.exec(
+    /^admin\.(posts|categories)\.(list|create|store|edit|update|view|destroy|export|import\.preview|import\.store|column\.update|reorder|actions|actions\.store|record\.actions|record\.actions\.store)$/.exec(
       name
     )
   if (!resourceRoute) return undefined
@@ -59,6 +66,14 @@ function classifyPanelRoute(name: string): RouteClass | undefined {
   if (page === 'list') return { kind: `${resourceSlug}.list`, ability: 'viewAny', expected: '403' }
   if (page === 'create' || page === 'store')
     return { kind: `${resourceSlug}.create`, ability: 'create', expected: '403' }
+  if (page === 'column.update')
+    return { kind: `${resourceSlug}.column`, ability: 'update', expected: '403' }
+  if (page === 'import.preview' || page === 'import.store')
+    return { kind: `${resourceSlug}.import`, expected: '404 when no import action is configured' }
+  if (page === 'export')
+    return { kind: `${resourceSlug}.export`, expected: '404 when no export action is configured' }
+  if (page === 'reorder')
+    return { kind: `${resourceSlug}.reorder`, expected: 'reorder or update ability' }
   if (page === 'edit' || page === 'update')
     return { kind: `${resourceSlug}.edit`, ability: 'update', expected: '403' }
   if (page === 'view') return { kind: `${resourceSlug}.view`, ability: 'view', expected: '403' }

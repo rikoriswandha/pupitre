@@ -115,7 +115,7 @@ test('form action loads a modal, posts data with the action header, and closes o
   const post = calls.find((call: { method: string }) => call.method === 'POST')
   expect(post.url).toBe('/actions/edit')
   expect(post.headers['x-pupitre-action']).toBe('1')
-  expect(post.body).toEqual({ data: { title: 'Example', items: [{ sku: 'ABC' }] } })
+  expect(post.body).toEqual({ data: { title: '01012024', items: [{ sku: 'ABC' }] } })
 })
 
 test('ConfirmDialog cancel sends no request', async ({ mount, page }) => {
@@ -145,9 +145,16 @@ test('FileUpload shows the uploaded image preview', async ({ mount, page }) => {
     })
   })
   const view = await mount(<UploadStory />)
-  await view
-    .locator('input[type="file"]')
-    .setInputFiles({ name: 'file.png', mimeType: 'image/png', buffer: Buffer.from('png') })
+  await view.locator('input[type="file"]').setInputFiles({
+    name: 'file.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3S8AAAAASUVORK5CYII=',
+      'base64'
+    ),
+  })
+  await expect(view.getByRole('dialog', { name: 'Edit image' })).toBeVisible()
+  await view.getByRole('button', { name: 'Apply crop' }).click()
   await expect(view.getByRole('link', { name: 'Preview' })).toHaveAttribute('href', '/file.png')
   await expect(view.locator('img')).toBeVisible()
 })

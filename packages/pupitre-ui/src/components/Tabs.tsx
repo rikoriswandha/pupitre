@@ -27,7 +27,7 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
 
   return (
     <TabContext.Provider value={{ active: active ?? initial, select: setActive, id }}>
-      <div className="space-y-4" data-tabs-id={id}>
+      <div id={id} className="space-y-4" data-tabs-id={id}>
         <div
           role="tablist"
           aria-label={typeof props.label === 'string' ? props.label : undefined}

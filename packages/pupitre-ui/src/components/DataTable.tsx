@@ -1,8 +1,8 @@
 import { createElement, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { matchesKeyBinding } from '../primitives/key_bindings.js'
+import { matchesKeyBinding } from '@rikology/pupitre-react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
-import type { ColumnDef } from '@tanstack/react-table'
+import type { Cell, ColumnDef, Row } from '@tanstack/react-table'
 import type {
   ColumnDescriptor,
   JsonRenderSpec,
@@ -10,10 +10,14 @@ import type {
   TableDescriptor,
   TableRow,
 } from '@rikology/pupitre/catalog'
-import { useRunAction, useTable } from '@rikology/pupitre-react'
+import { getRouter, jsonFetch, t, useRunAction, useTable } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
+import { DataTableEditableCell } from './DataTableEditableCell.js'
+import { DataTableGrid } from './DataTableGrid.js'
 
+import { DataTableGroups } from './DataTableGroups.js'
+import { DataTableSummary } from './DataTableSummary.js'
 export type DataTableProps = {
   props: { descriptor: TableDescriptor; label?: string | null; disabled?: boolean }
   children?: ReactNode
@@ -21,6 +25,7 @@ export type DataTableProps = {
   on?: unknown
   bindings?: Record<string, string | undefined>
   loading?: boolean
+  tableData?: TableData
 }
 
 function displayValue(value: unknown): string {
@@ -84,6 +89,11 @@ function seededFilterState(
   if (Object.keys(data).length) state.data = data
   return state
 }
+type CustomFilterDescriptor = {
+  name: string
+  label: string
+  form?: { spec?: unknown }
+}
 
 function CustomFilterForm({
   filter,
@@ -91,7 +101,7 @@ function CustomFilterForm({
   setFilter,
   query,
 }: {
-  filter: TableDescriptor['filters'][number]
+  filter: CustomFilterDescriptor
   spec: JsonRenderSpec
   setFilter: (name: string, value: unknown) => void
   query: Record<string, unknown>
@@ -123,12 +133,12 @@ function CustomFilterForm({
 }
 
 function CustomFilter(props: {
-  filter: TableDescriptor['filters'][number]
+  filter: CustomFilterDescriptor
   setFilter: (name: string, value: unknown) => void
   query: Record<string, unknown>
 }) {
-  const spec = props.filter.form?.spec
-  return spec ? <CustomFilterForm {...props} spec={spec as JsonRenderSpec} /> : null
+  const spec = props.filter.form?.spec as JsonRenderSpec | undefined
+  return spec ? <CustomFilterForm {...props} spec={spec} /> : null
 }
 function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   const cell =
@@ -260,17 +270,85 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   )
 }
 
-export function DataTable({ props, children, emit, loading = false }: DataTableProps) {
+export function DataTable({
+  props,
+  children,
+  emit,
+  loading = false,
+  tableData: fallbackData,
+}: DataTableProps) {
   const descriptor = props.descriptor as TableDescriptor & { striped?: boolean }
-  const tableState = useTable(descriptor)
+  const tableState = useTable(descriptor, fallbackData)
   const runAction = useRunAction()
   const tableData =
-    tableState.data && 'rows' in tableState.data ? (tableState.data as TableData) : undefined
+    tableState.data && typeof tableState.data === 'object' && 'rows' in tableState.data
+      ? (tableState.data as TableData)
+      : undefined
   const rows = tableData?.rows ?? []
+  const activeGroup =
+    descriptor.groups?.find((group) => group.key === tableData?.query.groupBy) ??
+    descriptor.groups?.[0]
   const [search, setSearch] = useState(
     typeof tableState.query.q === 'string' ? tableState.query.q : ''
   )
+  const [columnSearchDraft, setColumnSearchDraft] = useState<Record<string, string>>({})
   const [draggedKey, setDraggedKey] = useState<string | number | null>(null)
+  const editing = useRef(false)
+  const [reorderMode, setReorderMode] = useState(false)
+  const [visibility, setVisibility] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(
+      descriptor.columns.map((column) => [column.name, !column.toggleable?.hiddenByDefault])
+    )
+  )
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false)
+  const [optimisticCells, setOptimisticCells] = useState<Record<string, unknown>>({})
+  const [cellDataSource, setCellDataSource] = useState(tableData)
+  if (cellDataSource !== tableData) {
+    setCellDataSource(tableData)
+    setOptimisticCells({})
+  }
+  const [filterDraft, setFilterDraft] = useState<Record<string, unknown>>({})
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const saved = window.localStorage.getItem(`pupitre:columns:${descriptor.id}`)
+      if (saved)
+        setVisibility((current) => ({
+          ...current,
+          ...(JSON.parse(saved) as Record<string, boolean>),
+        }))
+    } catch {
+      // Storage may be unavailable in restricted browser contexts.
+    } finally {
+      setVisibilityLoaded(true)
+    }
+  }, [descriptor.id])
+  useEffect(() => {
+    if (typeof window === 'undefined' || !visibilityLoaded) return
+    try {
+      window.localStorage.setItem(`pupitre:columns:${descriptor.id}`, JSON.stringify(visibility))
+    } catch {
+      // Storage may be unavailable in restricted browser contexts.
+    }
+  }, [descriptor.id, visibility, visibilityLoaded])
+  useEffect(() => {
+    if (!descriptor.poll || descriptor.poll <= 0) return
+    const timer = window.setInterval(() => {
+      const modalOpen = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]')).some(
+        (dialog) => {
+          const style = window.getComputedStyle(dialog)
+          return (
+            style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            dialog.getClientRects().length > 0
+          )
+        }
+      )
+      if (document.visibilityState === 'hidden' || editing.current || modalOpen) return
+      getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
+    }, descriptor.poll)
+    return () => window.clearInterval(timer)
+  }, [descriptor.poll, descriptor.dataProp])
 
   const querySearch = tableState.query.q
   const searchTable = tableState.search
@@ -307,22 +385,41 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
     header: column.label,
     enableSorting: column.sortable,
     enableHiding: Boolean(column.toggleable),
-    cell: ({ getValue }) => <DataTableCell value={getValue<unknown>()} column={column} />,
   }))
+  function renderCell(cell: Cell<TableRow, unknown>) {
+    const column = descriptor.columns.find((item) => item.name === cell.column.id)!
+    const value = cell.getValue()
+    if (!column.editable) return <DataTableCell value={value} column={column} />
+    const data = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+    const key = `${cell.row.original.key}:${column.name}`
+    return (
+      <DataTableEditableCell
+        column={column}
+        rowKey={cell.row.original.key}
+        value={optimisticCells[key] ?? data.value ?? value}
+        display={typeof data.display === 'string' ? data.display : undefined}
+        disabled={data.disabled === true}
+        onChange={(next) => setOptimisticCells((current) => ({ ...current, [key]: next }))}
+        onEditingChange={(active) => {
+          editing.current = active
+        }}
+      />
+    )
+  }
   // TanStack returns a mutable table instance; this render path uses its documented APIs directly.
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Table exposes a mutable instance for its documented rendering APIs.
   const table = useReactTable({
     data: rows,
     columns,
+    getRowId: (row) => String(row.key),
     getCoreRowModel: getCoreRowModel(),
-    initialState: {
-      columnVisibility: Object.fromEntries(
-        descriptor.columns
-          .filter((column) => column.toggleable?.hiddenByDefault)
-          .map((column) => [column.name, false])
-      ),
-    },
+    state: { columnVisibility: visibility },
+    onColumnVisibilityChange: (updater) =>
+      setVisibility((current) => (typeof updater === 'function' ? updater(current) : updater)),
   })
+  const tableRowsByKey = new Map(
+    table.getRowModel().rows.map((row) => [row.original.key, row] as const)
+  )
   const meta = tableData?.meta
   const selected = tableState.selected
   const bulkActions = descriptor.bulkActions.filter((action) => action.enabled)
@@ -354,6 +451,15 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
     selectableRows.length > 0 && selectableRows.every((row) => selected.includes(row.key))
   const page = meta?.currentPage ?? 1
   const lastPage = meta?.lastPage ?? 1
+  const pageSize =
+    tableState.query.perPage === 'all'
+      ? rows.length
+      : Number(tableState.query.perPage ?? meta?.perPage ?? rows.length)
+  const reorderableWindow =
+    !descriptor.groups?.length &&
+    !Object.keys(tableState.query).some(
+      (key) => !['page', 'perPage'].includes(key) && tableState.query[key] !== ''
+    )
   const columnsVisible = descriptor.columns.some((column) => column.toggleable)
 
   function selectRow(key: string | number, checked: boolean) {
@@ -362,25 +468,41 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
     )
   }
   function changeSort(column: string) {
+    if (reorderMode) return
     tableState.sort(column)
     emit('column', { column })
   }
-  function reorderRow(target: TableRow) {
-    if (
-      !descriptor.reorderable ||
-      draggedKey === null ||
-      draggedKey === undefined ||
-      draggedKey === target.key
-    )
-      return
+  async function reorderRow(target: TableRow) {
+    if (!descriptor.reorderable || draggedKey === null || draggedKey === target.key) return
     const order = rows.map((row) => row.key)
     const from = order.indexOf(draggedKey)
     const to = order.indexOf(target.key)
     if (from < 0 || to < 0) return
     order.splice(from, 1)
     order.splice(to, 0, draggedKey)
-    emit('reorder', { ids: order, url: descriptor.reorderable.url })
-    setDraggedKey(null)
+    try {
+      const response = await jsonFetch(descriptor.reorderable.url, {
+        method: 'POST',
+        body: JSON.stringify({ ids: order, offset: (page - 1) * pageSize }),
+      })
+      if (!response.ok) throw new Error('Unable to reorder records')
+      getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
+      emit('reorder', { ids: order, url: descriptor.reorderable.url })
+    } finally {
+      setDraggedKey(null)
+    }
+  }
+  async function moveRow(key: string | number, direction: -1 | 1) {
+    const index = rows.findIndex((row) => row.key === key)
+    const targetIndex = index + direction
+    if (index < 0 || targetIndex < 0 || targetIndex >= rows.length) return
+    const order = rows.map((row) => row.key)
+    ;[order[index], order[targetIndex]] = [order[targetIndex], order[index]]
+    const response = await jsonFetch(descriptor.reorderable!.url, {
+      method: 'POST',
+      body: JSON.stringify({ ids: order, offset: (page - 1) * pageSize }),
+    })
+    if (response.ok) getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
   }
   function renderActions(row: TableRow) {
     const groups = new Map<string, typeof row.actions>()
@@ -428,25 +550,221 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
       </div>
     )
   }
+  function renderGridCard(row: Row<TableRow>) {
+    const firstCell = row.getVisibleCells()[0]
+    const firstColumn = descriptor.columns.find((column) => column.name === firstCell?.column.id)
+    return (
+      <article
+        key={row.original.key}
+        className="space-y-3 rounded-md border p-4"
+        draggable={reorderMode}
+        onDragOver={(event) => {
+          if (reorderMode) event.preventDefault()
+        }}
+        onDrop={() => {
+          if (reorderMode) void reorderRow(row.original)
+        }}
+      >
+        {reorderMode && (
+          <div className="flex gap-1">
+            <button
+              type="button"
+              draggable
+              aria-label={`Drag ${row.original.key}`}
+              onDragStart={() => setDraggedKey(row.original.key)}
+            >
+              ⠿
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${row.original.key} up`}
+              onClick={() => void moveRow(row.original.key, -1)}
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              aria-label={`Move ${row.original.key} down`}
+              onClick={() => void moveRow(row.original.key, 1)}
+            >
+              ↓
+            </button>
+          </div>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          {descriptor.selectable && (
+            <input
+              type="checkbox"
+              aria-label={`Select row ${row.original.key}`}
+              disabled={!row.original.selectable}
+              checked={selected.includes(row.original.key)}
+              onChange={(event) => selectRow(row.original.key, event.currentTarget.checked)}
+            />
+          )}
+          {firstColumn?.editable && firstCell ? (
+            renderCell(firstCell)
+          ) : row.original.url ? (
+            <a className="font-medium text-primary hover:underline" href={row.original.url}>
+              {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                String(row.original.key)}
+            </a>
+          ) : (
+            <strong>
+              {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                String(row.original.key)}
+            </strong>
+          )}
+        </div>
+        {row
+          .getVisibleCells()
+          .slice(1)
+          .map((cell) => (
+            <div key={cell.id} className="flex justify-between gap-3 text-sm">
+              <span className="text-muted-foreground">
+                {descriptor.columns.find((column) => column.name === cell.column.id)?.label}
+              </span>
+              <span>{renderCell(cell)}</span>
+            </div>
+          ))}
+        {renderActions(row.original)}
+      </article>
+    )
+  }
+  function renderTableRow(row: Row<TableRow>) {
+    const item = row.original
+    return (
+      <tr
+        key={row.original.key}
+        className={`border-t ${item.className ?? ''} ${
+          descriptor.striped && row.index % 2 ? 'bg-muted/30' : ''
+        }`}
+        draggable={reorderMode}
+        onDragOver={(event) => {
+          if (reorderMode) event.preventDefault()
+        }}
+        onDrop={() => {
+          if (reorderMode) void reorderRow(item)
+        }}
+      >
+        {descriptor.reorderable && (
+          <td className="px-2 text-muted-foreground">
+            {reorderMode && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  draggable
+                  aria-label={`${t('Drag')} ${item.key}`}
+                  onDragStart={() => setDraggedKey(item.key)}
+                >
+                  ⠿
+                </button>
+                <button
+                  type="button"
+                  aria-label={`${t('Move')} ${item.key} ${t('up')}`}
+                  onClick={() => void moveRow(item.key, -1)}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  aria-label={`${t('Move')} ${item.key} ${t('down')}`}
+                  onClick={() => void moveRow(item.key, 1)}
+                >
+                  ↓
+                </button>
+              </div>
+            )}
+          </td>
+        )}
+        {descriptor.selectable && (
+          <td className="px-3 py-2">
+            <input
+              type="checkbox"
+              aria-label={`Select row ${item.key}`}
+              disabled={!item.selectable}
+              checked={selected.includes(item.key)}
+              onChange={(event) => selectRow(item.key, event.currentTarget.checked)}
+            />
+          </td>
+        )}
+        {row.getVisibleCells().map((cell, index) => {
+          const column = descriptor.columns.find((candidate) => candidate.name === cell.column.id)
+          return (
+            <td
+              key={cell.id}
+              className={`px-3 py-2 ${
+                column?.alignment === 'end'
+                  ? 'text-right'
+                  : column?.alignment === 'center'
+                    ? 'text-center'
+                    : ''
+              }`}
+              style={{ width: column?.width }}
+            >
+              {index === 0 && item.url && !column?.editable ? (
+                <a className="text-primary hover:underline" href={item.url}>
+                  {renderCell(cell)}
+                </a>
+              ) : (
+                renderCell(cell)
+              )}
+            </td>
+          )
+        })}
+        <td className="px-3 py-2">{renderActions(item)}</td>
+      </tr>
+    )
+  }
+  function setFilterValue(name: string, value: unknown) {
+    if (descriptor.deferFilters) setFilterDraft((current) => ({ ...current, [name]: value }))
+    else tableState.setFilter(name, value)
+  }
+  function resetFilterDraft() {
+    setFilterDraft(
+      Object.fromEntries(
+        descriptor.filters.map((filter) => [
+          filter.name,
+          filter.type === 'dateRange' ? { from: '', to: '' } : '',
+        ])
+      )
+    )
+  }
+  function applyFilterDraft() {
+    const patch: Record<string, unknown> = { page: 1 }
+    for (const name of Object.keys(filterDraft)) {
+      const prefix = `filters[${name}]`
+      for (const key of Object.keys(tableState.query))
+        if (key === prefix || key.startsWith(`${prefix}[`)) patch[key] = ''
+      const value = filterDraft[name]
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        for (const [key, field] of Object.entries(value)) patch[`${prefix}[${key}]`] = field
+      } else patch[prefix] = value
+    }
+    tableState.setQuery(patch)
+  }
   function renderFilter(filter: TableDescriptor['filters'][number]) {
-    const current = tableState.query[`filters[${filter.name}]`] ?? ''
-    if (filter.type === 'custom' && filter.form?.spec)
-      return (
+    if (reorderMode) return null
+    const current = filterDraft[filter.name] ?? tableState.query[`filters[${filter.name}]`] ?? ''
+    if (filter.type === 'custom') {
+      const spec = filter.form?.spec
+      return spec ? (
         <CustomFilter
           filter={filter}
-          setFilter={tableState.setFilter}
+          setFilter={setFilterValue}
           query={tableState.query}
           key={`${filter.name}:${typeof window === 'undefined' ? '' : window.location.search}`}
         />
-      )
+      ) : null
+    }
     if (filter.type === 'select')
       return (
         <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <select
+            aria-label={`${t('Filter')} ${filter.label}`}
             className="h-9 rounded-md border border-input bg-background px-2"
             value={String(current)}
-            onChange={(event) => tableState.setFilter(filter.name, event.currentTarget.value)}
+            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
           >
             <option value="">All</option>
             {(filter.options ?? []).map((option) => (
@@ -462,9 +780,10 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
         <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <select
+            aria-label={`${t('Filter')} ${filter.label}`}
             className="h-9 rounded-md border border-input bg-background px-2"
             value={String(current)}
-            onChange={(event) => tableState.setFilter(filter.name, event.currentTarget.value)}
+            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
           >
             <option value="">Any</option>
             <option value="1">Yes</option>
@@ -472,7 +791,11 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
           </select>
         </label>
       )
-    if (filter.type === 'dateRange')
+    if (filter.type === 'dateRange') {
+      const range =
+        current && typeof current === 'object' && !Array.isArray(current)
+          ? (current as Record<string, unknown>)
+          : {}
       return (
         <div className="flex flex-wrap items-end gap-2" key={filter.name}>
           <span className="w-full text-sm">{filter.label}</span>
@@ -480,44 +803,55 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
             aria-label={`${filter.label} from`}
             type="date"
             className="h-9 rounded-md border border-input bg-background px-2"
-            value={String(tableState.query[`filters[${filter.name}][from]`] ?? '')}
+            value={String(range.from ?? tableState.query[`filters[${filter.name}][from]`] ?? '')}
             onChange={(event) =>
-              tableState.setQuery({
-                [`filters[${filter.name}][from]`]: event.currentTarget.value,
-                page: 1,
-              })
+              descriptor.deferFilters
+                ? setFilterValue(filter.name, { ...range, from: event.currentTarget.value })
+                : tableState.setQuery({
+                    [`filters[${filter.name}][from]`]: event.currentTarget.value,
+                    page: 1,
+                  })
             }
           />
           <input
             aria-label={`${filter.label} to`}
             type="date"
             className="h-9 rounded-md border border-input bg-background px-2"
-            value={String(tableState.query[`filters[${filter.name}][to]`] ?? '')}
+            value={String(range.to ?? tableState.query[`filters[${filter.name}][to]`] ?? '')}
             onChange={(event) =>
-              tableState.setQuery({
-                [`filters[${filter.name}][to]`]: event.currentTarget.value,
-                page: 1,
-              })
+              descriptor.deferFilters
+                ? setFilterValue(filter.name, { ...range, to: event.currentTarget.value })
+                : tableState.setQuery({
+                    [`filters[${filter.name}][to]`]: event.currentTarget.value,
+                    page: 1,
+                  })
             }
           />
         </div>
       )
-    return (
-      <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
-        <span>{filter.label}</span>
-        <input
-          className="h-9 rounded-md border border-input bg-background px-2"
-          value={String(current)}
-          onChange={(event) => tableState.setFilter(filter.name, event.currentTarget.value)}
-        />
-      </label>
-    )
+    }
+    if (filter.type === 'trashed')
+      return (
+        <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
+          <span>{filter.label}</span>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2"
+            value={String(current || 'without')}
+            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
+          >
+            <option value="without">{t('Without trashed')}</option>
+            <option value="with">{t('With trashed')}</option>
+            <option value="only">{t('Only trashed')}</option>
+          </select>
+        </label>
+      )
+    return null
   }
 
   return (
     <section className="space-y-3" aria-busy={loading || tableState.isLoading}>
       {props.label && <h2 className="text-base font-medium">{props.label}</h2>}
-      {descriptor.tabs && descriptor.tabs.length > 0 && (
+      {!reorderMode && descriptor.tabs && descriptor.tabs.length > 0 && (
         <nav className="flex gap-1 border-b" aria-label="Table tabs">
           {descriptor.tabs.map((tab) => (
             <button
@@ -537,13 +871,15 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
           ))}
         </nav>
       )}
-      {descriptor.groups && descriptor.groups.length > 0 && (
+      {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
         <label className="flex max-w-xs flex-col gap-1 text-sm">
           <span>Group</span>
           <select
             className="h-9 rounded-md border border-input bg-background px-2"
-            value={String(tableState.query.group ?? '')}
-            onChange={(event) => tableState.setQuery({ group: event.currentTarget.value, page: 1 })}
+            value={String(tableState.query.groupBy ?? '')}
+            onChange={(event) =>
+              tableState.setQuery({ groupBy: event.currentTarget.value, page: 1 })
+            }
           >
             <option value="">All groups</option>
             {descriptor.groups.map((group) => (
@@ -559,9 +895,9 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
           <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
             <span>Search</span>
             <input
-              className="h-9 rounded-md border border-input bg-background px-3"
               type="search"
               value={search}
+              disabled={reorderMode}
               onChange={(event) => setSearch(event.currentTarget.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -574,17 +910,29 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
             />
           </label>
         )}
-        {descriptor.filters.length > 0 &&
+        {!reorderMode &&
+          descriptor.filters.length > 0 &&
           (descriptor.filtersLayout === 'above' ? (
             <div className="flex flex-wrap items-end gap-3">
               {descriptor.filters.map(renderFilter)}
               <button
                 type="button"
                 className="h-9 rounded-md border px-3 text-sm"
-                onClick={() => tableState.resetFilters()}
+                onClick={() =>
+                  descriptor.deferFilters ? resetFilterDraft() : tableState.resetFilters()
+                }
               >
-                Reset filters
+                {t('Reset filters')}
               </button>
+              {descriptor.deferFilters && (
+                <button
+                  type="button"
+                  className="h-9 rounded-md border px-3 text-sm"
+                  onClick={applyFilterDraft}
+                >
+                  {t('Apply')}
+                </button>
+              )}
             </div>
           ) : (
             <details className="relative">
@@ -598,10 +946,21 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
                 <button
                   type="button"
                   className="h-9 rounded-md border px-3 text-sm"
-                  onClick={() => tableState.resetFilters()}
+                  onClick={() =>
+                    descriptor.deferFilters ? resetFilterDraft() : tableState.resetFilters()
+                  }
                 >
-                  Reset filters
+                  {t('Reset filters')}
                 </button>
+                {descriptor.deferFilters && (
+                  <button
+                    type="button"
+                    className="h-9 rounded-md border px-3 text-sm"
+                    onClick={applyFilterDraft}
+                  >
+                    {t('Apply')}
+                  </button>
+                )}
               </div>
             </details>
           ))}
@@ -626,6 +985,22 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
                 ))}
             </div>
           </details>
+        )}
+        {descriptor.reorderable && (
+          <button
+            type="button"
+            className="h-9 rounded-md border px-3 text-sm"
+            aria-pressed={reorderMode}
+            disabled={!reorderMode && !reorderableWindow}
+            title={
+              !reorderMode && !reorderableWindow
+                ? t('Clear filters and sorting before reordering')
+                : undefined
+            }
+            onClick={() => setReorderMode((current) => !current)}
+          >
+            {reorderMode ? t('Done reordering') : t('Reorder')}
+          </button>
         )}
       </div>
       {bulkActions.length > 0 && (
@@ -659,75 +1034,28 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
           ))}
         </div>
       )}
-      {tableData?.groups && tableData.groups.length > 0 && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {tableData.groups.map((group) => (
-            <section key={group.key} className="rounded-md border bg-muted/20 p-3">
-              <h3 className="text-sm font-medium">{group.label}</h3>
-              <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                <span>{group.rows.length} rows</span>
-                {group.summary &&
-                  Object.entries(group.summary).flatMap(([column, summaries]) =>
-                    Object.entries(summaries).map(([name, value]) => (
-                      <span key={`${column}-${name}`}>
-                        {descriptor.columns.find((item) => item.name === column)?.label ?? column}{' '}
-                        {name}: <strong className="text-foreground">{value}</strong>
-                      </span>
-                    ))
-                  )}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
       {descriptor.layout === 'grid' ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {table.getRowModel().rows.map((row) => (
-            <article
-              key={row.id}
-              className="space-y-3 rounded-md border p-4"
-              draggable={Boolean(descriptor.reorderable)}
-              onDragStart={() => setDraggedKey(row.original.key)}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={() => reorderRow(row.original)}
-            >
-              <div className="flex items-center justify-between gap-3">
-                {descriptor.selectable && (
-                  <input
-                    type="checkbox"
-                    aria-label={`Select row ${row.original.key}`}
-                    disabled={!row.original.selectable}
-                    checked={selected.includes(row.original.key)}
-                    onChange={(event) => selectRow(row.original.key, event.currentTarget.checked)}
-                  />
-                )}
-                {row.original.url ? (
-                  <a className="font-medium text-primary hover:underline" href={row.original.url}>
-                    {displayValue(row.original.cells[descriptor.columns[0]?.name]) ||
-                      String(row.original.key)}
-                  </a>
-                ) : (
-                  <strong>
-                    {displayValue(row.original.cells[descriptor.columns[0]?.name]) ||
-                      String(row.original.key)}
-                  </strong>
-                )}
-              </div>
-              {row
-                .getVisibleCells()
-                .slice(1)
-                .map((cell) => (
-                  <div key={cell.id} className="flex justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">
-                      {descriptor.columns.find((column) => column.name === cell.column.id)?.label}
-                    </span>
-                    <span>{flexRender(cell.column.columnDef.cell, cell.getContext())}</span>
-                  </div>
-                ))}
-              {renderActions(row.original)}
-            </article>
-          ))}
-        </div>
+        tableData?.groups ? (
+          <DataTableGroups
+            groups={tableData.groups}
+            columns={descriptor.columns}
+            definition={activeGroup}
+            layout="grid"
+            colSpan={descriptor.columns.length + (descriptor.selectable ? 1 : 0) + 1}
+            renderRows={(groupRows) => (
+              <DataTableGrid columns={descriptor.gridColumns}>
+                {groupRows.map((groupRow) => {
+                  const row = tableRowsByKey.get(groupRow.key)
+                  return row ? renderGridCard(row) : null
+                })}
+              </DataTableGrid>
+            )}
+          />
+        ) : (
+          <DataTableGrid columns={descriptor.gridColumns}>
+            {table.getRowModel().rows.map(renderGridCard)}
+          </DataTableGrid>
+        )
       ) : (
         <div className="overflow-x-auto rounded-md border">
           <table className="w-full border-collapse text-sm">
@@ -777,60 +1105,67 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
                 })}
                 <th className="px-3 py-2 text-right font-medium">Actions</th>
               </tr>
+              {!reorderMode &&
+                descriptor.columns.some((column) => column.individuallySearchable) && (
+                  <tr>
+                    {descriptor.reorderable && <th className="px-2" />}
+                    {descriptor.selectable && <th className="px-3" />}
+                    {table.getHeaderGroups()[0]?.headers.map((header) => {
+                      const column = descriptor.columns.find(
+                        (item) => item.name === header.column.id
+                      )
+                      if (!column?.individuallySearchable) return <th key={header.id} />
+                      const queryKey = `columns[${column.name}][search]`
+                      const searchValue =
+                        columnSearchDraft[column.name] ?? tableState.query[queryKey] ?? ''
+                      return (
+                        <th key={header.id} className="px-3 pb-2">
+                          <input
+                            type="search"
+                            aria-label={`Search ${column.label}`}
+                            className="h-8 w-full rounded-md border bg-background px-2 font-normal"
+                            value={searchValue}
+                            onChange={(event) =>
+                              setColumnSearchDraft((current) => ({
+                                ...current,
+                                [column.name]: event.currentTarget.value,
+                              }))
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key !== 'Enter') return
+                              tableState.setQuery({ [queryKey]: searchValue, page: 1 })
+                            }}
+                          />
+                        </th>
+                      )
+                    })}
+                    <th />
+                  </tr>
+                )}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => {
-                const item = row.original
-                return (
-                  <tr
-                    key={row.id}
-                    className={`border-t ${descriptor.striped && row.index % 2 ? 'bg-muted/30' : ''}`}
-                    draggable={Boolean(descriptor.reorderable)}
-                    onDragStart={() => setDraggedKey(item.key)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={() => reorderRow(item)}
-                  >
-                    {descriptor.reorderable && (
-                      <td
-                        className="cursor-grab px-2 text-muted-foreground"
-                        aria-label="Drag to reorder"
-                      >
-                        ⋮⋮
-                      </td>
-                    )}
-                    {descriptor.selectable && (
-                      <td className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          aria-label={`Select row ${item.key}`}
-                          disabled={!item.selectable}
-                          checked={selected.includes(item.key)}
-                          onChange={(event) => selectRow(item.key, event.currentTarget.checked)}
-                        />
-                      </td>
-                    )}
-                    {row.getVisibleCells().map((cell, index) => (
-                      <td
-                        key={cell.id}
-                        className={`px-3 py-2 ${descriptor.columns.find((column) => column.name === cell.column.id)?.alignment === 'end' ? 'text-right' : descriptor.columns.find((column) => column.name === cell.column.id)?.alignment === 'center' ? 'text-center' : ''}`}
-                        style={{
-                          width: descriptor.columns.find((column) => column.name === cell.column.id)
-                            ?.width,
-                        }}
-                      >
-                        {index === 0 && item.url ? (
-                          <a className="text-primary hover:underline" href={item.url}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </a>
-                        ) : (
-                          flexRender(cell.column.columnDef.cell, cell.getContext())
-                        )}
-                      </td>
-                    ))}
-                    <td className="px-3 py-2">{renderActions(item)}</td>
-                  </tr>
-                )
-              })}
+              {tableData?.groups ? (
+                <DataTableGroups
+                  groups={tableData.groups}
+                  columns={descriptor.columns}
+                  definition={activeGroup}
+                  layout="table"
+                  colSpan={
+                    descriptor.columns.length +
+                    (descriptor.selectable ? 1 : 0) +
+                    (descriptor.reorderable ? 1 : 0) +
+                    1
+                  }
+                  renderRows={(groupRows) =>
+                    groupRows.map((groupRow) => {
+                      const row = tableRowsByKey.get(groupRow.key)
+                      return row ? renderTableRow(row) : null
+                    })
+                  }
+                />
+              ) : (
+                table.getRowModel().rows.map(renderTableRow)
+              )}
               {rows.length === 0 && (
                 <tr>
                   <td
@@ -842,7 +1177,14 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
                       1
                     }
                   >
-                    {descriptor.emptyState?.heading ?? 'No results.'}
+                    {descriptor.deferLoading && !tableData ? (
+                      <span
+                        className="inline-block h-5 w-32 animate-pulse rounded bg-muted"
+                        aria-label={t('Loading records')}
+                      />
+                    ) : (
+                      (descriptor.emptyState?.heading ?? t('No results.'))
+                    )}
                     {descriptor.emptyState?.description && (
                       <div className="mt-1">{descriptor.emptyState.description}</div>
                     )}
@@ -873,19 +1215,7 @@ export function DataTable({ props, children, emit, loading = false }: DataTableP
         </div>
       )}
       {tableData?.summary && (
-        <div className="flex flex-wrap gap-4 rounded-md border bg-muted/20 p-3 text-sm">
-          {Object.entries(tableData.summary).flatMap(([column, summaries]) =>
-            Object.entries(summaries).map(([name, value]) => (
-              <div key={`${column}-${name}`}>
-                <span className="text-muted-foreground">
-                  {descriptor.columns.find((item) => item.name === column)?.label ?? column} {name}
-                  :{' '}
-                </span>
-                <strong>{value}</strong>
-              </div>
-            ))
-          )}
-        </div>
+        <DataTableSummary summary={tableData.summary} columns={descriptor.columns} />
       )}
       <footer className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
         <span>{meta ? `${meta.from}–${meta.to} of ${meta.total}` : `${rows.length} results`}</span>

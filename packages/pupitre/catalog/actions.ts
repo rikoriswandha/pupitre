@@ -37,6 +37,15 @@ export const actions = {
     }),
     description: 'Run an action endpoint directly.',
   },
+  evaluate: {
+    params: z.object({
+      url: z.string(),
+      resource: z.string(),
+      field: z.string(),
+      debounce: z.number().optional(),
+    }),
+    description: 'Evaluate a server-backed field update and apply returned state patches.',
+  },
   upload: {
     params: z.object({ field: z.string(), files: z.array(z.unknown()) }),
     description: 'Upload files for a field.',

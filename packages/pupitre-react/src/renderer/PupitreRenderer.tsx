@@ -1,6 +1,7 @@
+import { evaluateResponse } from '@rikology/pupitre/catalog'
 import type { ActionDescriptor, PupitrePageProps } from '@rikology/pupitre/catalog'
 import { isDev } from '../dev.js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { JSONUIProvider, Renderer } from '@json-render/react'
 import type { SetState } from '@json-render/react'
 import type { StateStore } from '@json-render/core'
@@ -11,6 +12,7 @@ import { RuntimeContext } from '../runtime.js'
 import type { RuntimeContextValue } from '../runtime.js'
 import { getRegistryHandlers } from '../registry/defineRegistry.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
+import { jsonFetch } from '../bridge/actions.js'
 export function exposePupitreDevContext(
   target: Window,
   enabled: boolean,
@@ -18,10 +20,76 @@ export function exposePupitreDevContext(
 ): void {
   if (enabled) (target as Window & { __pupitre?: typeof context }).__pupitre = context
 }
+function readPath(value: unknown, path: string): unknown {
+  return path
+    .split('/')
+    .filter(Boolean)
+    .reduce<unknown>(
+      (current, segment) =>
+        current && typeof current === 'object'
+          ? (current as Record<string, unknown>)[segment]
+          : undefined,
+      value
+    )
+}
+
+function writePath(store: StateStore, path: string, value: unknown): void {
+  const keys = path.split('/').filter(Boolean)
+  if (keys[0] !== 'data' || keys.length < 2) return
+  store.set(path, value)
+}
+type ServerWatch = { params: Record<string, unknown> }
+function serverWatches(page: PupitrePageProps['page']): ServerWatch[] {
+  const output: ServerWatch[] = []
+  for (const element of Object.values(page.spec.elements)) {
+    if (!element.watch) continue
+    for (const bindings of Object.values(element.watch)) {
+      for (const binding of Array.isArray(bindings) ? bindings : [bindings]) {
+        if (
+          !binding ||
+          typeof binding !== 'object' ||
+          !('action' in binding) ||
+          binding.action !== 'evaluate'
+        )
+          continue
+        const params = 'params' in binding ? binding.params : undefined
+        if (
+          params &&
+          typeof params === 'object' &&
+          'field' in params &&
+          typeof params.field === 'string'
+        )
+          output.push({ params: params as Record<string, unknown> })
+      }
+    }
+  }
+  return output
+}
+
+function valuesAtPattern(value: unknown, pattern: string): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  const walk = (current: unknown, parts: string[], path: string[]) => {
+    const [part, ...rest] = parts
+    if (part === undefined) {
+      result[path.join('.')] = current
+      return
+    }
+    if (part === '*') {
+      if (!Array.isArray(current)) return
+      current.forEach((item, index) => walk(item, rest, [...path, String(index)]))
+      return
+    }
+    if (!current || typeof current !== 'object') return
+    walk((current as Record<string, unknown>)[part], rest, [...path, part])
+  }
+  walk(value, pattern.split('.'), [])
+  return result
+}
 
 export type PupitreRendererProps = {
   page: PupitrePageProps['page']
   data?: PupitrePageProps['data']
+  tableDataProps?: Record<string, unknown>
   errors?: Record<string, unknown>
   pupitre: PupitrePageProps['pupitre']
   registry: PupitreRegistry
@@ -41,6 +109,7 @@ export function PupitreRenderer(props: PupitreRendererProps) {
 function PupitreRendererInstance({
   page,
   data,
+  tableDataProps,
   errors,
   pupitre,
   registry,
@@ -73,6 +142,18 @@ function PupitreRendererInstance({
     if (typeof window === 'undefined') return
     exposePupitreDevContext(window, isDev, { store, page })
   }, [page, store])
+  const evaluations = useRef({
+    timers: new Map<string, ReturnType<typeof setTimeout>>(),
+    sequences: new Map<string, number>(),
+  })
+  useEffect(
+    () => () => {
+      for (const timer of evaluations.current.timers.values()) clearTimeout(timer)
+      evaluations.current.timers.clear()
+      evaluations.current.sequences.clear()
+    },
+    []
+  )
   const dispatchState: SetState = (updater) => {
     const next = updater(store.getSnapshot())
     for (const [key, value] of Object.entries(next)) store.set(`/${key}`, value)
@@ -85,6 +166,52 @@ function PupitreRendererInstance({
     ...handlers,
     visit: async (params: Record<string, unknown>) => visit(params),
     reload: async (params: Record<string, unknown>) => reload(params),
+    evaluate: async (params: Record<string, unknown>) => {
+      const field = String(params.field ?? '')
+      const sequence = (evaluations.current.sequences.get(field) ?? 0) + 1
+      evaluations.current.sequences.set(field, sequence)
+      clearTimeout(evaluations.current.timers.get(field))
+      return new Promise<void>((resolve) => {
+        const debounce = Math.max(0, Number(params.debounce) || 0)
+        const timer = setTimeout(async () => {
+          evaluations.current.timers.delete(field)
+          const snapshot = store.getSnapshot() as Record<string, unknown>
+          const state = snapshot.data
+          const meta = snapshot.meta
+          const record = readPath(meta, 'record') as Record<string, unknown> | undefined
+          const response = await jsonFetch(String(params.url ?? ''), {
+            method: 'POST',
+            body: JSON.stringify({
+              resource: String(params.resource ?? ''),
+              page: page.kind,
+              field,
+              state: state && typeof state === 'object' ? state : {},
+              ...(record && (typeof record.id === 'string' || typeof record.id === 'number')
+                ? { record: record.id }
+                : {}),
+            }),
+          }).catch(() => undefined)
+          if (!response?.ok || evaluations.current.sequences.get(field) !== sequence) {
+            resolve()
+            return
+          }
+          const parsed = evaluateResponse.safeParse(await response.json().catch(() => undefined))
+          if (!parsed.success) {
+            resolve()
+            return
+          }
+          const latest = store.getSnapshot()
+          for (const [path, value] of Object.entries(parsed.data.set)) {
+            if (!path.startsWith('/data/') || path.includes('..')) continue
+            const before = readPath(snapshot, path)
+            const current = readPath(latest, path)
+            if (JSON.stringify(current) === JSON.stringify(before)) writePath(store, path, value)
+          }
+          resolve()
+        }, debounce)
+        evaluations.current.timers.set(field, timer)
+      })
+    },
     submitForm: async () => submitForm(),
     openAction: async (params: Record<string, unknown>) =>
       runAction(params.action as never, { ids: params.ids as Array<string | number> | undefined }),
@@ -119,11 +246,37 @@ function PupitreRendererInstance({
         Array.isArray(params.files) ? (params.files as File[]) : []
       ),
   }
+  const evaluateAction = useRef(bridge.evaluate)
+  useEffect(() => {
+    evaluateAction.current = bridge.evaluate
+  }, [bridge.evaluate])
+  useEffect(() => {
+    const watchers = serverWatches(page)
+    if (!watchers.length) return
+    let previous = store.getSnapshot()
+    const unsubscribe = store.subscribe(() => {
+      const current = store.getSnapshot()
+      const beforeData = previous.data
+      const currentData = current.data
+      for (const watcher of watchers) {
+        const pattern = String(watcher.params.field)
+        const before = valuesAtPattern(beforeData, pattern)
+        const after = valuesAtPattern(currentData, pattern)
+        for (const [field, value] of Object.entries(after)) {
+          if (Object.is(value, before[field])) continue
+          void evaluateAction.current({ ...watcher.params, field })
+        }
+      }
+      previous = current
+    })
+    return unsubscribe
+  }, [page, store])
   const submitForm = embedded ? embedded.submit : () => submitPageForm(page, store, toast)
   const context: RuntimeContextValue = {
     store,
     page,
     data,
+    tableDataProps,
     panel: pupitre,
     registry,
     handlers: bridge,

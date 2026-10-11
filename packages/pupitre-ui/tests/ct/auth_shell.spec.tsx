@@ -10,5 +10,10 @@ test('renders the panel brand, title and accessible auth form in a centered shel
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible()
   await expect(page.getByRole('form', { name: 'Sign in form' })).toBeVisible()
   await expect(page.getByLabel('Email')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Continue with github' })).toHaveAttribute(
+    'href',
+    '/admin/auth/github/redirect'
+  )
+  await expect(page.getByRole('link', { name: 'Continue with google' })).toBeVisible()
   await story.unmount()
 })

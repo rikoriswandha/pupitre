@@ -1,0 +1,3 @@
+import { defineWidget } from '@rikology/pupitre'
+{{modelImport}}
+export default {{definition}}

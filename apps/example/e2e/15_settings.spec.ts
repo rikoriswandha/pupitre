@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('admin can update and reload Settings', async ({ admin, page }) => {
   await admin.login()

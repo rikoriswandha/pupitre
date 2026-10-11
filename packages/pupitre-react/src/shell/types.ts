@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import type {
   ActionDescriptor,
   Breadcrumb,
@@ -6,6 +6,10 @@ import type {
   PupitrePageProps,
   TenantOption,
 } from '@rikology/pupitre/catalog'
+import type { SubNavigationItem } from '@rikology/pupitre/catalog'
+import type { WidgetFilter } from '@rikology/pupitre/catalog'
+import type { WidgetDescriptor } from '@rikology/pupitre/catalog'
+import type { ImportResultResponse } from '@rikology/pupitre/catalog'
 
 type SharedPupitre = PupitrePageProps['pupitre']
 
@@ -16,6 +20,7 @@ export type ShellProps = {
   breadcrumbs: Breadcrumb[]
   title: string
   headerActions: ActionDescriptor[]
+  subNavigation?: SubNavigationItem[]
   currentUrl: string
   /** Current tenant (tenancy enabled), else `null`. */
   tenant: SharedPupitre['tenant']
@@ -37,6 +42,7 @@ export type ToastMessage = {
   type: 'success' | 'error' | 'warning' | 'info'
   title: string
   body?: string
+  actions?: { label: string; url?: string; method?: 'get' | 'post'; markAsRead?: boolean }[]
 }
 export type ModalProps = {
   open: boolean
@@ -61,6 +67,19 @@ export type ConfirmDialogProps = {
   onConfirm: () => void
   onCancel: () => void
 }
+export type ImportModalProps = {
+  open: boolean
+  action: ActionDescriptor
+  onClose: () => void
+  onComplete: (result: ImportResultResponse) => void
+}
+export type WidgetGridProps = {
+  widgets: WidgetDescriptor[]
+  data: Record<string, unknown>
+  deferred?: string[]
+  filters?: WidgetFilter[]
+  customWidgets?: Record<string, ComponentType<{ descriptor: WidgetDescriptor; data: unknown }>>
+}
 export type NotFoundProps = { title: string; message: string }
 export type ShellRegistry = {
   Shell: React.ComponentType<ShellProps>
@@ -69,4 +88,6 @@ export type ShellRegistry = {
   Modal: React.ComponentType<ModalProps>
   ConfirmDialog: React.ComponentType<ConfirmDialogProps>
   NotFound: React.ComponentType<NotFoundProps>
+  ImportModal?: React.ComponentType<ImportModalProps>
+  WidgetGrid?: ComponentType<WidgetGridProps>
 }

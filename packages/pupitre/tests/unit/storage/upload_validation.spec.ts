@@ -30,7 +30,8 @@ test.group('upload validation helpers', () => {
           .components([schema.repeater('items').schema((s) => [s.fileUpload('photo').image()])])
       ),
     ]
-    const field = findUploadField(nodes, 'photo')
+    const field = findUploadField(nodes, 'items.photo')
+    assert.isUndefined(findUploadField(nodes, 'photo'))
     assert.isUndefined(findUploadField(nodes, 'missing'))
     assert.isDefined(field)
     assert.equal(field?.kind, 'fileUpload')

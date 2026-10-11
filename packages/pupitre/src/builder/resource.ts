@@ -16,6 +16,7 @@ import type { PageBuilder } from './pages.js'
 import type { LucidRow, ModelAttributes } from '@adonisjs/lucid/types/model'
 import type { LucidModel, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { ModelRelationTypes } from '@adonisjs/lucid/types/relations'
+import type { RelationManagerEntry } from '../definition/relation_manager.js'
 export type ModelConstructor = {
   new (...args: never[]): object
   name: string
@@ -56,6 +57,7 @@ export type ResourceBuilder<M extends ResourceModel> = {
   globallySearchable(value: readonly (ModelField<M> | `${string}.${string}`)[]): ResourceBuilder<M>
   globalSearchDetails(value: (record: ModelInstance<M>) => string[]): ResourceBuilder<M>
   policy(value: PolicyClass | (() => Promise<{ default: PolicyClass }>)): ResourceBuilder<M>
+  softDeletes(column?: string): ResourceBuilder<M>
   scope(
     value: false | ((query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void)
   ): ResourceBuilder<M>
@@ -75,6 +77,12 @@ export type ResourceBuilder<M extends ResourceModel> = {
   actions(value: ResourceActions): ResourceBuilder<M>
   pages(
     value: Partial<Record<'list' | 'create' | 'edit' | 'view', PageBuilder>>
+  ): ResourceBuilder<M>
+  relations(value: readonly RelationManagerEntry[]): ResourceBuilder<M>
+  nested(value: readonly ResourceBuilder<ResourceModel>[]): ResourceBuilder<M>
+  parent(
+    value: ResourceBuilder<ResourceModel> | ResourceModel,
+    relation: string
   ): ResourceBuilder<M>
   fill(
     value: (record: ModelInstance<M>, ctx: HttpContext) => ResourceData | Promise<ResourceData>
@@ -165,6 +173,9 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
   ): ResourceBuilder<M> {
     return this.change({ scope: value })
   }
+  softDeletes(column = 'deletedAt'): ResourceBuilder<M> {
+    return this.change({ softDeletes: column })
+  }
   form(
     callback: (
       schema: FormSchema<Record<ModelField<M>, unknown>>
@@ -218,6 +229,28 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
         Object.entries(value).map(([key, page]) => [key, page?.definition])
       ) as ResourceDefinition['pages'],
     })
+  }
+  relations(value: readonly RelationManagerEntry[]): ResourceBuilder<M> {
+    return this.change({
+      relations: value.map((item) =>
+        'toDefinition' in item && typeof item.toDefinition === 'function'
+          ? item.toDefinition()
+          : item
+      ),
+    })
+  }
+  nested(value: readonly ResourceBuilder<ResourceModel>[]): ResourceBuilder<M> {
+    return this.change({ nested: value.map((item) => item.toDefinition()) })
+  }
+  parent(
+    value: ResourceBuilder<ResourceModel> | ResourceModel,
+    relation: string
+  ): ResourceBuilder<M> {
+    const parentDefinition = typeof value === 'function' ? undefined : value.toDefinition()
+    const modelName =
+      parentDefinition?.model ?? (typeof value === 'function' ? value.name : value.definition.model)
+    const slug = parentDefinition?.slug ?? pluralize(kebab(modelName.replace(/Model$/, '')))
+    return this.change({ parent: { resource: slug, relation } })
   }
   fill(value: NonNullable<ResourceHooks<ModelInstance<M>>['fill']>): ResourceBuilder<M> {
     return this.updateHooks({ fill: value })

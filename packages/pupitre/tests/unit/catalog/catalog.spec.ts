@@ -89,7 +89,7 @@ test.group('catalog wire schemas', () => {
       }).success
     )
     assert.isTrue(
-      actionFormResponse.safeParse({ spec: catalogFixtures.Text, state: {}, catalogVersion: '0.2' })
+      actionFormResponse.safeParse({ spec: catalogFixtures.Text, state: {}, catalogVersion: '0.3' })
         .success
     )
     assert.isTrue(
@@ -203,7 +203,7 @@ test.group('catalog wire schemas', () => {
           spec: catalogFixtures.DataTable,
           state: {},
           actions: { header: [] },
-          catalogVersion: '0.2',
+          catalogVersion: '0.3',
         },
         data: {
           rows: [],
@@ -213,10 +213,10 @@ test.group('catalog wire schemas', () => {
       }).success
     )
   })
-  test('M1 catalog omits evaluate/fetchOptions and accepts striped table descriptors', ({
+  test('catalog exposes evaluate (M3), omits fetchOptions, accepts striped table descriptors', ({
     assert,
   }) => {
-    assert.notProperty(pupitreCatalog.actions, 'evaluate')
+    assert.property(pupitreCatalog.actions, 'evaluate')
     assert.notProperty(pupitreCatalog.actions, 'fetchOptions')
     assert.isTrue(
       tableDescriptor.safeParse({

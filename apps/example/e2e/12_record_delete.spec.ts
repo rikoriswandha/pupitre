@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest(
   'delete from an edit page returns to the list with one Deleted toast',
@@ -12,13 +12,13 @@ pupitreTest(
     await admin.fillField('Title', title)
     await admin.fillField('Slug', `delete-e2e-${Date.now()}`)
     await admin.fillField('Category', 'Culture')
-    await page.getByRole('button', { name: 'Create Post' }).click()
+    await page.getByRole('button', { name: 'Save post' }).click()
     await expect(page).toHaveURL(/\/admin\/acme\/posts\/\d+\/edit/)
     const postId = page.url().match(/posts\/(\d+)\/edit/)?.[1]
     expect(postId).toBeTruthy()
 
     await page.goto('/admin/acme/posts')
-    const row = admin.postRow(title)
+    const row = admin.row(title)
     await expect(row).toBeVisible()
     await page.goto(`/admin/acme/posts/${postId}/edit`)
 
@@ -40,7 +40,7 @@ pupitreTest('clearing an optional date persists null on edit', async ({ admin, p
   const publishedAt = page.getByLabel('Published at')
   await expect(publishedAt).toHaveValue(/.+/)
   await publishedAt.fill('')
-  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await page.getByRole('button', { name: 'Save post', exact: true }).click()
   await expect(page).toHaveURL('/admin/acme/posts/2/edit')
 
   await page.reload()

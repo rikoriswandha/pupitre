@@ -128,6 +128,49 @@
       "filePath": "make_panel.js"
     },
     {
+      "commandName": "make:relation-manager",
+      "description": "Generate a Pupitre relation manager",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "model",
+          "flagName": "model",
+          "required": false,
+          "type": "string",
+          "description": "Parent model module path (defaults to #models/<model>)"
+        },
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing relation manager"
+        }
+      ],
+      "args": [
+        {
+          "name": "parent",
+          "argumentName": "parent",
+          "required": true,
+          "description": "Parent Lucid model name",
+          "type": "string"
+        },
+        {
+          "name": "relation",
+          "argumentName": "relation",
+          "required": true,
+          "description": "Relationship name on the parent model",
+          "type": "string"
+        }
+      ],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "make_relation_manager.js"
+    },
+    {
       "commandName": "make:resource",
       "description": "Generate a Pupitre resource from a Lucid model",
       "help": "",
@@ -171,16 +214,56 @@
       "filePath": "make_resource.js"
     },
     {
+      "commandName": "make:widget",
+      "description": "Generate a Pupitre dashboard widget",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "type",
+          "flagName": "type",
+          "required": false,
+          "type": "string",
+          "description": "Widget type: stats, chart, or table",
+          "default": "stats"
+        },
+        {
+          "name": "model",
+          "flagName": "model",
+          "required": false,
+          "type": "string",
+          "description": "Model module path for table widgets (defaults to #models/<name>)"
+        },
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing widget file"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Widget name",
+          "type": "string"
+        }
+      ],
+      "options": {},
+      "filePath": "make_widget.js"
+    },
+    {
       "commandName": "pupitre:prune",
-      "description": "Delete expired Pupitre password reset tokens",
+      "description": "Delete expired Pupitre password reset tokens and export files",
       "help": "",
       "namespace": "pupitre",
       "aliases": [],
       "flags": [],
       "args": [],
-      "options": {
-        "startApp": true
-      },
+      "options": {},
       "filePath": "prune.js"
     },
     {

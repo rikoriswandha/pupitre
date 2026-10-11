@@ -27,9 +27,11 @@ export function usePanelTheme(panel: ShellProps['panel']): CSSProperties {
   }, [dark])
   useEffect(() => {
     const root = document.documentElement
-    const variables = Object.entries(theme)
-      .filter(([key]) => key.startsWith('--') || key === 'primary')
-      .map(([key, value]) => [key === 'primary' ? '--primary' : key, value] as const)
+    const variables = Object.entries({
+      ...(theme.primary ? { '--primary': theme.primary } : {}),
+      ...(theme.radius ? { '--radius': theme.radius } : {}),
+      ...(theme.vars ?? {}),
+    })
     const previous = variables.map(
       ([key]) =>
         [key, root.style.getPropertyValue(key), root.style.getPropertyPriority(key)] as const
@@ -43,6 +45,22 @@ export function usePanelTheme(panel: ShellProps['panel']): CSSProperties {
     }
   }, [theme])
   useEffect(() => {
+    const links: HTMLLinkElement[] = []
+    for (const [rel, href] of [
+      ['stylesheet', theme.stylesheet],
+      ['stylesheet', theme.fontUrl],
+    ] as const) {
+      if (!href || typeof document === 'undefined') continue
+      const link = document.createElement('link')
+      link.rel = rel
+      link.href = href
+      link.dataset.pupitreTheme = panel.id
+      document.head.append(link)
+      links.push(link)
+    }
+    return () => links.forEach((link) => link.remove())
+  }, [panel.id, theme.stylesheet, theme.fontUrl])
+  useEffect(() => {
     if (!panelBrand?.favicon || typeof document === 'undefined') return
     let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
     if (!link) {
@@ -52,9 +70,10 @@ export function usePanelTheme(panel: ShellProps['panel']): CSSProperties {
     }
     link.href = panelBrand.favicon
   }, [panelBrand?.favicon])
-  return Object.fromEntries(
-    Object.entries(theme)
-      .filter(([key]) => key.startsWith('--') || key === 'primary')
-      .map(([key, value]) => [key === 'primary' ? '--primary' : key, value])
-  ) as CSSProperties
+  return {
+    ...theme.vars,
+    ...(theme.primary ? { '--primary': theme.primary } : {}),
+    ...(theme.radius ? { '--radius': theme.radius } : {}),
+    ...(theme.fontFamily ? { fontFamily: 'var(--font-sans)' } : {}),
+  } as CSSProperties
 }

@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('rich editor persists formatted sanitized HTML', async ({ admin, page }) => {
   await admin.login()
@@ -23,7 +23,7 @@ pupitreTest('rich editor persists formatted sanitized HTML', async ({ admin, pag
       response.request().method() === 'PUT' &&
       new URL(response.url()).pathname === '/admin/acme/posts/1'
   )
-  await page.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Save post' }).click()
   await saved
   const postId = page.url().match(/posts\/(\d+)/)?.[1]
   expect(postId).toBeTruthy()

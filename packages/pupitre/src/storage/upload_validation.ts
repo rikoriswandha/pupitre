@@ -1,48 +1,43 @@
 import type {
   FileUploadFieldDefinition,
+  MarkdownEditorFieldDefinition,
   RichEditorFieldDefinition,
   SchemaNodeBuilder,
   SchemaNodeDefinition,
 } from '../definition/schema.js'
 import { getComponentDefinition, schema } from '../builder/schema/schema.js'
-type UploadField = FileUploadFieldDefinition | RichEditorFieldDefinition
+import { walkSchema } from '../definition/walk.js'
+type UploadField =
+  FileUploadFieldDefinition | RichEditorFieldDefinition | MarkdownEditorFieldDefinition
 
 export function findUploadField(
   nodes: SchemaNodeDefinition[] | undefined,
   name: string
 ): UploadField | undefined {
-  const find = (
-    items: SchemaNodeDefinition[] | undefined,
-    prefix: string
-  ): UploadField | undefined => {
-    for (const node of items ?? []) {
-      const path = 'name' in node ? [prefix, node.name].filter(Boolean).join('.') : prefix
+  let result: UploadField | undefined
+  walkSchema(
+    nodes ?? [],
+    (node, path) => {
       if (
-        (node.kind === 'fileUpload' || node.kind === 'richEditor') &&
-        (node.name === name || path === name)
+        !result &&
+        (node.kind === 'fileUpload' ||
+          node.kind === 'richEditor' ||
+          node.kind === 'markdownEditor') &&
+        path === name
       ) {
-        return node
+        result = node
       }
-      if ('children' in node) {
-        const found = find(node.children, prefix)
-        if (found) return found
-      }
-      if (node.kind === 'repeater') {
-        const nested =
-          typeof node.schema === 'function'
-            ? node
-                .schema(schema)
-                .map((component) =>
-                  getComponentDefinition(component as unknown as SchemaNodeBuilder)
-                )
-            : (node.schema ?? [])
-        const found = find(nested, path)
-        if (found) return found
-      }
+    },
+    {
+      repeaterSchema: (node) =>
+        typeof node.schema === 'function'
+          ? node
+              .schema(schema)
+              .map((component) => getComponentDefinition(component as unknown as SchemaNodeBuilder))
+          : (node.schema ?? []),
     }
-    return undefined
-  }
-  return find(nodes, '')
+  )
+  return result
 }
 
 export function parseMaxSize(value: number | string | undefined): number | undefined {
@@ -59,8 +54,9 @@ export function isUploadMimeAllowed(
   mime: string,
   extension: string
 ): boolean {
-  if (field.kind !== 'fileUpload' && field.kind !== 'richEditor') return false
-  if (field.kind === 'richEditor' || field.image) return mime.startsWith('image/')
+  if (field.kind !== 'fileUpload' && field.kind !== 'richEditor' && field.kind !== 'markdownEditor')
+    return false
+  if (field.kind !== 'fileUpload' || field.image) return mime.startsWith('image/')
   if (!field.accept) return true
   const accepts = (Array.isArray(field.accept) ? field.accept : [field.accept])
     .flatMap((accept) => accept.split(','))

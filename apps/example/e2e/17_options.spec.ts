@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest(
   'searches relationships and creates an option from the select modal',
@@ -23,7 +23,7 @@ pupitreTest(
       page.getByRole('option', { name: 'New options category', exact: true })
     ).toBeVisible()
 
-    await page.getByRole('button', { name: 'Create Post' }).click()
+    await page.getByRole('button', { name: 'Save post' }).click()
     await expect(page).toHaveURL(/\/admin\/acme\/posts\/\d+\/edit/)
   }
 )

@@ -33,7 +33,12 @@ export const plugins: Config['plugins'] = [
  * The teardown functions are executed after all the tests
  */
 export const runnerHooks: Required<Pick<Config, 'setup' | 'teardown'>> = {
-  setup: [],
+  setup: [
+    async () => {
+      const ace = await app.container.make('ace')
+      await ace.exec('migration:run', [])
+    },
+  ],
   teardown: [],
 }
 

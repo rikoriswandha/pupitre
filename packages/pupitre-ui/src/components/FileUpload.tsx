@@ -1,8 +1,10 @@
+import { lazy, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
 import type { FileUploadDescriptor, UploadResponse } from '@rikology/pupitre/catalog'
 
+const ImageCropper = lazy(() => import('./ImageCropper.js'))
 export type FileUploadProps = {
   props: {
     descriptor: FileUploadDescriptor
@@ -35,6 +37,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   const [workingFile, setWorkingFile] = useState<string | null>(null)
   const [localError, setLocalError] = useState<string>()
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadResponse>>({})
+  const [cropFile, setCropFile] = useState<File | null>(null)
   const dirty = useStateValue('/meta/dirty')
   const wasDirty = useRef(false)
   useEffect(() => {
@@ -53,7 +56,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     !working &&
     (!descriptor.multiple || descriptor.maxFiles === undefined || keys.length < descriptor.maxFiles)
 
-  async function uploadFiles(files: FileList | null) {
+  async function uploadFiles(files: FileList | null, cropApplied = false) {
     if (!files?.length) return
     setLocalError(undefined)
     const chosen = Array.from(files)
@@ -73,6 +76,18 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     )
     if (invalid) {
       setLocalError(`${invalid.name} exceeds the maximum file size.`)
+      return
+    }
+    if (
+      !cropApplied &&
+      descriptor.imageEditor &&
+      chosen.some((file) => file.type.startsWith('image/'))
+    ) {
+      if (chosen.length !== 1) {
+        setLocalError('Choose one image at a time when image editing is enabled.')
+        return
+      }
+      setCropFile(chosen[0]!)
       return
     }
     setWorking(true)
@@ -244,6 +259,21 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         <p className="text-sm text-destructive" role="alert">
           {error ?? localError}
         </p>
+      )}
+      {cropFile && (
+        <Suspense fallback={<div role="status">Loading image editor…</div>}>
+          <ImageCropper
+            file={cropFile}
+            ratios={descriptor.imageEditorAspectRatios}
+            onCancel={() => setCropFile(null)}
+            onComplete={(cropped) => {
+              setCropFile(null)
+              const transfer = new DataTransfer()
+              transfer.items.add(cropped)
+              void uploadFiles(transfer.files, true)
+            }}
+          />
+        </Suspense>
       )}
       {children}
     </div>

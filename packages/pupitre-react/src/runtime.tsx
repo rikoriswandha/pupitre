@@ -9,6 +9,7 @@ export type RuntimeContextValue = {
   store: StateStore
   page: PupitrePageProps['page']
   data: PupitrePageProps['data']
+  tableDataProps?: Record<string, unknown>
   panel: PupitrePageProps['pupitre']
   registry: PupitreRegistry
   handlers: Record<string, (params: Record<string, unknown>) => Promise<unknown> | unknown>
@@ -29,6 +30,9 @@ export function useRuntime(): RuntimeContextValue {
   if (!value) throw new Error('Pupitre hooks must be used inside <Pupitre>.')
   return value
 }
+export function useOptionalRuntime(): RuntimeContextValue | null {
+  return useContext(RuntimeContext)
+}
 
 /**
  * Page-level services available outside the spec renderer (the Shell renders
@@ -42,4 +46,9 @@ export function usePageActions(): PageActionsContextValue {
   const value = runtime ?? page
   if (!value) throw new Error('Pupitre hooks must be used inside <Pupitre>.')
   return value
+}
+export function useOptionalPageActions(): PageActionsContextValue | null {
+  const runtime = useContext(RuntimeContext)
+  const page = useContext(PageActionsContext)
+  return runtime ?? page
 }

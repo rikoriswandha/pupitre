@@ -1,8 +1,9 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Category from './category.js'
+import PostLink from './post_link.js'
 
 function jsonPrepare(value: unknown) {
   return value === null ? value : JSON.stringify(value)
@@ -29,9 +30,12 @@ export default class Post extends BaseModel {
   declare items: { sku: string; qty: number; attachment?: string }[] | null
   @column({ prepare: jsonPrepare, consume: jsonConsume })
   declare metadata: Record<string, unknown> | null
+  @column({ prepare: jsonPrepare, consume: jsonConsume })
+  declare content: { type: string; data: Record<string, unknown>; _key?: string }[] | null
   @column() declare cover: string | null
   @column() declare privateCover: string | null
   @column() declare tenantId: number | null
+  @column.dateTime() declare deletedAt: DateTime | null
   @column.dateTime({ autoCreate: true }) declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true }) declare updatedAt: DateTime
 
@@ -39,4 +43,5 @@ export default class Post extends BaseModel {
   @belongsTo(() => Category, { foreignKey: 'categoryId' }) declare category: BelongsTo<
     typeof Category
   >
+  @hasMany(() => PostLink) declare links: HasMany<typeof PostLink>
 }

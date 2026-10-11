@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest(
   'repeater preserves the remaining item and validates its own row',
@@ -33,7 +33,7 @@ pupitreTest(
       const form = element as unknown as { noValidate: boolean }
       form.noValidate = true
     })
-    await page.getByRole('button', { name: 'Create Post' }).click()
+    await page.getByRole('button', { name: 'Save post' }).click()
     await expect(page.getByText(/sku.*must be defined/i).last()).toBeVisible()
     await expect(page.getByLabel('SKU').first()).toHaveValue('')
   }

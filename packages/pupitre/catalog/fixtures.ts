@@ -1,7 +1,7 @@
 import type { JsonRenderSpec } from './wire.js'
 
 export const catalogFixtures = {
-  Text: {
+  'Text': {
     root: 'root',
     elements: {
       root: {
@@ -13,22 +13,49 @@ export const catalogFixtures = {
           error: { $state: '/errors/title' },
           type: 'text',
           placeholder: 'Enter a title',
+          mask: '99/99/9999',
+          hint: 'A date for this record.',
+          hintIcon: 'circle-help',
+          hintTooltip: 'Date format: MM/DD/YYYY.',
+          hintAction: {
+            name: 'hint-help',
+            label: 'Hint action',
+            kind: 'link',
+            url: '/help',
+            enabled: true,
+          },
+          prefix: 'From',
+          prefixAction: {
+            name: 'prefix-action',
+            label: 'Prefix action',
+            kind: 'link',
+            url: '/prefix',
+            enabled: true,
+          },
+          suffix: 'to',
+          suffixAction: {
+            name: 'suffix-action',
+            label: 'Suffix action',
+            kind: 'link',
+            url: '/suffix',
+            enabled: true,
+          },
         },
       },
     },
-    state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
+    state: { data: { title: '01012024', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Textarea: {
+  'Textarea': {
     root: 'root',
     elements: {
       root: {
         type: 'Textarea',
-        props: { name: 'body', value: { $bindState: '/data/body' }, rows: 4 },
+        props: { name: 'body', value: { $bindState: '/data/body' }, rows: 2, autosize: true },
       },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Number: {
+  'Number': {
     root: 'root',
     elements: {
       root: {
@@ -38,14 +65,32 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Hidden: {
+  'Slider': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Slider',
+        props: {
+          name: 'priority',
+          label: 'Priority',
+          value: { $bindState: '/data/priority' },
+          min: 0,
+          max: 100,
+          step: 5,
+          marks: [0, 50, 100],
+        },
+      },
+    },
+    state: { data: { priority: 20 }, errors: {} },
+  },
+  'Hidden': {
     root: 'root',
     elements: {
       root: { type: 'Hidden', props: { name: 'token', value: { $bindState: '/data/token' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Select: {
+  'Select': {
     root: 'root',
     elements: {
       root: {
@@ -59,14 +104,14 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Checkbox: {
+  'Checkbox': {
     root: 'root',
     elements: {
       root: { type: 'Checkbox', props: { name: 'active', value: { $bindState: '/data/active' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  CheckboxList: {
+  'CheckboxList': {
     root: 'root',
     elements: {
       root: {
@@ -80,7 +125,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Radio: {
+  'Radio': {
     root: 'root',
     elements: {
       root: {
@@ -94,14 +139,14 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Toggle: {
+  'Toggle': {
     root: 'root',
     elements: {
       root: { type: 'Toggle', props: { name: 'enabled', value: { $bindState: '/data/enabled' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  ToggleButtons: {
+  'ToggleButtons': {
     root: 'root',
     elements: {
       root: {
@@ -115,7 +160,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Date: {
+  'Date': {
     root: 'root',
     elements: {
       root: {
@@ -125,7 +170,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  DateTime: {
+  'DateTime': {
     root: 'root',
     elements: {
       root: {
@@ -135,14 +180,14 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Time: {
+  'Time': {
     root: 'root',
     elements: {
       root: { type: 'Time', props: { name: 'opensAt', value: { $bindState: '/data/opensAt' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Color: {
+  'Color': {
     root: 'root',
     elements: {
       root: {
@@ -152,14 +197,14 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Tags: {
+  'Tags': {
     root: 'root',
     elements: {
       root: { type: 'Tags', props: { name: 'tags', value: { $bindState: '/data/tags' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  KeyValue: {
+  'KeyValue': {
     root: 'root',
     elements: {
       root: {
@@ -169,7 +214,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  RichEditor: {
+  'RichEditor': {
     root: 'root',
     elements: {
       root: {
@@ -183,7 +228,39 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  FileUpload: {
+  'MarkdownEditor': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'MarkdownEditor',
+        props: {
+          name: 'summary',
+          value: { $bindState: '/data/summary' },
+          toolbar: ['bold', 'italic', 'link', 'image'],
+          uploadUrl: '/upload',
+          preview: true,
+        },
+      },
+    },
+    state: { data: { summary: '# Article' } },
+  },
+  'CodeEditor': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'CodeEditor',
+        props: {
+          name: 'config',
+          value: { $bindState: '/data/config' },
+          language: 'json',
+          lineNumbers: true,
+          minHeight: 180,
+        },
+      },
+    },
+    state: { data: { config: '{}' } },
+  },
+  'FileUpload': {
     root: 'root',
     elements: {
       root: {
@@ -200,6 +277,8 @@ export const catalogFixtures = {
             reorderable: false,
             downloadable: true,
             previewable: true,
+            imageEditor: true,
+            imageEditorAspectRatios: ['16:9', '4:3', '1:1', null],
           },
           value: { $bindState: '/data/cover' },
         },
@@ -207,7 +286,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Repeater: {
+  'Repeater': {
     root: 'root',
     elements: {
       root: {
@@ -234,7 +313,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  RepeaterItem: {
+  'RepeaterItem': {
     root: 'root',
     elements: {
       root: {
@@ -246,7 +325,46 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Form: {
+  'Builder': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Builder',
+        props: {
+          descriptor: {
+            name: 'content',
+            blocks: [{ key: 'heading', label: 'Heading', template: 'item' }],
+            reorderable: true,
+            collapsible: true,
+            cloneable: true,
+          },
+          value: { $bindState: '/data/content' },
+        },
+        children: ['item'],
+        repeat: { statePath: '/data/content', key: '_key' },
+      },
+      item: {
+        type: 'BuilderItem',
+        props: { block: 'heading', index: { $index: true } },
+        children: ['field'],
+      },
+      field: { type: 'Text', props: { name: 'title', value: { $bindItem: 'data.title' } } },
+    },
+    state: { data: { content: [{ _key: 'one', type: 'heading', data: { title: 'Welcome' } }] } },
+  },
+  'BuilderItem': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'BuilderItem',
+        props: { block: 'heading', index: { $index: true } },
+        children: ['field'],
+      },
+      field: { type: 'Text', props: { name: 'title', value: { $bindItem: 'data.title' } } },
+    },
+    state: { data: { content: [{ _key: 'one', type: 'heading', data: { title: 'Welcome' } }] } },
+  },
+  'Form': {
     root: 'root',
     elements: {
       root: {
@@ -261,7 +379,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Grid: {
+  'Grid': {
     root: 'root',
     elements: {
       root: { type: 'Grid', props: { columns: 2, gap: 4 }, children: ['child'] },
@@ -272,7 +390,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Section: {
+  'Section': {
     root: 'root',
     elements: {
       root: { type: 'Section', props: { heading: 'Details', columns: 2 }, children: ['child'] },
@@ -283,7 +401,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Fieldset: {
+  'Fieldset': {
     root: 'root',
     elements: {
       root: { type: 'Fieldset', props: { label: 'Details', columns: 2 }, children: ['child'] },
@@ -294,7 +412,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Tabs: {
+  'Tabs': {
     root: 'root',
     elements: {
       root: {
@@ -317,7 +435,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Tab: {
+  'Tab': {
     root: 'root',
     elements: {
       root: { type: 'Tab', props: { key: 'details', label: 'Details' }, children: ['child'] },
@@ -328,7 +446,45 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Group: {
+  'Wizard': {
+    root: 'root',
+    elements: {
+      'root': {
+        type: 'Wizard',
+        props: {
+          id: 'l.0',
+          steps: [
+            { key: 'account', label: 'Account' },
+            { key: 'profile', label: 'Profile' },
+          ],
+          step: { $bindState: '/ui/wizard/l.0/step' },
+          skippable: false,
+        },
+        children: ['step', 'profile-step'],
+      },
+      'step': { type: 'Step', props: { key: 'account', label: 'Account' }, children: ['field'] },
+      'profile-step': {
+        type: 'Step',
+        props: { key: 'profile', label: 'Profile' },
+        children: ['profile-field'],
+      },
+      'field': { type: 'Text', props: { name: 'email', value: { $bindState: '/data/email' } } },
+      'profile-field': {
+        type: 'Text',
+        props: { name: 'name', value: { $bindState: '/data/name' } },
+      },
+    },
+    state: { data: { email: '', name: '' }, ui: { wizard: { 'l.0': { step: 0 } } } },
+  },
+  'Step': {
+    root: 'root',
+    elements: {
+      root: { type: 'Step', props: { key: 'account', label: 'Account' }, children: ['field'] },
+      field: { type: 'Text', props: { name: 'email', value: { $bindState: '/data/email' } } },
+    },
+    state: { data: { email: '' } },
+  },
+  'Group': {
     root: 'root',
     elements: {
       root: { type: 'Group', props: { relationship: 'author' }, children: ['child'] },
@@ -339,7 +495,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Split: {
+  'Split': {
     root: 'root',
     elements: {
       root: { type: 'Split', props: { from: 'md', ratio: 0.5 }, children: ['child'] },
@@ -350,7 +506,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Placeholder: {
+  'Placeholder': {
     root: 'root',
     elements: {
       root: {
@@ -366,22 +522,22 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Html: {
+  'Html': {
     root: 'root',
     elements: { root: { type: 'Html', props: { content: '<p>Safe content</p>' } } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Divider: {
+  'Divider': {
     root: 'root',
     elements: { root: { type: 'Divider', props: {} } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Actions: {
+  'Actions': {
     root: 'root',
     elements: { root: { type: 'Actions', props: { actions: [] } } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  View: {
+  'View': {
     root: 'root',
     elements: {
       root: { type: 'View', props: { component: 'PostSummary', props: {} }, children: ['child'] },
@@ -392,7 +548,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Fragment: {
+  'Fragment': {
     root: 'root',
     elements: {
       root: { type: 'Fragment', props: {}, children: ['child'] },
@@ -403,7 +559,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  DataTable: {
+  'DataTable': {
     root: 'root',
     elements: {
       root: {
@@ -456,7 +612,110 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  ActionBar: {
+  'Widget.Stats': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Widget.Stats',
+        props: {
+          descriptor: { name: 'posts', kind: 'stats', dataProp: 'widget_posts', span: 2, sort: 1 },
+          data: { kind: 'stats', stats: [{ label: 'Published', value: 12, chart: [2, 4, 6] }] },
+        },
+      },
+    },
+  },
+  'Widget.Chart': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Widget.Chart',
+        props: {
+          descriptor: {
+            name: 'trend',
+            kind: 'chart',
+            dataProp: 'widget_trend',
+            span: 2,
+            sort: 2,
+            chartType: 'line',
+          },
+          data: {
+            kind: 'chart',
+            labels: ['Jan', 'Feb'],
+            datasets: [{ label: 'Posts', data: [4, 7] }],
+          },
+        },
+      },
+    },
+  },
+  'Widget.Table': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'Widget.Table',
+        props: {
+          descriptor: {
+            name: 'latest',
+            kind: 'table',
+            dataProp: 'widget_latest',
+            span: 'full',
+            sort: 3,
+          },
+          data: {
+            kind: 'table',
+            data: {
+              rows: [],
+              meta: { total: 0, perPage: 10, currentPage: 1, lastPage: 1, from: 0, to: 0 },
+              query: {},
+            },
+          },
+        },
+      },
+    },
+  },
+  'RelationManager': {
+    root: 'root',
+    elements: {
+      root: {
+        type: 'RelationManager',
+        props: {
+          descriptor: {
+            key: 'comments',
+            relation: 'comments',
+            label: 'Comments',
+            badge: 7,
+            url: '/posts/1/relations/comments',
+            dataProp: 'commentsData',
+            queryPrefix: 'comments',
+            readOnly: true,
+            table: {
+              id: 'posts.comments',
+              url: '/posts/1/relations/comments',
+              dataProp: 'commentsData',
+              queryPrefix: 'comments',
+              columns: [],
+              filters: [],
+              filtersLayout: 'dropdown',
+              perPageOptions: [25],
+              searchable: false,
+              searchDebounce: 300,
+              selectable: false,
+              bulkActions: [],
+              layout: 'table',
+            },
+            actions: {
+              header: [
+                { name: 'attach', label: 'Attach', kind: 'form', url: '/attach', enabled: true },
+              ],
+              row: [],
+              bulk: [],
+            },
+          },
+        },
+      },
+    },
+    state: { data: {}, errors: {} },
+  },
+  'ActionBar': {
     root: 'root',
     elements: {
       root: {
@@ -470,7 +729,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  Infolist: {
+  'Infolist': {
     root: 'root',
     elements: {
       root: { type: 'Infolist', props: {}, children: ['child'] },
@@ -481,7 +740,7 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  TextEntry: {
+  'TextEntry': {
     root: 'root',
     elements: {
       root: {
@@ -491,31 +750,31 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  IconEntry: {
+  'IconEntry': {
     root: 'root',
     elements: {
       root: { type: 'IconEntry', props: { label: 'Status', value: 'check', icon: 'check' } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  ImageEntry: {
+  'ImageEntry': {
     root: 'root',
     elements: { root: { type: 'ImageEntry', props: { label: 'Cover', value: '/cover.png' } } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  ColorEntry: {
+  'ColorEntry': {
     root: 'root',
     elements: { root: { type: 'ColorEntry', props: { label: 'Accent', value: '#336699' } } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  KeyValueEntry: {
+  'KeyValueEntry': {
     root: 'root',
     elements: {
       root: { type: 'KeyValueEntry', props: { label: 'Metadata', value: { author: 'Ada' } } },
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  RepeatableEntry: {
+  'RepeatableEntry': {
     root: 'root',
     elements: {
       root: {
@@ -530,12 +789,12 @@ export const catalogFixtures = {
     },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  CodeEntry: {
+  'CodeEntry': {
     root: 'root',
     elements: { root: { type: 'CodeEntry', props: { label: 'Payload', value: '{}' } } },
     state: { data: { title: 'Example', items: [{ sku: 'ABC' }] }, errors: { title: 'Required' } },
   },
-  BadgeEntry: {
+  'BadgeEntry': {
     root: 'root',
     elements: {
       root: {

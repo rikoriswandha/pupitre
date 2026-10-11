@@ -3,7 +3,7 @@ import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Input, Label } from '../primitives/index.js'
-import { toInputValue } from '../primitives/date_value.js'
+import { timezoneHint, toInputValue } from '../primitives/date_value.js'
 
 type Props = Infer<typeof components.Date.props>
 type Runtime = {
@@ -22,8 +22,14 @@ export function Date({ props, bindings }: Runtime) {
   const id = bindings?.value
     ? bindings.value.split('/').slice(2).join('.')
     : (props.name ?? generatedId)
+  const zoneHint = timezoneHint(props.timezone)
   const describedBy =
-    [props.hint && `${id}-hint`, props.helperText && `${id}-helper`, error && `${id}-error`]
+    [
+      props.hint && `${id}-hint`,
+      props.helperText && `${id}-helper`,
+      zoneHint && `${id}-timezone`,
+      error && `${id}-error`,
+    ]
       .filter(Boolean)
       .join(' ') || undefined
   const columnStyle =
@@ -62,6 +68,11 @@ export function Date({ props, bindings }: Runtime) {
           aria-invalid={!!error}
           className="h-10 w-full"
         />
+        {zoneHint && (
+          <p id={`${id}-timezone`} className="text-sm text-muted-foreground">
+            {zoneHint}
+          </p>
+        )}
         {props.hint && (
           <p id={`${id}-hint`} className="text-sm text-muted-foreground">
             {props.hint}

@@ -4,6 +4,7 @@ import type { ActionDefinition } from './action.js'
 import type { ComponentDefinition } from './schema.js'
 import type { TableDefinition } from './table.js'
 import type { PageDefinition } from './page.js'
+import type { RelationManagerEntry } from './relation_manager.js'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 
 export type PolicyClass = abstract new (...args: never[]) => object
@@ -56,9 +57,13 @@ export type ResourceDefinition<Model extends object = object> = {
   scope?: false | ((query: ModelQueryBuilderContract<LucidModel>, ctx: HttpContext) => void)
   form?: ComponentDefinition[]
   table?: TableDefinition
+  softDeletes?: string
   infolist?: ComponentDefinition[]
   actions?: { header: ActionDefinition[]; row: ActionDefinition[]; bulk: ActionDefinition[] }
   pages: Partial<Record<'list' | 'create' | 'edit' | 'view', PageDefinition>>
+  relations?: RelationManagerEntry[]
+  nested?: ResourceDefinition[]
+  parent?: { resource: string; relation: string }
   hooks: ResourceHooks<Model>
   handlers: ResourceHandlers<Model>
   toJSON(): string

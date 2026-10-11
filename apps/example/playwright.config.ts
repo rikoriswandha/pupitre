@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
+import type { PupitreFixtures } from '@rikology/pupitre-ui/testing'
+import { examplePanel } from './e2e/panel.js'
 
-export default defineConfig({
+export default defineConfig<Pick<PupitreFixtures, 'pupitre'>>({
   testDir: './e2e',
   fullyParallel: false,
   workers: 1,
@@ -11,6 +13,7 @@ export default defineConfig({
     baseURL: 'http://localhost:3391',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    pupitre: examplePanel,
     ...devices['Desktop Chrome'],
   },
   webServer: {
@@ -26,6 +29,7 @@ export default defineConfig({
       LOG_LEVEL: 'error',
       APP_KEY: 'pupitre-e2e-key-that-is-long-enough-for-tests',
       PUPITRE_MAIL_DIR: `${import.meta.dirname}/tmp/mails`,
+      PUPITRE_FAKE_ALLY: 'true',
       APP_URL: 'http://localhost:3391',
       SESSION_DRIVER: 'cookie',
       DB_DATABASE: `${import.meta.dirname}/tmp/pupitre-e2e.sqlite`,

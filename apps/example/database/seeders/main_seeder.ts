@@ -3,7 +3,9 @@ import db from '@adonisjs/lucid/services/db'
 import { DateTime } from 'luxon'
 import Category from '#models/category'
 import Post from '#models/post'
+import Comment from '#models/comment'
 import Tenant from '#models/tenant'
+import Tag from '#models/tag'
 import User from '#models/user'
 
 export default class MainSeeder extends BaseSeeder {
@@ -22,7 +24,7 @@ export default class MainSeeder extends BaseSeeder {
       {
         fullName: 'Editorial Editor',
         password: 'password',
-        timezone: null,
+        timezone: 'Europe/Amsterdam',
         emailVerifiedAt: DateTime.now(),
       }
     )
@@ -31,6 +33,15 @@ export default class MainSeeder extends BaseSeeder {
       { email: 'reset@example.com' },
       {
         fullName: 'Password Reset Demo',
+        password: 'password',
+        timezone: null,
+        emailVerifiedAt: DateTime.now(),
+      }
+    )
+    const mfaUser = await User.updateOrCreate(
+      { email: 'mfa@example.com' },
+      {
+        fullName: 'MFA Passkeys Demo',
         password: 'password',
         timezone: null,
         emailVerifiedAt: DateTime.now(),
@@ -67,6 +78,12 @@ export default class MainSeeder extends BaseSeeder {
         created_at: DateTime.now().toSQL(),
         updated_at: null,
       },
+      {
+        tenant_id: acme.id,
+        user_id: mfaUser.id,
+        created_at: DateTime.now().toSQL(),
+        updated_at: null,
+      },
     ])
 
     const seedDate = DateTime.fromISO('2026-10-10T12:00:00.000Z', { zone: 'utc' })
@@ -84,17 +101,30 @@ export default class MainSeeder extends BaseSeeder {
           )
         )
       )
+      const tags = await Promise.all(
+        ['research', 'editorial', 'community'].map((name) =>
+          Tag.updateOrCreate(
+            { slug: `${prefix}${name}` },
+            {
+              name: name[0]!.toUpperCase() + name.slice(1),
+              slug: `${prefix}${name}`,
+              tenantId: tenant.id,
+            }
+          )
+        )
+      )
       for (let index = 1; index <= 30; index++) {
         const published = index % 3 !== 0
         const publishedAt = published ? seedDate.minus({ days: index * 3 }) : null
         const number = index.toString().padStart(2, '0')
-        await Post.updateOrCreate(
+        const post = await Post.updateOrCreate(
           { slug: `${prefix}field-notes-${number}` },
           {
             title: `${tenant.slug === 'acme' ? '' : 'Globex '}Field Notes ${number}`,
             slug: `${prefix}field-notes-${number}`,
             status: published ? 'published' : 'draft',
             body: `<p>Editorial note ${index} from the ${tenant.name} dogfood journal.</p>`,
+            summary: `## Field Notes ${number}\n\nEditorial note ${index} from the ${tenant.name} dogfood journal.`,
             isFeatured: index % 5 === 0,
             publishedAt,
             viewsCount: index * 17,
@@ -107,6 +137,20 @@ export default class MainSeeder extends BaseSeeder {
             ],
           }
         )
+        await Comment.updateOrCreate(
+          { postId: post.id, title: `Reader note ${number}` },
+          {
+            postId: post.id,
+            title: `Reader note ${number}`,
+            body: `A seeded comment for ${post.title}.`,
+            tenantId: tenant.id,
+          }
+        )
+        const tag = tags[(index - 1) % tags.length]!
+        await post.related('tags').detach()
+        await post.related('tags').attach({
+          [String(tag.id)]: { note: `Seeded relationship note ${number}` },
+        })
       }
     }
   }

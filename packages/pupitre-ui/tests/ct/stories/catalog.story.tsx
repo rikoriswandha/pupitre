@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { catalogFixtures } from '@rikology/pupitre/catalog'
-import type { ActionDescriptor, PupitrePageProps, TableData } from '@rikology/pupitre/catalog'
+import type {
+  ActionDescriptor,
+  JsonRenderSpec,
+  PupitrePageProps,
+  TableData,
+} from '@rikology/pupitre/catalog'
 import { defineRegistry, PupitreRenderer, setFetch, setRouter } from '@rikology/pupitre-react'
 import { ActionModal } from '@rikology/pupitre-react'
 import { Shell } from '../../../src/components/Shell.js'
@@ -62,28 +67,33 @@ function RouterLog() {
   return <pre data-testid="router-calls">[]</pre>
 }
 
-function fixturePage(name: string): PupitrePageProps['page'] {
-  const fixture = catalogFixtures[name as keyof typeof catalogFixtures]
+function fixturePage(name: string, spec?: JsonRenderSpec): PupitrePageProps['page'] {
+  const fixture = spec ?? catalogFixtures[name as keyof typeof catalogFixtures]
   return {
     key: `ct:${String(name)}`,
     kind: 'custom',
     title: String(name),
     breadcrumbs: [],
     spec: fixture,
-    state: fixture.state ?? {},
+    state: 'state' in fixture ? (fixture.state ?? {}) : {},
     actions: { header: [] },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
 }
 
 export function FixtureStory({
   name,
+  spec,
   upload = async () => ({}),
+  errors,
 }: {
   name: string
+  /** Story-only spec variant; defaults to the catalog fixture called `name`. */
+  spec?: JsonRenderSpec
   upload?: (field: string, files: File[]) => Promise<unknown>
+  errors?: Record<string, unknown>
 }) {
-  const page = fixturePage(name)
+  const page = fixturePage(name, spec)
   return (
     <div data-testid="fixture-root">
       <PupitreRenderer
@@ -92,6 +102,7 @@ export function FixtureStory({
         registry={registry}
         runAction={async () => {}}
         upload={upload}
+        errors={errors}
         toast={noopToast}
       />
       <RouterLog />
@@ -150,7 +161,7 @@ function RepeaterFixture({
     },
     state: { data: { items: initialItems } },
     actions: { header: [] },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
   return (
     <PupitreRenderer
@@ -220,7 +231,7 @@ export function TabsStory() {
     },
     state: { data: {}, ui: { tabs: { 'interaction-tabs': 'details' } } },
     actions: { header: [] },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
   return (
     <PupitreRenderer
@@ -238,6 +249,65 @@ export function SelectStory() {
 }
 export function RichEditorStory() {
   return <FixtureStory name="RichEditor" />
+}
+export function MarkdownEditorStory() {
+  return <FixtureStory name="MarkdownEditor" />
+}
+export function CodeEditorStory() {
+  return <FixtureStory name="CodeEditor" />
+}
+export function CodeEditorBoundStory() {
+  const fixture = catalogFixtures.CodeEditor
+  return (
+    <>
+      {standalonePage('ct:CodeEditor', fixture, fixture.state)}
+      <button
+        type="button"
+        onClick={() =>
+          (
+            window as Window & {
+              __ctPupitreStore?: { set(path: string, value: unknown): void }
+            }
+          ).__ctPupitreStore?.set('/data/config', '{"external":true}')
+        }
+      >
+        Set external value
+      </button>
+    </>
+  )
+}
+export function CodeEditorReadonlyStory({ disabled = false }: { disabled?: boolean }) {
+  const fixture = catalogFixtures.CodeEditor
+  const root = fixture.elements.root as {
+    type: string
+    props: Record<string, unknown>
+  }
+  const readonlyFixture = {
+    ...fixture,
+    elements: {
+      ...fixture.elements,
+      root: { ...root, props: { ...root.props, readOnly: !disabled, disabled } },
+    },
+  } as JsonRenderSpec
+  return standalonePage('ct:CodeEditorReadonly', readonlyFixture, fixture.state)
+}
+export function MarkdownEditorA11yStory() {
+  const fixture = catalogFixtures.MarkdownEditor
+  const root = fixture.elements.root as {
+    type: string
+    props: Record<string, unknown>
+  }
+  const spec = {
+    ...fixture,
+    elements: {
+      ...fixture.elements,
+      root: {
+        ...root,
+        props: { ...root.props, label: 'Body', helperText: 'Write Markdown content.' },
+      },
+    },
+  } as JsonRenderSpec
+  return <FixtureStory name="MarkdownEditorA11y" spec={spec} errors={{ summary: 'Required' }} />
 }
 export function UploadStory() {
   return <FixtureStory name="FileUpload" />
@@ -262,7 +332,7 @@ export function ActionStory() {
           ? {
               spec: catalogFixtures.Text,
               state: catalogFixtures.Text.state ?? {},
-              catalogVersion: '0.2',
+              catalogVersion: '0.3',
             }
           : { flash: [], reload: false }
       return new Response(JSON.stringify(payload), {
@@ -331,7 +401,7 @@ export function FormStory() {
     },
     state: { data: { title: 'Draft' }, errors: {}, meta: {} },
     actions: { header: [] },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
   return (
     <div>
@@ -369,7 +439,7 @@ function standalonePage(
     spec,
     state,
     actions: { header: [] },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
   return (
     <div>

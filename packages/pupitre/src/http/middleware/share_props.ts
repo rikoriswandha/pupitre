@@ -10,17 +10,37 @@ import { searchProps } from '../../search/props.js'
 
 type SharedPupitre = PupitrePageProps['pupitre']
 
-/** Flattens the panel theme definition into the wire `ThemeVars` record. */
+/** Compiles the validated panel theme into CSS variables and shell settings. */
 export function themeVars(panel: PanelRuntime): ThemeVars {
   const theme = panel.theme ?? {}
-  return Object.fromEntries(
-    [
-      ...(theme.primary ? [['primary', theme.primary]] : []),
-      ...(theme.darkMode ? [['darkMode', theme.darkMode]] : []),
-      ...(theme.radius ? [['--radius', theme.radius]] : []),
-      ...Object.entries(theme.vars ?? {}),
-    ].filter((entry): entry is [string, string] => typeof entry[1] === 'string')
-  )
+  const vars = {
+    ...(theme.primary ? { '--primary': theme.primary } : {}),
+    ...(theme.radius ? { '--radius': theme.radius } : {}),
+    ...(theme.font ? { '--font-sans': theme.font.family } : {}),
+    ...(theme.colors
+      ? Object.fromEntries(
+          Object.entries(theme.colors).map(([name, value]) => [`--${name}`, value])
+        )
+      : {}),
+    ...(theme.density ? { '--pupitre-density': theme.density === 'compact' ? '0.75' : '1' } : {}),
+    ...(theme.vars ?? {}),
+  }
+  return {
+    ...(theme.primary ? { primary: theme.primary } : {}),
+    ...(theme.darkMode ? { darkMode: theme.darkMode } : {}),
+    ...(theme.radius ? { radius: theme.radius } : {}),
+    vars,
+    ...(theme.font
+      ? { fontFamily: theme.font.family, ...(theme.font.url ? { fontUrl: theme.font.url } : {}) }
+      : {}),
+    ...(theme.density ? { density: theme.density } : {}),
+    ...(theme.sidebar ? { sidebar: theme.sidebar } : {}),
+    ...(theme.sidebarCollapsibleOnDesktop !== undefined
+      ? { sidebarCollapsibleOnDesktop: theme.sidebarCollapsibleOnDesktop }
+      : {}),
+    ...(theme.contentWidth ? { contentWidth: theme.contentWidth } : {}),
+    ...(theme.stylesheet ? { stylesheet: theme.stylesheet } : {}),
+  }
 }
 
 /** Feature flags the client uses to show/hide built-in shell affordances. */
@@ -32,8 +52,13 @@ export function panelFeatures(panel: PanelRuntime): Record<string, boolean> {
     emailVerification: panel.auth.emailVerification,
     profile: panel.auth.profile?.enabled ?? false,
     tenancy: Boolean(panel.tenancy),
+    mfa: Boolean(panel.auth.mfa),
+    passkeys: Boolean(panel.auth.passkeys?.enabled),
     notifications: Boolean(panel.notifications),
     globalSearch: Boolean(panel.globalSearch),
+    ...Object.fromEntries(
+      (panel.social?.providers ?? []).map((provider) => [`social:${provider}`, true])
+    ),
   }
 }
 

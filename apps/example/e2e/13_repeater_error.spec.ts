@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest(
   'a 422 repeater error is shown only under the invalid second item',
@@ -30,7 +30,7 @@ pupitreTest(
       form.noValidate = true
     })
 
-    await page.getByRole('button', { name: 'Create Post' }).click()
+    await page.getByRole('button', { name: 'Save post' }).click()
 
     const error = /sku.*must be defined/i
     const itemOne = page.getByRole('heading', { name: 'Item 1' }).locator('xpath=../..')

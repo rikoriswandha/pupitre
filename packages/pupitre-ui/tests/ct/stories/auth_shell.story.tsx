@@ -17,6 +17,7 @@ export function AuthShellStory() {
           tenancy: false,
           notifications: false,
           globalSearch: false,
+          ...{ 'social:github': true, 'social:google': true },
         },
       }}
       title="Sign in"

@@ -1,6 +1,7 @@
-import { E_PUPITRE_INVALID_ACTION_NAME } from '../errors.js'
+import { E_PUPITRE_INVALID_ACTION_CONTEXT, E_PUPITRE_INVALID_ACTION_NAME } from '../errors.js'
 import type { ActionBuilder, ActionDefinition, ActionColor } from '../definition/action.js'
 import type { SchemaNodeBuilder } from '../definition/schema.js'
+import type { ExportColumnBuilder } from '../definition/action.js'
 
 class Action implements ActionBuilder {
   constructor(readonly definition: ActionDefinition) {}
@@ -58,11 +59,41 @@ class Action implements ActionBuilder {
   modalIcon(value: string): this {
     return this.setModal('icon', value)
   }
+  modal(
+    value: Omit<Partial<NonNullable<ActionDefinition['modal']>>, 'footerActions'> & {
+      footerActions?: readonly ActionBuilder[]
+    }
+  ): this {
+    const { footerActions, ...modal } = value
+    return this.set({
+      modal: {
+        ...this.definition.modal,
+        ...modal,
+        ...(footerActions ? { footerActions: footerActions.map((item) => item.definition) } : {}),
+      },
+    })
+  }
+  modalSubmit(value = true): this {
+    return this.setModal('submit', value)
+  }
+  modalCancel(value = true): this {
+    return this.setModal('cancel', value)
+  }
+  deepLinkable(value = true): this {
+    return this.set({ deepLinkable: value })
+  }
+  rateLimit(maxAttempts: number, options: { per: string; by?: 'user' | 'ip' }): this {
+    return this.set({ rateLimit: { maxAttempts, ...options } })
+  }
   form(value: readonly SchemaNodeBuilder[]): this {
     return this.set({ form: value.map((field) => field.toDefinition()) })
   }
   fillForm(value: NonNullable<ActionDefinition['fillForm']>): this {
     return this.set({ fillForm: value })
+  }
+  resolveRecord(value: NonNullable<ActionDefinition['resolveRecord']>): this {
+    if (this.definition.builtin !== 'import') throw new E_PUPITRE_INVALID_ACTION_CONTEXT()
+    return this.set({ resolveRecord: value })
   }
   handle(value: NonNullable<ActionDefinition['handle']>): this {
     return this.set({ handle: value })
@@ -79,6 +110,9 @@ class Action implements ActionBuilder {
   keyBindings(value: readonly string[]): this {
     return this.set({ keyBindings: value })
   }
+  excludeAttributes(value: readonly string[]): this {
+    return this.set({ excludeAttributes: [...value] })
+  }
   group(value: string): this {
     return this.set({ group: value })
   }
@@ -88,13 +122,44 @@ class Action implements ActionBuilder {
   destructive(value = true): this {
     return this.setConfirmation('destructive', value)
   }
+  async(value = true): this {
+    return this.set({ async: value })
+  }
+  columns(value: readonly ExportColumnBuilder[]): this {
+    if (this.definition.builtin !== 'export') throw new E_PUPITRE_INVALID_ACTION_CONTEXT()
+    return this.set({ exportColumns: value.map((column) => column.definition) })
+  }
 }
 function create(name: string, kind: ActionDefinition['kind'] = 'action'): ActionBuilder {
   if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) throw new E_PUPITRE_INVALID_ACTION_NAME()
   const builtin = kind === 'action' ? undefined : kind
   const context = kind === 'bulk' ? 'bulk' : kind === 'create' ? 'header' : 'record'
-  const confirmation = kind === 'delete' ? { destructive: true } : undefined
+  const confirmation =
+    kind === 'delete' || kind === 'forceDelete' ? { destructive: true } : undefined
   return new Action({ name, kind, builtin, context, confirmation })
+}
+function createBuiltin(
+  name: string,
+  builtin: NonNullable<ActionDefinition['builtin']>
+): ActionBuilder {
+  if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) throw new E_PUPITRE_INVALID_ACTION_NAME()
+  return new Action({ name, kind: 'action', builtin, context: 'header' })
+}
+function relationBuiltin(
+  name: string,
+  builtin: 'attach' | 'detach' | 'associate' | 'dissociate',
+  context: 'header' | 'record' | 'bulk'
+): ActionBuilder {
+  if (!/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(name)) throw new E_PUPITRE_INVALID_ACTION_NAME()
+  return new Action({
+    name,
+    kind: context === 'bulk' ? 'bulk' : 'action',
+    builtin,
+    context,
+    ...(builtin === 'detach' || builtin === 'dissociate'
+      ? { confirmation: { destructive: true } }
+      : {}),
+  })
 }
 export function action(name: string): ActionBuilder {
   return create(name)
@@ -104,5 +169,26 @@ export const actions = {
   edit: (name = 'edit') => create(name, 'edit'),
   view: (name = 'view') => create(name, 'view'),
   delete: (name = 'delete') => create(name, 'delete'),
+  restore: (name = 'restore') => create(name, 'restore'),
+  forceDelete: (name = 'force-delete') => create(name, 'forceDelete'),
+  replicate: (name = 'replicate') => create(name, 'replicate'),
   bulk: (name: string) => create(name, 'bulk'),
+  bulkRestore: (name = 'restore') =>
+    new Action({ name, kind: 'bulk', builtin: 'restore', context: 'bulk' }),
+  bulkForceDelete: (name = 'force-delete') =>
+    new Action({
+      name,
+      kind: 'bulk',
+      builtin: 'forceDelete',
+      context: 'bulk',
+      confirmation: { destructive: true },
+    }),
+  export: (name = 'export') => createBuiltin(name, 'export'),
+  import: (name = 'import') => createBuiltin(name, 'import'),
+  attach: (name = 'attach') => relationBuiltin(name, 'attach', 'header'),
+  associate: (name = 'associate') => relationBuiltin(name, 'associate', 'header'),
+  detach: (name = 'detach') => relationBuiltin(name, 'detach', 'record'),
+  dissociate: (name = 'dissociate') => relationBuiltin(name, 'dissociate', 'record'),
+  bulkDetach: (name = 'bulk-detach') => relationBuiltin(name, 'detach', 'bulk'),
+  bulkDissociate: (name = 'bulk-dissociate') => relationBuiltin(name, 'dissociate', 'bulk'),
 }

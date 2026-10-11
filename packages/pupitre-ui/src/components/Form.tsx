@@ -6,10 +6,10 @@ import {
   useEmbedded,
   useSubmitForm,
   useVisit,
+  matchesKeyBinding,
 } from '@rikology/pupitre-react'
 import { Button } from '../primitives/index.js'
 import { cn } from '../primitives/index.js'
-import { matchesKeyBinding } from '../primitives/key_bindings.js'
 
 type Props = Record<string, unknown>
 type RuntimeProps = {
@@ -74,6 +74,7 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   }
   return (
     <form
+      noValidate
       className={cn('space-y-6', typeof props.className === 'string' ? props.className : undefined)}
       action={typeof props.url === 'string' ? props.url : undefined}
       method={typeof props.method === 'string' ? props.method : undefined}

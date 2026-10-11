@@ -1,11 +1,16 @@
+import { symbols as inertiaSymbols } from '@adonisjs/inertia'
 import app from '@adonisjs/core/services/app'
 import { catalogVersion, pageProps } from '../../catalog/index.js'
 import type {
+  ActionDescriptor,
   Breadcrumb,
   JsonRenderSpec,
+  RelationDescriptor,
   StateModel,
-  ActionDescriptor,
+  SubNavigationItem,
   TableData,
+  WidgetDescriptor,
+  WidgetFilter,
 } from '../../catalog/index.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ResourceRuntime } from '../manager.js'
@@ -51,9 +56,31 @@ export function buildPanelPageProps(options: {
   state: StateModel
   headerActions?: ActionDescriptor[]
   data?: TableData | Record<string, unknown>
+  relations?: RelationDescriptor[]
+  extraProps?: Record<string, unknown>
   component?: string
+  deferred?: string[]
+  widgets?: WidgetDescriptor[]
+  filters?: WidgetFilter[]
+  subNavigation?: SubNavigationItem[]
 }) {
-  const { ctx, key, kind, title, spec, state, headerActions = [], data, component } = options
+  const {
+    ctx,
+    key,
+    kind,
+    title,
+    spec,
+    state,
+    headerActions = [],
+    data,
+    component,
+    relations,
+    extraProps,
+    deferred,
+    widgets,
+    filters,
+    subNavigation,
+  } = options
   const page = {
     key,
     kind: component ? ('custom' as const) : kind,
@@ -62,11 +89,21 @@ export function buildPanelPageProps(options: {
     spec,
     state,
     actions: { header: headerActions },
+    ...(widgets ? { widgets } : {}),
+    ...(filters ? { filters } : {}),
+    ...(relations ? { relations } : {}),
+    ...(subNavigation ? { subNavigation } : {}),
+    ...(deferred ? { deferred } : {}),
     catalogVersion,
     ...(component ? { component } : {}),
   }
-  const props = { page, ...(data === undefined ? {} : { data }) }
-  if (!app.inProduction)
+  const props = { page, ...(data === undefined ? {} : { data }), ...extraProps }
+  if (!app.inProduction) {
+    const deferredData =
+      data !== null && typeof data === 'object' && inertiaSymbols.DEFERRED_PROP in data
+    const propsToValidate = deferredData
+      ? Object.fromEntries(Object.entries(props).filter(([propName]) => propName !== 'data'))
+      : props
     pageProps.parse({
       pupitre: {
         panel: {
@@ -83,8 +120,9 @@ export function buildPanelPageProps(options: {
         locale: ctx.pupitre.locale,
         timezone: ctx.pupitre.timezone,
       },
-      ...props,
+      ...propsToValidate,
     })
+  }
   return props
 }
 
@@ -100,7 +138,13 @@ export function buildPageProps(options: {
   recordLabel?: string
   headerActions?: ActionDescriptor[]
   data?: TableData | Record<string, unknown>
+  relations?: RelationDescriptor[]
+  extraProps?: Record<string, unknown>
   component?: string
+  deferred?: string[]
+  widgets?: WidgetDescriptor[]
+  parentBreadcrumb?: { label: string; url: string }
+  subNavigation?: SubNavigationItem[]
 }) {
   const { ctx, resource, kind, recordId, recordLabel } = options
   return buildPanelPageProps({
@@ -108,6 +152,7 @@ export function buildPageProps(options: {
     key: pageKey(ctx, resource.slug, kind, recordId),
     breadcrumbs: [
       panelBreadcrumb(ctx),
+      ...(options.parentBreadcrumb ? [options.parentBreadcrumb] : []),
       { label: t(resource.pluralLabel), url: resource.urls.list },
       ...(recordId === undefined ? [] : [{ label: t(recordLabel ?? String(recordId)) }]),
       ...(kind === 'create' ? [{ label: t('Create') }] : []),

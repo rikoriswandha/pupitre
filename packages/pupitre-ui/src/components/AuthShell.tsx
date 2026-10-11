@@ -2,6 +2,7 @@ import { t } from '@rikology/pupitre-react'
 import type { AuthShellProps } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { usePanelTheme } from './use_panel_theme.js'
+import { PasskeyLogin } from './PasskeyLogin.js'
 
 /** Centered card layout for auth pages (login, password reset, registration). */
 export function AuthShell({ panel, title, children }: AuthShellProps) {
@@ -17,6 +18,9 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
       ? [{ label: t('Create account'), href: `${panel.path}/register` }]
       : []),
   ]
+  const socialProviders = Object.keys(panel.features)
+    .filter((feature) => feature.startsWith('social:') && panel.features[feature])
+    .map((feature) => feature.slice('social:'.length))
   return (
     <div
       className="grid min-h-screen place-items-center bg-muted/40 px-4 py-10 text-foreground"
@@ -36,6 +40,22 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
         </div>
         <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
           {children}
+          {title === t('Sign in') && panel.features.passkeys && (
+            <PasskeyLogin panelPath={panel.path} />
+          )}
+          {title === t('Sign in') && socialProviders.length > 0 && (
+            <div className="mt-5 grid gap-2 border-t border-border pt-5">
+              {socialProviders.map((provider) => (
+                <a
+                  key={provider}
+                  href={`${panel.path}/auth/${encodeURIComponent(provider)}/redirect`}
+                  className="flex min-h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+                >
+                  {t('Continue with')} {provider}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         {links.length > 0 && (
           <nav

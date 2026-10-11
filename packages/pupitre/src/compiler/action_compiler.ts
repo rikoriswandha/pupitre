@@ -1,15 +1,16 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, ActionFormResponse, ActionResult } from '../../catalog/wire.js'
-import type { ActionDefinition } from '../definition/action.js'
+import type { ActionDefinition, NotificationAction } from '../definition/action.js'
 import type { ResourceDefinition } from '../definition/resource.js'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { CompileContext } from './schema_compiler.js'
 import { compileForm } from './schema_compiler.js'
 import { compileValidator } from './vine_compiler.js'
-import { E_PUPITRE_FORBIDDEN } from '../errors.js'
+import { E_PUPITRE_FORBIDDEN, E_PUPITRE_INVALID_ACTION_CONTEXT } from '../errors.js'
 import { t } from '../i18n.js'
 import { resolveAdapter } from '../define_config.js'
 import type { PupitreConfig } from '../define_config.js'
+import { DateTime } from 'luxon'
 
 export type ActionAuthorize = (ability: string, record?: LucidRow) => Promise<boolean>
 export type ActionRoutes = {
@@ -31,6 +32,24 @@ function getAbility(action: ActionDefinition): string | undefined {
       return 'view'
     case 'delete':
       return 'delete'
+    case 'restore':
+      return 'restore'
+    case 'forceDelete':
+      return 'forceDelete'
+    case 'export':
+      return 'viewAny'
+    case 'import':
+      return 'create'
+    case 'replicate':
+      return 'replicate'
+    case 'attach':
+      return 'attach'
+    case 'detach':
+      return 'detach'
+    case 'associate':
+      return 'associate'
+    case 'dissociate':
+      return 'dissociate'
     case 'bulk':
       return isBulkDelete(action) ? 'delete' : undefined
     default:
@@ -68,15 +87,32 @@ export async function compileActionDescriptor(
     resourceLabel?: string
   }
 ): Promise<ActionDescriptor> {
+  if (action.async && action.context !== 'bulk' && action.builtin !== 'import')
+    throw new E_PUPITRE_INVALID_ACTION_CONTEXT()
   const { record, ctx } = options
   const ability = getAbility(action)
   const visible = action.visible ? action.visible({ record: record ?? null, ctx }) : true
-  const authorized = ability ? await options.authorize(ability, record) : true
+  const resourceAbility =
+    action.builtin === 'export' ? 'viewAny' : action.builtin === 'import' ? 'create' : undefined
+  const resourceAuthorized =
+    resourceAbility && action.can ? await options.authorize(resourceAbility, record) : true
+  const authorized =
+    resourceAuthorized && (ability ? await options.authorize(ability, record) : true)
   const enabled = visible && authorized
   let kind: ActionDescriptor['kind']
   if (action.url) kind = 'link'
+  else if ((action.builtin === 'create' || action.builtin === 'edit') && action.form) kind = 'form'
   else if (action.builtin === 'create' || action.builtin === 'edit' || action.builtin === 'view')
     kind = 'link'
+  else if (action.builtin === 'attach' || action.builtin === 'associate') kind = 'form'
+  else if (action.builtin === 'detach' || action.builtin === 'dissociate') kind = 'confirm'
+  else if (action.builtin === 'export' || action.builtin === 'import') kind = 'direct'
+  else if (
+    action.builtin === 'restore' ||
+    action.builtin === 'forceDelete' ||
+    action.builtin === 'replicate'
+  )
+    kind = action.builtin === 'replicate' ? 'direct' : 'confirm'
   else if (action.form) kind = 'form'
   else if (action.confirmation || action.builtin === 'delete' || isBulkDelete(action))
     kind = 'confirm'
@@ -89,20 +125,50 @@ export async function compileActionDescriptor(
       typeof action.url === 'function' ? action.url({ record: record ?? null, ctx }) : action.url
   } else if (action.builtin === 'create') {
     url = options.routes.create
+  } else if (action.builtin === 'export') {
+    url = `${options.baseUrl.replace(/\/$/, '')}/export?action=${encodeURIComponent(action.name)}`
+  } else if (action.builtin === 'import') {
+    url = `${options.baseUrl.replace(/\/$/, '')}/import?action=${encodeURIComponent(action.name)}`
   } else if (action.builtin === 'edit' || action.builtin === 'view') {
     if (id === undefined) throw new Error(`Action "${action.name}" requires a record key`)
     url = action.builtin === 'edit' ? options.routes.edit(id) : options.routes.view(id)
-  } else if (action.builtin === 'delete' && action.context === 'record') {
-    if (id === undefined) throw new Error(`Action "${action.name}" requires a record key`)
-    url = options.routes.destroy(id)
+  } else if (
+    action.builtin === 'delete' ||
+    action.builtin === 'restore' ||
+    action.builtin === 'forceDelete' ||
+    action.builtin === 'replicate'
+  ) {
+    if (action.context === 'record' && id === undefined)
+      throw new Error(`Action "${action.name}" requires a record key`)
+    url =
+      action.builtin === 'delete' && action.context === 'record'
+        ? options.routes.destroy(id!)
+        : action.context === 'record'
+          ? `${options.baseUrl.replace(/\/$/, '')}/${encodeURIComponent(String(id))}/actions/${action.name}`
+          : `${options.baseUrl.replace(/\/$/, '')}/actions/${action.name}`
   } else if (action.context === 'record') {
     if (id === undefined) throw new Error(`Action "${action.name}" requires a record key`)
     url = `${options.baseUrl.replace(/\/$/, '')}/${encodeURIComponent(String(id))}/actions/${action.name}`
   } else {
     url = `${options.baseUrl.replace(/\/$/, '')}/actions/${action.name}`
   }
+  if (
+    !action.url &&
+    action.context === 'header' &&
+    record &&
+    id !== undefined &&
+    (!action.builtin ||
+      action.builtin === 'delete' ||
+      action.builtin === 'restore' ||
+      action.builtin === 'forceDelete' ||
+      action.builtin === 'replicate')
+  ) {
+    const separator = url.includes('?') ? '&' : '?'
+    url += `${separator}record=${encodeURIComponent(String(id))}`
+  }
   const destructive =
-    action.confirmation?.destructive ?? (action.builtin === 'delete' || isBulkDelete(action))
+    action.confirmation?.destructive ??
+    (action.builtin === 'delete' || action.builtin === 'forceDelete' || isBulkDelete(action))
   const confirm =
     kind === 'confirm'
       ? {
@@ -125,6 +191,35 @@ export async function compileActionDescriptor(
               : {}),
         }
       : undefined
+  let modal: ActionDescriptor['modal']
+  if (action.modal) {
+    const { footerActions, ...modalOptions } = action.modal
+    modal = {
+      ...modalOptions,
+      ...(footerActions
+        ? {
+            footerActions: await Promise.all(
+              footerActions.map(async (child) => {
+                const compiled = await compileActionDescriptor(
+                  { ...child, context: action.context },
+                  options
+                )
+                return {
+                  name: compiled.name,
+                  label: compiled.label,
+                  kind: compiled.kind,
+                  url: compiled.url,
+                  enabled: compiled.enabled,
+                  ...(compiled.method ? { method: compiled.method } : {}),
+                  ...(compiled.openInNewTab ? { openInNewTab: true } : {}),
+                  ...(compiled.confirm ? { confirm: compiled.confirm } : {}),
+                }
+              })
+            ),
+          }
+        : {}),
+    }
+  }
   const descriptor: ActionDescriptor = {
     name: action.name,
     label: defaultLabel(action),
@@ -144,7 +239,8 @@ export async function compileActionDescriptor(
     ...(action.keyBindings ? { keyBindings: [...action.keyBindings] } : {}),
     ...(action.group ? { group: action.group } : {}),
     ...(confirm ? { confirm } : {}),
-    ...(action.modal ? { modal: { ...action.modal } } : {}),
+    ...(action.deepLinkable ? { deepLink: true } : {}),
+    ...(modal ? { modal } : {}),
   }
   return descriptor
 }
@@ -171,7 +267,12 @@ export async function compileActionForm(
 }
 
 type FlashType = 'success' | 'error' | 'warning' | 'info'
-type PendingFlash = { type: FlashType; title: string; body?: string }
+type PendingFlash = {
+  type: FlashType
+  title: string
+  body?: string
+  actions?: NotificationAction[]
+}
 type ActionCallbacks = {
   redirect: { back(): void; to(url: string): void }
   refresh: { table(): void }
@@ -250,13 +351,23 @@ export async function executeAction(
 
 function flashBuilder(type: FlashType, title: string, target: PendingFlash[], ctx: HttpContext) {
   let body: string | undefined
+  let actions: NotificationAction[] | undefined
   const builder = {
     body(value: string) {
       body = value
       return builder
     },
+    actions(value: readonly { definition: NotificationAction }[]) {
+      actions = value.map((item) => item.definition)
+      return builder
+    },
     send() {
-      target.push({ type, title, ...(body !== undefined ? { body } : {}) })
+      target.push({
+        type,
+        title,
+        ...(body !== undefined ? { body } : {}),
+        ...(actions ? { actions } : {}),
+      })
     },
     async sendToDatabase(user?: LucidRow) {
       const recipient = user ?? ctx.pupitre.authUser
@@ -276,7 +387,12 @@ function flashBuilder(type: FlashType, title: string, target: PendingFlash[], ct
       }
       await adapter.toInbox(
         recipient,
-        { type, title, ...(body !== undefined ? { body } : {}) },
+        {
+          type,
+          title,
+          ...(body !== undefined ? { body } : {}),
+          ...(actions ? { actions } : {}),
+        },
         ctx
       )
     },
@@ -287,7 +403,8 @@ function flashBuilder(type: FlashType, title: string, target: PendingFlash[], ct
 export async function executeBuiltinDelete<Model extends object>(
   resource: ResourceDefinition<Model>,
   records: LucidRow[],
-  ctx: HttpContext
+  ctx: HttpContext,
+  force = false
 ): Promise<void> {
   const Model = records[0]?.constructor as LucidModel | undefined
   if (!Model || records.length === 0) return
@@ -295,7 +412,13 @@ export async function executeBuiltinDelete<Model extends object>(
     for (const record of records) {
       record.useTransaction(trx)
       await resource.hooks.beforeDelete?.(record as Model, ctx, trx)
-      await record.delete()
+      if (resource.softDeletes && !force) {
+        // Through `merge` so the model's column (de)serialisers see a Luxon DateTime.
+        record.merge({ [resource.softDeletes]: DateTime.now() })
+        await record.save()
+      } else {
+        await record.delete()
+      }
       await resource.hooks.afterDelete?.(record as Model, ctx, trx)
     }
   })

@@ -1,12 +1,12 @@
 import { mkdir, readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('invalid credentials return an email field error', async ({ page }) => {
   await page.goto('/admin/login')
   await page.getByLabel('Email').fill('editor@example.com')
   await page.getByRole('textbox', { name: 'Password', exact: true }).fill('wrong-password')
-  await page.getByRole('button', { name: 'Sign in' }).click()
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByText('These credentials do not match our records')).toBeVisible()
 })
 
@@ -52,7 +52,7 @@ pupitreTest(
     await page.goto('/admin/login')
     await page.getByLabel('Email').fill('reset@example.com')
     await page.getByRole('textbox', { name: 'Password', exact: true }).fill('new-password-123')
-    await page.getByRole('button', { name: 'Sign in' }).click()
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(page).toHaveURL(/\/admin(?:\/|$)/)
   }
 )
@@ -61,7 +61,7 @@ pupitreTest('a logged in user can update their profile and log out', async ({ ad
   // The editor's password was changed by the reset test above; use the admin account.
   await admin.login()
   await page.goto('/admin/profile')
-  await page.getByLabel('Name').fill('Editorial Admin Updated')
+  await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Editorial Admin Updated')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText('Profile updated')).toBeVisible()
   await page.getByRole('button', { name: /user/i }).click()

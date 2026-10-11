@@ -11,8 +11,17 @@ export type { PupitreRendererProps } from './renderer/PupitreRenderer.js'
 export { createPupitreStore } from './renderer/store.js'
 export { builtInFunctions } from './renderer/functions.js'
 export { t } from './i18n.js'
+export { matchesKeyBinding } from './key_bindings.js'
 export { setRouter } from './bridge/inertia.js'
-export { setFetch, fetchOptions, jsonFetch, xsrfToken } from './bridge/actions.js'
+export { getRouter } from './bridge/inertia.js'
+export {
+  setFetch,
+  fetchOptions,
+  jsonFetch,
+  xsrfToken,
+  waitForExport,
+  downloadExportFile,
+} from './bridge/actions.js'
 export { mapErrors } from './bridge/errors.js'
 export {
   useBoundValue,
@@ -42,5 +51,6 @@ export type {
   ModalProps,
   ConfirmDialogProps,
   NotFoundProps,
+  ImportModalProps,
   ShellRegistry,
 } from './shell/types.js'

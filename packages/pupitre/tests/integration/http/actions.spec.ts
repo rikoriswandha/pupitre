@@ -1,11 +1,13 @@
 import { test } from '@japa/runner'
 import { actionFormResponse, actionResult } from '../../../catalog/wire.js'
+import { actions, definePanel } from '../../../index.js'
 import {
   allowPolicyAbilities,
   closeTestApp,
   createTestApp,
   denyPolicyAbility,
   fixtureHookEventsSnapshot,
+  fixturePostResource,
   Post,
   User,
   resetFixtureHooks,
@@ -13,6 +15,20 @@ import {
 import type { TestApplication } from '../../helpers/app.js'
 import { teardown } from '../../helpers/db.js'
 let csrfCookieHeader = ''
+class ExplicitReplicateDenialPolicy {
+  viewAny() {
+    return true
+  }
+  view() {
+    return true
+  }
+  create() {
+    return true
+  }
+  replicate() {
+    return false
+  }
+}
 let csrfToken = ''
 async function jsonRequest(
   baseUrl: string,
@@ -103,6 +119,93 @@ test.group('Pupitre HTTP actions', (group) => {
       assert.equal(deniedPost.status, 'draft')
     } finally {
       allowPolicyAbilities()
+    }
+  })
+  test('denies record-bound actions through the record query parameter without view access', async ({
+    assert,
+  }) => {
+    const fixture = sharedFixture
+    const post = await createPost()
+    denyPolicyAbility('view')
+    try {
+      const path = `/admin/posts/actions/publish?record=${post.id}`
+      const form = await jsonRequest(fixture.baseUrl, path)
+      assert.equal(form.response.status, 403)
+      const result = await jsonRequest(fixture.baseUrl, path, {
+        method: 'POST',
+        body: { data: { reason: 'ready' } },
+        headers: { 'X-Pupitre-Action': '1' },
+      })
+      assert.equal(result.response.status, 403)
+      const unchanged = await Post.findOrFail(post.id)
+      assert.equal(unchanged.status, 'draft')
+    } finally {
+      allowPolicyAbilities()
+    }
+  })
+  test('exposes the panel guard user to Bouncer without silent-auth middleware', async ({
+    assert,
+  }) => {
+    const panel = definePanel('admin')
+      .path('/admin')
+      .guard('web')
+      .resources({ posts: fixturePostResource })
+    const fixture = await createTestApp({
+      panels: { admin: async () => ({ default: panel }) },
+    })
+    try {
+      const user = await User.create({
+        name: 'Policy admin',
+        email: `policy-${Date.now()}@example.test`,
+      })
+      const cookie = await fixture.loginAs(user)
+      await createPost()
+      const response = await fetch(`${fixture.baseUrl}/admin/posts`, {
+        headers: {
+          'Accept': 'text/html',
+          'X-Inertia': 'true',
+          'X-Inertia-Version': '1',
+          'Cookie': cookie,
+        },
+      })
+      assert.equal(response.status, 200, await response.clone().text())
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+  test('explicit replicate denial is not overridden by create permission', async ({ assert }) => {
+    const resource = fixturePostResource
+      .policy(ExplicitReplicateDenialPolicy)
+      .actions({ row: [actions.replicate()] })
+    const panel = definePanel('admin').path('/admin').guard('web').resources({ posts: resource })
+    const fixture = await createTestApp({
+      panels: { admin: async () => ({ default: panel }) },
+    })
+    try {
+      const user = await User.create({
+        name: 'Replicate test',
+        email: `replicate-${Date.now()}@example.test`,
+      })
+      const cookie = await fixture.loginAs(user)
+      const post = await createPost()
+      const path = `/admin/posts/${post.id}/actions/replicate`
+      const form = await fetch(`${fixture.baseUrl}${path}`, {
+        headers: { Accept: 'application/json', Cookie: cookie },
+      })
+      assert.equal(form.status, 403)
+      const result = await fetch(`${fixture.baseUrl}${path}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Pupitre-Action': '1',
+          'Cookie': cookie,
+        },
+        body: JSON.stringify({ data: {} }),
+      })
+      assert.equal(result.status, 403)
+    } finally {
+      await closeTestApp(fixture)
     }
   })
 

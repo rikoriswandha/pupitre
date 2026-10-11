@@ -19,6 +19,7 @@ Konvensi props lintas komponen:
 | `name` | `string` | path field tanpa prefix |
 | `label` | `string \| null` | `null` = sembunyikan label |
 | `helperText`, `hint` | `string \| null` | |
+| `hintIcon`, `hintTooltip`, `hintColor`, `hintAction` | ikon, tooltip/warna opsional, `ActionDescriptor` | ikon dan tooltip hint; action berjalan melalui protokol action form |
 | `required` | `boolean` | hanya tanda bintang; validasi di server |
 | `disabled`, `readOnly` | `boolean` | boleh ekspresi |
 | `value` | sesuai field | `$bindState` / `$bindItem` |
@@ -35,6 +36,7 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | Komponen | Props khusus | Nilai |
 | --- | --- | --- |
 | `Text` | `type: 'text'\|'email'\|'password'\|'url'\|'tel'`, `placeholder`, `prefix`, `suffix`, `prefixIcon`, `suffixIcon`, `maxLength`, `mask`, `autocomplete`, `datalist: string[]`, `revealable` (password) | `string \| null` |
+| Mask | `9` digit, `a` huruf, `*` alfanumerik; literal ditampilkan tetapi tidak disimpan. State/dehydrate membawa nilai tanpa delimiter mask. `.tel()` memvalidasi nomor dengan regex permisif; `.telRegex(regex)` menggantinya. |
 | `Textarea` | `rows`, `autosize`, `maxLength`, `placeholder` | `string \| null` |
 | `Number` | `min`, `max`, `step`, `prefix`, `suffix`, `inputMode` | `number \| null` |
 | `Hidden` | — | any |
@@ -49,8 +51,8 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 | `Tags` | `suggestions`, `separator`, `maxTags`, `reorderable` | `string[]` |
 | `KeyValue` | `keyLabel`, `valueLabel`, `addable`, `deletable`, `reorderable`, `keyPlaceholder`, `valuePlaceholder` | `Record<string,string>` |
 | `RichEditor` | `toolbar: string[]`, `uploadUrl`, `minHeight`, `maxHeight` | HTML string |
-| `MarkdownEditor` | `toolbar`, `uploadUrl`, `preview` | string |
-| `CodeEditor` | `language`, `lineNumbers`, `minHeight` | string |
+| `MarkdownEditor` | `toolbar`, `uploadUrl`, `preview` | string Markdown; preview klien memakai DOMPurify dan upload lampiran field |
+| `CodeEditor` | `language`, `lineNumbers`, `minHeight` | string; CodeMirror 6 + bahasa pilihan dimuat lazy |
 | `FileUpload` *(domain)* | lihat §3 | |
 | `Slider` | `min`, `max`, `step`, `marks`, `range` | number / `[number, number]` |
 
@@ -65,7 +67,7 @@ Opsi closure menerima `{ search, ctx, page, values? }`; saat validasi, `search` 
 | `Section` | `heading`, `description`, `icon`, `collapsible`, `collapsed` (`$bindState /ui/section/<id>/collapsed`), `aside`, `compact`, `columns`, `footerActions` | elemen |
 | `Fieldset` | `label`, `columns` | elemen |
 | `Tabs` | `id`, `tabs: { key, label, icon?, badge? }[]`, `active` (`$bindState /ui/tabs/<id>`), `persistInUrl` | elemen `Tab` (`key`, `label`), urutan = `tabs` |
-| `Wizard` (M3) | `steps: { key, label, description?, icon? }[]`, `step` (`$bindState /ui/wizard/<id>/step`), `skippable`, `submitLabel`, `startOnStep` | elemen `Step` per `key` (pola Tabs) |
+| `Wizard` | `id`, `steps: { key, label, description?, icon?, fields? }[]`, `step` (`$bindState /ui/wizard/<id>/step`, indeks 0-based), `skippable`, `submitLabel` | anak `Step` per key; semua langkah tetap ter-mount dan langkah berisi error aktif setelah 422 |
 | `Group` | `relationship?` (hanya metadata) | elemen |
 | `Split` | `from: 'md'\|'lg'`, `ratio` | 2 slot |
 | `Placeholder` | `label`, `content` (ekspresi / `$computed`) | — |
@@ -73,7 +75,7 @@ Opsi closure menerima `{ search, ctx, page, values? }`; saat validasi, `search` 
 | `Divider` | — | — |
 | `Actions` | `actions: ActionDescriptor[]`, `alignment`, `fullWidth` | — |
 
-Tabs memakai anak `Tab` biasa, **bukan** named slots: json-render hanya mengenal nama slot yang dideklarasikan statis di catalog (SPIKE Q4). Semua panel tab tetap ter-mount (state tidak hilang), yang tidak aktif disembunyikan. Wizard (M3) akan memakai pola yang sama.
+Tabs memakai anak `Tab` biasa, **bukan** named slots: json-render hanya mengenal nama slot yang dideklarasikan statis di catalog (SPIKE Q4). Semua panel tab dan wizard tetap ter-mount; yang tidak aktif disembunyikan agar state input tidak hilang. Wizard menavigasi dengan indeks 0-based dan menggunakan daftar `fields` untuk memilih langkah error pertama setelah validasi server.
 
 ### 2.3 Infolist entries
 
@@ -86,28 +88,41 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 | Komponen | Descriptor | Protokol |
 | --- | --- | --- |
 | `Form` | `{ method, url, submitLabel, cancelUrl?, keyBindings, dirtyGuard }` | `submitForm` bridge |
-| `DataTable` | `TableDescriptor` + prop Inertia top-level `data` (lihat WIRE_PROTOCOL §5, ADR-0011) | `useTable` → `reload({ only: ['data'] })`; row/bulk action lewat `useRunAction`; M3: `PATCH column`, `POST reorder` |
+| `DataTable` | `TableDescriptor` + top-level prop `dataProp` (default `data`; lihat WIRE_PROTOCOL §5, ADR-0011) | `useTable` → partial reload `only: [dataProp]`; query dapat dibatasi dengan `queryPrefix`; row/bulk action lewat `useRunAction`; M3: `PATCH column`, `POST reorder` |
+
 | `Repeater` | `{ name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, grid, defaultItems }` + `value` terikat ke array; anak tunggal `RepeaterItem` (`index: { $index: true }`, opsional `itemLabel` expression dalam scope item) sebagai template | event `add` → `pushState` (item baru `_key: '$id'`); hapus/pindah/klon/collapse dikerjakan komponen lewat nilai array terikat (`useSetState`), karena param action tidak bisa menyatakan path array induk di scope bersarang |
-| `Builder` | `{ name, blocks: { key, label, icon, template: ElementId }[], ... Repeater }` | sama + `/data/<name>/<i>/type` |
-| `FileUpload` | `{ name, uploadUrl, deleteUrl, multiple, accept, maxSize, maxFiles, image, imageEditor, directory, visibility, reorderable, downloadable, previewable }` | `POST/DELETE /_pupitre/upload`; nilai state = `string \| string[]` (key) |
+  `.relationship('items', { orderColumn? })` hanya mendukung Lucid `hasMany`. Edit memuat baris terkait bersama primary key internal `_relationKey`; saat simpan server memeriksa ulang ownership, menyinkronkan insert/update/delete dalam transaksi resource, dan mengisi urutan bila `orderColumn` ditetapkan.
+| `Builder` | `{ name, blocks: { key, label, icon?, template: ElementId }[], minItems?, maxItems?, reorderable, collapsible, cloneable, addLabel?, blockPickerColumns? }` | nilai array item `{ _key, type: blockKey, data: { ...fields } }`; template block terikat ke `data.*`, Vine memilih schema dari `type`, menolak tipe tak dikenal, dan membuang `_key` |
+| `FileUpload` | `{ name, uploadUrl, deleteUrl, multiple, accept, maxSize, maxFiles, image, imageEditor?, imageEditorAspectRatios?, directory, visibility, reorderable, downloadable, previewable }` | `POST/DELETE /_pupitre/upload`; nilai state = `string \| string[]` (key); gambar dipotong di client dan tetap divalidasi server |
 | `RelationSelect` | `Select` + `{ optionsUrl, createOption: { url, modal } }` | `fetchOptions`; `openAction` |
-| `RelationManager` | `{ relation, label, icon, url, table: TableDescriptor, actions: { header, row, bulk }, badge?, readOnly }` | sama seperti DataTable dengan prefix query |
+| `RelationManager` | `RelationDescriptor { key, relation, label, group?, icon?, badge?, url, dataProp, queryPrefix, table, actions, readOnly }` pada `page.relations` | Tab di bawah form/infolist; top-level deferred `dataProp` dan tabel query diprefix menurut relasi; RelationGroup mengelompokkan tab, policy parent/related model dijalankan server-side; `readOnly` mematikan aksi mutasi |
 | `ActionBar` | `{ actions: ActionDescriptor[] }` | `openAction` / `runAction` |
 | `ActionModal` | internal: dipasang oleh runtime, bukan dari spec | `ActionFormResponse` |
-| `Widget.Stats` | `{ name, url, poll?, columns }` + data `{ stats: { label, value, description?, descriptionIcon?, color?, chart?: number[] }[] }` | deferred prop / `GET /_pupitre/widgets/:name` |
-| `Widget.Chart` | `{ name, url, type: 'line'\|'bar'\|'area'\|'pie'\|'doughnut', height, filters?: Spec, options }` + data `{ labels, datasets }` | sama |
-| `Widget.Table` | `TableDescriptor` | sama seperti DataTable |
+| `Widget.Stats` | `WidgetDescriptor` (`name`, `dataProp`, `dataUrl`, `placement`, `span`, `sort`, `poll?`) + `{ kind: 'stats', stats: { label, value, description?, descriptionIcon?, color?, chart?: number[] }[] }` | `WidgetGrid` menampilkan warna/icon stat dan polling mengambil `GET dataUrl` |
+| `Widget.Chart` | `WidgetDescriptor` + `{ kind: 'chart', labels, datasets }`; `chartType` memilih `line\|bar\|area\|pie\|doughnut` | deferred prop / `GET dataUrl`; chart memakai komponen UI khusus |
+| `Widget.Table` | `WidgetDescriptor` + `TableDescriptor` (`dataProp` = top-level widget prop, `queryPrefix` = nama widget) | Query model, filter, sort, pagination, formatter server, dan renderer `DataTable`/`useTable` berbagi jalur tabel resource |
+
 | `GlobalSearch` | `{ url, keyBinding, placeholder }` | `GET /_pupitre/search` |
 | `NotificationTray` | `{ url, readUrl, poll? }` | `GET /_pupitre/notifications` |
 | `TenantSwitcher` | dari `pupitre.tenants` | `visit` |
 | `View` | `{ component: string, props }` — komponen React host dari registry host | — |
 | `Fragment` | sub-spec dari host (`children` saja) | — |
+`page.subNavigation` menambahkan navigasi record sekunder (edit, view, relations, nested) di bawah page header; parent record title tetap muncul di breadcrumbs.
+Widget descriptor dikirim di `page.widgets`, sedangkan hasil (`WidgetData`) berada di prop top-level bernama `dataProp`; `deferred` menyebut prop yang belum dimuat. Dashboard dan halaman resource memakai descriptor yang sama. `dataUrl` menunjuk endpoint GET panel-scoped untuk refresh/poll; query filter dashboard dikirim kembali. Widget record menyertakan `resource` dan `record` pada URL, dan server memeriksa scoped record sebelum memuatnya. Nilai `span` 1–4 mengikuti jumlah kolom grid (1 di ponsel, 2 pada breakpoint md, hingga 4 di xl); `'full'` mengisi seluruh baris.
+Descriptor M3 tabel membawa `editable.url`, `poll` (ms), `reorderable.url`, `deferFilters`, `deferLoading`, dan `gridColumns`. Kolom dapat mendeklarasikan `individuallySearchable` dan `summarize`; ringkasan diproses melalui agregat SQL atas query terfilter (termasuk per grup). Baris membawa `className` hasil `.rowClass()` yang dibatasi ke token class aman. `DataTable` mengirim perubahan edit/reorder dengan CSRF, menangani rollback optimistis + toast, dan menyimpan visibilitas kolom per `descriptor.id`.
+
+`ActionDescriptor.deepLink` menandai modal/konfirmasi yang boleh dibuka lewat `?action=<name>[&record=<id>]`; server tetap memeriksa izin saat GET form. `modal.footerActions` adalah descriptor tombol modal tambahan yang menjalankan URL action dengan data form saat ini; `modal.submit`/`modal.cancel` menyembunyikan tombol submit/cancel saat `false`. Shortcut `keyBindings` dipasang pada action header dan action di luar row tabel; shortcut row sengaja tidak dipasang karena target record ambigu.
+
+`NotificationItem.actions` serta `FlashMessage.actions` berisi `{ label, url?, method?: 'get'|'post', markAsRead? }`. Tray dan toaster merender action; `markAsRead: true` pada aksi tray menandai item sebagai dibaca ketika aksi dipilih.
+Ekspor/impor menggunakan response schemas di wire: `exportJobResponse`/`exportProgressResponse` untuk job CSV, `importPreviewResponse` untuk header/sample row/field mapping, `importResultResponse` untuk ringkasan per-row, dan `importJobResponse` untuk async import. Bridge memvalidasi setiap respons sebelum memperbarui UI.
 
 `DataTable` descriptor filter dapat menyertakan sub-spec form. Bungkus spec itu sebagai `{ $raw: spec }` agar ekspresinya tetap utuh sampai `SpecRenderer` memprosesnya dengan store filter sendiri; jangan gunakan wrapper ini untuk prop elemen biasa.
-
 ## 4. Shell
 
-`Shell`, `Toaster`, `Modal`, `ConfirmDialog`, `NotFound`. Dirender dari `pupitre.nav`/`page.*`, bukan dari spec; prop-nya bertipe di `@rikology/pupitre-react` (`ShellProps`, `ModalProps`, ...) dan didaftarkan di map `components` yang sama dengan komponen catalog (`defineRegistry(components)`), sehingga host bisa mengganti satu per satu. Sidebar, topbar, breadcrumb, user menu, page header, dan empty state adalah bagian dalam `Shell`/`DataTable` di `pupitre-ui`.
+`Shell`, `Toaster`, `Modal`, `ConfirmDialog`, `NotFound`, `ImportModal`. Dirender dari `pupitre.nav`/`page.*`, bukan dari spec; prop-nya bertipe di `@rikology/pupitre-react` (`ShellProps`, `ModalProps`, ...) dan didaftarkan di map `components` yang sama dengan komponen catalog (`defineRegistry(components)`), sehingga host bisa mengganti satu per satu. `ImportModal` menangani upload CSV, preview header/mapping, hasil row, dan link CSV gagal. Sidebar, topbar, breadcrumb, user menu, page header, dan empty state adalah bagian dalam `Shell`/`DataTable` di `pupitre-ui`.
+
+
+Konfigurasi tema panel berasal dari `defineTheme()` atau `.theme()` dan diserialisasi sebagai `panel.theme` (lihat [Wire Protocol §1](./WIRE_PROTOCOL.md#1-props-halaman-inertia)). Shell mengubah warna/`vars` menjadi CSS custom properties, memakai skala `density` untuk kontrol, dan menghormati `contentWidth` serta font. Tema khusus dapat disimpan di `app/admin/themes/<panel>.ts`; `indexAdmin()` menerbitkan barrel `themes` menurut ID file. `stylesheet` dan URL font harus same-origin atau HTTPS, dan nilai CSS ditolak jika mengandung delimiter/instruksi yang dapat menyisipkan aturan.
 
 Komponen yang butuh payload runtime (DataTable, ActionBar, FileUpload, Repeater item) memakai hook `pupitre-react` (`useTable`, `useRunAction`, `useUpload`, `useSetState`, `useBoundValue`, `useFieldError`, `useVisit`, `useNavigationGuard`, `SpecRenderer` untuk sub-spec) karena event json-render tidak membawa payload; `pupitre-ui` tidak pernah mengimpor `@json-render/*`.
 
@@ -123,7 +138,7 @@ Didaftarkan di catalog dan diimplementasikan oleh bridge `pupitre-react`:
 | `submitForm` | `{ formId? }` | kumpulkan `/data` → `router[method](url)` |
 | `openAction` | `{ action: ActionDescriptor, ids? }` | sesuai `kind` |
 | `runAction` | `{ url, method, ids? }` | `direct` tanpa dialog |
-| `evaluate` | — | M3; not part of the M1 catalog or client runtime |
+| `evaluate` | `{ url, resource, field, debounce? }` | M3; debounced POST `/_pupitre/evaluate` from a server-backed field watch; merges only server-approved `/data/**` pointers. |
 | `fetchOptions` | — | M2; not part of the M1 catalog or client runtime |
 | `upload` | `{ field, files }` | `POST /_pupitre/upload` |
 | `toast` | `{ type, title, body? }` | tampilkan toast lokal |

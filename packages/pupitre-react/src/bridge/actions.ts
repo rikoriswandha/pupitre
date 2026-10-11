@@ -5,6 +5,8 @@ import {
   fileUploadDescriptor,
   option as optionSchema,
 } from '@rikology/pupitre/catalog'
+import { exportJobResponse } from '@rikology/pupitre/catalog'
+import { exportProgressResponse } from '@rikology/pupitre/catalog'
 import type {
   ActionDescriptor,
   FileUploadDescriptor,
@@ -12,6 +14,8 @@ import type {
   PupitrePageProps,
   UploadResponse,
 } from '@rikology/pupitre/catalog'
+import type { ExportJobResponse } from '@rikology/pupitre/catalog'
+import type { ExportProgressResponse } from '@rikology/pupitre/catalog'
 import type { ActionResult } from '@rikology/pupitre/catalog'
 import { mapErrors } from './errors.js'
 import { currentUrl, getRouter } from './inertia.js'
@@ -55,7 +59,7 @@ export function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}): Pro
       : Object.fromEntries(new Headers(init.headers).entries())
   const existingHeaders = new Headers(headers)
   if (!existingHeaders.has('Accept')) headers.Accept = 'application/json'
-  if (init.body !== undefined && !existingHeaders.has('Content-Type'))
+  if (typeof init.body === 'string' && !existingHeaders.has('Content-Type'))
     headers['Content-Type'] = 'application/json'
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !existingHeaders.has('X-XSRF-TOKEN'))
     headers['X-XSRF-TOKEN'] = xsrfToken()
@@ -64,6 +68,22 @@ export function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}): Pro
     credentials: init.credentials ?? 'same-origin',
     headers,
   })
+}
+async function saveCsvResponse(response: Response): Promise<void> {
+  const blobUrl = URL.createObjectURL(await response.blob())
+  const anchor = document.createElement('a')
+  anchor.href = blobUrl
+  const disposition = response.headers.get('content-disposition')
+  anchor.download = disposition?.match(/filename="([^"]+)"/)?.[1] ?? 'export.csv'
+  anchor.click()
+  URL.revokeObjectURL(blobUrl)
+}
+export async function downloadExportFile(url: string): Promise<void> {
+  const response = await jsonFetch(url, { headers: { Accept: 'text/csv' } })
+  if (!response.ok) throw new Error(`Export download failed (${response.status})`)
+  if (!response.headers.get('content-type')?.includes('text/csv'))
+    throw new Error('Export download did not return CSV.')
+  await saveCsvResponse(response)
 }
 export async function submitAction(
   url: string,
@@ -74,10 +94,18 @@ export async function submitAction(
   result?: ActionResult
   option?: Option
   errors?: Record<string, unknown>
+  retryAfter?: number
   message?: string
+  exportJob?: ExportJobResponse
+  downloaded?: boolean
 }> {
-  const pageUrl =
-    typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
+  let pageUrl = ''
+  if (typeof window !== 'undefined') {
+    const pageAddress = new URL(window.location.href)
+    pageAddress.searchParams.delete('action')
+    pageAddress.searchParams.delete('record')
+    pageUrl = pageAddress.pathname + pageAddress.search
+  }
   const response = await jsonFetch(url, {
     method: method.toUpperCase(),
     headers: {
@@ -89,8 +117,14 @@ export async function submitAction(
     },
     body: JSON.stringify(body),
   })
+  if (response.ok && response.headers.get('content-type')?.includes('text/csv')) {
+    await saveCsvResponse(response)
+    return { status: response.status, downloaded: true }
+  }
   const payload: unknown = await response.json().catch(() => ({}))
   if (response.status === 200) {
+    const exportJob = exportJobResponse.safeParse(payload)
+    if (exportJob.success) return { status: response.status, exportJob: exportJob.data }
     const parsedOption =
       payload && typeof payload === 'object' && 'option' in payload
         ? optionSchema.safeParse(payload.option)
@@ -108,6 +142,15 @@ export async function submitAction(
     if (errors && typeof errors === 'object' && !Array.isArray(errors))
       return { status: response.status, errors: errors as Record<string, unknown> }
   }
+  if (response.status === 429 && payload && typeof payload === 'object' && 'message' in payload) {
+    const message = payload.message
+    const retryAfter =
+      'retryAfter' in payload && typeof payload.retryAfter === 'number'
+        ? payload.retryAfter
+        : undefined
+    if (typeof message === 'string')
+      return { status: response.status, message, ...(retryAfter ? { retryAfter } : {}) }
+  }
   if (
     (response.status === 403 || response.status === 404) &&
     payload &&
@@ -118,6 +161,45 @@ export async function submitAction(
     if (typeof message === 'string') return { status: response.status, message }
   }
   return { status: response.status, message: `Unable to perform action (${response.status}).` }
+}
+export async function waitForExport(
+  job: { progressUrl: string },
+  onProgress?: (progress: ExportProgressResponse) => void,
+  options: { signal?: AbortSignal; maxDurationMs?: number } = {}
+): Promise<ExportProgressResponse> {
+  const signal = options.signal
+  const deadline = Date.now() + (options.maxDurationMs ?? 5 * 60_000)
+  while (true) {
+    if (signal?.aborted)
+      throw signal.reason ?? new DOMException('Export polling was cancelled.', 'AbortError')
+    if (Date.now() >= deadline)
+      throw new Error('Export did not finish before the polling deadline.')
+    const response = await jsonFetch(job.progressUrl, {
+      headers: { Accept: 'application/json' },
+      signal,
+    })
+    if (!response.ok) throw new Error(`Export progress request failed (${response.status})`)
+    const progress = exportProgressResponse.safeParse(await response.json())
+    if (!progress.success) throw new Error('Invalid export progress response.')
+    onProgress?.(progress.data)
+    if (progress.data.status === 'done') return progress.data
+    if (progress.data.status === 'failed') throw new Error(progress.data.error ?? 'Export failed.')
+    const delay = Math.min(1500, Math.max(0, deadline - Date.now()))
+    await new Promise<void>((resolve, reject) => {
+      const finish = () => {
+        signal?.removeEventListener('abort', abort)
+        resolve()
+      }
+      const timer = setTimeout(finish, delay)
+      const abort = () => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', abort)
+        reject(signal?.reason ?? new DOMException('Export polling was cancelled.', 'AbortError'))
+      }
+      signal?.addEventListener('abort', abort, { once: true })
+      if (signal?.aborted) abort()
+    })
+  }
 }
 const tableSelectionClearers = new Set<() => void>()
 export function registerTableSelectionClearer(clear: () => void): () => void {
@@ -250,9 +332,20 @@ export function reload(params: Record<string, unknown>): void {
   })
 }
 export function getFormDescriptor(page: PupitrePageProps['page']): FormDescriptor | undefined {
-  const root = page.spec.elements[page.spec.root] as
-    { type?: string; props?: Record<string, unknown> } | undefined
-  return root?.type === 'Form' && root.props ? (root.props as unknown as FormDescriptor) : undefined
+  const pending = [page.spec.root]
+  const visited = new Set<string>()
+  while (pending.length > 0) {
+    const key = pending.pop()!
+    if (visited.has(key)) continue
+    visited.add(key)
+    const element = page.spec.elements[key]
+    if (!element) continue
+    if (element.type === 'Form') return element.props as unknown as FormDescriptor
+    if (element.children)
+      for (let index = element.children.length - 1; index >= 0; index--)
+        pending.push(element.children[index])
+  }
+  return undefined
 }
 export function submitForm(
   page: PupitrePageProps['page'],
@@ -260,7 +353,7 @@ export function submitForm(
   toast: (message: { type: 'error'; title: string }) => void
 ): void {
   const form = getFormDescriptor(page)
-  if (!form) throw new Error('The page spec root must be a Form to submit it.')
+  if (!form) throw new Error('The page spec must contain a Form to submit it.')
   const state = store.getSnapshot() as Record<string, unknown>
   const data = (state.data ?? {}) as Record<string, unknown>
   store.set('/meta/submitting', true)

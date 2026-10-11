@@ -3,7 +3,7 @@ import type { PanelRuntime } from '../manager.js'
 import type PupitreManager from '../manager.js'
 import type { PanelRouteGroups } from '../http/router.js'
 import AuthController from './controller.js'
-
+import SocialAuthController from './social_controller.js'
 /** Registers only the auth routes enabled for this panel. */
 export function registerAuthRoutes(
   router: HttpRouterService,
@@ -13,8 +13,28 @@ export function registerAuthRoutes(
 ): void {
   if (!panel.auth.login) return
   groups.guest(() => {
+    if (panel.social?.providers.length) {
+      router
+        .get('/auth/:provider/redirect', [SocialAuthController, 'redirect'])
+        .as('auth.social.redirect')
+      router
+        .get('/auth/:provider/callback', [SocialAuthController, 'callback'])
+        .as('auth.social.callback')
+    }
     router.get('/login', [AuthController, 'loginPage']).as('auth.login')
     router.post('/login', [AuthController, 'login']).as('auth.login.store')
+    if (panel.auth.mfa) {
+      router.get('/mfa/challenge', [AuthController, 'mfaChallenge']).as('auth.mfa.challenge')
+      router.post('/mfa/challenge', [AuthController, 'completeMfaChallenge']).as('auth.mfa.verify')
+    }
+    if (panel.auth.passkeys?.enabled) {
+      router
+        .get('/passkeys/login/options', [AuthController, 'passkeyLoginOptions'])
+        .as('auth.passkeys.login.options')
+      router
+        .post('/passkeys/login/verify', [AuthController, 'passkeyLoginVerify'])
+        .as('auth.passkeys.login.verify')
+    }
     if (panel.auth.passwordReset) {
       router.get('/password/forgot', [AuthController, 'forgotPage']).as('auth.password.request')
       router.post('/password/email', [AuthController, 'forgot']).as('auth.password.email')
@@ -43,7 +63,8 @@ export function registerAuthRoutes(
         .post('/email/verification-notification', [AuthController, 'sendVerification'])
         .as('auth.verification.send')
     }
-    if (panel.auth.profile?.enabled) {
+    const hasSecurityPage = panel.auth.mfa || panel.auth.passkeys?.enabled
+    if (panel.auth.profile?.enabled || hasSecurityPage) {
       router.get('/profile', [AuthController, 'profile']).as('profile')
       router.put('/profile', [AuthController, 'updateProfile']).as('profile.update')
       if (panel.auth.profile.avatar) {
@@ -51,6 +72,33 @@ export function registerAuthRoutes(
         router
           .delete('/profile/avatar', [AuthController, 'deleteAvatar'])
           .as('profile.avatar.delete')
+      }
+      if (panel.auth.mfa) {
+        router.post('/profile/mfa/setup', [AuthController, 'mfaSetup']).as('profile.mfa.setup')
+        router
+          .post('/profile/mfa/confirm', [AuthController, 'mfaConfirm'])
+          .as('profile.mfa.confirm')
+        router
+          .post('/profile/mfa/disable', [AuthController, 'mfaDisable'])
+          .as('profile.mfa.disable')
+        router
+          .post('/profile/mfa/recovery-codes', [AuthController, 'regenerateMfaRecoveryCodes'])
+          .as('profile.mfa.recovery-codes')
+      }
+      if (panel.auth.passkeys?.enabled) {
+        router.get('/profile/passkeys', [AuthController, 'listPasskeys']).as('profile.passkeys')
+        router
+          .post('/profile/passkeys/register/options', [AuthController, 'passkeyRegisterOptions'])
+          .as('profile.passkeys.register.options')
+        router
+          .post('/profile/passkeys/register/verify', [AuthController, 'passkeyRegisterVerify'])
+          .as('profile.passkeys.register.verify')
+        router
+          .patch('/profile/passkeys/:id', [AuthController, 'renamePasskey'])
+          .as('profile.passkeys.rename')
+        router
+          .delete('/profile/passkeys/:id', [AuthController, 'deletePasskey'])
+          .as('profile.passkeys.delete')
       }
     }
   })

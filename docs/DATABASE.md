@@ -33,9 +33,9 @@ Index: `(user_id, guard)`. Token lama user yang sama dihapus saat token baru dib
 | `last_used_at` | timestamptz nullable | |
 | `created_at`, `updated_at` | timestamptz | |
 
-Challenge WebAuthn disimpan di session (bukan DB).
+Challenges WebAuthn disimpan di session (bukan DB), berumur lima menit, dan dikonsumsi saat verifikasi dicoba. Assertion valid memperbarui `counter`, `last_used_at`, `backed_up`, dan `device_type`.
 
-### `pupitre_exports` (M3, WP30) — hanya kalau adapter `jobs` dipasang
+### `pupitre_exports` (M3, WP30) — dipakai ketika adapter `jobs` dikonfigurasi
 
 | Kolom | Tipe | Catatan |
 | --- | --- | --- |
@@ -47,9 +47,10 @@ Challenge WebAuthn disimpan di session (bukan DB).
 | `total_rows`, `processed_rows` | integer | progress |
 | `file_key` | string nullable | key di storage adapter |
 | `error` | text nullable | |
+| `result` | text nullable | Ringkasan JSON import asynchronous (`created`, `updated`, `failed`, `failedRowsUrl`). |
 | `created_at`, `updated_at`, `expires_at` | timestamptz | file dihapus setelah `expires_at` |
 
-Tanpa adapter `jobs`, export sinkron dan tabel ini tidak dibuat.
+Tabel dipublikasikan oleh stub migrasi `1791700000006_create_pupitre_exports_table` dan boleh tetap kosong bila host tidak memakai `jobs`; ekspor sinkron tidak membuat row. `user_id` memakai FK `users.id` (integer), `tenant_id` menyimpan ID tenant aktif tanpa FK karena model tenant milik host. Retensi default 1.440 menit dapat diubah lewat `config/pupitre.ts` → `exports.retentionMinutes`; `pupitre:prune` menghapus file dari disk storage sebelum menghapus row kedaluwarsa.
 
 ## 2. Kolom yang ditambahkan ke `users` host
 
@@ -61,8 +62,15 @@ Migrasi `add_pupitre_columns_to_users` memakai `hasColumn` sebelum setiap `alter
 | `avatar` | string nullable | key storage adapter | kalau profile avatar aktif |
 | `timezone` | string(64) nullable | override timezone panel | opsional; dibaca kalau ada |
 | `current_tenant_id` | integer nullable | tenancy mode `implicit` | kalau tenancy implicit tanpa `adonisjs-tenant` |
+| `provider` | string nullable | Ally provider key; optional social identity lookup | migration WP32b |
+| `provider_id` | string nullable | provider's stable account id; paired with `provider` | migration WP32b |
+| `mfa_secret` | text nullable | encrypted TOTP secret | kalau `.mfa()` |
+| `mfa_recovery_codes` | text nullable | JSON array of per-code SHA-256 hashes | kalau `.mfa()` |
+| `mfa_enabled_at` | timestamptz nullable | MFA activation timestamp | kalau `.mfa()` |
 
 Untuk `.login()` host harus menyediakan kolom email dan password pada model, serta model auth yang mengimplementasikan `verifyCredentials(email, password)` (umumnya `withAuthFinder`). `auth.columns` berisi **nama properti model Lucid**, bukan nama fisik SQL. Perubahan email/password profil memerlukan password saat ini; avatar harus berupa image dan disimpan sebagai key pada storage disk Pupitre.
+
+Social login memakai kolom identitas hanya bila keduanya tersedia; selain itu akun dicocokkan melalui email terverifikasi dari provider. Stub migrasi kolom sosial `1791700000005_add_pupitre_social_columns_to_users` dipublikasikan saat configure. Callback hanya memakai target relatif yang sebelumnya disimpan di session; parameter query callback tidak diteruskan ke redirect setelah login. Ally melaporkan status verified untuk GitHub saat provider mengembalikan email publik/terverifikasi dan untuk Google pada alamat yang telah diverifikasi oleh Google; alamat kosong, unsupported, atau unverified tidak pernah dipakai untuk menghubungkan akun atau registrasi. `auth.columns.socialProvider` dan `socialProviderId` memetakan properti model Lucid (default `provider` dan `providerId`).
 
 Nama kolom bisa diubah di `config/pupitre.ts` → `auth.columns`. Properti `emailVerifiedAt`, `avatar`, `timezone`, dan lainnya dibaca melalui atribut model sesuai konfigurasi; migrasi hanya menambahkan kolom fisik standar di atas.
 
@@ -75,10 +83,13 @@ Pupitre tidak membuat tabel tenant atau membership. Host menyediakan tenant mode
 | Fitur builder | Kolom | Catatan |
 | --- | --- | --- |
 | tenancy default (`ownership`) | `tenant_id` | nama bisa diubah per panel/resource |
-| `.softDeletes()` | `deleted_at` | memakai `@adonisjs/lucid-soft-deletes` kalau model memakainya, atau filter manual `whereNull` |
+| `.softDeletes('deletedAt')` | `deleted_at` | Implementasi Pupitre sendiri (tanpa `lucid-soft-deletes`): `scopedQuery()` menerapkan `whereNull` secara default; filter trashed memilih `with`/`only`, delete mengisi timestamp, restore mengosongkan kolom. |
 | `.reorderable('sortOrder')` | `sort_order` integer | |
 | `t.text('x').searchable()` | index disarankan; `pupitre:inspect` memperingatkan kolom `searchable` tanpa index (PostgreSQL: `pg_indexes`) |
 | `recordTitle` | kolom apa pun | |
+
+`s.repeater('items').relationship('items', { orderColumn })` memakai tabel child Lucid milik host (`hasMany`); Pupitre tidak membuat tabel relasi generik. Form menyimpan PK child sebagai state internal saat edit, lalu dalam transaksi parent membuat/memperbarui/menghapus hanya child yang ditemukan lewat query relasi parent. `orderColumn` (nama atribut model child) menerima indeks urutan dari repeater.
+`defineRelationManager(Model, relation)` memakai tabel/model child atau pivot yang sudah didefinisikan host; Pupitre tidak membuat tabel generik. `.nested([...])`/`.parent(Post, 'post')` juga reuse FK Lucid dan membatasi query child ke parent. Aksi dissociate membutuhkan FK hasMany nullable; pada example `comments.post_id` nullable dan `comments.tenant_id` di-backfill dari `posts.tenant_id`. Example tags memakai `tags.tenant_id`, pivot `post_tags(post_id, tag_id, note)`, dan child `revisions(post_id, tenant_id)`.
 
 ## 4. Tabel dari peer (tidak dibuat Pupitre)
 

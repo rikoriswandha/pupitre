@@ -195,10 +195,11 @@ Lihat [DESIGN.md §Compiler](./DESIGN.md#compiler-builder--spec-json-render). Ke
 | --- | --- | --- |
 | `expression` | `visible`, `disabled`, `label`, `helperText`, `placeholder.content` | `acorn` mem-parse `fn.toString()`; pola sederhana diterjemahkan: `get('status') === 'published'` → `{ $state: '/data/status', eq: 'published' }`, `!==`/`>`/`<`/`!`/truthiness, `&&` → `$and`, `\|\|` → `$or`, template string → `$template`, ternary → `$cond`; di dalam repeater `get('qty')` → `{ $item: 'qty' }` |
 | `static` | sama | Dievaluasi per request di server dengan state awal + record; hasil literal di-patch ke salinan spec cache |
-| `server` | `afterStateUpdated` | M3 (WP31): `watch` → `evaluate` → `POST /_pupitre/evaluate`. Di M1 hanya `set('x', <ekspresi terangkat>)` yang didukung (→ `watch` + `setState`); selain itu `E_PUPITRE_UNLIFTABLE_CLOSURE` saat compile |
+| `server` | `afterStateUpdated` | `.live({ server: true })` menurunkan closure apa pun menjadi `watch` + aksi `evaluate`; endpoint mengotorisasi `create`/`update`, memakai query terscope tenant untuk record edit, lalu hanya mengembalikan pointer `/data/**` ke field yang ada serta tidak hidden/disabled |
 | `computed` | `placeholder.content` aritmatika sederhana | `{ $computed: 'expr', args }` dengan **fungsi terdaftar** bawaan (`add`, `mul`, `concat`, `formatNumber`, ...), **bukan** string JS yang di-`eval` |
 
 Keputusan: desain v0 menyebut "fungsi dikirim sebagai string di spec". Itu **tidak** dilakukan: `new Function` di client bentrok dengan CSP Shield (`script-src` tanpa `unsafe-eval`) dan membuka celah kalau spec pernah berasal dari sumber lain. Closure yang tidak bisa dipetakan ke fungsi `$computed` terdaftar jatuh ke `static` atau `server`. Lihat [ADR-0002](./adr/0002-client-first-reactivity.md).
+Closure `afterStateUpdated` yang tidak dapat diangkat ke ekspresi client dan tidak memakai `live({ server: true })` tetap ditolak dengan `E_PUPITRE_UNLIFTABLE_CLOSURE`, yang menyarankan opsi server tersebut. Evaluasi berlaku pada form resource create/edit dan custom page; form action modal memakai store modal terpisah dan tidak menjadi form owner untuk endpoint ini.
 
 ## 6. Otorisasi dan tenancy di jalur request
 
@@ -210,6 +211,7 @@ Urutan middleware group panel (dipasang oleh `router.ts`):
 4. `share_props`: `inertia.share({ user, tenant, tenants, nav, flash, notifications })`. `nav` sudah difilter `viewAny`.
 
 Controller selalu mengotorisasi ability tingkat resource sebelum query (`viewAny` untuk list, `create` untuk create, serta `viewAny` sebelum pencarian record); setelah record ditemukan lewat query terscope, ability record (`view`/`update`/`delete` atau custom action) diperiksa sebelum data dipakai atau dimutasi. Query selalu lewat `scopedQuery(ctx, resource)`: callback `.scope(fn)` berjalan terlebih dahulu, lalu default adapter scope; `.scope(false)` sengaja melewati tenancy untuk resource global. Ownership create diterapkan lagi setelah mutation hooks, sementara update menghapus kolom ownership dari data sebelum handler/merge agar record tidak dapat dipindahkan tenant. Policy relasi memakai policy model terkait (`viewAny`). Matriks test memeriksa semua route panel yang diklasifikasikan dan gagal bila ada route baru tanpa mapping.
+Pada relation manager, parent record diselesaikan lebih dulu melalui `scopedQuery` dan wajib lulus `view`; operasi mutasi juga mensyaratkan `update` parent. Related table menjalankan `viewAny` terhadap model terkait. Mutasi terkait memeriksa ability `create`/`update`/`delete`/`attach`/`detach`/`associate`/`dissociate`; fallback yang dipakai adalah `attach → create`, `detach → delete`, dan `associate|dissociate → update`. `.readOnly()` atau penolakan `update` parent menonaktifkan aksi mutasi. Query related selalu dibatasi oleh Lucid relation pada parent dan tenant scope related resource; pencarian related id di luar parent menghasilkan 404.
 
 ## 7. Auth bawaan
 
@@ -217,10 +219,12 @@ Semua halaman auth adalah `definePage` internal dengan `kind: 'auth'` (tanpa she
 
 | Fitur | Library | Penyimpanan |
 | --- | --- | --- |
-| TOTP | `otplib` | `users.mfa_secret` dienkripsi `encryption` Adonis; `users.mfa_recovery_codes` hash argon2 per kode |
-| Passkeys | `@simplewebauthn/server` | tabel `pupitre_passkeys` (credential id, public key, counter, transports) |
+| TOTP | `otplib` + `qrcode` | `users.mfa_secret` dienkripsi `encryption` Adonis; recovery codes disimpan sebagai SHA-256 hash per kode |
+| Passkeys | `@simplewebauthn/server` (lazy optional peer) | tabel `pupitre_passkeys` (credential id, public key, counter, transports, last use) |
 | Reset password | token acak 32 byte, hash SHA-256 | tabel `pupitre_password_resets`, TTL 60 menit |
 | Social | `@adonisjs/ally` host | kolom `users.provider`, `users.provider_id` opsional; kalau tidak ada, hanya mencocokkan email |
+Social login dibatasi provider lewat `panel.social`; route redirect/callback hanya dibuat untuk panel login yang aktif. Callback menolak denial/state mismatch/provider error, mencari identitas provider sebelum fallback ke email terverifikasi, dan selalu menyerahkan autentikasi ke `completeLogin` agar MFA tetap berlaku. Target redirect aman disimpan di session saat alur dimulai; callback query tidak diteruskan. Peer Ally dimuat secara lazy di `drivers/ally`.
+`completeLogin` membuat challenge hanya pada panel dengan `.mfa()` aktif. Marker pending menyimpan penghitung percobaan per login; setelah lima kegagalan marker dibuang dan user harus login ulang. Limiter memakai kunci user, sementara penghitung session tetap membatasi percobaan meskipun limiter optional tidak terpasang. Passkey hanya melewati challenge MFA bila assertion juga menyatakan user verification berhasil; UV yang tidak ada melanjutkan ke challenge.
 
 ## 8. Invarian
 
@@ -228,5 +232,5 @@ Semua halaman auth adalah `definePage` internal dengan `kind: 'auth'` (tanpa she
 - Client tidak pernah memegang logika otorisasi: `visible`/`can` action sudah dievaluasi di server; client hanya menyembunyikan tombol dan server tetap menolak 403.
 - `/data` di store hanya diubah oleh user atau `set()` dari handler; reload props Inertia memperbarui `/meta/record`, `/errors`, `/options` saja.
 - `page.key` berubah ⇔ store di-reset. Key = `${panel}:${resource}:${page}:${recordId ?? ''}:${tenant ?? ''}`.
-- Satu definition → satu `vine.compile()`; tidak ada validasi ad-hoc per field di controller kecuali inline edit (`PATCH column`) yang memakai sub-schema satu field dari compiler yang sama.
-- Semua `dateTime` disimpan UTC, dikirim ke client sebagai ISO 8601 dengan offset, ditampilkan di timezone panel/user/komponen (urutan prioritas: komponen > user > panel > `config/app.ts`).
+- Semua `dateTime` disimpan UTC, dikirim ke client sebagai ISO 8601 ber-offset, dan ditampilkan menurut prioritas komponen > timezone user > panel > `config/app.ts`.
+- `dateTime` awal dikirim sebagai ISO ber-offset pada zona efektif. Input lokal tanpa offset diparse di zona field; ISO ber-offset mempertahankan instant yang dinyatakan oleh offset. Jam lokal yang tidak ada saat DST maju ditolak; jam ambigu saat DST mundur memilih offset lebih awal. `date` tetap kalender tanpa pergeseran. `time` hanya menyimpan jam dinding (`HH:mm[:ss]`) tanpa tanggal/offset, sehingga zona menjadi konteks tampilan dan tidak mengubah nilai tersimpan.

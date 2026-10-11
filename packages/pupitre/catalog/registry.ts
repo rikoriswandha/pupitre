@@ -1,7 +1,10 @@
 import { actions } from './actions.js'
 import { components } from './components.js'
 
-export const pupitreCatalog = { components, actions }
+export const pupitreCatalog: { components: typeof components; actions: typeof actions } = {
+  components,
+  actions,
+}
 
 export function assertRegistryComplete(
   catalog: { components: Record<string, unknown> },

@@ -12,17 +12,18 @@ const nav = [
     label: 'Content',
     collapsible: true,
     collapsed: false,
-    items: [{ label: 'Posts', url: '/admin/posts', active: true }],
+    items: [{ label: 'Posts', url: '/admin/posts', active: true, badge: 4 }],
   },
 ]
 
-export function SidebarStory() {
+export function SidebarStory({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <ShellSidebar
       panel={panel as never}
       nav={nav}
       currentUrl="/admin/posts"
       onNavigate={() => {}}
+      collapsed={collapsed}
     />
   )
 }

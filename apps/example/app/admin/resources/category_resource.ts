@@ -28,8 +28,10 @@ export default defineResource(Category)
       .columns([
         table.text('name').searchable().sortable(),
         table.text('slug').searchable().sortable(),
+        table.text('sortOrder').sortable().label('Order'),
       ])
-      .defaultSort('name', 'asc')
+      .defaultSort('sortOrder', 'asc')
+      .reorderable('sortOrder')
   )
   .infolist((s) => [s.textEntry('name'), s.textEntry('slug').copyable()])
   .actions({

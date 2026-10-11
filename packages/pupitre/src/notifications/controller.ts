@@ -28,8 +28,8 @@ export default class NotificationController {
     const rawPage = Number(ctx.request.input('page', 1))
     const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1
     const [inbox, unread] = await Promise.all([
-      adapter.inbox(ctx.pupitre.authUser, { page, perPage: PER_PAGE }),
-      adapter.unreadCount(ctx.pupitre.authUser),
+      adapter.inbox(ctx.pupitre.authUser, { page, perPage: PER_PAGE }, ctx),
+      adapter.unreadCount(ctx.pupitre.authUser, ctx),
     ])
     const items: PupitreNotificationItem[] = inbox.items
     return ctx.response.json({
@@ -46,7 +46,7 @@ export default class NotificationController {
     const parsed = notificationsReadRequest.safeParse(ctx.request.all())
     if (!parsed.success)
       return ctx.response.badRequest({ message: 'Invalid notification read request' })
-    await adapter.markRead(ctx.pupitre.authUser, parsed.data.ids)
+    await adapter.markRead(ctx.pupitre.authUser, parsed.data.ids, ctx)
     return ctx.response.noContent()
   }
 }

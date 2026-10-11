@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre-ui",
-  "version": "0.2.0-beta.0",
+  "version": "0.3.0-beta.0",
   "description": "Default Pupitre catalog components built on shadcn/ui + Base UI",
   "type": "module",
   "sideEffects": [
@@ -38,6 +38,11 @@
       "types": "./build/src/components/*.d.ts",
       "default": "./build/src/components/*.js"
     },
+    "./testing": {
+      "@rikology/source": "./src/testing.ts",
+      "types": "./build/src/testing.d.ts",
+      "default": "./build/src/testing.js"
+    },
     "./styles.css": {
       "@rikology/source": "./src/styles.css",
       "default": "./build/src/styles.css"
@@ -54,6 +59,19 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/lang-html": "^6.4.12",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/lang-php": "^6.0.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.14",
+    "@simplewebauthn/browser": "^14.0.0",
     "@tanstack/react-table": "^8.21.3",
     "@tiptap/extension-image": "^3.31.4",
     "@tiptap/extension-link": "^3.31.4",
@@ -63,15 +81,26 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "codemirror": "^6.0.2",
+    "dompurify": "^3.4.16",
     "lucide-react": "^1.55.0",
+    "marked": "^18.1.0",
+    "react-easy-crop": "^6.2.4",
+    "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"
   },
   "peerDependencies": {
-    "@rikology/pupitre": "^0.2.0-beta.0",
-    "@rikology/pupitre-react": "^0.2.0-beta.0",
+    "@playwright/test": "^1.62.1",
+    "@rikology/pupitre": "^0.3.0-beta.0",
+    "@rikology/pupitre-react": "^0.3.0-beta.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3"
+  },
+  "peerDependenciesMeta": {
+    "@playwright/test": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -80,8 +109,8 @@
     "@playwright/experimental-ct-react": "^1.62.1",
     "@playwright/test": "^1.62.1",
     "@poppinss/ts-exec": "^1.5.0",
-    "@rikology/pupitre": "^0.2.0-beta.0",
-    "@rikology/pupitre-react": "^0.2.0-beta.0",
+    "@rikology/pupitre": "^0.3.0-beta.0",
+    "@rikology/pupitre-react": "^0.3.0-beta.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

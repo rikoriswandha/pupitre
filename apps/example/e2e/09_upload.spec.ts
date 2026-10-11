@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 const png = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3S8AAAAASUVORK5CYII=',
@@ -11,15 +11,19 @@ pupitreTest(
     await admin.login()
     await page.goto('/admin/acme/posts/1/edit')
     await page.getByRole('tab', { name: 'Media' }).click()
-    const fileInput = page.locator('input[type=file]').first()
+    const fileInput = page.getByRole('tabpanel', { name: 'Media' }).locator('input[type=file]')
     await fileInput.setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png })
+    const cropDialog = page.getByRole('dialog', { name: 'Edit image' })
+    await expect(cropDialog).toBeVisible()
+    await expect(cropDialog.locator('img')).toBeVisible()
+    await page.getByRole('button', { name: 'Apply crop' }).click()
     await expect(page.getByRole('img', { name: 'cover.png' })).toBeVisible()
     const saved = page.waitForResponse(
       (response) =>
         response.request().method() === 'PUT' &&
         new URL(response.url()).pathname === '/admin/acme/posts/1'
     )
-    await page.getByRole('button', { name: 'Save' }).click()
+    await page.getByRole('button', { name: 'Save post' }).click()
     await saved
     await page.goto('/admin/acme/posts/1')
     await expect(page.locator('img').last()).toBeVisible()
@@ -27,11 +31,11 @@ pupitreTest(
     await page.goto('/admin/acme/posts/2/edit')
     await page.getByRole('tab', { name: 'Media' }).click()
     await page
+      .getByRole('tabpanel', { name: 'Media' })
       .locator('input[type=file]')
-      .first()
       .setInputFiles({
         name: 'fake.png',
-        mimeType: 'image/png',
+        mimeType: 'application/octet-stream',
         buffer: Buffer.from('MZ executable payload'),
       })
     await expect(page.getByText(/fake\.png|upload failed/i).last()).toBeVisible()

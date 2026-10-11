@@ -5,8 +5,20 @@ import type { SchemaNodeBuilder } from './schema.js'
 export type ActionColor = 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'gray'
 export type ActionContextName = 'record' | 'bulk' | 'header'
 export type ActionVisibilityContext = { record: unknown; ctx?: HttpContext }
+export type NotificationAction = {
+  label: string
+  url?: string
+  method?: 'get' | 'post'
+  markAsRead?: boolean
+}
+export interface NotificationActionBuilder {
+  readonly definition: NotificationAction
+  url(value: string): this
+  markAsRead(value?: boolean): this
+}
 export interface NotificationBuilder {
   body(value: string): this
+  actions(value: readonly NotificationActionBuilder[]): this
   send(): unknown
   sendToDatabase(user?: LucidRow): Promise<void>
 }
@@ -27,10 +39,43 @@ export type ActionAfterContext = ActionHandleContext & {
   redirect: { back(): unknown; to(url: string): unknown }
   refresh: { table(): unknown }
 }
+export type ExportColumnDefinition = {
+  name: string
+  label?: string
+  formatStateUsing?: (value: unknown, record: unknown) => unknown | Promise<unknown>
+}
+export interface ExportColumnBuilder {
+  readonly definition: ExportColumnDefinition
+  label(value: string): this
+  formatStateUsing(formatter: NonNullable<ExportColumnDefinition['formatStateUsing']>): this
+}
 export type ActionDefinition = {
   name: string
-  kind: 'action' | 'create' | 'edit' | 'view' | 'delete' | 'bulk'
-  builtin?: 'create' | 'edit' | 'view' | 'delete' | 'bulk'
+  kind:
+    | 'action'
+    | 'create'
+    | 'edit'
+    | 'view'
+    | 'delete'
+    | 'bulk'
+    | 'restore'
+    | 'forceDelete'
+    | 'replicate'
+  builtin?:
+    | 'create'
+    | 'edit'
+    | 'view'
+    | 'delete'
+    | 'bulk'
+    | 'restore'
+    | 'forceDelete'
+    | 'replicate'
+    | 'export'
+    | 'import'
+    | 'attach'
+    | 'detach'
+    | 'associate'
+    | 'dissociate'
   context: ActionContextName
   label?: string
   icon?: string
@@ -54,19 +99,31 @@ export type ActionDefinition = {
     submitLabel?: string
     cancelLabel?: string
     icon?: string
+    submit?: boolean
+    cancel?: boolean
+    footerActions?: readonly ActionDefinition[]
   }
+  deepLinkable?: boolean
+  rateLimit?: { maxAttempts: number; per: string; by?: 'user' | 'ip' }
   form?: readonly SchemaNodeDefinition[]
   fillForm?: (args: {
     record: unknown
     ctx?: HttpContext
   }) => Record<string, unknown> | Promise<Record<string, unknown>>
+  resolveRecord?: (args: {
+    data: Record<string, unknown>
+    ctx: HttpContext
+  }) => LucidRow | null | Promise<LucidRow | null>
   handle?: (args: ActionHandleContext) => unknown | Promise<unknown>
   after?: (args: ActionAfterContext) => unknown | Promise<unknown>
   url?: string | ((args: { record: unknown; ctx?: HttpContext }) => string)
   openUrlInNewTab?: boolean
   keyBindings?: readonly string[]
   group?: string
+  async?: boolean
+  exportColumns?: readonly ExportColumnDefinition[]
   deselectAfter?: boolean
+  excludeAttributes?: readonly string[]
 }
 export interface ActionBuilder {
   readonly definition: ActionDefinition
@@ -84,14 +141,27 @@ export interface ActionBuilder {
   modalSubmitLabel(value: string): this
   modalCancelLabel(value: string): this
   modalIcon(value: string): this
+  modal(
+    value: Omit<Partial<NonNullable<ActionDefinition['modal']>>, 'footerActions'> & {
+      footerActions?: readonly ActionBuilder[]
+    }
+  ): this
+  modalSubmit(value?: boolean): this
+  modalCancel(value?: boolean): this
+  deepLinkable(value?: boolean): this
+  rateLimit(maxAttempts: number, options: { per: string; by?: 'user' | 'ip' }): this
   form(value: readonly SchemaNodeBuilder[]): this
   fillForm(value: NonNullable<ActionDefinition['fillForm']>): this
+  resolveRecord(value: NonNullable<ActionDefinition['resolveRecord']>): this
   handle(value: NonNullable<ActionDefinition['handle']>): this
   after(value: NonNullable<ActionDefinition['after']>): this
   url(value: NonNullable<ActionDefinition['url']>): this
   openUrlInNewTab(value?: boolean): this
   keyBindings(value: readonly string[]): this
+  excludeAttributes(value: readonly string[]): this
   group(value: string): this
+  async(value?: boolean): this
+  columns(value: readonly ExportColumnBuilder[]): this
   deselectAfter(value?: boolean): this
   destructive(value?: boolean): this
 }

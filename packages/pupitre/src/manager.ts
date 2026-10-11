@@ -5,9 +5,18 @@ import type { ResourceDefinition } from './definition/resource.js'
 import type { CustomPageDefinition } from './definition/custom_page.js'
 import { registerPanelRoutes } from './http/router.js'
 import { validateNavigation } from './navigation/validate.js'
+import { resolveAdapter } from './define_config.js'
+import type { PupitreConfig } from './define_config.js'
+import { registerExportJob } from './table/export_job.js'
+import { registerImportJob } from './jobs/import_job.js'
+import { registerBulkJob } from './jobs/bulk_job.js'
+import type { WidgetDefinition } from './definition/widget.js'
+import type { JobsAdapter } from './adapters/jobs.js'
 
 export type ResourceRuntime = {
   slug: string
+  routeSlug: string
+  parent?: { resource: string; relation: string; param: string }
   definition: ResourceDefinition<LucidRow>
   model: LucidModel
   label: string
@@ -31,9 +40,10 @@ export type PageRuntime = {
   url: string
 }
 
-export type PanelRuntime = Omit<PanelDefinition, 'resources' | 'pages'> & {
+export type PanelRuntime = Omit<PanelDefinition, 'resources' | 'pages' | 'widgets'> & {
   resources: ResourceRuntime[]
   pages: PageRuntime[]
+  widgets: WidgetDefinition[]
 }
 type LazyModule<T> = () => Promise<{ default: T }>
 type PanelInput =
@@ -123,7 +133,7 @@ export function bindPanel(panel: PanelRuntime, path: string): PanelRuntime {
     path,
     resources: panel.resources.map((resource) => ({
       ...resource,
-      urls: resourceUrls(path, resource.slug),
+      urls: resourceUrls(path, resource.routeSlug),
     })),
     pages: panel.pages.map((page) => ({ ...page, url: pageUrl(path, page.definition.path) })),
   }
@@ -131,6 +141,7 @@ export function bindPanel(panel: PanelRuntime, path: string): PanelRuntime {
 
 export default class PupitreManager {
   readonly panels: PanelRuntime[] = []
+  jobs?: JobsAdapter
   private routesRegistered = false
 
   constructor(private readonly app: ApplicationService) {}
@@ -166,9 +177,19 @@ export default class PupitreManager {
         throw new Error(
           `Pupitre resource and page slugs must be unique in panel "${definition.id}": "${duplicate.slug}"`
         )
-      const panel: PanelRuntime = { ...definition, resources, pages }
+      const widgets = await this.resolveWidgets(definition)
+      const panel: PanelRuntime = { ...definition, resources, pages, widgets }
       validateNavigation(panel)
       this.panels.push(panel)
+    }
+    const config = (await this.app.container.make('pupitre.config')) as PupitreConfig
+    const jobs = await resolveAdapter(config.jobs)
+    this.jobs = jobs
+    if (jobs) {
+      registerImportJob(jobs, this)
+      registerBulkJob(jobs, this)
+      await registerExportJob(jobs, this)
+      await jobs.initialize?.()
     }
     const router = (await this.app.container.make('router')) as HttpRouterService
     for (const panel of this.panels) registerPanelRoutes(router, panel, this)
@@ -228,6 +249,64 @@ export default class PupitreManager {
       ? source.map((value) => [undefined, value] as const)
       : Object.entries(source ?? {})
     const result: ResourceRuntime[] = []
+    const resolveModel = (definition: ResourceDefinition<LucidRow>): LucidModel => {
+      const model = definition.modelClass
+      if (!model)
+        throw new Error(`Resource "${definition.slug}" does not expose its Lucid model constructor`)
+      return model
+    }
+    const registerNested = (parent: ResourceRuntime) => {
+      for (const nestedChild of parent.definition.nested ?? []) {
+        const child = nestedChild as unknown as ResourceDefinition<LucidRow>
+        if (!validSlug(child.slug)) throw new Error(`Invalid nested resource slug "${child.slug}"`)
+        if (!child.parent)
+          throw new Error(
+            `Nested resource "${child.slug}" must declare .parent(resource, relation)`
+          )
+        if (child.parent.resource !== parent.slug)
+          throw new Error(
+            `Nested resource "${child.slug}" declares parent "${child.parent.resource}", expected "${parent.slug}"`
+          )
+        const model = resolveModel(child)
+        const parentParam = 'parentId'
+        const parentRelation = model.$getRelation(child.parent.relation)
+        parentRelation.boot()
+        if (parentRelation.type !== 'belongsTo')
+          throw new Error(`Nested resource "${child.slug}" parent relation must be belongsTo`)
+        const originalScope = child.scope
+        const definition: ResourceDefinition<LucidRow> = {
+          ...child,
+          scope: (query, ctx) => {
+            if (typeof originalScope === 'function') originalScope(query, ctx)
+            query.where(parentRelation.foreignKey, ctx.params[parentParam])
+          },
+        }
+        const routeSlug = `${parent.routeSlug}/:${parentParam}/${child.slug}`
+        const existingIndex = result.findIndex((item) => item.slug === child.slug)
+        if (existingIndex >= 0) {
+          const existing = result[existingIndex]!
+          if (existing.model !== model)
+            throw new Error(
+              `Duplicate Pupitre resource slug "${child.slug}" in panel "${panel.id}"`
+            )
+          if (existing.parent)
+            throw new Error(`Nested Pupitre resource "${child.slug}" is registered more than once`)
+          result.splice(existingIndex, 1)
+        }
+        const runtime: ResourceRuntime = {
+          slug: child.slug,
+          routeSlug,
+          parent: { resource: parent.slug, relation: child.parent.relation, param: parentParam },
+          definition,
+          model,
+          label: child.label,
+          pluralLabel: child.pluralLabel,
+          urls: resourceUrls(panel.path, routeSlug),
+        }
+        result.push(runtime)
+        registerNested(runtime)
+      }
+    }
     for (const [, value] of entries) {
       let loaded = value
       if (typeof value === 'function') {
@@ -241,18 +320,46 @@ export default class PupitreManager {
         throw new Error(`Resource in panel "${panel.id}" must resolve to a resource definition`)
       if (!validSlug(definition.slug))
         throw new Error(`Invalid Pupitre resource slug "${definition.slug}"`)
-      const model = definition.modelClass
-      if (!model)
-        throw new Error(`Resource "${definition.slug}" does not expose its Lucid model constructor`)
-      result.push({
+      const model = resolveModel(definition)
+      if (result.some((item) => item.slug === definition.slug && item.parent)) continue
+      const runtime: ResourceRuntime = {
         slug: definition.slug,
+        routeSlug: definition.slug,
         definition,
         model,
         label: definition.label,
         pluralLabel: definition.pluralLabel,
         urls: resourceUrls(panel.path, definition.slug),
-      })
+      }
+      result.push(runtime)
+      registerNested(runtime)
+    }
+    const slugs = new Set<string>()
+    for (const resource of result) {
+      if (slugs.has(resource.slug))
+        throw new Error(`Duplicate Pupitre resource slug "${resource.slug}" in panel "${panel.id}"`)
+      slugs.add(resource.slug)
     }
     return result
+  }
+  private async resolveWidgets(panel: PanelDefinition): Promise<WidgetDefinition[]> {
+    const source = panel.widgets ?? []
+    const entries = Array.isArray(source) ? source : Object.values(source)
+    const result: WidgetDefinition[] = []
+    for (const value of entries) {
+      let loaded = value
+      if (typeof value === 'function') {
+        const imported = await (value as LazyModule<unknown>)()
+        loaded =
+          imported && typeof imported === 'object' && 'default' in imported
+            ? imported.default
+            : imported
+      }
+      const definition = asDefinition<WidgetDefinition>(loaded as never)
+      if (!definition || typeof definition.name !== 'string')
+        throw new Error(`Widget in panel "${panel.id}" must resolve to a widget definition`)
+      result.push(definition)
+    }
+    return result.sort((left, right) => left.sort - right.sort)
   }
 }

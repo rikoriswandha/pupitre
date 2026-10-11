@@ -26,5 +26,7 @@ export default defineConfig({
     watch: {
       ignored: ['**/storage/**', '**/tmp/**'],
     },
+    // Lets several dev servers run side by side (one HMR socket each).
+    ...(process.env.VITE_HMR_PORT ? { hmr: { port: Number(process.env.VITE_HMR_PORT) } } : {}),
   },
 })

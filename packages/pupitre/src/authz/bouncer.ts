@@ -9,6 +9,14 @@ import type { PupitreConfig } from '../define_config.js'
 const warnedResources = new Set<string>()
 const configuredPolicyModules = new WeakMap<object, Promise<Record<string, unknown>>>()
 const lazyPolicies = new WeakMap<Function, Promise<PolicyClass>>()
+const fallbackAbilities: Record<string, string> = {
+  replicate: 'create',
+  reorder: 'update',
+  attach: 'create',
+  detach: 'delete',
+  associate: 'update',
+  dissociate: 'update',
+}
 
 async function policiesFor(config?: PupitreConfig): Promise<Record<string, unknown> | undefined> {
   if (!config?.policies) return undefined
@@ -97,7 +105,14 @@ export async function authorizeResource(
   record?: LucidRow
 ): Promise<boolean> {
   const policy = await resolveResourcePolicy(resource, await pupitreConfig())
-  return allows(ctx, policy, `${resource.definition.model}:${resource.slug}`, ability, record)
+  if (!policy)
+    return allows(ctx, policy, `${resource.definition.model}:${resource.slug}`, ability, record)
+  const methods = policy.prototype as Record<string, unknown>
+  if (typeof methods[ability] === 'function')
+    return allows(ctx, policy, `${resource.definition.model}:${resource.slug}`, ability, record)
+  const fallback = fallbackAbilities[ability]
+  if (!fallback || typeof methods[fallback] !== 'function') return false
+  return allows(ctx, policy, `${resource.definition.model}:${resource.slug}`, fallback, record)
 }
 
 /** Evaluates a host-registered Bouncer ability without a resource policy. */
@@ -120,12 +135,15 @@ export async function authorizeModel(
   record?: LucidRow
 ): Promise<boolean> {
   const resource = ctx.pupitre?.panel?.resources.find((candidate) => candidate.model === model)
-  if (resource) {
-    const policy = await resolveResourcePolicy(resource, await pupitreConfig())
-    return allows(ctx, policy, `${resource.definition.model}:${resource.slug}`, ability, record)
-  }
+  if (resource) return authorizeResource(ctx, resource, ability, record)
   const policy = await resolveModelPolicy(model.name, await pupitreConfig())
-  return allows(ctx, policy, model.name, ability, record)
+  if (!policy) return allows(ctx, policy, model.name, ability, record)
+  const methods = policy.prototype as Record<string, unknown>
+  if (typeof methods[ability] === 'function')
+    return allows(ctx, policy, model.name, ability, record)
+  const fallback = fallbackAbilities[ability]
+  if (!fallback || typeof methods[fallback] !== 'function') return false
+  return allows(ctx, policy, model.name, fallback, record)
 }
 
 export async function ensureAuthorized(

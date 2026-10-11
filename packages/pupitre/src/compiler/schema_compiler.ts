@@ -1,3 +1,4 @@
+import { marked } from 'marked'
 import { validateSpec } from '@json-render/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import {
@@ -72,6 +73,8 @@ type BuildContext = {
   options: CompileContext
   data: Record<string, unknown>
   numericFields: Record<string, true>
+  builderBlocks: { path: string; name: string }[]
+  repeaterPaths: string[]
 }
 function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeDefinition[] {
   if (typeof value !== 'function') return value ?? []
@@ -105,9 +108,13 @@ const fieldType: Record<string, string> = {
   color: 'Color',
   tags: 'Tags',
   keyValue: 'KeyValue',
+  markdownEditor: 'MarkdownEditor',
+  codeEditor: 'CodeEditor',
   richEditor: 'RichEditor',
   fileUpload: 'FileUpload',
   repeater: 'Repeater',
+  builder: 'Builder',
+  slider: 'Slider',
 }
 const infolistType: Record<string, string> = {
   textEntry: 'TextEntry',
@@ -130,6 +137,22 @@ function headline(name: string): string {
 }
 function pointer(path: string) {
   return path.split('.').filter(Boolean).join('/')
+}
+function builderFieldPath(path: string, scopes: { path: string; name: string }[]): string {
+  let pattern = path
+  for (const scope of [...scopes].reverse())
+    pattern = pattern.replace(`${scope.path}.${scope.name}.data.`, `${scope.path}.*.data.`)
+  return pattern
+}
+function repeatedFieldPath(path: string, repeaterPaths: string[]): string {
+  const parts = path.split('.')
+  let inserted = 0
+  for (const repeaterPath of repeaterPaths) {
+    const index = repeaterPath.split('.').length + inserted
+    parts.splice(index, 0, '*')
+    inserted += 1
+  }
+  return parts.join('.')
 }
 function getPath(data: Record<string, unknown>, path: string): unknown {
   return path
@@ -166,7 +189,29 @@ function defaults(
   for (const node of nodes) {
     if ('name' in node && node.name) {
       const value = getPath(data, node.name)
-      if (node.kind === 'repeater') {
+      if (node.kind === 'builder') {
+        const builder = node as FieldDefinitionUnion & {
+          blocks: { name: string; schema: SchemaNodeDefinition[] }[]
+        }
+        const initial =
+          value === undefined && create && node.default !== undefined
+            ? typeof node.default === 'function'
+              ? (node.default as () => unknown)()
+              : node.default
+            : value
+        const rows = Array.isArray(initial) ? initial : []
+        const keyed = rows.map((row, index) => {
+          const item = row as Record<string, unknown>
+          const block = builder.blocks.find((candidate) => candidate.name === item.type)
+          const blockData =
+            item.data && typeof item.data === 'object' && !Array.isArray(item.data)
+              ? (item.data as Record<string, unknown>)
+              : {}
+          if (block) defaults(block.schema, blockData, create)
+          return { _key: item._key ?? `b${index}`, type: item.type, data: blockData }
+        })
+        setPath(data, node.name, keyed)
+      } else if (node.kind === 'repeater') {
         const definition = node as FieldDefinitionUnion & {
           schema?: SchemaNodeDefinition[] | ((arg: unknown) => SchemaNodeDefinition[])
           defaultItems?: number
@@ -183,13 +228,15 @@ function defaults(
         }))
         if (!Array.isArray(value) || create) setPath(data, node.name, keyed)
         for (const row of keyed) defaults(template, row, create)
-      } else if (value === undefined && create && 'default' in node && node.default !== undefined)
+      } else if (value === undefined && create && 'default' in node && node.default !== undefined) {
         setPath(
           data,
           node.name,
           typeof node.default === 'function' ? (node.default as () => unknown)() : node.default
         )
+      }
     }
+    if (node.kind === 'wizard') for (const step of node.steps) defaults(step.children, data, create)
     if ('children' in node && Array.isArray(node.children)) defaults(node.children, data, create)
   }
 }
@@ -260,7 +307,8 @@ async function addField(
   node: FieldDefinitionUnion,
   build: BuildContext,
   parentPath = '',
-  inRepeater = false
+  inRepeater = false,
+  inBuilderBlock = false
 ): Promise<string> {
   const path = parentPath ? `${parentPath}.${node.name}` : node.name
   const id = `f.${path}`
@@ -281,7 +329,13 @@ async function addField(
     const children = repeaterChildren(definition.schema)
     const templateId = `${id}.item`
     const templateChildren: string[] = []
-    for (const child of children) templateChildren.push(await addNode(child, build, path, true))
+    build.repeaterPaths.push(path)
+    try {
+      for (const child of children)
+        templateChildren.push(await addNode(child, build, path, true, false))
+    } finally {
+      build.repeaterPaths.pop()
+    }
     const defaultItem: Record<string, unknown> = {}
     defaults(children, defaultItem, true)
     const liftedLabel =
@@ -304,7 +358,11 @@ async function addField(
       grid: definition.grid,
       defaultItems: [],
     } as unknown as RepeaterDescriptor
-    const statePath = inRepeater ? { $item: node.name } : `/data/${pointer(path)}`
+    const statePath = inRepeater
+      ? inBuilderBlock
+        ? { $item: `data/${pointer(node.name)}` }
+        : { $item: pointer(node.name) }
+      : `/data/${pointer(path)}`
     if (typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static') {
       const error = new E_PUPITRE_UNLIFTABLE_CLOSURE()
       error.message = `Cannot lift itemLabel for repeater "${path}"`
@@ -329,7 +387,9 @@ async function addField(
       },
       children: templateChildren,
     }
-    const repeatValue = inRepeater ? { $bindItem: node.name } : { $bindState: statePath }
+    const repeatValue = inRepeater
+      ? { $bindItem: inBuilderBlock ? `data/${pointer(node.name)}` : pointer(node.name) }
+      : { $bindState: statePath }
     const repeater: Element = {
       type: 'Repeater',
       props: { descriptor, value: repeatValue },
@@ -348,11 +408,88 @@ async function addField(
     }))
     return id
   }
+  if (node.kind === 'builder') {
+    const definition = node as FieldDefinitionUnion & {
+      blocks: { name: string; label?: string; icon?: string; schema: SchemaNodeDefinition[] }[]
+      minItems?: number
+      maxItems?: number
+      reorderable?: boolean
+      collapsible?: boolean
+      cloneable?: boolean
+      addLabel?: string
+      blockPickerColumns?: number
+    }
+    const blockTemplates = []
+    for (const block of definition.blocks) {
+      const templateId = `${id}.${block.name}.item`
+      const children: string[] = []
+      build.builderBlocks.push({ path, name: block.name })
+      try {
+        for (const child of block.schema)
+          children.push(await addNode(child, build, `${path}.${block.name}.data`, true, true))
+      } finally {
+        build.builderBlocks.pop()
+      }
+      build.elements[templateId] = {
+        type: 'BuilderItem',
+        props: { block: block.name, index: { $index: true } },
+        children,
+      }
+      blockTemplates.push({
+        key: block.name,
+        label: block.label ?? headline(block.name),
+        icon: block.icon,
+        template: templateId,
+      })
+    }
+    const descriptor = {
+      name: path,
+      blocks: blockTemplates,
+      minItems: definition.minItems,
+      maxItems: definition.maxItems,
+      reorderable: definition.reorderable ?? false,
+      collapsible: definition.collapsible ?? false,
+      cloneable: definition.cloneable ?? false,
+      addLabel: definition.addLabel,
+      blockPickerColumns: definition.blockPickerColumns,
+    }
+    const statePath = inRepeater
+      ? inBuilderBlock
+        ? { $item: `data/${pointer(node.name)}` }
+        : { $item: pointer(node.name) }
+      : `/data/${pointer(path)}`
+    const props: Record<string, unknown> = {
+      name: path,
+      label:
+        typeof node.label === 'string' || node.label === null ? node.label : headline(node.name),
+      value: inRepeater
+        ? { $bindItem: inBuilderBlock ? `data/${pointer(node.name)}` : pointer(node.name) }
+        : { $bindState: statePath },
+      descriptor,
+    }
+    if (node.helperText !== undefined) props.helperText = node.helperText
+    if (node.hint !== undefined) props.hint = node.hint
+    if (node.rules?.required) props.required = true
+    if (node.disabled !== undefined && typeof node.disabled !== 'function')
+      props.disabled = node.disabled
+    if (node.columnSpan !== undefined) props.columnSpan = node.columnSpan
+    if (node.extraAttributes !== undefined) props.extraAttributes = node.extraAttributes
+    build.elements[id] = {
+      type: 'Builder',
+      props,
+      children: blockTemplates.map((block) => block.template),
+      repeat: { statePath, key: '_key' },
+    }
+    applyVisibility(node as unknown as Record<string, unknown>, id, build, inRepeater)
+    return id
+  }
   const type = fieldType[node.kind]
   const props: Record<string, unknown> = {
     name: path,
     label: typeof node.label === 'string' || node.label === null ? node.label : headline(node.name),
-    value: inRepeater ? { $bindItem: node.name } : { $bindState: `/data/${pointer(path)}` },
+    value: inRepeater
+      ? { $bindItem: inBuilderBlock ? `data/${pointer(node.name)}` : pointer(node.name) }
+      : { $bindState: `/data/${pointer(path)}` },
   }
   if (!inRepeater) props.error = { $state: `/errors/${pointer(path)}` }
   if (node.helperText !== undefined) props.helperText = node.helperText
@@ -406,6 +543,10 @@ async function addField(
     'reorderable',
     'downloadable',
     'previewable',
+    'fileAttachmentsDisk',
+    'fileAttachmentsDirectory',
+    'imageEditor',
+    'imageEditorAspectRatios',
     'options',
     'relationship',
     'searchable',
@@ -415,14 +556,48 @@ async function addField(
     'createOptionUsing',
     'prefixAction',
     'suffixAction',
+    'hintAction',
+    'tel',
+    'telRegex',
   ])
   for (const [key, value] of Object.entries(node))
     if (!excluded.has(key) && value !== undefined) props[key] = value
+  if (node.kind === 'text') {
+    if (node.tel || node.telRegex) props.type = 'tel'
+    else if (node.rules?.url) props.type = 'url'
+    else if (node.rules?.email) props.type = 'email'
+  }
   if (node.kind === 'email' || node.kind === 'password') props.type = node.kind
   if (node.kind === 'multiSelect') props.multiple = true
   if ('minDate' in node && node.minDate !== undefined) props.min = node.minDate
   if ('maxDate' in node && node.maxDate !== undefined) props.max = node.maxDate
   mapOptions(node as unknown as Record<string, unknown>, props)
+  if (build.options.ctx && build.options.resourceSlug) {
+    const ctx = build.options.ctx
+    const owner = ctx.pupitre.panel.resources.find(
+      (resource) => resource.slug === build.options.resourceSlug
+    )
+    if (owner) {
+      for (const key of ['prefixAction', 'suffixAction', 'hintAction'] as const) {
+        const action = (node as unknown as Record<string, unknown>)[key] as
+          ActionDefinition | undefined
+        if (!action) continue
+        const record = build.options.model ?? undefined
+        const effectiveAction = record ? action : { ...action, context: 'header' as const }
+        addValueSlot(build, id, key, () =>
+          compileActionDescriptor(effectiveAction, {
+            baseUrl: owner.urls.list,
+            record,
+            recordKey: record?.$getAttribute(owner.model.primaryKey) as string | number | undefined,
+            ctx,
+            authorize: (ability, row) => authorizeResource(ctx, owner, ability, row),
+            routes: owner.urls,
+            resourceLabel: owner.label,
+          })
+        )
+      }
+    }
+  }
   if (
     (node.kind === 'select' || node.kind === 'multiSelect') &&
     (typeof node.options === 'function' || node.relationship)
@@ -437,21 +612,6 @@ async function addField(
       props.searchable = node.searchable ?? true
       props.preload = node.preload ?? false
       if (owner && node.createOptionForm?.length) props.createOption = { url: optionsUrl }
-      if (owner) {
-        for (const key of ['prefixAction', 'suffixAction'] as const) {
-          const action = node[key] as ActionDefinition | undefined
-          if (!action) continue
-          addValueSlot(build, id, key, () =>
-            compileActionDescriptor(action, {
-              baseUrl: owner.urls.list,
-              ctx,
-              authorize: (ability, record) => authorizeResource(ctx, owner, ability, record),
-              routes: owner.urls,
-              resourceLabel: owner.label,
-            })
-          )
-        }
-      }
       addValueSlot(build, id, 'options', async (data) => {
         const selected = getPath(data, path)
         const selectedValues = Array.isArray(selected)
@@ -495,30 +655,15 @@ async function addField(
     (!build.options.resourceSlug ||
       !build.options.ctx.pupitre.panel.resources.some(
         (resource) => resource.slug === build.options.resourceSlug
-      ) ||
-      (!node.relationship && typeof node.options !== 'function'))
+      ))
   ) {
     const ctx = build.options.ctx
     const ownerSlug = build.options.resourceSlug
-    const owner = ctx.pupitre.panel.resources?.find((resource) => resource.slug === ownerSlug)
     const page = ctx.pupitre.panel.pages?.find((candidate) => candidate.slug === ownerSlug)
     for (const key of ['prefixAction', 'suffixAction'] as const) {
       const action = node[key]
       if (!action) continue
-      if (owner) {
-        addValueSlot(build, id, key, () =>
-          compileActionDescriptor(action, {
-            baseUrl: owner.urls.list,
-            ctx,
-            authorize: (ability, record) => authorizeResource(ctx, owner, ability, record),
-            routes: owner.urls,
-            resourceLabel: owner.label,
-          })
-        )
-      } else if (
-        page &&
-        page.definition.actions.some((candidate) => candidate.name === action.name)
-      ) {
+      if (page && page.definition.actions.some((candidate) => candidate.name === action.name)) {
         addValueSlot(build, id, key, () =>
           compileActionDescriptor(action, {
             baseUrl: page.url,
@@ -570,11 +715,14 @@ async function addField(
       image: node.image ?? false,
       directory: node.directory,
       visibility: node.visibility,
+      imageEditor: node.imageEditor ?? false,
+      imageEditorAspectRatios: node.imageEditorAspectRatios,
       reorderable: node.reorderable ?? false,
       downloadable: node.downloadable ?? false,
       previewable: node.previewable ?? true,
     }
   }
+  if (node.kind === 'markdownEditor') props.uploadUrl = build.options.uploadUrls?.upload ?? ''
   if (node.live) props.live = node.live === true ? true : node.live
   build.elements[id] = { type, props }
   for (const prop of ['label', 'disabled', 'placeholder'] as const) {
@@ -590,28 +738,78 @@ async function addField(
   }
   applyVisibility(node as unknown as Record<string, unknown>, id, build, inRepeater)
   if (typeof node.afterStateUpdated === 'function') {
-    const lifted = liftClosure(node.afterStateUpdated, 'afterStateUpdated', {
-      pathPrefix: '/data',
-      inRepeater,
-      numericFields: build.numericFields,
-    })
-    if (lifted.kind === 'static') {
+    const server = typeof node.live === 'object' && node.live.server === true
+    const lifted = server
+      ? undefined
+      : liftClosure(node.afterStateUpdated, 'afterStateUpdated', {
+          pathPrefix: '/data',
+          inRepeater,
+          numericFields: build.numericFields,
+        })
+    if (!server && lifted?.kind === 'static') {
       const error = new E_PUPITRE_UNLIFTABLE_CLOSURE()
-      error.message = `Cannot lift afterStateUpdated for field "${path}"`
+      error.message = `Cannot lift afterStateUpdated for field "${path}". Use live({ server: true }) to run it on the server.`
       throw error
     }
-    build.elements[id].watch = { [`/data/${pointer(path)}`]: lifted.value as unknown[] }
+    if (server) {
+      build.elements[id].watch = {
+        [`/data/${pointer(path)}`]: [
+          {
+            action: 'evaluate',
+            params: {
+              url: `${build.options.ctx?.pupitre.panel.path ?? ''}/_pupitre/evaluate`,
+              resource: build.options.resourceSlug ?? '',
+              field: inRepeater
+                ? repeatedFieldPath(
+                    builderFieldPath(path, build.builderBlocks),
+                    build.repeaterPaths
+                  )
+                : builderFieldPath(path, build.builderBlocks),
+              debounce:
+                typeof node.live === 'object' && typeof node.live.debounce === 'number'
+                  ? node.live.debounce
+                  : 0,
+            },
+          },
+        ],
+      }
+    } else if (lifted && lifted.kind !== 'static') {
+      build.elements[id].watch = { [`/data/${pointer(path)}`]: lifted.value as unknown[] }
+    }
   }
   return id
+}
+function stepFieldPaths(nodes: SchemaNodeDefinition[]): string[] {
+  const paths: string[] = []
+  for (const node of nodes) {
+    if ('name' in node && typeof node.name === 'string') paths.push(node.name)
+    if ('children' in node) paths.push(...stepFieldPaths(node.children))
+    if (node.kind === 'repeater') paths.push(...stepFieldPaths(repeaterChildren(node.schema)))
+  }
+  return paths
+}
+function wizardSubmitLabel(nodes: SchemaNodeDefinition[]): string | undefined {
+  for (const node of nodes) {
+    if (node.kind === 'wizard' && node.submitLabel) return node.submitLabel
+    if ('children' in node) {
+      const label = wizardSubmitLabel(node.children)
+      if (label) return label
+    }
+    if (node.kind === 'wizard') {
+      const label = wizardSubmitLabel(node.steps.flatMap((step) => step.children))
+      if (label) return label
+    }
+  }
 }
 async function addNode(
   node: SchemaNodeDefinition,
   build: BuildContext,
   parentPath = '',
-  inRepeater = false
+  inRepeater = false,
+  inBuilderBlock = false
 ): Promise<string> {
   if (fieldKinds[node.kind])
-    return addField(node as FieldDefinitionUnion, build, parentPath, inRepeater)
+    return addField(node as FieldDefinitionUnion, build, parentPath, inRepeater, inBuilderBlock)
   if (node.kind.endsWith('Entry')) return addEntry(node, build)
   const id = `l.${build.layoutId++}`
   const element = node as unknown as Record<string, unknown>
@@ -627,7 +825,7 @@ async function addNode(
       const tabId = `l.${build.layoutId++}`
       const ids: string[] = []
       for (const child of (tab as Extract<SchemaNodeDefinition, { kind: 'tab' }>).children)
-        ids.push(await addNode(child, build, parentPath, inRepeater))
+        ids.push(await addNode(child, build, parentPath, inRepeater, inBuilderBlock))
       build.elements[tabId] = { type: 'Tab', props: { key, label: headline(key) }, children: ids }
       childIds.push(tabId)
       tabSpecs.push({ key, label: headline(key) })
@@ -640,9 +838,66 @@ async function addNode(
       props: { id: tabsId, tabs: tabSpecs, active: { $bindState: activePath } },
       children: childIds,
     }
+  } else if (node.kind === 'wizard') {
+    const wizard = node as unknown as {
+      steps: {
+        name: string
+        description?: string
+        icon?: string
+        children: SchemaNodeDefinition[]
+      }[]
+      skippable?: boolean
+      startOnStep?: number
+      submitLabel?: string
+    }
+    const steps = []
+    for (const step of wizard.steps) {
+      const key = step.name
+      const stepId = `l.${build.layoutId++}`
+      const ids: string[] = []
+      for (const child of step.children)
+        ids.push(await addNode(child, build, parentPath, inRepeater, inBuilderBlock))
+      build.elements[stepId] = {
+        type: 'Step',
+        props: { key, label: headline(key), description: step.description, icon: step.icon },
+        children: ids,
+      }
+      childIds.push(stepId)
+      steps.push({
+        key,
+        label: headline(key),
+        description: step.description,
+        icon: step.icon,
+        fields: stepFieldPaths(step.children),
+      })
+    }
+    const statePath = `/ui/wizard/${id}/step`
+    const initialStep = steps.length
+      ? Math.max(0, Math.min((wizard.startOnStep ?? 1) - 1, steps.length - 1))
+      : 0
+    const stateUi =
+      build.state.ui && typeof build.state.ui === 'object'
+        ? (build.state.ui as Record<string, unknown>)
+        : {}
+    const wizardStates =
+      stateUi.wizard && typeof stateUi.wizard === 'object'
+        ? (stateUi.wizard as Record<string, unknown>)
+        : {}
+    build.state.ui = { ...stateUi, wizard: { ...wizardStates, [id]: { step: initialStep } } }
+    build.elements[id] = {
+      type: 'Wizard',
+      props: {
+        id,
+        steps,
+        step: { $bindState: statePath },
+        skippable: wizard.skippable ?? false,
+        submitLabel: wizard.submitLabel,
+      },
+      children: childIds,
+    }
   } else {
     for (const child of children as SchemaNodeDefinition[])
-      childIds.push(await addNode(child, build, parentPath, inRepeater))
+      childIds.push(await addNode(child, build, parentPath, inRepeater, inBuilderBlock))
     const type =
       node.kind === 'fragment' ? 'Fragment' : node.kind[0].toUpperCase() + node.kind.slice(1)
     const props: Record<string, unknown> = {}
@@ -698,9 +953,15 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
       typeof prop !== 'function'
     )
       props[key] = prop
+  if (entry.markdown === true) props.html = true
   addValueSlot(build, id, 'value', async (_data, record, _ctx, request) => {
     const current = request as SlotRequest | undefined
-    return formatEntryValue(entry, getPath(record ?? {}, path), current?.options ?? build.options)
+    return formatEntryValue(
+      entry,
+      getPath(record ?? {}, path),
+      current?.options ?? build.options,
+      path
+    )
   })
   if (entry.kind === 'badgeEntry' && entry.colors && typeof entry.colors === 'object')
     addValueSlot(
@@ -717,19 +978,22 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
 async function formatEntryValue(
   entry: Record<string, unknown>,
   value: unknown,
-  options: CompileContext
+  options: CompileContext,
+  path: string
 ): Promise<unknown> {
   if (value === null || value === undefined) return value
-  const context = { locale: options.locale, timezone: options.timezone }
+  const context = { locale: options.locale, timezone: String(entry.timezone ?? options.timezone) }
   if (entry.dateTime) return formatDateTime(value as string, context, String(entry.dateTime))
   if (entry.date) return formatDate(value as string, context, String(entry.date))
   if (entry.since) return formatSince(value as string, context)
   if (entry.money)
     return formatMoney(value as number | string, context, { currency: String(entry.money) })
   if (entry.limit) return truncate(value, Number(entry.limit))
+  if (entry.markdown === true && typeof value === 'string')
+    return sanitizeHtml(marked.parse(value, { async: false }) as string)
   if (entry.html && typeof value === 'string') return sanitizeHtml(value)
   if (entry.kind === 'imageEntry' && options.resolveFileUrl) {
-    const field = { kind: 'fileUpload', name: String(entry.name) } as FieldDefinitionUnion
+    const field = { kind: 'fileUpload', name: path } as FieldDefinitionUnion
     const resolve = async (key: unknown) =>
       typeof key === 'string' ? ((await options.resolveFileUrl!(key, field)) ?? key) : key
     return Array.isArray(value) ? Promise.all(value.map(resolve)) : resolve(value)
@@ -745,7 +1009,12 @@ async function formatEntryValue(
               async (child) =>
                 [
                   String(child.name),
-                  await formatEntryValue(child, getPath(record, String(child.name)), options),
+                  await formatEntryValue(
+                    child,
+                    getPath(record, String(child.name)),
+                    options,
+                    `${path}.${String(child.name)}`
+                  ),
                 ] as const
             )
           )
@@ -767,6 +1036,24 @@ function normalizeFormData(
   record: Record<string, unknown> | null
 ): void {
   for (const node of nodes) {
+    if (node.kind === 'wizard') {
+      for (const step of node.steps) normalizeFormData(step.children, data, timezone, record)
+      continue
+    }
+    if (node.kind === 'builder') {
+      const definition = node as FieldDefinitionUnion & {
+        blocks: { name: string; schema: SchemaNodeDefinition[] }[]
+      }
+      const items = getPath(data, node.name)
+      if (Array.isArray(items))
+        for (const item of items) {
+          if (!item || typeof item !== 'object' || !('type' in item) || !('data' in item)) continue
+          const block = definition.blocks.find((candidate) => candidate.name === item.type)
+          if (block && item.data && typeof item.data === 'object' && !Array.isArray(item.data))
+            normalizeFormData(block.schema, item.data as Record<string, unknown>, timezone, record)
+        }
+      continue
+    }
     if (node.kind === 'repeater') {
       const rows = getPath(data, node.name)
       const children = repeaterChildren(node.schema)
@@ -846,6 +1133,8 @@ async function compile(
     options,
     data,
     numericFields,
+    builderBlocks: [],
+    repeaterPaths: [],
   }
   const children: string[] = []
   for (const node of nodes) children.push(await addNode(node, build))
@@ -854,6 +1143,8 @@ async function compile(
     for (const [key, value] of Object.entries(form))
       addValueSlot(build, 'root', key, (_data, _record, _ctx, request) => {
         const current = request as SlotRequest | undefined
+        if (key === 'submitLabel')
+          return wizardSubmitLabel(nodes) ?? current?.form?.submitLabel ?? value
         return current?.form?.[key as keyof FormDescriptor] ?? value
       })
   const ui =

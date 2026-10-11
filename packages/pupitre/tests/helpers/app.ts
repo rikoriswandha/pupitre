@@ -67,7 +67,7 @@ class TestBouncerMiddleware {
     return next()
   }
 }
-async function testSessionAuthentication(ctx: HttpContext, next: NextFn) {
+export async function testSessionAuthentication(ctx: HttpContext, next: NextFn) {
   const context = ctx as unknown as Omit<HttpContext, 'auth' | 'session'> & {
     auth: { authenticate(): Promise<unknown> }
     session: { get(key: string): unknown }
@@ -169,12 +169,39 @@ export const fixtureBulkArchiveAction = actions
 
 export const fixturePublishAction = action('publish')
   .label('Publish')
+  .deepLinkable()
   .can('publish')
   .fillForm(() => ({ reason: 'fixture reason' }))
   .form([schema.text('reason').required()])
+  .modal({
+    footerActions: [
+      action('publish-preview')
+        .label('Preview publish')
+        .handle(({ data, notify }) => {
+          notify?.info(`Preview: ${String(data?.reason ?? 'ready')}`).send()
+        }),
+    ],
+  })
   .handle(async ({ record, notify }) => {
     if (record) await (record as Post).merge({ status: 'published' }).save()
     notify?.success('Published').send()
+  })
+export const fixtureRateLimitAction = action('rate-limit')
+  .label('Rate limit')
+  .can('publish')
+  .rateLimit(2, { per: '1 minute', by: 'user' })
+  .handle(({ notify }) => {
+    notify?.success('Rate-limited action ran').send()
+  })
+
+export const fixtureRecordHeaderAction = action('record-header')
+  .label('Record header')
+  .deepLinkable()
+  .can('publish')
+  .form([schema.text('reason').required()])
+  .fillForm(({ record }) => ({ reason: (record as Post | null)?.title ?? 'header' }))
+  .handle(async ({ notify }) => {
+    notify?.success('Header action ran').send()
   })
 
 export const fixturePostResource = defineResource(Post)
@@ -221,12 +248,16 @@ export const fixturePostResource = defineResource(Post)
       schema
         .repeater('items')
         .schema((fields) => [fields.fileUpload('attachment').image().maxSize('2mb')]),
+      schema
+        .repeater('links')
+        .schema((fields) => [fields.text('label').required(), fields.text('url').url().required()])
+        .relationship('links', { orderColumn: 'sort' }),
     ])
   )
   .table((definition) =>
     definition
       .columns([
-        table.text('title').sortable().searchable(),
+        table.text('title').sortable().searchable({ individually: true }),
         table.text('category.name'),
         table.text('metadata.title'),
         table.badge('status'),
@@ -243,8 +274,8 @@ export const fixturePostResource = defineResource(Post)
     ])
   )
   .actions({
-    header: [actions.create()],
-    row: [fixturePublishAction, fixtureArchiveAction],
+    header: [actions.create(), fixtureRecordHeaderAction],
+    row: [fixturePublishAction, fixtureArchiveAction, fixtureRateLimitAction],
     bulk: [actions.delete(), fixtureBulkArchiveAction],
   })
   .pages({

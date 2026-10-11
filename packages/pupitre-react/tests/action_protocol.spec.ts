@@ -6,6 +6,7 @@ import {
   registerTableSelectionClearer,
   setFetch,
   submitAction,
+  waitForExport,
 } from '../src/bridge/actions.js'
 import { setRouter } from '../src/bridge/inertia.js'
 import type { RouterLike } from '../src/bridge/inertia.js'
@@ -123,7 +124,7 @@ test('action submissions consume ActionResult and send selected ids as JSON', as
 }) => {
   let init: RequestInit | undefined
   const location = window as unknown as { happyDOM: { setURL(url: string): void } }
-  location.happyDOM.setURL('http://localhost/admin/posts?q=1')
+  location.happyDOM.setURL('http://localhost/admin/posts?q=1&action=publish&record=7')
   const restoreFetch = setFetch(async (_input, request) => {
     init = request
     return {
@@ -223,5 +224,32 @@ test('ActionResult patch refreshes top-level data, redirects navigate, and desel
   } finally {
     unregister()
     restoreRouter()
+  }
+})
+test('export polling aborts between progress checks', async ({ assert }) => {
+  let requests = 0
+  const restoreFetch = setFetch(async () => {
+    requests++
+    return new Response(
+      JSON.stringify({
+        id: 'export-1',
+        status: 'queued',
+        totalRows: 1,
+        processedRows: 0,
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
+    )
+  })
+  const controller = new AbortController()
+  try {
+    const polling = waitForExport({ progressUrl: '/exports/1' }, undefined, {
+      signal: controller.signal,
+    })
+    setTimeout(() => controller.abort(), 10)
+    await assert.rejects(() => polling, /cancel|abort/i)
+    assert.equal(requests, 1)
+  } finally {
+    controller.abort()
+    restoreFetch()
   }
 })

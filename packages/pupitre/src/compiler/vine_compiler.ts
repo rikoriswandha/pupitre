@@ -17,11 +17,14 @@ import { getComponentDefinition, schema as schemaFactory } from '../builder/sche
 import { parseInZone } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
 import { scopedQuery } from '../query/scoped_query.js'
+import { authorizeModel, authorizeResource } from '../authz/bouncer.js'
+import { valuesAt } from '../definition/values_at.js'
 type ValidatorOptions = {
   record?: LucidRow | null
   /** Resource model: default table + attribute→column mapping for `unique` on create. */
   model?: LucidModel | null
   ctx?: HttpContext
+  resource?: string
   timezone: string
 }
 export type FormValidator = {
@@ -29,7 +32,7 @@ export type FormValidator = {
 }
 
 type FieldRecord = { field: FieldDefinitionUnion; path: string; repeatPath?: string }
-const validators = new WeakMap<SchemaNodeDefinition[], FormValidator>()
+const validators = new WeakMap<SchemaNodeDefinition[], Map<string, FormValidator>>()
 const uploadSessionKey = 'pupitre.uploads'
 type UploadedSessionFile = {
   key: string
@@ -53,19 +56,6 @@ function resourceSlug(nodes: SchemaNodeDefinition[], ctx?: HttpContext): string 
   const resource = panel?.resources?.find((item) => item.definition.form === nodes)
   if (resource) return resource.slug
   return panel?.pages?.find((item) => item.definition.form === nodes)?.slug
-}
-
-function persistedAt(record: Record<string, unknown> | null, path: string): unknown[] {
-  let values: unknown[] = [record]
-  for (const segment of path.split('.')) {
-    values = values.flatMap((value) => {
-      if (Array.isArray(value))
-        return value.map((item) => (item as Record<string, unknown>)?.[segment])
-      if (value === null || typeof value !== 'object') return []
-      return [(value as Record<string, unknown>)[segment]]
-    })
-  }
-  return values
 }
 
 function sessionUploads(ctx: HttpContext | undefined): UploadedSessionFile[] {
@@ -92,7 +82,7 @@ function isUploadedFileKey(value: unknown, targetField: string, vineField: Field
   const meta = vineField.meta as
     { ctx?: HttpContext; resource?: string; record?: LucidRow | null } | undefined
   const record = meta?.record?.serialize() ?? null
-  const previous = persistedAt(record, targetField)
+  const previous = valuesAt(record, targetField)
   if (previous.some((item) => (Array.isArray(item) ? item.includes(value) : item === value)))
     return true
   return sessionUploads(meta?.ctx).some(
@@ -266,8 +256,25 @@ function relationshipValue(field: SelectField) {
       )
       const query = relatedResource ? scopedQuery(ctx, relatedResource) : model.query()
       field.relationship.scope?.(query, ctx)
-      if (!(await query.where(model.primaryKey, value).first()))
+      const row = await query.where(model.primaryKey, value).first()
+      if (!row) {
         vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+        return
+      }
+      if (relatedResource) {
+        if (
+          !(await authorizeResource(ctx, relatedResource, 'viewAny')) ||
+          !(await authorizeResource(ctx, relatedResource, 'view', row))
+        ) {
+          vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+          return
+        }
+      } else if (
+        !(await authorizeModel(ctx, model, 'viewAny')) ||
+        !(await authorizeModel(ctx, model, 'view', row))
+      ) {
+        vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)
+      }
     })()
   )
 }
@@ -305,14 +312,70 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
     case 'textarea':
     case 'hidden':
     case 'richEditor':
+    case 'markdownEditor':
+    case 'codeEditor':
     case 'color':
       schema = vine.string()
       if (field.kind === 'email' || rules.email) schema = schema.email()
-      if (rules.url) schema = schema.url()
-      if (field.kind === 'richEditor') {
+      if (field.kind === 'richEditor')
         schema = schema.transform((value: string) => sanitizeHtml(value))
+      if (field.kind === 'text' && (field.tel || field.telRegex)) {
+        const configured = field.telRegex
+        const phonePattern =
+          typeof configured === 'string'
+            ? new RegExp(configured)
+            : configured instanceof RegExp
+              ? new RegExp(configured.source)
+              : /^\+?[\d().\-\s]{5,}$/
+        schema = schema.use(
+          vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
+            if (typeof value === 'string' && value.length > 0 && !phonePattern.test(value))
+              vineField.report(
+                'The {{ field }} field must be a valid phone number',
+                'tel',
+                vineField
+              )
+          })()
+        )
       }
       break
+    case 'slider': {
+      const slider = field
+      schema = vine.any().use(
+        vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
+          const values = Array.isArray(value) ? value : [value]
+          const validShape = slider.range
+            ? Array.isArray(value) && value.length === 2
+            : typeof value === 'number'
+          const min = slider.min ?? 0
+          const max = slider.max ?? 100
+          const step = slider.step ?? 1
+          const validValues =
+            validShape &&
+            values.every(
+              (candidate) =>
+                typeof candidate === 'number' &&
+                Number.isFinite(candidate) &&
+                candidate >= min &&
+                candidate <= max &&
+                Math.abs((candidate - min) / step - Math.round((candidate - min) / step)) < 1e-8
+            )
+          const reversed =
+            Array.isArray(value) &&
+            typeof value[0] === 'number' &&
+            typeof value[1] === 'number' &&
+            value[0] > value[1]
+          if (!validValues || reversed)
+            vineField.report(
+              'The {{ field }} field is outside the allowed range',
+              'slider',
+              vineField
+            )
+        })()
+      )
+      schema = applyPresence(schema, field)
+      return schema
+    }
     case 'number':
       schema = vine.number()
       break
@@ -354,9 +417,18 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
       schema = vine.array(vine.string())
       if (field.maxTags !== undefined) schema = schema.maxLength(field.maxTags)
       break
-    case 'keyValue':
-      schema = vine.record(vine.string())
-      break
+    case 'repeater':
+      schema = vine.array(
+        vine.object({
+          ...schemaProperties(repeaterChildren(field.schema), fieldPath),
+          ...(field.relationship ? { _relationKey: vine.any().optional() } : {}),
+        } as never)
+      )
+      if (field.minItems !== undefined) schema = schema.minLength(field.minItems)
+      if (field.maxItems !== undefined) schema = schema.maxLength(field.maxItems)
+      schema = addRules(schema, field)
+      schema = applyPresence(schema, field)
+      return schema
     case 'fileUpload': {
       const key = vine.string().use(
         vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
@@ -381,8 +453,8 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
           vine.createRule((value: unknown, _args: unknown, vineField: FieldContext) => {
             if (typeof value !== 'string') return
             const timezone =
-              (vineField.meta as { timezone?: string } | undefined)?.timezone ??
               field.timezone ??
+              (vineField.meta as { timezone?: string } | undefined)?.timezone ??
               'UTC'
             if (!parseInZone(value, timezone))
               vineField.report('The {{ field }} field must be a valid date', 'date', vineField)
@@ -401,15 +473,80 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
         })()
       )
       break
-    case 'repeater':
-      schema = vine.array(
-        vine.object(schemaProperties(repeaterChildren(field.schema), fieldPath) as never)
+    case 'builder': {
+      const definition = field as FieldDefinitionUnion & {
+        blocks: { name: string; schema: SchemaNodeDefinition[] }[]
+        minItems?: number
+        maxItems?: number
+      }
+      const dataSchema = vine.any().use(
+        vine.createRule(async (value: unknown, _args: unknown, vineField: FieldContext) => {
+          const context = vineField as FieldContext & { meta?: ValidatorOptions }
+          const itemPath = context.getFieldPath().replace(/\.data$/, '')
+          const blockName = getAt(context.data, `${itemPath}.type`)
+          const block = definition.blocks.find((candidate) => candidate.name === blockName)
+          if (!block) return
+          if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+            vineField.report('The block data must be an object', 'builderData', vineField)
+            return
+          }
+          try {
+            const validated = await compileValidator(
+              block.schema,
+              `${fieldPath}.${block.name}.data`
+            ).validate(value, {
+              timezone: context.meta?.timezone ?? 'UTC',
+              record: context.meta?.record,
+              model: context.meta?.model,
+              ctx: context.meta?.ctx,
+              resource: context.meta?.resource,
+            })
+            vineField.mutate(validated, vineField)
+          } catch (error) {
+            if (
+              !error ||
+              typeof error !== 'object' ||
+              !('code' in error) ||
+              error.code !== 'E_VALIDATION_ERROR' ||
+              !('messages' in error) ||
+              !Array.isArray(error.messages)
+            )
+              throw error
+            const messages = error.messages as { field?: string; message?: string }[]
+            for (const issue of messages) {
+              const nestedField = Object.assign(
+                Object.create(Object.getPrototypeOf(vineField)),
+                vineField,
+                {
+                  getFieldPath: () =>
+                    issue.field
+                      ? `${vineField.getFieldPath()}.${issue.field}`
+                      : vineField.getFieldPath(),
+                  wildCardPath: issue.field
+                    ? `${vineField.wildCardPath}.${issue.field}`
+                    : vineField.wildCardPath,
+                }
+              ) as FieldContext
+              vineField.report(
+                issue.message ?? 'The block data is invalid',
+                'builderData',
+                nestedField
+              )
+            }
+          }
+        })()
       )
-      if (field.minItems !== undefined) schema = schema.minLength(field.minItems)
-      if (field.maxItems !== undefined) schema = schema.maxLength(field.maxItems)
-      schema = addRules(schema, field)
+      schema = vine.array(
+        vine.object({
+          type: stringComparableEnum(definition.blocks.map((block) => block.name)),
+          data: dataSchema,
+        })
+      )
+      if (definition.minItems !== undefined) schema = schema.minLength(definition.minItems)
+      if (definition.maxItems !== undefined) schema = schema.maxLength(definition.maxItems)
       schema = applyPresence(schema, field)
       return schema
+    }
     default:
       schema = vine.any()
   }
@@ -451,6 +588,7 @@ const fieldKinds: Record<string, true> = {
   text: true,
   email: true,
   password: true,
+  slider: true,
   number: true,
   textarea: true,
   hidden: true,
@@ -466,16 +604,27 @@ const fieldKinds: Record<string, true> = {
   time: true,
   color: true,
   tags: true,
+  markdownEditor: true,
+  codeEditor: true,
   keyValue: true,
   richEditor: true,
   fileUpload: true,
+  builder: true,
   repeater: true,
 }
 
 function schemaProperties(nodes: SchemaNodeDefinition[], pathPrefix = ''): Record<string, unknown> {
   const properties: ObjectProperties = {}
   for (const node of nodes) {
-    if ('children' in node) {
+    if (node.kind === 'wizard') {
+      Object.assign(
+        properties,
+        schemaProperties(
+          node.steps.flatMap((step) => step.children),
+          pathPrefix
+        )
+      )
+    } else if ('children' in node) {
       Object.assign(properties, schemaProperties(node.children, pathPrefix))
     } else if (node.kind in fieldKinds && 'name' in node) {
       const field = node as FieldDefinitionUnion
@@ -493,7 +642,14 @@ function collectFields(
   result: FieldRecord[] = []
 ): FieldRecord[] {
   for (const node of nodes) {
-    if ('children' in node) {
+    if (node.kind === 'wizard') {
+      collectFields(
+        node.steps.flatMap((step) => step.children),
+        prefix,
+        repeatPath,
+        result
+      )
+    } else if ('children' in node) {
       collectFields(node.children, prefix, repeatPath, result)
     } else if (node.kind in fieldKinds && 'name' in node) {
       const field = node as FieldDefinitionUnion
@@ -639,8 +795,12 @@ function filterHidden(
   return filtered
 }
 
-function buildValidator(nodes: SchemaNodeDefinition[], fields: FieldRecord[]): FormValidator {
-  const compiled = vine.compile(vine.object(schemaProperties(nodes) as never))
+function buildValidator(
+  nodes: SchemaNodeDefinition[],
+  fields: FieldRecord[],
+  pathPrefix: string
+): FormValidator {
+  const compiled = vine.compile(vine.object(schemaProperties(nodes, pathPrefix) as never))
   return {
     async validate(data, options) {
       const input =
@@ -655,7 +815,7 @@ function buildValidator(nodes: SchemaNodeDefinition[], fields: FieldRecord[]): F
           model: options.model ?? null,
           ctx: options.ctx,
           timezone: options.timezone,
-          resource: resourceSlug(nodes, options.ctx),
+          resource: options.resource ?? resourceSlug(nodes, options.ctx),
         },
       })
       for (const item of fields) {
@@ -675,10 +835,15 @@ function buildValidator(nodes: SchemaNodeDefinition[], fields: FieldRecord[]): F
   }
 }
 
-export function compileValidator(nodes: SchemaNodeDefinition[]): FormValidator {
-  const cached = validators.get(nodes)
-  if (cached) return cached
-  const validator = buildValidator(nodes, collectFields(nodes))
-  validators.set(nodes, validator)
+export function compileValidator(nodes: SchemaNodeDefinition[], pathPrefix = ''): FormValidator {
+  let cached = validators.get(nodes)
+  const existing = cached?.get(pathPrefix)
+  if (existing) return existing
+  const validator = buildValidator(nodes, collectFields(nodes), pathPrefix)
+  if (!cached) {
+    cached = new Map()
+    validators.set(nodes, cached)
+  }
+  cached.set(pathPrefix, validator)
   return validator
 }

@@ -9,7 +9,7 @@ export default class extends BaseSchema {
       table
         .integer('post_id')
         .unsigned()
-        .notNullable()
+        .nullable()
         .references('id')
         .inTable('posts')
         .onDelete('CASCADE')

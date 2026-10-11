@@ -54,11 +54,21 @@ export const E_PUPITRE_FORBIDDEN = handledError(
   403,
   'E_PUPITRE_FORBIDDEN'
 )
+export const E_PUPITRE_NOT_FOUND = createError(
+  'The requested record was not found',
+  'E_PUPITRE_NOT_FOUND',
+  404
+)
 
 export const E_PUPITRE_MISSING_PEER = createError(
   'An optional Pupitre peer dependency is required for this feature',
   'E_PUPITRE_MISSING_PEER',
   500
+)
+export const E_PUPITRE_INVALID_ACTION_CONTEXT = createError(
+  'Asynchronous execution is supported only for bulk actions and imports',
+  'E_PUPITRE_INVALID_ACTION_CONTEXT',
+  400
 )
 export const E_PUPITRE_MAIL_ADAPTER_REQUIRED = createError(
   'A mail adapter is required when password reset or email verification is enabled',

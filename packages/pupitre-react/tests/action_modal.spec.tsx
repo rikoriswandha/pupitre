@@ -100,7 +100,7 @@ test('action form GET renders a separate form store and validation keeps the mod
       },
     },
     state: { data: { title: 'Draft' } },
-    catalogVersion: '0.2',
+    catalogVersion: '0.3',
   }
   const restoreFetch = setFetch(async (url, init) => {
     if ((init?.method ?? 'GET') === 'GET') {
@@ -151,7 +151,7 @@ test('action form GET renders a separate form store and validation keeps the mod
     assert.exists(container.querySelector('[data-testid="modal"]'))
     assert.equal((container.querySelector('input') as HTMLInputElement | null)?.value, 'Draft')
     await act(async () =>
-      (container.querySelector('button') as unknown as HTMLButtonElement).click()
+      (container.querySelectorAll('button')[1] as unknown as HTMLButtonElement).click()
     )
     assert.equal(submission?.url, action.url)
     assert.equal(submission?.init.method, 'POST')
@@ -171,13 +171,93 @@ test('action form GET renders a separate form store and validation keeps the mod
     responseStatus = 403
     responsePayload = { message: 'Forbidden action' }
     await act(async () =>
-      (container.querySelector('button') as unknown as HTMLButtonElement).click()
+      (container.querySelectorAll('button')[1] as unknown as HTMLButtonElement).click()
     )
     assert.deepEqual(toasts, ['Forbidden action'])
     assert.exists(container.querySelector('[data-testid="modal"]'))
   } finally {
     await act(async () => root.unmount())
     restoreRouter()
+    restoreFetch()
+    dom.happyDOM.abort()
+  }
+})
+
+test('modal footer actions submit current data and modalSubmit(false) hides submit', async ({
+  assert,
+}) => {
+  const dom = installDom()
+  const container = dom.document.createElement('div')
+  dom.document.body.append(container)
+  const root = createRoot(container as unknown as Element)
+  let submission: { url: string; init: RequestInit } | undefined
+  const formResponse = {
+    spec: {
+      root: 'field',
+      elements: {
+        field: {
+          type: 'Text',
+          props: { name: 'title', value: { $bindState: '/data/title' } },
+        },
+      },
+    },
+    state: { data: { title: 'Current modal value' } },
+    catalogVersion: '0.3',
+  }
+  const restoreFetch = setFetch(async (url, init) => {
+    if ((init?.method ?? 'GET') === 'GET')
+      return { ok: true, status: 200, json: async () => formResponse } as Response
+    submission = { url: String(url), init: init ?? {} }
+    return { ok: true, status: 200, json: async () => ({ flash: [] }) } as Response
+  })
+  const infoAction: ActionDescriptor = {
+    ...action,
+    modal: {
+      submit: false,
+      footerActions: [
+        {
+          name: 'continue',
+          label: 'Continue',
+          kind: 'direct',
+          url: '/posts/actions/continue',
+          method: 'post',
+          enabled: true,
+        },
+      ],
+    },
+  }
+  try {
+    await act(async () =>
+      root.render(
+        <ActionModal
+          action={infoAction}
+          ids={[11]}
+          registry={registry.shell}
+          runtimeRegistry={registry}
+          pupitre={pupitre}
+          close={() => {}}
+          toast={() => {}}
+          onResult={() => {}}
+        />
+      )
+    )
+    const { promise, resolve } = Promise.withResolvers<void>()
+    setTimeout(resolve, 0)
+    await act(async () => promise)
+    assert.deepEqual(
+      Array.from(container.querySelectorAll('button')).map((button) => button.textContent),
+      ['Cancel', 'Continue']
+    )
+    await act(async () =>
+      (container.querySelector('button:last-of-type') as unknown as HTMLButtonElement).click()
+    )
+    assert.equal(submission?.url, '/posts/actions/continue')
+    assert.deepEqual(JSON.parse(String(submission?.init.body)), {
+      data: { title: 'Current modal value' },
+      ids: [11],
+    })
+  } finally {
+    await act(async () => root.unmount())
     restoreFetch()
     dom.happyDOM.abort()
   }

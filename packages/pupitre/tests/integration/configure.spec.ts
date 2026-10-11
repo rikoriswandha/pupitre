@@ -15,6 +15,7 @@ const hostFiles = [
   'inertia/css/app.css',
   'database/migrations/1791700000001_create_pupitre_password_resets_table.ts',
   'database/migrations/1791700000002_add_pupitre_columns_to_users.ts',
+  'database/migrations/1791700000005_add_pupitre_social_columns_to_users.ts',
 ]
 test.group('Pupitre configure', () => {
   test('creates host wiring and is idempotent with real codemods', async ({ assert }) => {
@@ -119,6 +120,10 @@ export default defineConfig({
       assert.equal((rcFile.match(/#start\/pupitre/g) ?? []).length, 1)
       assert.equal((rcFile.match(/indexAdmin\(\)/g) ?? []).length, 1)
       assert.equal((rcFile.match(/@rikology\/pupitre\/hooks/g) ?? []).length, 1)
+      const socialMigrationPath =
+        'database/migrations/1791700000005_add_pupitre_social_columns_to_users.ts'
+      const socialMigration = first.find(([path]) => path === socialMigrationPath)![1]
+      assert.include(socialMigration, 'provider_id')
       const packageJson = JSON.parse(first.find(([path]) => path === 'package.json')![1])
       assert.equal(packageJson.imports['#admin/*'], './app/admin/*.js')
       const css = first.find(([path]) => path === 'inertia/css/app.css')![1]

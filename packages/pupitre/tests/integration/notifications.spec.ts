@@ -6,7 +6,7 @@ import type {
   PupitreNotificationItem,
 } from '../../src/adapters/notifications.js'
 import { executeAction } from '../../src/compiler/action_compiler.js'
-import { action, definePanel } from '../../index.js'
+import { action, definePanel, notificationAction } from '../../index.js'
 import { closeTestApp, createTestApp, User } from '../helpers/app.js'
 import { notificationListResponse } from '../../catalog/wire.js'
 
@@ -17,6 +17,7 @@ const notification = (id: string, userId: number): PupitreNotificationItem => ({
   readAt: null,
   createdAt: '2026-10-11T00:00:00.000Z',
   url: `/posts/${userId}`,
+  actions: [{ label: 'Mark read', markAsRead: true }],
 })
 
 function memoryAdapter() {
@@ -107,6 +108,7 @@ test.group('Pupitre notifications', () => {
       assert.isTrue(notificationListResponse.safeParse(response.body()).success)
       assert.lengthOf(response.body().items, 1)
       assert.equal(response.body().items[0].id, 'own-20')
+      assert.deepEqual(response.body().items[0].actions, [{ label: 'Mark read', markAsRead: true }])
       assert.equal(response.body().unread, 21)
       assert.deepEqual(response.body().meta, {
         total: 21,
@@ -177,7 +179,14 @@ test.group('Pupitre notifications', () => {
       logger: { child: () => ({ warn() {} }) },
     } as never
     const operation = action('notify-test').handle(async ({ notify }) => {
-      await notify?.success('Done').body('Saved').sendToDatabase()
+      const databaseNotification = notify
+        ?.success('Done')
+        .body('Saved')
+        .actions([
+          notificationAction('View').url('/posts/7'),
+          notificationAction('Mark read').markAsRead(),
+        ])
+      await databaseNotification?.sendToDatabase()
     }).definition
     const result = await executeAction(operation, {
       ctx,
@@ -189,6 +198,10 @@ test.group('Pupitre notifications', () => {
     assert.isEmpty(result.flash)
     assert.equal((memory.items.get(7) ?? [])[0]?.title, 'Done')
     assert.equal((memory.items.get(7) ?? [])[0]?.body, 'Saved')
+    assert.deepEqual((memory.items.get(7) ?? [])[0]?.actions, [
+      { label: 'View', url: '/posts/7' },
+      { label: 'Mark read', markAsRead: true },
+    ])
   })
 
   test('keeps flash notification behavior and skips database delivery without adapter', async ({

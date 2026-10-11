@@ -9,7 +9,8 @@ export default class Comment extends BaseModel {
   @column({ isPrimary: true }) declare id: number
   @column() declare title: string
   @column() declare body: string
-  @column() declare postId: number
+  @column() declare postId: number | null
+  @column() declare tenantId: number | null
   @column.dateTime({ autoCreate: true }) declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true }) declare updatedAt: DateTime
 

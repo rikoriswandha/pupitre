@@ -25,7 +25,11 @@ export async function up(database: Database) {
     table.timestamp('email_verified_at', { useTz: true }).nullable()
     table.string('avatar').nullable()
     table.string('timezone', 64).nullable()
-    table.integer('current_tenant_id').unsigned().nullable()
+    table.string('provider').nullable()
+    table.string('provider_id').nullable()
+    table.timestamp('mfa_enabled_at', { useTz: true }).nullable()
+    table.text('mfa_secret').nullable()
+    table.text('mfa_recovery_codes').nullable()
     table.timestamps(true, true)
   })
   await createIfMissing(database, 'categories', (table) => {
@@ -49,6 +53,7 @@ export async function up(database: Database) {
     table.string('cover').nullable()
     table.string('private_cover').nullable()
     table.integer('tenant_id').nullable()
+    table.timestamp('deleted_at', { useTz: true }).nullable()
     table.timestamps(true, true)
   })
 }

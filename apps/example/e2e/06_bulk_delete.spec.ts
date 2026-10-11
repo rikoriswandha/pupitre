@@ -1,4 +1,4 @@
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('bulk delete confirms and removes two selected posts', async ({ admin, page }) => {
   await admin.login()
@@ -25,20 +25,14 @@ pupitreTest('bulk delete confirms and removes two selected posts', async ({ admi
 
   await page.getByRole('searchbox', { name: 'Search' }).fill(batch)
   await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
-  const first = admin.postRow(`${batch} A`)
-  const second = admin.postRow(`${batch} B`)
+  const first = admin.row(`${batch} A`)
+  const second = admin.row(`${batch} B`)
   await expect(first).toBeVisible()
   await expect(second).toBeVisible()
-  await first.getByRole('checkbox').check()
-  await second.getByRole('checkbox').check()
-  await page
-    .getByRole('button', { name: /delete selected|delete/i })
-    .last()
-    .click()
-  await page
-    .getByRole('button', { name: /delete|confirm/i })
-    .last()
-    .click()
+  await first.getByRole('checkbox', { name: /^Select row / }).check()
+  await second.getByRole('checkbox', { name: /^Select row / }).check()
+  await page.getByRole('button', { name: 'Delete', exact: true }).first().click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(first).toHaveCount(0)
   await expect(second).toHaveCount(0)
 })

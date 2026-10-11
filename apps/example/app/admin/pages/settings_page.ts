@@ -27,6 +27,12 @@ export default definePage('settings')
             system: t('System'),
           })
           .required(),
+        s
+          .codeEditor('editorConfig')
+          .label(t('Editor configuration'))
+          .language('json')
+          .lineNumbers()
+          .minHeight(180),
       ]),
   ])
   .fill(async () => {
@@ -35,6 +41,7 @@ export default definePage('settings')
       siteName: values.siteName ?? 'Pupitre Editorial',
       maintenanceMode: values.maintenanceMode === 'true',
       defaultTheme: values.defaultTheme ?? 'system',
+      editorConfig: values.editorConfig ?? '{\n  "format": "markdown"\n}',
     }
   })
   .save(async ({ data }) => {
@@ -42,6 +49,10 @@ export default definePage('settings')
     await Setting.updateOrCreate(
       { key: 'maintenanceMode' },
       { value: String(Boolean(data.maintenanceMode)) }
+    )
+    await Setting.updateOrCreate(
+      { key: 'editorConfig' },
+      { value: String(data.editorConfig ?? '') }
     )
     await Setting.updateOrCreate({ key: 'defaultTheme' }, { value: String(data.defaultTheme) })
   })

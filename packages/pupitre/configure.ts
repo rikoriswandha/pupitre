@@ -41,6 +41,26 @@ export async function configure(command: ConfigureCommand) {
       'database/migrations/1791700000002_add_pupitre_columns_to_users.ts',
       {},
     ],
+    [
+      'database/migrations/1791700000003_add_pupitre_mfa_columns_to_users.stub',
+      'database/migrations/1791700000003_add_pupitre_mfa_columns_to_users.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000004_create_pupitre_passkeys_table.stub',
+      'database/migrations/1791700000004_create_pupitre_passkeys_table.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000005_add_pupitre_social_columns_to_users.stub',
+      'database/migrations/1791700000005_add_pupitre_social_columns_to_users.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000006_create_pupitre_exports_table.stub',
+      'database/migrations/1791700000006_create_pupitre_exports_table.ts',
+      {},
+    ],
   ] as const
   await codemods.installPackages([
     { name: '@rikology/pupitre-react', isDevDependency: false },

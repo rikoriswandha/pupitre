@@ -11,6 +11,8 @@ import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
 type AuthContext = {
   auth?: {
     user?: LucidRow | null
+    authenticateUsing(guards: string[]): Promise<LucidRow>
+    checkUsing(guards: string[]): Promise<boolean>
     use(guard: string): {
       authenticate(): Promise<LucidRow>
       check(): Promise<boolean>
@@ -55,16 +57,16 @@ export default class PupitreContextMiddleware {
 
     const guardName = panelGuard(panel)
     if (guardName) {
-      if (!auth?.use) throw new Error(`Panel guard "${guardName}" is unavailable`)
-      const guard = auth.use(guardName)
+      if (!auth?.authenticateUsing || !auth.checkUsing || !auth.use)
+        throw new Error(`Panel guard "${guardName}" is unavailable`)
       if (this.options.requireUser) {
         try {
-          authUser = await guard.authenticate()
+          authUser = await auth.authenticateUsing([guardName])
         } catch (error) {
           return handleUnauthenticated(ctx, panel, error)
         }
-      } else if (await guard.check()) {
-        authUser = guard.user ?? null
+      } else if (await auth.checkUsing([guardName])) {
+        authUser = auth.user ?? null
       }
     } else {
       authUser = auth?.user ?? null
@@ -110,6 +112,15 @@ export default class PupitreContextMiddleware {
       const logoutRoute = routeName.endsWith('.auth.logout')
       if (!verified && !verificationRoute && !logoutRoute) {
         return ctx.response.redirect(`${ctx.pupitre.basePath}/email/verify`)
+      }
+    }
+    if (this.options.requireUser && authUser && panel.auth.mfa?.required) {
+      const attributes = authUser as unknown as Record<string, unknown>
+      const enabled = attributes[config.auth.columns.mfaEnabledAt]
+      const profileRoute = routeName.startsWith(`${panel.id}.profile`)
+      const logoutRoute = routeName.endsWith('.auth.logout')
+      if (!enabled && !profileRoute && !logoutRoute) {
+        return ctx.response.redirect(`${ctx.pupitre.basePath}/profile`)
       }
     }
     await next()

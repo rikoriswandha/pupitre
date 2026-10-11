@@ -5,8 +5,11 @@ export default defineConfig({
   testDir: './tests/ct',
   testMatch: '**/*.spec.tsx',
   workers: 2,
+  ...(process.env.CT_OUTPUT_DIR ? { outputDir: process.env.CT_OUTPUT_DIR } : {}),
   use: {
-    ctPort: 3100,
+    // Overridable so concurrent CT runs (parallel agents, local + CI) do not collide.
+    ctPort: Number(process.env.CT_PORT ?? 3100),
+    ...(process.env.CT_CACHE_DIR ? { ctCacheDir: process.env.CT_CACHE_DIR } : {}),
     ctViteConfig: {
       resolve: {
         conditions: ['@rikology/source', 'module', 'browser', 'development|production'],

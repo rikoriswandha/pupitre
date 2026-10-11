@@ -7,7 +7,12 @@ import type {
 } from '@rikology/pupitre/catalog'
 import { deleteUpload, registerTableSelectionClearer, uploadFile } from '../bridge/actions.js'
 import { currentUrl, getRouter, type RouterLike } from '../bridge/inertia.js'
-import { usePageActions, useRuntime } from '../runtime.js'
+import {
+  useOptionalPageActions,
+  useOptionalRuntime,
+  usePageActions,
+  useRuntime,
+} from '../runtime.js'
 
 export function useBoundValue<T>(
   value: T | undefined,
@@ -42,8 +47,11 @@ export function usePage() {
   const { page, data } = useRuntime()
   return { ...page, data }
 }
+async function unavailableRunAction(): Promise<void> {
+  throw new Error('Action execution is unavailable outside the Pupitre page runtime.')
+}
 export function useRunAction() {
-  return usePageActions().runAction
+  return useOptionalPageActions()?.runAction ?? unavailableRunAction
 }
 export function useSubmitForm() {
   return useRuntime().submitForm
@@ -118,55 +126,82 @@ export function useUpload(descriptor: FileUploadDescriptor) {
   )
   return { upload, remove }
 }
-export function useTable(descriptor: TableDescriptor) {
-  const { data } = useRuntime()
+function unprefixTableKey(key: string, prefix: string): string | undefined {
+  const marker = `${prefix}[`
+  if (!key.startsWith(marker) || !key.endsWith(']')) return undefined
+  const path = key.slice(marker.length, -1).split('][')
+  if (path.length === 1) return path[0]
+  return `${path[0]}[${path.slice(1).join('][')}]`
+}
+
+export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
+  const runtime = useOptionalRuntime()
+  const { data, tableDataProps } = runtime ?? {}
   const [selected, setSelected] = useState<Array<string | number>>([])
   const [isLoading, setIsLoading] = useState(false)
   useEffect(() => registerTableSelectionClearer(() => setSelected([])), [])
-  const query = Object.fromEntries(currentUrl().searchParams.entries())
-  // The URL is the single source of table state (ADR-0004): build the next URL
-  // ourselves and make a partial visit so history/back button and reloads keep
-  // the query, while only the top-level `data` prop is refetched (ADR-0011).
-  const setQuery = useCallback((partial: Record<string, unknown>) => {
-    setSelected((current) => (current.length > 0 ? [] : current))
-    const url = currentUrl()
-    for (const [key, value] of Object.entries(partial)) {
-      url.searchParams.delete(key)
-      if (value !== null && value !== undefined && value !== '')
-        url.searchParams.set(key, String(value))
-    }
-    const search = url.searchParams.toString()
-    getRouter().visit(`${url.pathname}${search ? `?${search}` : ''}`, {
-      only: ['data'],
-      preserveState: true,
-      preserveScroll: true,
-      onStart: () => setIsLoading(true),
-      onFinish: () => setIsLoading(false),
-    })
-  }, [])
+  const queryPrefix = descriptor.queryPrefix
+  const query: Record<string, string> = {}
+  for (const [key, value] of currentUrl().searchParams.entries()) {
+    const inner = queryPrefix ? unprefixTableKey(key, queryPrefix) : key
+    if (inner) query[inner] = value
+  }
+  // The URL is the single source of table state (ADR-0004): only this table's
+  // top-level data prop is refetched, including for relation-manager tables.
+  const setQuery = useCallback(
+    (partial: Record<string, unknown>) => {
+      setSelected((current) => (current.length > 0 ? [] : current))
+      const url = currentUrl()
+      for (const [key, value] of Object.entries(partial)) {
+        const queryKey = queryPrefix
+          ? `${queryPrefix}[${key.replaceAll(']', '').replaceAll('[', '][')}]`
+          : key
+        url.searchParams.delete(queryKey)
+        if (value !== null && value !== undefined && value !== '')
+          url.searchParams.set(queryKey, String(value))
+      }
+      const search = url.searchParams.toString()
+      getRouter().visit(`${url.pathname}${search ? `?${search}` : ''}`, {
+        only: [descriptor.dataProp ?? 'data'],
+        preserveState: true,
+        preserveScroll: true,
+        onStart: () => setIsLoading(true),
+        onFinish: () => setIsLoading(false),
+      })
+    },
+    [descriptor.dataProp, queryPrefix]
+  )
   const setFilter = useCallback(
     (name: string, value: unknown) => {
       const params = currentUrl().searchParams
-      const prefix = `filters[${name}]`
+      const filterKey = `filters[${name}]`
       const updates: Record<string, unknown> = { page: '' }
-      for (const key of params.keys())
-        if (key === prefix || key.startsWith(`${prefix}[`)) updates[key] = ''
+      for (const key of params.keys()) {
+        const inner = queryPrefix ? unprefixTableKey(key, queryPrefix) : key
+        if (inner && (inner === filterKey || inner.startsWith(`${filterKey}[`))) updates[inner] = ''
+      }
       if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         for (const [key, fieldValue] of Object.entries(value))
-          updates[`${prefix}[${key}]`] = fieldValue
-      } else updates[prefix] = value
+          updates[`${filterKey}[${key}]`] = fieldValue
+      } else updates[filterKey] = value
       setQuery(updates)
     },
-    [setQuery]
+    [queryPrefix, setQuery]
   )
   const resetFilters = useCallback(() => {
     const updates: Record<string, unknown> = { page: '' }
-    for (const key of currentUrl().searchParams.keys())
-      if (key.startsWith('filters[')) updates[key] = ''
+    for (const key of currentUrl().searchParams.keys()) {
+      const inner = queryPrefix ? unprefixTableKey(key, queryPrefix) : key
+      if (inner?.startsWith('filters[')) updates[inner] = ''
+    }
     setQuery(updates)
-  }, [setQuery])
+  }, [queryPrefix, setQuery])
   return {
-    data,
+    data:
+      fallbackData ??
+      (descriptor.dataProp && descriptor.dataProp !== 'data'
+        ? tableDataProps?.[descriptor.dataProp]
+        : data),
     query,
     setQuery,
     sort: (column: string) => setQuery({ sort: query.sort === column ? `-${column}` : column }),

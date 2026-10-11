@@ -29,6 +29,7 @@ class OptionsCategoryPolicy {
 }
 
 let resourceFieldActionRuns = 0
+let textSuffixActionRuns = 0
 let pageFieldActionRuns = 0
 const resourceFieldAction = {
   name: 'static-field-action',
@@ -39,6 +40,9 @@ const resourceFieldAction = {
     resourceFieldActionRuns += 1
   },
 }
+const textSuffixAction = action('text-suffix-action').handle(async () => {
+  textSuffixActionRuns += 1
+})
 const pageFieldAction = action('page-field-action')
   .can('page-field-action')
   .handle(async () => {
@@ -67,7 +71,7 @@ async function inertiaPage(baseUrl: string, path: string) {
 
 const optionsPost = fixturePostResource.form((form) =>
   form.components([
-    schema.text('title').required(),
+    schema.text('title').required().suffixAction(textSuffixAction.definition),
     schema.text('slug').required(),
     schema
       .select('categoryId')
@@ -88,6 +92,18 @@ const optionsPost = fixturePostResource.form((form) =>
     schema
       .repeater('items')
       .schema([schema.select('categoryId').relationship('category', 'name').searchable()]),
+    schema.wizard([
+      schema
+        .step('Details')
+        .components([schema.select('wizardCategory').relationship('category', 'name')]),
+    ]),
+    schema
+      .builder('article')
+      .blocks([
+        schema
+          .block('metadata')
+          .schema([schema.select('blockCategory').relationship('category', 'name')]),
+      ]),
   ])
 )
 const scopedCategoryResource = fixtureCategoryResource
@@ -182,6 +198,16 @@ test.group('Pupitre dynamic select options', (group) => {
       }
     )
     assert.equal(nested.status, 200)
+    const wizardNested = await fetch(
+      `${fixture.baseUrl}/admin/_pupitre/options/posts/wizardCategory?q=Option`,
+      { headers: { Accept: 'application/json', Connection: 'close' } }
+    )
+    assert.equal(wizardNested.status, 200)
+    const builderNested = await fetch(
+      `${fixture.baseUrl}/admin/_pupitre/options/posts/article.metadata.data.blockCategory?q=Option`,
+      { headers: { Accept: 'application/json', Connection: 'close' } }
+    )
+    assert.equal(builderNested.status, 200)
     const closureSelection = await fetch(
       `${fixture.baseUrl}/admin/_pupitre/options/posts/resolvedCode?selected%5B%5D=code-42`,
       { headers: { Accept: 'application/json', Connection: 'close' } }
@@ -217,6 +243,32 @@ test.group('Pupitre dynamic select options', (group) => {
     })
     assert.equal(resourceResult.status, 200, await resourceResult.text())
     assert.equal(resourceFieldActionRuns, 1)
+    const textAction = resourcePage.page.spec.elements['f.title']?.props.suffixAction as
+      { url: string; enabled: boolean } | undefined
+    assert.equal(textAction?.url, '/admin/posts/actions/text-suffix-action')
+    const textResult = await fetch(new URL(textAction!.url, fixture.baseUrl), {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pupitre-Action': '1',
+        'Connection': 'close',
+      },
+      body: JSON.stringify({ data: {} }),
+    })
+    assert.equal(textResult.status, 200, await textResult.text())
+    assert.equal(textSuffixActionRuns, 1)
+
+    const record = await Post.create({
+      title: 'Text action record',
+      slug: `text-action-${Date.now()}`,
+      status: 'draft',
+      tenantId: 1,
+    })
+    const editPage = await inertiaPage(fixture.baseUrl, `/admin/posts/${record.id}/edit`)
+    const editTextAction = editPage.page.spec.elements['f.title']?.props.suffixAction as
+      { url: string; enabled: boolean } | undefined
+    assert.equal(editTextAction?.url, `/admin/posts/${record.id}/actions/text-suffix-action`)
 
     const page = await inertiaPage(fixture.baseUrl, '/admin/action-select')
     const pageAction = page.page.spec.elements['f.status']?.props.suffixAction as

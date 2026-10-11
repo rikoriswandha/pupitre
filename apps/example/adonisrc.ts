@@ -61,11 +61,12 @@ export default defineConfig({
     () => import('@adonisjs/cors/cors_provider'),
     () => import('@adonisjs/inertia/inertia_provider'),
     () => import('@adonisjs/auth/auth_provider'),
-    () => import('@adonisjs/bouncer/bouncer_provider'),
+    () => import('@adonisjs/ally/ally_provider'),
     () => import('@adonisjs/drive/drive_provider'),
     () => import('#providers/api_provider'),
     () => import('@rikology/adonisjs-notifications/notification_provider'),
     () => import('@rikology/pupitre/pupitre_provider'),
+    () => import('@adonisjs/limiter/limiter_provider'),
   ],
 
   /*

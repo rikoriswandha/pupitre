@@ -5,6 +5,8 @@ import type {
 } from '../definition/panel.js'
 import type { NavEntryDefinition, UserMenuItemDefinition } from '../definition/navigation.js'
 import type { TenancyDefinition, TenancyMode } from '../definition/tenancy.js'
+import { validateTheme } from '../definition/theme.js'
+import type { WidgetFilterDefinition } from '../definition/widget.js'
 import { stableJson } from '../definition/shared.js'
 
 type Definable<T> = T | { toDefinition(): T }
@@ -28,12 +30,17 @@ export type PanelBuilder = {
   registration(enabled?: boolean): PanelBuilder
   passwordReset(enabled?: boolean): PanelBuilder
   emailVerification(enabled?: boolean): PanelBuilder
+  mfa(options?: { required?: boolean; issuer?: string } | false): PanelBuilder
+  passkeys(enabled?: boolean): PanelBuilder
   profile(options?: boolean | { avatar?: boolean }): PanelBuilder
+  social(providers: string[] | { providers: string[]; registration?: boolean }): PanelBuilder
   navigation(entries: readonly Definable<NavEntryDefinition>[]): PanelBuilder
   userMenu(items: readonly UserMenuItemDefinition[]): PanelBuilder
   tenancy(options: TenancyInput | false): PanelBuilder
   notifications(options?: { interval?: number } | false): PanelBuilder
   globalSearch(options?: { keyBinding?: string } | false): PanelBuilder
+  widgets(value: readonly unknown[] | Record<string, unknown>): PanelBuilder
+  filters(value: readonly WidgetFilterDefinition[]): PanelBuilder
   toDefinition(): PanelDefinition
   toJSON(): string
 }
@@ -90,11 +97,14 @@ class Panel implements PanelBuilder {
     return this.set({ brand: { ...value } })
   }
   theme(value: PanelThemeDefinition): PanelBuilder {
-    const invalid = Object.keys(value.vars ?? {}).find((name) => !/^--[A-Za-z0-9_-]+$/.test(name))
-    if (invalid)
-      throw new Error(`Invalid Pupitre theme CSS variable "${invalid}": names must start with "--"`)
+    validateTheme(value)
     return this.set({
-      theme: { ...value, ...(value.vars ? { vars: { ...value.vars } } : {}) },
+      theme: {
+        ...value,
+        ...(value.font ? { font: { ...value.font } } : {}),
+        ...(value.colors ? { colors: { ...value.colors } } : {}),
+        ...(value.vars ? { vars: { ...value.vars } } : {}),
+      },
     })
   }
   timezone(value: string): PanelBuilder {
@@ -118,12 +128,37 @@ class Panel implements PanelBuilder {
   emailVerification(enabled = true): PanelBuilder {
     return this.setAuth({ emailVerification: enabled })
   }
+  mfa(options: { required?: boolean; issuer?: string } | false = {}): PanelBuilder {
+    return this.setAuth({
+      mfa:
+        options === false
+          ? undefined
+          : { required: options.required ?? false, issuer: options.issuer ?? 'Pupitre' },
+    })
+  }
+  passkeys(enabled = true): PanelBuilder {
+    return this.setAuth({ passkeys: enabled ? { enabled: true } : undefined })
+  }
   profile(options: boolean | { avatar?: boolean } = true): PanelBuilder {
     return this.setAuth({
       profile:
         typeof options === 'boolean'
           ? { enabled: options, avatar: options }
           : { enabled: true, avatar: options.avatar ?? true },
+    })
+  }
+  social(providers: string[] | { providers: string[]; registration?: boolean }): PanelBuilder {
+    const options = Array.isArray(providers) ? { providers } : providers
+    const normalized = [
+      ...new Set(options.providers.map((provider) => provider.trim()).filter(Boolean)),
+    ]
+    if (normalized.some((provider) => !/^[a-z][a-z0-9_-]*$/i.test(provider)))
+      throw new Error('Social login providers must be valid Ally provider names')
+    return this.set({
+      social: {
+        providers: normalized,
+        registration: options.registration ?? this.definition.social?.registration ?? false,
+      },
     })
   }
   navigation(entries: readonly Definable<NavEntryDefinition>[]): PanelBuilder {
@@ -159,6 +194,17 @@ class Panel implements PanelBuilder {
       globalSearch: options === false ? null : { keyBinding: options.keyBinding ?? 'mod+k' },
     })
   }
+  widgets(value: readonly unknown[] | Record<string, unknown>): PanelBuilder {
+    return this.set({ widgets: definitions(value) as PanelDefinition['widgets'] })
+  }
+  filters(value: readonly WidgetFilterDefinition[]): PanelBuilder {
+    return this.set({
+      dashboardFilters: value.map((filter) => ({
+        ...filter,
+        options: filter.options.map((option) => ({ ...option })),
+      })),
+    })
+  }
   toDefinition(): PanelDefinition {
     return this.definition
   }
@@ -184,6 +230,7 @@ export function definePanel(id: string): PanelBuilder {
         profile: { enabled: false, avatar: false },
       },
       userMenu: [],
+      social: undefined,
       notifications: null,
       globalSearch: { keyBinding: 'mod+k' },
       toJSON: () => '',

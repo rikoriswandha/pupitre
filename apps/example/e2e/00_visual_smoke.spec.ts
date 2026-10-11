@@ -1,5 +1,5 @@
 import { mkdir } from 'node:fs/promises'
-import { pupitreTest, expect } from './fixtures/pupitre_test.js'
+import { pupitreTest, expect } from '@rikology/pupitre-ui/testing'
 
 pupitreTest('three dogfood resources load and save visual evidence', async ({ admin, page }) => {
   await admin.login()

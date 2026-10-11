@@ -2,6 +2,7 @@ import { configProvider } from '@adonisjs/core'
 import type { LucidModel } from '@adonisjs/lucid/types/model'
 import type { MailAdapter } from './adapters/mail.js'
 import type { NotificationsAdapter } from './adapters/notifications.js'
+import type { JobsAdapter } from './adapters/jobs.js'
 
 type Lazy<T> = T | (() => Promise<T>)
 
@@ -14,6 +15,11 @@ export type AuthColumns = {
   emailVerifiedAt: string
   timezone: string
   currentTenantId: string
+  mfaSecret: string
+  mfaRecoveryCodes: string
+  mfaEnabledAt: string
+  socialProvider?: string
+  socialProviderId?: string
 }
 
 export interface PupitreConfig {
@@ -27,13 +33,16 @@ export interface PupitreConfig {
     columns: AuthColumns
     /** Password reset token lifetime in minutes. */
     passwordResetTtl: number
+    passkeys?: { rpId?: string; origin?: string; rpName?: string }
   }
   mail?: Lazy<MailAdapter>
   notifications?: Lazy<NotificationsAdapter>
+  jobs?: Lazy<JobsAdapter>
+  exports?: { maxSyncRows?: number; maxAsyncRows?: number; retentionMinutes?: number }
 }
 
 export type PupitreConfigInput = Partial<
-  Pick<PupitreConfig, 'timezone' | 'policies' | 'mail' | 'notifications'>
+  Pick<PupitreConfig, 'timezone' | 'policies' | 'mail' | 'notifications' | 'jobs' | 'exports'>
 > & {
   cache?: Partial<PupitreConfig['cache']>
   storage?: Partial<PupitreConfig['storage']>
@@ -55,9 +64,15 @@ const defaults: PupitreConfig = {
       emailVerifiedAt: 'emailVerifiedAt',
       timezone: 'timezone',
       currentTenantId: 'currentTenantId',
+      mfaSecret: 'mfaSecret',
+      mfaRecoveryCodes: 'mfaRecoveryCodes',
+      mfaEnabledAt: 'mfaEnabledAt',
+      socialProvider: 'provider',
+      socialProviderId: 'providerId',
     },
     passwordResetTtl: 60,
   },
+  exports: { maxSyncRows: 1000, maxAsyncRows: 100_000, retentionMinutes: 1440 },
 }
 
 /** Resolves the configured config values, applying stable defaults. */
@@ -72,6 +87,7 @@ export function resolveConfig(config: PupitreConfigInput = {}): PupitreConfig {
       ...config.auth,
       columns: { ...defaults.auth.columns, ...config.auth?.columns },
     },
+    exports: { ...defaults.exports, ...config.exports },
   }
 }
 

@@ -1,15 +1,18 @@
 import { definePanel, nav } from '@rikology/pupitre'
-import { resources, pages } from '#generated/admin'
-import Tenant from '#models/tenant'
+import { resources, pages, widgets } from '#generated/admin'
 import Post from '#models/post'
 import type User from '#models/user'
+import Tenant from '#models/tenant'
+import adminTheme from '../themes/admin.js'
 
-export default definePanel('admin')
+const adminPanel = definePanel('admin')
   .guard('web')
   .login()
   .passwordReset()
   .emailVerification()
   .profile()
+  .mfa({ issuer: 'Pupitre Editorial' })
+  .passkeys()
   .tenancy({
     mode: 'url',
     model: () => import('#models/tenant'),
@@ -23,6 +26,17 @@ export default definePanel('admin')
   .timezone('Asia/Jakarta')
   .notifications({ interval: 30_000 })
   .pages(pages)
+  .widgets([widgets['posts-by-status'], widgets['posts-per-month'], widgets['latest-posts']])
+  .filters([
+    {
+      name: 'status',
+      label: 'Post status',
+      options: [
+        { value: 'draft', label: 'Draft' },
+        { value: 'published', label: 'Published' },
+      ],
+    },
+  ])
   .resources(resources)
   .navigation([
     nav
@@ -48,4 +62,14 @@ export default definePanel('admin')
     nav.item('Documentation').url('https://pupitre.dev/docs').external(),
   ])
   .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])
-  .theme({ primary: 'oklch(0.55 0.18 255)', darkMode: 'system', radius: '0.5rem' })
+  .theme(adminTheme)
+
+const socialProviders = [
+  ...(process.env.PUPITRE_FAKE_ALLY === 'true' ? ['fake'] : []),
+  ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET ? ['github'] : []),
+  ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? ['google'] : []),
+]
+
+export default socialProviders.length
+  ? adminPanel.social({ providers: socialProviders, registration: true })
+  : adminPanel

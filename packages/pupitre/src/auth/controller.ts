@@ -15,10 +15,24 @@ import type { PanelRuntime } from '../manager.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
 import type { FormDescriptor } from '../../catalog/index.js'
 import type { SchemaNodeBuilder, SchemaNodeDefinition } from '../definition/schema.js'
-import { consumeLoginLimit } from '../drivers/limiter.js'
+import { clearLoginLimit, consumeLoginLimit } from '../drivers/limiter.js'
 import { panelGuard } from './guard.js'
 import { E_PUPITRE_FORBIDDEN, E_PUPITRE_MAIL_ADAPTER_REQUIRED } from '../errors.js'
 import { t } from '../i18n.js'
+import { completeLogin } from './login_flow.js'
+import { consumeMfaLimit, clearMfaLimit } from './mfa_limit.js'
+import { consumeRecoveryCode } from './recovery_code.js'
+import { verifyTotp } from './totp.js'
+import { createTotpEnrollment, makeRecoveryCodes } from './mfa_setup.js'
+import {
+  authenticationOptions,
+  deletePasskey,
+  listPasskeys,
+  registrationOptions,
+  renamePasskey,
+  verifyAuthentication,
+  verifyRegistration,
+} from './passkey_service.js'
 
 const loginValidator = vine.compile(
   vine.object({
@@ -49,6 +63,15 @@ const registrationValidator = vine.compile(
     password: vine.string().minLength(8),
   })
 )
+const mfaChallengeValidator = vine.compile(
+  vine.object({
+    code: vine.string().trim().optional(),
+    recovery_code: vine.string().trim().optional(),
+  })
+)
+const passkeyNameValidator = vine.compile(
+  vine.object({ name: vine.string().trim().minLength(1).maxLength(100) })
+)
 type AuthContext = HttpContext & {
   pupitre: HttpContext['pupitre'] & { panel: PanelRuntime }
 }
@@ -73,6 +96,7 @@ type ResetDb = {
   table(table: string): { insert(row: unknown): Promise<unknown> }
 }
 type AuthUserModel = LucidModel & {
+  find(id: string | number): Promise<LucidRow | null>
   findBy(key: string, value: unknown): Promise<LucidRow | null>
   create(data: Record<string, unknown>): Promise<LucidRow>
   verifyCredentials(email: string, password: string): Promise<LucidRow>
@@ -196,6 +220,17 @@ function safeRedirect(ctx: AuthContext, value: unknown): string {
     return panelPath(ctx)
   }
 }
+async function decryptMfaSecret(encrypted: string): Promise<string> {
+  // Encryption's service proxy requires a booted Adonis app; load only during MFA operations.
+  const { default: encryption } = await import('@adonisjs/core/services/encryption')
+  const secret = encryption.decrypt<string>(encrypted)
+  if (typeof secret !== 'string') throw new Error('The stored MFA secret cannot be decrypted')
+  return secret
+}
+async function encryptMfaSecret(secret: string): Promise<string> {
+  const { default: encryption } = await import('@adonisjs/core/services/encryption')
+  return encryption.encrypt(secret)
+}
 function flashErrors(ctx: AuthContext, errors: Record<string, string>) {
   // Adonis Inertia's BaseInertiaMiddleware reads field errors from this bag.
   ctx.session?.flash('inputErrorsBag', errors)
@@ -259,15 +294,299 @@ export default class AuthController {
       })
       return ctx.response.status(429).redirect().back()
     }
+    let user: LucidRow
     try {
-      const user = await Model.verifyCredentials(data.email, data.password)
-      await panelAuth(ctx)
-        .use(panelGuard(ctx.pupitre.panel) ?? 'web')
-        .login(user)
-      return ctx.response.redirect(safeRedirect(ctx, input.redirect))
+      user = await Model.verifyCredentials(data.email, data.password)
     } catch {
       return flashErrors(ctx, { email: 'These credentials do not match our records' })
     }
+    await clearLoginLimit(key)
+    return completeLogin(ctx, ctx.pupitre.panel, user, {
+      redirect: safeRedirect(ctx, input.redirect),
+      remember: input.remember === true,
+    })
+  }
+  async mfaChallenge(ctx: AuthContext) {
+    const pending = ctx.session?.get('pupitre.pendingLogin')
+    if (!pending || typeof pending !== 'object' || !('expiresAt' in pending)) {
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    const expiresAt = pending.expiresAt
+    if (typeof expiresAt !== 'number' || expiresAt <= Date.now()) {
+      ctx.session?.forget('pupitre.pendingLogin')
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    return renderAuth(
+      ctx,
+      'Multi-factor authentication',
+      [schema.text('code').required().label('Authenticator code or recovery code')],
+      `${panelPath(ctx)}/mfa/challenge`
+    )
+  }
+  async completeMfaChallenge(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const pending = ctx.session?.get('pupitre.pendingLogin')
+    if (
+      !pending ||
+      typeof pending !== 'object' ||
+      !('userId' in pending) ||
+      !('guard' in pending)
+    ) {
+      ctx.session?.forget('pupitre.pendingLogin')
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    if (
+      !('expiresAt' in pending) ||
+      typeof pending.expiresAt !== 'number' ||
+      pending.expiresAt <= Date.now() ||
+      typeof pending.userId !== 'string' ||
+      typeof pending.guard !== 'string'
+    ) {
+      ctx.session?.forget('pupitre.pendingLogin')
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    const key = createHash('sha256').update(`mfa:${pending.userId}`).digest('hex')
+    const limit = await consumeMfaLimit(key)
+    if (limit.limited) {
+      ctx.session?.forget('pupitre.pendingLogin')
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    let input: { code?: string; recovery_code?: string }
+    try {
+      input = await mfaChallengeValidator.validate(ctx.request.all())
+    } catch {
+      if (limit.exhausted) {
+        ctx.session?.forget('pupitre.pendingLogin')
+        return ctx.response.redirect(`${panelPath(ctx)}/login`)
+      }
+      return flashErrors(ctx, { code: 'Enter an authenticator or recovery code' })
+    }
+    const Model = await userModel(cfg)
+    const user = await Model.find(pending.userId)
+    if (!user) {
+      ctx.session?.forget('pupitre.pendingLogin')
+      return ctx.response.redirect(`${panelPath(ctx)}/login`)
+    }
+    const attributes = user.$attributes as Record<string, unknown>
+    const secretAttribute = attributes[cfg.auth.columns.mfaSecret]
+    let verified = false
+    if (input.code && /^\d{6}$/.test(input.code) && typeof secretAttribute === 'string') {
+      const secret = await decryptMfaSecret(secretAttribute)
+      verified = await verifyTotp(secret, input.code)
+    }
+    const recoveryCode = input.recovery_code ?? input.code
+    if (!verified && recoveryCode) {
+      verified = await consumeRecoveryCode(
+        Model,
+        pending.userId,
+        cfg.auth.columns.mfaRecoveryCodes,
+        recoveryCode
+      )
+    }
+    if (!verified) {
+      if (limit.exhausted) {
+        ctx.session?.forget('pupitre.pendingLogin')
+        return ctx.response.redirect(`${panelPath(ctx)}/login`)
+      }
+      return flashErrors(ctx, { code: 'The code is invalid or expired' })
+    }
+    ctx.session?.forget('pupitre.pendingLogin')
+    await clearMfaLimit(key)
+    return completeLogin(ctx, ctx.pupitre.panel, user, {
+      redirect:
+        typeof pending.redirect === 'string' ? safeRedirect(ctx, pending.redirect) : panelPath(ctx),
+      remember: pending.remember === true,
+      mfaSatisfied: true,
+    })
+  }
+  async mfaSetup(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const user = ctx.pupitre.authUser as MutableUser
+    const attributes = user.$attributes
+    if (attributes[cfg.auth.columns.mfaEnabledAt]) {
+      return ctx.response.status(409).json({ message: 'MFA is already enabled' })
+    }
+    const email = String(attributes[cfg.auth.columns.email])
+    const enrollment = await createTotpEnrollment(
+      ctx.pupitre.panel.auth.mfa?.issuer ?? 'Pupitre',
+      email
+    )
+    ctx.session?.put('pupitre.mfa.setup', {
+      secret: enrollment.secret,
+      expiresAt: Date.now() + 10 * 60 * 1000,
+    })
+    return ctx.response.json({ secret: enrollment.secret, qrCode: enrollment.qrCode })
+  }
+  async mfaConfirm(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const setup = ctx.session?.get('pupitre.mfa.setup')
+    const code = ctx.request.input('code')
+    if (
+      !setup ||
+      typeof setup !== 'object' ||
+      !('secret' in setup) ||
+      typeof setup.secret !== 'string' ||
+      !('expiresAt' in setup) ||
+      typeof setup.expiresAt !== 'number' ||
+      setup.expiresAt <= Date.now() ||
+      typeof code !== 'string' ||
+      !(await verifyTotp(setup.secret, code))
+    ) {
+      return ctx.response
+        .status(422)
+        .json({ message: 'The authenticator code is invalid or expired' })
+    }
+    const { codes, hashes } = makeRecoveryCodes()
+    const user = ctx.pupitre.authUser as MutableUser
+    user.merge({
+      [cfg.auth.columns.mfaSecret]: await encryptMfaSecret(setup.secret),
+      [cfg.auth.columns.mfaRecoveryCodes]: JSON.stringify(hashes),
+      [cfg.auth.columns.mfaEnabledAt]: DateTime.now(),
+    })
+    await user.save()
+    ctx.session?.forget('pupitre.mfa.setup')
+    return ctx.response.json({ recoveryCodes: codes })
+  }
+  async regenerateMfaRecoveryCodes(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const user = ctx.pupitre.authUser as MutableUser
+    const attributes = user.$attributes
+    const key = createHash('sha256').update(`mfa:${user.$primaryKeyValue}`).digest('hex')
+    const limit = await consumeMfaLimit(key)
+    if (limit.limited)
+      return ctx.response.status(429).json({ message: 'Too many attempts. Try again later.' })
+    const secretValue = attributes[cfg.auth.columns.mfaSecret]
+    const code = ctx.request.input('code')
+    if (
+      !attributes[cfg.auth.columns.mfaEnabledAt] ||
+      typeof secretValue !== 'string' ||
+      typeof code !== 'string' ||
+      !(await verifyTotp(await decryptMfaSecret(secretValue), code))
+    ) {
+      return ctx.response.status(422).json({ message: 'The authenticator code is invalid' })
+    }
+    const { codes, hashes } = makeRecoveryCodes()
+    user.merge({ [cfg.auth.columns.mfaRecoveryCodes]: JSON.stringify(hashes) })
+    await user.save()
+    await clearMfaLimit(key)
+    return ctx.response.json({ recoveryCodes: codes })
+  }
+  async mfaDisable(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const user = ctx.pupitre.authUser as MutableUser
+    const attributes = user.$attributes
+    const key = createHash('sha256').update(`mfa:${user.$primaryKeyValue}`).digest('hex')
+    const limit = await consumeMfaLimit(key)
+    if (limit.limited)
+      return ctx.response.status(429).json({ message: 'Too many attempts. Try again later.' })
+    const code = ctx.request.input('code')
+    const password = ctx.request.input('current_password')
+    let verified = false
+    if (typeof password === 'string' && password) {
+      try {
+        const Model = await userModel(cfg)
+        await Model.verifyCredentials(String(attributes[cfg.auth.columns.email]), password)
+        verified = true
+      } catch {
+        verified = false
+      }
+    } else if (
+      typeof code === 'string' &&
+      typeof attributes[cfg.auth.columns.mfaSecret] === 'string'
+    ) {
+      verified = await verifyTotp(
+        await decryptMfaSecret(String(attributes[cfg.auth.columns.mfaSecret])),
+        code
+      )
+    }
+    if (!verified) {
+      return ctx.response
+        .status(422)
+        .json({ message: 'Current password or authenticator code required' })
+    }
+    user.merge({
+      [cfg.auth.columns.mfaSecret]: null,
+      [cfg.auth.columns.mfaRecoveryCodes]: null,
+      [cfg.auth.columns.mfaEnabledAt]: null,
+    })
+    await user.save()
+    await clearMfaLimit(key)
+    return ctx.response.status(204)
+  }
+  async passkeyLoginOptions(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    return ctx.response.json(await authenticationOptions(ctx, cfg))
+  }
+  async passkeyLoginVerify(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const result = await verifyAuthentication(ctx, cfg, ctx.request.input('credential'))
+    if (!result) {
+      return ctx.response
+        .status(422)
+        .json({ message: 'The passkey assertion is invalid or expired' })
+    }
+    const Model = await userModel(cfg)
+    const user = await Model.find(result.userId)
+    if (!user) {
+      return ctx.response.status(422).json({ message: 'The passkey account no longer exists' })
+    }
+    return completeLogin(ctx, ctx.pupitre.panel, user, {
+      redirect: panelPath(ctx),
+      mfaSatisfied: result.userVerified,
+    })
+  }
+  async passkeyRegisterOptions(ctx: AuthContext) {
+    const cfg = await config(ctx)
+    const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
+    const attributes = user.$attributes
+    return ctx.response.json(
+      await registrationOptions(ctx, cfg, {
+        id: attributes.id as string | number,
+        email: String(attributes[cfg.auth.columns.email]),
+        name: String(attributes[cfg.auth.columns.name] ?? attributes[cfg.auth.columns.email]),
+      })
+    )
+  }
+  async passkeyRegisterVerify(ctx: AuthContext) {
+    const validated = await passkeyNameValidator.validate(ctx.request.all())
+    const result = await verifyRegistration(
+      ctx,
+      await config(ctx),
+      ctx.request.input('credential'),
+      validated.name
+    )
+    if (!result) {
+      return ctx.response
+        .status(422)
+        .json({ message: 'Passkey registration was invalid or expired' })
+    }
+    return ctx.response.status(201).json(result)
+  }
+  async listPasskeys(ctx: AuthContext) {
+    const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
+    return ctx.response.json({
+      passkeys: await listPasskeys(ctx, user.$attributes.id as string | number),
+    })
+  }
+  async renamePasskey(ctx: AuthContext) {
+    const validated = await passkeyNameValidator.validate(ctx.request.all())
+    const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
+    const updated = await renamePasskey(
+      ctx,
+      user.$attributes.id as string | number,
+      String(ctx.params.id),
+      validated.name
+    )
+    return updated ? ctx.response.noContent() : ctx.response.notFound()
+  }
+  async deletePasskey(ctx: AuthContext) {
+    const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
+    const deleted = await deletePasskey(
+      ctx,
+      user.$attributes.id as string | number,
+      String(ctx.params.id)
+    )
+    return deleted ? ctx.response.noContent() : ctx.response.notFound()
   }
   async logout(ctx: AuthContext) {
     await panelAuth(ctx)
@@ -426,13 +745,12 @@ export default class AuthController {
         [cfg.auth.columns.email]: data.email,
         [cfg.auth.columns.password]: data.password,
       })
-      await panelAuth(ctx)
-        .use(panelGuard(ctx.pupitre.panel) ?? 'web')
-        .login(user)
       if (ctx.pupitre.panel.auth.emailVerification) await sendVerification(ctx, user, cfg)
-      return ctx.response.redirect(
-        ctx.pupitre.panel.auth.emailVerification ? `${panelPath(ctx)}/email/verify` : panelPath(ctx)
-      )
+      return completeLogin(ctx, ctx.pupitre.panel, user, {
+        redirect: ctx.pupitre.panel.auth.emailVerification
+          ? `${panelPath(ctx)}/email/verify`
+          : panelPath(ctx),
+      })
     } catch {
       return flashErrors(ctx, { email: 'Unable to create an account with those details' })
     }
@@ -481,7 +799,16 @@ export default class AuthController {
       schema.password('password').label('New password'),
       schema.password('password_confirmation').label('Confirm new password'),
     ]
-    if (ctx.pupitre.panel.auth.profile.avatar)
+    if (ctx.pupitre.panel.auth.mfa || ctx.pupitre.panel.auth.passkeys?.enabled) {
+      nodes.push(
+        schema.view('PupitreProfileSecurity', {
+          basePath: panelPath(ctx),
+          mfaEnabled: Boolean(user.$attributes[cfg.auth.columns.mfaEnabledAt]),
+          passkeysEnabled: ctx.pupitre.panel.auth.passkeys?.enabled === true,
+        })
+      )
+    }
+    if (ctx.pupitre.panel.auth.profile?.avatar)
       nodes.push(schema.fileUpload('avatar').image().maxSize('5mb').label('Avatar'))
     return renderAuth(
       ctx,
@@ -503,7 +830,7 @@ export default class AuthController {
   async uploadAvatar(ctx: AuthContext) {
     const user = ctx.pupitre.authUser as MutableUser
     if (
-      !ctx.pupitre.panel.auth.profile.avatar ||
+      !ctx.pupitre.panel.auth.profile?.avatar ||
       ctx.request.input('resource') !== 'profile' ||
       ctx.request.input('field') !== 'avatar' ||
       String(ctx.request.input('record')) !== String(user.$attributes.id)
@@ -604,7 +931,7 @@ export default class AuthController {
       changes[cfg.auth.columns.emailVerifiedAt] = null
     if (passwordChanged) changes[cfg.auth.columns.password] = validated.password
     let storedAvatar: string | undefined
-    if (ctx.pupitre.panel.auth.profile.avatar) {
+    if (ctx.pupitre.panel.auth.profile?.avatar) {
       const file = ctx.request.file('avatar') as MultipartFile | null
       if (file) {
         if (!file.tmpPath || file.errors.length > 0 || file.size > 5 * 1024 * 1024)

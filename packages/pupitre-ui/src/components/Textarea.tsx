@@ -1,9 +1,11 @@
-import { useId, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useId, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Label } from '../primitives/index.js'
 import { useLiveField } from './use_live_field.js'
+
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 type Props = Infer<typeof components.Textarea.props>
 type Runtime = {
@@ -19,6 +21,13 @@ export function Textarea({ props, bindings }: Runtime) {
   const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
   const [value, changeValue, commitValue] = useLiveField(boundValue, setValue, props.live)
   const error = useFieldError(props.error, bindings?.value)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  useIsomorphicLayoutEffect(() => {
+    const textarea = textareaRef.current
+    if (!props.autosize || !textarea) return
+    textarea.style.height = 'auto'
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [props.autosize, value])
   const generatedId = useId()
   const id = bindings?.value
     ? bindings.value.split('/').slice(2).join('.')
@@ -46,6 +55,7 @@ export function Textarea({ props, bindings }: Runtime) {
           </Label>
         )}
         <textarea
+          ref={textareaRef}
           aria-label={props.label ?? id}
           {...props.extraAttributes}
           id={id}
@@ -63,6 +73,7 @@ export function Textarea({ props, bindings }: Runtime) {
           aria-describedby={describedBy}
           aria-invalid={!!error}
           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          style={props.autosize ? { overflow: 'hidden', resize: 'none' } : undefined}
         />
         {props.hint && (
           <p id={`${id}-hint`} className="text-sm text-muted-foreground">

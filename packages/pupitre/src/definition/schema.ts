@@ -6,6 +6,7 @@ export type SchemaKind =
   | 'text'
   | 'email'
   | 'password'
+  | 'slider'
   | 'number'
   | 'textarea'
   | 'hidden'
@@ -22,8 +23,11 @@ export type SchemaKind =
   | 'color'
   | 'tags'
   | 'keyValue'
+  | 'markdownEditor'
+  | 'codeEditor'
   | 'richEditor'
   | 'fileUpload'
+  | 'builder'
   | 'repeater'
   | 'grid'
   | 'section'
@@ -44,6 +48,8 @@ export type SchemaKind =
   | 'keyValueEntry'
   | 'repeatableEntry'
   | 'codeEntry'
+  | 'wizard'
+  | 'step'
   | 'badgeEntry'
 export type FieldClosure<T = unknown> = (args: {
   get(path: string): any
@@ -75,6 +81,10 @@ export type FieldCommon = {
   label?: string | null | FieldClosure<string | null>
   helperText?: string | null
   hint?: string | null
+  hintIcon?: string
+  hintTooltip?: string
+  hintColor?: string
+  hintAction?: ActionDefinition
   placeholder?: string | null
   default?: unknown | (() => unknown)
   disabled?: boolean | FieldClosure<boolean>
@@ -83,12 +93,14 @@ export type FieldCommon = {
   hidden?: FieldClosure<boolean>
   columnSpan?: number | 'full'
   extraAttributes?: Record<string, string>
-  live?: { onBlur?: boolean; debounce?: number } | true
+  live?: { onBlur?: boolean; debounce?: number; server?: boolean } | true
   afterStateUpdated?: (args: {
     state: unknown
     old: unknown
     get(path: string): any
     set(path: string, value: unknown): void
+    record?: Record<string, unknown> | null
+    ctx?: HttpContext
   }) => unknown
   dehydrated?: boolean
   dehydratedWhenHidden?: boolean
@@ -106,6 +118,11 @@ export type TextFieldDefinition =
         suffix?: string
         autocomplete?: string
         datalist?: readonly string[]
+        mask?: string
+        telRegex?: RegExp | string
+        prefixAction?: ActionDefinition
+        suffixAction?: ActionDefinition
+        tel?: boolean
       }
     >
   | FieldDefinition<
@@ -115,6 +132,9 @@ export type TextFieldDefinition =
         suffix?: string
         autocomplete?: string
         datalist?: readonly string[]
+        mask?: string
+        prefixAction?: ActionDefinition
+        suffixAction?: ActionDefinition
       }
     >
   | FieldDefinition<
@@ -125,10 +145,19 @@ export type TextFieldDefinition =
         autocomplete?: string
         datalist?: readonly string[]
         revealable?: boolean
+        prefixAction?: ActionDefinition
+        suffixAction?: ActionDefinition
       }
     >
 export type NumberFieldDefinition = FieldDefinition<'number', { prefix?: string; suffix?: string }>
-export type TextareaFieldDefinition = FieldDefinition<'textarea', { rows?: number }>
+export type TextareaFieldDefinition = FieldDefinition<
+  'textarea',
+  { rows?: number; autosize?: boolean }
+>
+export type SliderFieldDefinition = FieldDefinition<
+  'slider',
+  { min?: number; max?: number; step?: number; marks?: readonly number[]; range?: boolean }
+>
 export type SelectOptions = Record<string, unknown> | readonly unknown[]
 export type SelectOptionsContext = {
   search: string
@@ -265,6 +294,24 @@ export type KeyValueFieldDefinition = FieldDefinition<
     valuePlaceholder?: string
   }
 >
+export type MarkdownEditorFieldDefinition = FieldDefinition<
+  'markdownEditor',
+  {
+    toolbar?: readonly string[]
+    fileAttachmentsDisk?: string
+    fileAttachmentsDirectory?: string
+    preview?: boolean
+  }
+>
+export type CodeEditorFieldDefinition = FieldDefinition<
+  'codeEditor',
+  {
+    language?:
+      'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'markdown' | 'sql' | 'python' | 'php'
+    lineNumbers?: boolean
+    minHeight?: number
+  }
+>
 export type RichEditorFieldDefinition = FieldDefinition<
   'richEditor',
   {
@@ -289,8 +336,11 @@ export type FileUploadFieldDefinition = FieldDefinition<
     reorderable?: boolean
     downloadable?: boolean
     previewable?: boolean
+    imageEditor?: boolean
+    imageEditorAspectRatios?: readonly (string | null)[]
   }
 >
+export type RepeaterRelationshipOptions = { name: string; orderColumn?: string }
 export type RepeaterFieldDefinition = FieldDefinition<
   'repeater',
   {
@@ -305,12 +355,84 @@ export type RepeaterFieldDefinition = FieldDefinition<
     itemLabel?: string | FieldClosure<string>
     defaultItems?: number
     grid?: number | Record<string, number>
+    relationship?: RepeaterRelationshipOptions
   }
 >
+export type BuilderBlockDefinition = {
+  kind: 'block'
+  name: string
+  label?: string
+  icon?: string
+  schema: SchemaNodeDefinition[]
+}
+export type BuilderFieldDefinition = FieldDefinition<
+  'builder',
+  {
+    blocks: BuilderBlockDefinition[]
+    minItems?: number
+    maxItems?: number
+    reorderable?: boolean
+    collapsible?: boolean
+    cloneable?: boolean
+    addLabel?: string
+    blockPickerColumns?: number
+  }
+>
+export type WizardStepDefinition = {
+  kind: 'step'
+  name: string
+  description?: string
+  icon?: string
+  children: SchemaNodeDefinition[]
+}
+export type WizardDefinition = {
+  kind: 'wizard'
+  steps: WizardStepDefinition[]
+  skippable?: boolean
+  startOnStep?: number
+  submitLabel?: string
+  visible?: FieldClosure<boolean>
+  hidden?: FieldClosure<boolean>
+  columnSpan?: number | 'full'
+  extraAttributes?: Record<string, string>
+}
+export interface BuilderBlockBuilder {
+  toDefinition(): BuilderBlockDefinition
+  label(value: string): this
+  icon(value: string): this
+  schema(
+    value:
+      | readonly SchemaNodeBuilder[]
+      | ((fields: BlockSchemaNamespace) => readonly SchemaNodeBuilder[])
+  ): this
+}
+export interface BuilderBuilder extends FieldBuilderBase<BuilderFieldDefinition> {
+  blocks(value: readonly BuilderBlockBuilder[]): this
+  minItems(value: number): this
+  maxItems(value: number): this
+  reorderable(value?: boolean): this
+  collapsible(value?: boolean): this
+  cloneable(value?: boolean): this
+  addLabel(value: string): this
+  blockPickerColumns(value: number): this
+}
+export interface WizardBuilder extends LayoutBase<WizardDefinition> {
+  steps(value: readonly SchemaNodeBuilder[]): this
+  skippable(value?: boolean): this
+  startOnStep(value: number): this
+  submitLabel(value: string): this
+}
+export interface StepBuilder extends LayoutBase<WizardStepDefinition> {
+  components(value: readonly SchemaNodeBuilder[]): this
+  description(value: string): this
+  icon(value: string): this
+  schema(value: readonly SchemaNodeBuilder[]): this
+}
 export type HiddenFieldDefinition = FieldDefinition<'hidden'>
 export type FieldDefinitionUnion =
   | TextFieldDefinition
   | NumberFieldDefinition
+  | SliderFieldDefinition
   | TextareaFieldDefinition
   | SelectFieldDefinition
   | CheckboxFieldDefinition
@@ -322,11 +444,16 @@ export type FieldDefinitionUnion =
   | ColorFieldDefinition
   | TagsFieldDefinition
   | KeyValueFieldDefinition
+  | MarkdownEditorFieldDefinition
+  | CodeEditorFieldDefinition
   | RichEditorFieldDefinition
   | FileUploadFieldDefinition
   | RepeaterFieldDefinition
+  | BuilderFieldDefinition
   | HiddenFieldDefinition
 export type LayoutDefinition =
+  | WizardDefinition
+  | WizardStepDefinition
   | {
       kind: 'grid'
       children: SchemaNodeDefinition[]
@@ -455,9 +582,11 @@ export type TextEntryDefinition = EntryCommon & {
   url?: string | FieldClosure<string>
   dateTime?: string
   date?: string
+  timezone?: string
   since?: boolean
   money?: string
   limit?: number
+  markdown?: boolean
 }
 export type IconEntryDefinition = EntryCommon & {
   kind: 'iconEntry'
@@ -496,6 +625,9 @@ export interface FieldBuilderBase<D extends FieldDefinitionUnion> extends Compon
   label(value: string | null | FieldClosure<string | null>): this
   helperText(value: string | null): this
   hint(value: string | null): this
+  hintIcon(value: string, options?: { tooltip?: string }): this
+  hintColor(value: string): this
+  hintAction(value: ActionDefinition | ActionBuilder): this
   placeholder(value: string | null): this
   default(value: unknown | (() => unknown)): this
   required(value?: boolean): this
@@ -506,7 +638,7 @@ export interface FieldBuilderBase<D extends FieldDefinitionUnion> extends Compon
   hidden(value: FieldClosure<boolean>): this
   columnSpan(value: number | 'full'): this
   extraAttributes(value: Record<string, string>): this
-  live(value?: { onBlur?: boolean; debounce?: number }): this
+  live(value?: { onBlur?: boolean; debounce?: number; server?: boolean }): this
   afterStateUpdated(value: NonNullable<FieldCommon['afterStateUpdated']>): this
   dehydrated(value?: boolean): this
   dehydratedWhenHidden(value?: boolean): this
@@ -517,6 +649,9 @@ export interface FieldBuilderBase<D extends FieldDefinitionUnion> extends Compon
 export interface TextBuilder extends FieldBuilderBase<TextFieldDefinition> {
   prefix(value: string): this
   suffix(value: string): this
+  mask(value: string): this
+  prefixAction(value: ActionDefinition | ActionBuilder): this
+  suffixAction(value: ActionDefinition | ActionBuilder): this
   autocomplete(value: string): this
   datalist(value: readonly string[]): this
   minLength(value: number): this
@@ -526,6 +661,8 @@ export interface TextBuilder extends FieldBuilderBase<TextFieldDefinition> {
   alphaNumeric(): this
   email(): this
   url(): this
+  tel(): this
+  telRegex(value: RegExp | string): this
   in(value: readonly unknown[]): this
   same(field: string): this
   different(field: string): this
@@ -544,10 +681,18 @@ export interface NumberBuilder extends FieldBuilderBase<NumberFieldDefinition> {
   suffix(value: string): this
   unique(value?: NonNullable<ValidationRules['unique']>): this
 }
+export interface SliderBuilder extends FieldBuilderBase<SliderFieldDefinition> {
+  min(value: number): this
+  max(value: number): this
+  step(value: number): this
+  marks(value: readonly number[]): this
+  range(value?: boolean): this
+}
 export interface TextareaBuilder extends FieldBuilderBase<TextareaFieldDefinition> {
   rows(value: number): this
   minLength(value: number): this
   maxLength(value: number): this
+  autosize(value?: boolean): this
 }
 export interface SelectBuilder extends FieldBuilderBase<
   Extract<SelectFieldDefinition, { kind: 'select' }>
@@ -614,6 +759,7 @@ export interface RepeaterBuilder extends FieldBuilderBase<RepeaterFieldDefinitio
   addLabel(value: string): this
   itemLabel(value: string | FieldClosure<string>): this
   defaultItems(value: number): this
+  relationship(name: string, options?: Omit<RepeaterRelationshipOptions, 'name'>): this
   grid(columns: number | Record<string, number>): this
 }
 export interface FileUploadBuilder extends FieldBuilderBase<FileUploadFieldDefinition> {
@@ -626,6 +772,8 @@ export interface FileUploadBuilder extends FieldBuilderBase<FileUploadFieldDefin
   directory(value: string): this
   visibility(value: 'public' | 'private'): this
   reorderable(value?: boolean): this
+  imageEditor(value?: boolean): this
+  imageEditorAspectRatios(value: readonly (string | null)[]): this
   downloadable(value?: boolean): this
   previewable(value?: boolean): this
 }
@@ -635,6 +783,17 @@ export interface RichEditorBuilder extends FieldBuilderBase<RichEditorFieldDefin
   maxHeight(value: number): this
   fileAttachmentsDisk(value: string): this
   fileAttachmentsDirectory(value: string): this
+}
+export interface MarkdownEditorBuilder extends FieldBuilderBase<MarkdownEditorFieldDefinition> {
+  toolbar(value: readonly string[]): this
+  fileAttachmentsDisk(value: string): this
+  fileAttachmentsDirectory(value: string): this
+  fileAttachments(options: { disk?: string; directory?: string }): this
+}
+export interface CodeEditorBuilder extends FieldBuilderBase<CodeEditorFieldDefinition> {
+  language(value: NonNullable<CodeEditorFieldDefinition['language']>): this
+  lineNumbers(value?: boolean): this
+  minHeight(value: number): this
 }
 export interface CheckboxBuilder extends FieldBuilderBase<CheckboxFieldDefinition> {
   inline(value?: boolean): this
@@ -742,10 +901,12 @@ export interface TextEntryBuilder extends ComponentBuilder<
   copyable(value?: boolean): this
   url(value: string | FieldClosure<string>): this
   dateTime(value?: string): this
+  timezone(value: string): this
   date(value?: string): this
   since(value?: boolean): this
   money(currency: string): this
   limit(value: number): this
+  markdown(value?: boolean): this
 }
 export interface IconEntryBuilder extends ComponentBuilder<
   Extract<EntryDefinition, { kind: 'iconEntry' }>
@@ -783,6 +944,7 @@ export type SchemaNodeBuilder =
   | TextBuilder
   | PasswordBuilder
   | NumberBuilder
+  | SliderBuilder
   | TextareaBuilder
   | SelectBuilder
   | MultiSelectBuilder
@@ -798,6 +960,9 @@ export type SchemaNodeBuilder =
   | ColorBuilder
   | TagsBuilder
   | KeyValueBuilder
+  | BuilderBuilder
+  | WizardBuilder
+  | StepBuilder
   | GridBuilder
   | SectionBuilder
   | FieldsetBuilder
@@ -813,10 +978,12 @@ export type SchemaNodeBuilder =
   | SimpleEntryBuilder<EntryDefinition>
 export type FieldName<M> = [M] extends [never] ? string : keyof M & string
 export type FieldConstructors<M> = {
+  builder(name: FieldName<M>): BuilderBuilder
   text(name: FieldName<M>): TextBuilder
   email(name: FieldName<M>): TextBuilder
   password(name: FieldName<M>): PasswordBuilder
   number(name: FieldName<M>): NumberBuilder
+  slider(name: FieldName<M>): SliderBuilder
   textarea(name: FieldName<M>): TextareaBuilder
   hidden(name: FieldName<M>): SimpleFieldBuilder<HiddenFieldDefinition>
   select(name: FieldName<M>): SelectBuilder
@@ -834,7 +1001,9 @@ export type FieldConstructors<M> = {
   keyValue(name: FieldName<M>): KeyValueBuilder
   richEditor(name: FieldName<M>): RichEditorBuilder
   fileUpload(name: FieldName<M>): FileUploadBuilder
-  repeater(name: FieldName<M>): RepeaterBuilder
+  markdownEditor(name: FieldName<M>): MarkdownEditorBuilder
+  codeEditor(name: FieldName<M>): CodeEditorBuilder
+  repeater(name: string): RepeaterBuilder
   textEntry(name: FieldName<M>): TextEntryBuilder
   iconEntry(name: FieldName<M>): IconEntryBuilder
   imageEntry(name: FieldName<M>): ImageEntryBuilder
@@ -858,6 +1027,7 @@ export type FormSchema<M = never> = Omit<
     components(value: readonly SchemaNodeBuilder[]): { components: SchemaNodeDefinition[] }
     entries(value: readonly SchemaNodeBuilder[]): { entries: SchemaNodeDefinition[] }
   }
+export type BlockSchemaNamespace = Omit<SchemaNamespace, 'block'>
 export type SchemaNamespace = FieldConstructors<never> & {
   grid(): GridBuilder
   section(heading?: string): SectionBuilder
@@ -871,4 +1041,7 @@ export type SchemaNamespace = FieldConstructors<never> & {
   divider(): DividerBuilder
   view(component: string, props?: Record<string, unknown>): ViewBuilder
   fragment(children?: readonly SchemaNodeBuilder[]): ChildrenLayoutBuilder
+  block(name: string): BuilderBlockBuilder
+  wizard(steps?: readonly SchemaNodeBuilder[]): WizardBuilder
+  step(name: string): StepBuilder
 }

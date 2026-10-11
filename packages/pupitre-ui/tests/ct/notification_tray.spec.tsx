@@ -20,3 +20,18 @@ test('opens the inbox, shows notifications, and marks all read', async ({ mount,
   await expect(page.getByText('Post published')).toBeVisible()
   await expect(page.locator('button[aria-label="Notifications"] span')).toHaveCount(0)
 })
+
+test('notification actions invoke mark-read on click', async ({ mount, page }) => {
+  await mount(<NotificationTrayStory />)
+  await page.getByRole('button', { name: 'Notifications' }).click()
+  await page.getByRole('button', { name: 'Mark as read from action' }).click()
+  const requestLog = page.getByTestId('notification-requests')
+  await expect
+    .poll(async () => JSON.parse((await requestLog.textContent()) ?? '[]'))
+    .toContainEqual({
+      method: 'POST',
+      url: '/admin/_pupitre/notifications/read',
+      body: '{"ids":["notification-1"]}',
+      xsrf: 'ct-token',
+    })
+})

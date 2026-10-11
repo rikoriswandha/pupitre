@@ -3,6 +3,7 @@ import {
   action,
   actions,
   definePanel,
+  defineWidget,
   defineResource,
   pages,
   schema,
@@ -115,6 +116,12 @@ test.group('resource and builder DSL', () => {
     assert.equal(branded.toDefinition().brand?.name, 'Example')
     assert.throws(() => action('123'))
   })
+  test('accepts the lazy discovered widget registry object', ({ assert }) => {
+    const widget = defineWidget('monthly-sales').stats(() => [])
+    const registry = { monthlySales: () => Promise.resolve({ default: widget }) }
+    const panel = definePanel('admin').widgets(registry)
+    assert.strictEqual(panel.toDefinition().widgets, registry)
+  })
 
   test('infers model schema fields', () => {
     defineResource(Post).form((s) => {
@@ -135,12 +142,8 @@ test.group('resource and builder DSL', () => {
     const textField = schema.text('title')
     // @ts-expect-error text fields do not expose editor-only modifiers
     void textField.toolbar
-    // @ts-expect-error unsupported text masks are not exposed by M1 builders
-    void textField.mask
     // @ts-expect-error unsupported text icons are not exposed by M1 builders
     void textField.prefixIcon
-    // @ts-expect-error textarea autosize is not implemented in M1
-    void schema.textarea('body').autosize
     // @ts-expect-error checkbox-list bulk toggling is not implemented in M1
     void schema.checkboxList('roles').bulkToggleable
     // @ts-expect-error date display formatting is not implemented in M1
@@ -157,11 +160,6 @@ test.group('resource and builder DSL', () => {
     void schema.checkboxList('roles').searchable
     // @ts-expect-error color format is not implemented in M1
     void schema.color('brand').format
-    defineResource(Post).table((t) => {
-      // @ts-expect-error table row class callbacks are not implemented in M1
-      void t.rowClass
-      return t
-    })
     void (undefined as typeof compileFieldValidator)
   })
   test('omits unsupported schema methods from builder proxies', ({ assert }) => {
