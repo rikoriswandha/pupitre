@@ -29,6 +29,7 @@
 - Preserve preloaded options for client-reactive visibility while still skipping server-hidden relationship authorization and queries.
 - Align passkey login verification and social callbacks with the 60/minute shared-IP sign-in budget; evict the oldest local limiter key at the 10,000-key cap rather than locking out every new identity.
 - Initialize browser CSP jitless configuration before every catalog schema module and probe the built catalog in a fresh process during `verify:exports`; retain repeated-success login and version-derived scaffolder regressions.
+- Widgets: stats widgets span the full dashboard row by default (Filament `StatsOverviewWidget` parity); an explicit `.span()` before or after `.stats()` still wins.
 
 ## Unreleased (0.3.0-beta, milestone M3)
 

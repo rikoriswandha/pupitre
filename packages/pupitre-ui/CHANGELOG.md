@@ -11,6 +11,7 @@
 
 ### Fixed
 - Host styling (M4): namespace the example's card/focus tokens so public-site defaults cannot override Pupitre light/dark surfaces and keyboard focus.
+- Host styling (M4): `styles.css` points every border at `--border` in the base layer; bare `border` utilities no longer paint Tailwind v4's currentColor (near-black) on cards, tables, chart panels, selects and buttons. Stat cards size to their widget column instead of the viewport, and the table page indicator no longer wraps.
 - Accessibility (M4): move the panel toolbar banner outside the main landmark and cover shell landmark best practices.
 - Realtime inbox (M4): retain existing notification items and keyboard focus during background ping refreshes.
 - Accessibility (WP42): use an opaque auth canvas and strengthen light muted-text contrast so authentication links and muted-surface text meet AA in the built host application.

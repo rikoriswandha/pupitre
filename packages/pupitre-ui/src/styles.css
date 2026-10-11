@@ -71,6 +71,20 @@
   --ring: oklch(0.556 0 0);
 }
 
+/*
+ * Tailwind v4 dropped the default border color, so a bare `border` utility paints
+ * currentColor (near-black). Point every border at the theme token instead.
+ */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+}
+
 @layer components {
   /* Density adjusts minimum touch size without distorting intrinsic or icon-sized controls. */
   [data-density='compact']

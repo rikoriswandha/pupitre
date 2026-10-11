@@ -122,6 +122,25 @@ test.group('resource and builder DSL', () => {
     const panel = definePanel('admin').widgets(registry)
     assert.strictEqual(panel.toDefinition().widgets, registry)
   })
+  test('spans stats widgets full width unless a span is set', ({ assert }) => {
+    assert.equal(defineWidget('a').stats(() => []).definition.span, 'full')
+    assert.equal(
+      defineWidget('b')
+        .span(2)
+        .stats(() => []).definition.span,
+      2
+    )
+    assert.equal(
+      defineWidget('c')
+        .stats(() => [])
+        .span(1).definition.span,
+      1
+    )
+    assert.equal(
+      defineWidget('d').chart('bar', () => ({ labels: [], datasets: [] })).definition.span,
+      1
+    )
+  })
 
   test('infers model schema fields', () => {
     defineResource(Post).form((s) => {

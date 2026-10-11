@@ -70,18 +70,26 @@ export type WidgetBuilder = {
 }
 
 class Widget implements WidgetBuilder {
-  constructor(readonly definition: WidgetDefinition) {}
+  constructor(
+    readonly definition: WidgetDefinition,
+    private readonly explicitSpan = false
+  ) {}
 
-  private change(patch: Partial<WidgetDefinition>): WidgetBuilder {
+  private change(
+    patch: Partial<WidgetDefinition>,
+    explicitSpan = this.explicitSpan
+  ): WidgetBuilder {
     const next = { ...this.definition, ...patch }
     next.toJSON = () =>
       stableJson(Object.fromEntries(Object.entries(next).filter(([key]) => key !== 'toJSON')))
-    return new Widget(next)
+    return new Widget(next, explicitSpan)
   }
 
   stats(callback: (args: WidgetContext) => StatInput[] | Promise<StatInput[]>) {
     return this.change({
       kind: 'stats',
+      // Like Filament's StatsOverviewWidget, a stats row spans the dashboard unless sized explicitly.
+      ...(this.explicitSpan ? {} : { span: 'full' as const }),
       load: async (args) => {
         const stats = await callback(args)
         return stats.map((item) => ('toDefinition' in item ? item.toDefinition() : item))
@@ -117,7 +125,7 @@ class Widget implements WidgetBuilder {
     return this.change({ kind: 'component', component: value })
   }
   span(value: number | 'full') {
-    return this.change({ span: value })
+    return this.change({ span: value }, true)
   }
   sort(value: number) {
     return this.change({ sort: value })

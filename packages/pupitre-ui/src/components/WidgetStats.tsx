@@ -75,7 +75,7 @@ export function WidgetStats({ descriptor, data }: Props) {
       {descriptor.description && (
         <p className="text-sm text-muted-foreground">{descriptor.description}</p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,13rem),1fr))] gap-3">
         {stats.map((stat) => (
           <StatCard key={stat.label} stat={stat} />
         ))}

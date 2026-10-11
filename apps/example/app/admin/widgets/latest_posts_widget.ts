@@ -3,6 +3,7 @@ import Post from '#models/post'
 
 export default defineWidget('latest-posts', Post)
   .heading('Latest posts')
+  .span(2)
   .table((t) =>
     t
       .query((query, ctx) => {

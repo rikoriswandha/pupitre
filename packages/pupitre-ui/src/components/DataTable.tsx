@@ -900,6 +900,7 @@ export function DataTable({
             <span>Search</span>
             <input
               type="search"
+              className="h-9 rounded-md border border-input bg-background px-2"
               value={search}
               disabled={reorderMode}
               onChange={(event) => setSearch(event.currentTarget.value)}
@@ -1267,7 +1268,7 @@ export function DataTable({
           >
             Previous
           </button>
-          <span>
+          <span className="whitespace-nowrap tabular-nums">
             {page} / {lastPage}
           </span>
           <button

@@ -3,6 +3,7 @@ import Post from '#models/post'
 
 export default defineWidget('posts-per-month')
   .heading('Posts per month')
+  .span(2)
   .chart('bar', async ({ ctx, filters }) => {
     const query = Post.query().select('created_at')
     if (ctx.pupitre.tenant) query.where('tenant_id', ctx.pupitre.tenant.id)
