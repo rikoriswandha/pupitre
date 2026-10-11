@@ -1,0 +1,22 @@
+{
+  "commands": [
+    {
+      "commandName": "shield:sync",
+      "description": "Synchronize panel permissions and optionally assign a super administrator",
+      "aliases": [],
+      "args": [],
+      "flags": [
+        {
+          "name": "user",
+          "flagName": "user",
+          "type": "string",
+          "description": "Super-admin user ID or email"
+        }
+      ],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "./sync.js"
+    }
+  ]
+}
