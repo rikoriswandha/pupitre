@@ -1,6 +1,6 @@
 # Pupitre — Wire Protocol
 
-Kontrak antara `@rikology/pupitre` (server) dan `@rikology/pupitre-react` (client). Semua bentuk di sini dikunci oleh Zod di `@rikology/pupitre/catalog` dan diuji snapshot di kedua sisi. Perubahan apa pun di dokumen ini wajib menaikkan `catalogVersion`.
+Kontrak antara `@rikology/pupitre` (server) dan `@rikology/pupitre-react` (client). Semua bentuk di sini dikunci oleh Zod di `@rikology/pupitre/catalog` dan diuji snapshot di kedua sisi. Perubahan breaking wajib menaikkan `catalogVersion`; penambahan realtime opsional M4 tetap memakai versi catalog yang sama karena polling lama tetap valid.
 
 Format spec mengikuti `@json-render/core` 0.21 (flat `root` + `elements`, ekspresi `$state`/`$bindState`/`$cond`/`$template`/`$computed`, `visible`, `watch`, `repeat`). Pupitre tidak menambah sintaks ekspresi; `$raw` adalah wrapper escape khusus untuk sub-spec di prop descriptor, bukan ekspresi state.
 
@@ -19,6 +19,7 @@ type PupitrePageProps = {
     nav: NavGroup[]
     flash: { type: 'success' | 'error' | 'warning' | 'info'; title: string; body?: string }[]
     notifications?: { unread: number; url: string; readUrl: string; interval: number } // tray endpoint URLs + shared-prop polling interval
+    realtime?: { driver: string; userChannel: string }
     locale: string
     timezone: string
   }
@@ -175,6 +176,7 @@ type TableDescriptor = {
   searchDebounce: number
   reorderable?: { url: string }
   poll?: number                      // ms
+  realtime?: { channel: string }      // ping invalidasi, bukan data record
   selectable: boolean                // ada bulk action
   bulkActions: ActionDescriptor[]    // url tanpa id; ids di body
   emptyState?: { heading: string; description?: string; icon?: string; action?: ActionDescriptor }
@@ -294,8 +296,14 @@ Semua di dalam route group panel (prefix panel + tenant), middleware sama.
 
 `WidgetDescriptor` membawa `{ name, kind, dataProp, dataUrl, heading?, description?, span, sort, poll?, placement?, chartType?, component?, table? }`. `dataUrl` adalah URL panel-scoped untuk `GET /_pupitre/widgets/:name`; klien mengirim query filter saat polling atau refresh. URL menyertakan konteks resource/custom page di atas; widget record wajib memakai `widgetPage` eksplisit. Parameter `widgetPage` terpisah dari `page` agar pagination tabel tidak menimpa konteks widget.
 
+Widget timeline memakai `WidgetDescriptor.kind: 'timeline'` dan komponen katalog `Widget.Timeline`. Payload `WidgetData` berbentuk `{ kind: 'timeline', items: { title: string, description?: string, time: { iso: string, formatted: string }, actor?: string, icon?: string, color?: string, changes?: { field: string, old: unknown, new: unknown }[] }[] }`. Server memformat waktu; klien menampilkan `formatted` dalam elemen `<time datetime={iso}>` tanpa memformat ulang atau mengubah urutan item. Nilai perubahan adalah data JSON, bukan HTML. Warna mendukung token `primary`, `success`, `warning`, `danger`, `gray` atau warna CSS. Array kosong menampilkan empty state; data deferred dan refresh mengikuti kontrak widget lainnya.
+
 
 `NotificationItem` adalah `{ id, type: 'success'|'error'|'warning'|'info', title, body?, url?, actions?: { label, url?, method?: 'get'|'post', markAsRead? }[], readAt: string|null, createdAt: string }`. Flash message memakai bentuk action yang sama; tray/toast merender action dan `markAsRead` menandai item dibaca saat tombol tersebut diklik. `notificationListResponse` dan `notificationsReadRequest` di `@rikology/pupitre/catalog` memvalidasi kontrak endpoint ini. Kedua route berada di tenant route group dan bernama `<panel>.notifications` dan `<panel>.notifications.read`.
+
+Realtime memakai kontrak client `RealtimeClient { subscribe(channel: string, onEvent: (event: RealtimeEvent) => void): () => void }`; cleanup subscription berjalan saat channel/page berubah atau unmount. Event hanya ping: `{ type: 'pupitre:notification' }` pada `pupitre/<panel>/users/<id>` dan `{ type: 'pupitre:table', resource: string }` pada `pupitre/<panel>[/tenants/<tenant>]/resources/<slug>`. Nama lama tanpa namespace tidak diterima. ID tenant/user adalah identitas model, bukan slug URL. Ping inbox dikirim ke channel user setiap panel dengan notifications aktif karena penyimpanan inbox dibagi lintas panel. Event tidak membawa isi record/notifikasi; client mengambil ulang data lewat endpoint terotorisasi.
+
+`<Pupitre realtime={client} />` menerima instance client stabil dari host, bukan prop Inertia serializable. Bila client dan channel tersedia, ping notifikasi memperbarui shared props/inbox terbuka dan ping tabel reload `dataProp` tanpa interval polling. Tanpa client atau channel, interval `notifications.interval` dan `table.poll` tetap berlaku. Transmit mengotorisasi channel user, membership tenant, dan akses resource di server.
 
 Tenancy routes live under the panel user route group (without a tenant segment): `GET <panel.path>` redirects to the first authorized tenant home in mode `url`; `POST <panel.path>/_pupitre/tenant` accepts `{ tenant: id }`, persists the current tenant in mode `implicit`, and redirects to the panel home. Tenant resource routes use `<panel.path>/:tenant/...` in mode `url`; tenant membership failures and unknown slugs return 404. In mode `implicit`, a missing current tenant selects and persists the first membership before continuing; users with no membership receive 403.
 

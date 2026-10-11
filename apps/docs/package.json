@@ -1,0 +1,22 @@
+{
+  "name": "@rikology/pupitre-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/prepare-content.mjs",
+    "prebuild": "node scripts/prepare-content.mjs",
+    "precheck": "node scripts/prepare-content.mjs",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.6",
+    "astro": "^7.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10"
+  }
+}

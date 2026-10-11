@@ -1,0 +1,20 @@
+:root {
+  --sl-color-accent-low: oklch(28% 0.08 290);
+  --sl-color-accent: oklch(64% 0.18 290);
+  --sl-color-accent-high: oklch(90% 0.05 290);
+  --sl-font: 'Avenir Next', Avenir, system-ui, sans-serif;
+  --sl-content-width: 72ch;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: oklch(95% 0.025 290);
+  --sl-color-accent: oklch(48% 0.2 290);
+  --sl-color-accent-high: oklch(32% 0.12 290);
+}
+.hero h1 {
+  letter-spacing: -0.045em;
+  max-width: 12ch;
+}
+.sl-markdown-content table {
+  display: block;
+  overflow-x: auto;
+}

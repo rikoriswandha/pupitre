@@ -52,6 +52,25 @@ Challenges WebAuthn disimpan di session (bukan DB), berumur lima menit, dan diko
 
 Tabel dipublikasikan oleh stub migrasi `1791700000006_create_pupitre_exports_table` dan boleh tetap kosong bila host tidak memakai `jobs`; ekspor sinkron tidak membuat row. `user_id` memakai FK `users.id` (integer), `tenant_id` menyimpan ID tenant aktif tanpa FK karena model tenant milik host. Retensi default 1.440 menit dapat diubah lewat `config/pupitre.ts` → `exports.retentionMinutes`; `pupitre:prune` menghapus file dari disk storage sebelum menghapus row kedaluwarsa.
 
+### Shield (M4, WP37) — tabel global plugin `@rikology/pupitre-shield`
+
+| Tabel | Kolom | Tipe / batasan |
+| --- | --- | --- |
+| `pupitre_roles` | `id` | increments, primary key |
+| `pupitre_roles` | `name` | string(160), wajib, unique |
+| `pupitre_roles` | `created_at`, `updated_at` | timestamp, wajib; otomatis oleh model Lucid |
+| `pupitre_permissions` | `id` | increments, primary key |
+| `pupitre_permissions` | `name` | string(254), wajib, unique; `<slug>.<ability>` |
+| `pupitre_permissions` | `created_at`, `updated_at` | timestamp, wajib; otomatis oleh model Lucid |
+| `pupitre_permission_role` | `role_id` | integer FK `pupitre_roles.id`, cascade |
+| `pupitre_permission_role` | `permission_id` | integer FK `pupitre_permissions.id`, cascade |
+| `pupitre_role_user` | `role_id` | integer FK `pupitre_roles.id`, cascade |
+| `pupitre_role_user` | `user_id` | integer FK `users.id` host, cascade |
+
+Kedua pivot memakai primary key komposit pasangan FK, tanpa kolom timestamp. Configure menerbitkan `1791700000037_create_pupitre_shield_tables.ts`; `--user-table=accounts` mengganti tabel FK host. Tipe `user_id`/kolom referensi harus disesuaikan sebelum migrasi untuk host UUID/custom PK. Role dan permission bersifat global lintas panel/guard, bukan tenant-scoped; slug yang sama berbagi grant. Lookup memakai satu query join per request/user. `shield:sync --user=<id|email>` melakukan upsert permission dan assignment super-admin secara idempotent.
+
+`shieldRolesField()` mengisi ID role saat edit dan menyinkronkan pivot dalam transaksi create/update; daftar kosong mencabut assignment. Field tersembunyi untuk actor tanpa `roles.viewAny`, sehingga form User tetap dapat dibuka tanpa membaca opsi role atau mengubah pivot melalui input tersembunyi.
+
 ## 2. Kolom yang ditambahkan ke `users` host
 
 Migrasi `add_pupitre_columns_to_users` memakai `hasColumn` sebelum setiap `alter` dan hanya menambahkan kolom M2 Pupitre berikut (kolom kredensial standar tetap tanggung jawab host):
@@ -114,3 +133,9 @@ Catatan: Pupitre tidak mengelola atau memigrasikan tabel `notifications`. Host h
 ## 6. Rollback
 
 Setiap migrasi `down()` menghapus tabel/kolom yang dibuatnya **saja**; tidak menyentuh tabel peer. Urutan rollback: `pupitre_exports` → `pupitre_passkeys` → `pupitre_password_resets` → kolom `users` (FK `current_tenant_id` dilepas dulu untuk SQLite).
+
+## 7. Audit trail (M4, WP38)
+
+`pupitre-audit` tidak membuat tabel log sendiri. Activity memakai model `Audit` dari `@rikology/adonisjs-audit-trail`; tabel `audits` menyimpan UUID `id`, event, pasangan `auditable_type/auditable_id`, `old_values/new_values` JSON, actor, `tenant_id`, tags, waktu, serta `stream/seq/hash/prev_hash`. Migrasi example mengikuti skema peer termasuk tabel checkpoint/archive dan guard maintenance SQLite. Semua builder DDL queued tanpa `await`.
+
+Post example memakai mixin `Auditable(PostSchema)`. Provider/config peer menangani capture dan delivery; `config.pupitre.audit` hanya adapter pembacaan. Activity tidak menyediakan operasi tulis; list dan detail dibatasi tenant aktif melalui `tenant_id` meskipun ownership column resource host berbeda.

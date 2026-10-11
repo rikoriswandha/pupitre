@@ -1,0 +1,94 @@
+---
+title: Getting started
+description: Install Pupitre and build your first model-backed admin panel.
+---
+
+## Prerequisites
+
+Use Node.js 24 or later and an AdonisJS v7 application with Inertia React, Lucid, a session authentication guard, and a configured database. Pupitre is an admin layer inside your application, not a separate hosted backend. Create the model and migration you intend to manage before generating its resource.
+
+```sh
+node ace add @rikology/pupitre
+```
+
+The configure hook installs `@rikology/pupitre-react`, `@rikology/pupitre-ui`, Tailwind CSS and its Vite plugin. It registers the Pupitre provider, Ace commands, `#start/pupitre` preload and `indexAdmin()` assembler init hook. It adds the `#admin/*` import mapping and imports the UI stylesheet when `inertia/css/app.css` exists.
+
+It publishes `config/pupitre.ts`, the starter panel, generic Inertia page and component registry. It also publishes migrations for password-reset tokens, user profile/verification fields, MFA, passkeys, social identity and exports. Existing host files are preserved. Review generated migrations against your user model before running them; do not blindly add columns that already exist in your application.
+
+To rerun host setup with explicit defaults:
+
+```sh
+node ace pupitre:install --panel=admin --path=/admin --auth=web
+node ace migration:run
+```
+
+## First panel
+
+Panel definitions live in `app/admin/panels/*.ts`. The generated panel uses resource/page barrels discovered at assembler initialization; direct registration also works:
+
+```ts
+// app/admin/panels/admin.ts
+import { definePanel } from '@rikology/pupitre'
+import PostResource from '#admin/resources/post_resource'
+
+export default definePanel('admin')
+  .path('/admin')
+  .guard('web')
+  .login()
+  .resources([PostResource])
+```
+
+When enabling built-in auth, configure the host model in `config/pupitre.ts`:
+
+```ts
+import { defineConfig } from '@rikology/pupitre'
+
+export default defineConfig({
+  auth: { model: () => import('#models/user') },
+  timezone: 'UTC',
+  storage: { disk: 'uploads' },
+})
+```
+
+Map `auth.columns` if your model attributes differ from Pupitre's defaults. If using your own login, omit `.login()` and protect the panel with your host middleware; choosing a guard alone is not a replacement for access control.
+
+## First resource
+
+```sh
+node ace make:resource Post
+```
+
+Edit `app/admin/resources/post_resource.ts`. Field names use model attributes, not SQL column names:
+
+```ts
+import { defineResource, table, actions } from '@rikology/pupitre'
+import Post from '#models/post'
+import PostPolicy from '#policies/post_policy'
+
+export default defineResource(Post)
+  .policy(PostPolicy)
+  .recordTitle('title')
+  .form((s) => [s.text('title').required().maxLength(200)])
+  .table((t) => t.columns([table.text('title').searchable().sortable()]))
+  .actions({ row: [actions.edit(), actions.delete()] })
+```
+
+The default pages are list, create and edit. Add an infolist or a view page explicitly for read-only details. Write a Bouncer policy before exposing the panel: **a resource with no policy allows access and logs a warning**.
+
+## Run and deploy
+
+```sh
+node ace serve --hmr
+```
+
+Visit `/admin/login` when built-in login is enabled, sign in with a real host user, then open `/admin/posts`. The configure hook supplies a generic React page that passes Inertia props to `<Pupitre registry={registry} />`. Keep that page and the registry in your host frontend.
+
+For production, use your normal AdonisJS build and deploy process. Keep `indexAdmin()` registered: discovery produces static import barrels at build initialization, rather than scanning application files on each request. Run the generated migrations, configure storage/mail/jobs as needed, and run scheduled `pupitre:prune` cleanup for expired tokens and export files.
+
+### Production security
+
+Keep AdonisJS Shield CSRF protection enabled for all mutation routes, including Transmit subscribe/unsubscribe. Use an enforced CSP with same-origin/nonce-based scripts and **no `unsafe-eval`**. Pupitre's browser catalog configures Zod with `jitless: true` before schema construction so Zod's JIT probe does not violate that policy; do not weaken CSP to enable form reactivity. Keep `X-Content-Type-Options: nosniff` enabled.
+
+Configure shared-store `@adonisjs/limiter` for multi-process deployments and correct trusted-proxy IP handling. Login, passkey sign-in options/verification and social callback quotas are 60 requests/minute per IP/panel; password failures additionally use a 5/minute email+IP window. Other sensitive auth endpoints, including passkey registration, use 5/minute limits. The single-process fallback resets on restart and evicts the oldest insertion-order key at its 10,000-key capacity, potentially forgetting active quotas under identity churn; it is not a distributed limiter. See [authentication](/guides/auth/#rate-limits).
+
+Set body-parser/proxy limits and storage quotas alongside Pupitre's bounded uploads: 10 MiB by default, 5 MiB for avatars and 10 MiB for CSV imports. SVG, HTML/XHTML and JavaScript uploads are rejected, and image endpoints accept passive images only. Audit host policies, custom plugins and copied registry source before exposure; Pupitre defaults do not secure arbitrary application endpoints.

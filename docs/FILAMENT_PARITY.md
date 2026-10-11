@@ -19,7 +19,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `->globalSearch()`, `->globalSearchKeyBindings()` | `.globalSearch({ keyBinding })` + pencarian `cmd+k` | M2 | ✅ | `GET /_pupitre/search`; hanya resource yang searchable dan lolos policy |
 | `->databaseNotifications()->databaseNotificationsPolling()` | `.notifications({ interval })` + database-channel adapter | M2 | ✅ | Tray polling, paginated inbox, and mark-read endpoints; database persistence is optional |
 | `->tenant()`, `->tenantRoutePrefix()`, `->tenantMenu()`, `->tenantRegistration()`, `->tenantProfile()` | `.tenancy({...})` + `TenantSwitcher` | M2 | ✅ | URL/implicit mode, membership-aware routing, resource scoping, ownership fill, and global `.scope(false)` |
-| `->plugins()` | `.plugins([...])` | M4 | ⬜ | API stabil sejak M1 |
+| `->plugins()` | `.plugins([...])` | M4 | ✅ | Hook register/extendResource/boot berurutan; kontribusi dan navigasi digabung oleh manager |
 | `->spa()` | — | — | — | Inertia sudah SPA |
 | `->unsavedChangesAlerts()` | `Form.dirtyGuard` | M1 | ✅ | |
 | `->maxContentWidth()` | theme `contentWidth` | M3 | ✅ | Lebar konten shell `md`–`7xl`, `full`, atau `screen` |
@@ -174,14 +174,14 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Social login | `.social(['github', 'google'])` via Ally | M3 | ✅ (provider ID, verified-email fallback, MFA-aware callback) |
 | Flash notifications | `notify.*` → toast | M1 | ✅ |
 | Database notifications + actions di notif | adapter `notifications`; `notify.*().actions()` | M2 | ✅ | action persisted dan ditampilkan di tray/toast |
-| Broadcast notifications (Echo) | `pupitre-transmit` | M4 | ⬜ |
+| Broadcast notifications (Echo) | `pupitre-transmit` + `/client` (SSE, bukan Echo) | M4 | ✅ | WP39: ping user + refresh tray; push tabel terscope panel/tenant; polling fallback tanpa client/channel |
 | Global search + `getGlobalSearchResultDetails/Actions/Url` | `.globallySearchable()`, `.globalSearchDetails()` | M2 | ✅ | URL mengikuti ability `view`/`update`; maksimal 5 hasil/resource |
 | Tenancy: `HasTenants`, scoping, `ownershipRelationship`, billing | `TenancyAdapter` + column / `@rikology/adonisjs-tenant` drivers; billing — | M2 | ✅ | |
-| Shield plugin (roles/permissions) | `pupitre-shield` | M4 | ⬜ |
-| Activity log plugin | `pupitre-audit` | M4 | ⬜ |
+| Shield plugin (roles/permissions) | `pupitre-shield` | M4 | ✅ | WP37: role CRUD, checkbox permission per resource, policy Bouncer cached per request, super-admin, sync idempotent, assignment User relation, helper custom page |
+| Activity log plugin | `pupitre-audit` | M4 | ✅ | WP38: timeline view/edit, Activity read-only, filter event/subject/date, old/new detail, fail-closed policy dan subject links authorized |
 | Multi-language (`->locales()`) | — | post-1.0 | — |
 | Theming custom CSS | theme file + CSS vars | M3 | ✅ | stylesheet host via `<link>` same-origin/HTTPS; tidak membuat inline `<style>` |
 | Testing helpers (`livewire()` assertions) | `@rikology/pupitre/testing` + `@rikology/pupitre-ui/testing` | M3 | ✅ | `visitResource`/`submitForm`/`runAction`/`visitPage` lewat controller asli (authz, tenancy, hooks) + `assertSpecHas`/`assertVisible`; fixture Playwright dipakai e2e example |
 | `make:*` commands | `make:panel <name>`; `make:resource`; `make:page`; `make:widget`; `make:relation-manager <Post> <comments>` | M2–M3 | ✅ | WP27/WP28 generator tests cover idempotent output |
-| `make:plugin` | `make:plugin` + `create-pupitre-plugin` | M4 | ⬜ | WP36 |
-| Plugin ecosystem | `definePlugin`, `create-pupitre-plugin` | M4 | ⬜ |
+| `make:plugin` | `make:plugin` + `create-pupitre-plugin` | M4 | ✅ | Modul lokal idempotent (`--force`); `--package [--dir]` menjalankan `npx @rikology/create-pupitre-plugin@<major>` untuk package plugin |
+| Plugin ecosystem | `definePlugin`, `create-pupitre-plugin` | M4 | ✅ | Kontrak plugin publik dan template package dengan kontribusi navigasi serta test manager Japa |

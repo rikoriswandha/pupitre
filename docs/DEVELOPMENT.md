@@ -32,6 +32,8 @@ pupitre/
     verify-exports/
 ```
 
+Workspace `packages/create-pupitre-plugin` berisi CLI `create-pupitre-plugin <name> [--dir <path>] [--force]`, API `createPlugin()`, dan `template/` terpublikasi. `node ace make:plugin <name>` membuat plugin lokal; `--package [--dir <path>]` menjalankan `npx --yes @rikology/create-pupitre-plugin@<major-core>` tanpa shell. Template menguji export build yang terpublikasi, tanpa condition `@rikology/source`. Manifest Ace diperbarui tanpa build dengan `node --conditions=@rikology/source --import=@poppinss/ts-exec packages/pupitre/scripts/generate_commands_manifest.ts --source`.
+
 ## 3. Setup
 
 ```bash
@@ -57,8 +59,17 @@ Setiap entri `exports` package punya kondisi `"@rikology/source": "./<file>.ts"`
 | `test:pg`                           | sama dengan `DB=pg` (butuh `DATABASE_URL`)                                               |
 | `verify:exports`                    | import tiap subpath setiap package, assert bentuk                                        |
 | `registry:build` / `registry:check` | M4 (WP40): bangun `packages/pupitre-ui/registry/registry.json`; `check` gagal kalau diff |
+| `bundle:budget` | WP42: test gate + ukuran gzip/Brotli graph Vite, batas chunk lazy; jalankan sesudah build example |
 | `e2e`                               | Playwright terhadap `apps/example`                                                       |
 | `release`                           | `release-it` per package (lihat §9)                                                      |
+
+WP40 tersedia: `registry:build` memindai sumber UI dan menulis manifest serta `registry/public/{registry.json,r/*.json}` secara deterministik; `registry:check` membangun ke direktori sementara, membandingkan artefak committed, lalu menjalankan test copy-ability semua item. Jalankan build dan commit hasil setelah mengubah komponen. Origin dependency dapat diganti dengan `PUPITRE_REGISTRY_URL=http://localhost:3404/r npm run registry:build` atau `node tools/registry-build/index.mjs --base-url http://localhost:3404/r --output /tmp/pupitre-registry`; jangan commit output origin lokal.
+
+WP42: `verify:exports` juga menjalankan regresi parser import runtime, mengecek seluruh file JS build memakai dependency/peer yang dideklarasikan (devDependency tidak cukup), serta `npm pack --dry-run --json` untuk ketujuh package publishable. Tarball tidak boleh membawa `build/tmp`, test internal, coverage, atau registry source junk; test dalam `create-pupitre-plugin/template` memang diperlukan oleh generator. Fixture terisolasi dapat dicek dengan `node tools/verify-exports/index.mjs --package /path/to/package`.
+
+Untuk budget: `npm run build` → `cd apps/example && node ace build --ignore-ts-errors` → kembali ke root dan `npm run bundle:budget`. Tool membaca `public/assets/.vite/manifest.json`, menjumlah kompresi per file tanpa duplikasi pada static closure entry `inertia/app.tsx`, mengukur CSS dan semua grup fitur berat, serta menolak fitur eager pada entry maupun halaman admin. Batas di `tools/bundle-budget/budgets.json` memiliki headroom 10%; jangan menaikkan batas tanpa mencatat pengukuran dan alasan di `RELEASE_1_0.md`. Argumen path JSON alternatif mendukung uji negatif tanpa mengubah budget committed.
+
+Docs menyajikan `registry/public` pada root (`/registry.json`, `/r/<name>.json`). Host: `node ace pupitre:ui add select --yes`; target `registry:file` memakai `~/inertia/components/pupitre/` relatif terhadap root host. Flag `--path` tidak tersedia karena shadcn meratakan file; installer langsung mendukung `--cwd` untuk memilih root host. `--registry file:///path/to/registry/public` atau origin HTTP mendukung sumber lokal; dependency origin juga harus menunjuk server lokal. Smoke nyata: `node tools/registry-build/shadcn-smoke.mjs` menjalankan shadcn@4 pada fixture Vite/React/TS lalu `tsc --noEmit`; dependency npm prerelease disediakan dari workspace karena belum terpublikasi (target, isi file, dan graph registry tetap asli).
 
 ## 5. Konvensi package
 
@@ -67,6 +78,7 @@ Mengikuti skill `adonisjs-package-development`:
 - `"type": "module"`, `"sideEffects": false`, `engines.node >= 24`.
 - `peerDependencies`: `@adonisjs/core`, `@adonisjs/lucid`, `@adonisjs/inertia`, `@adonisjs/bouncer`, `@vinejs/vine`, `luxon`; optional (`peerDependenciesMeta`): `@adonisjs/queue`, `@adonisjs/transmit`, `@adonisjs/ally`, `@adonisjs/mail`, `@rikology/adonisjs-tenant`, `@rikology/adonisjs-notifications`, `@rikology/adonisjs-audit-trail`, `otplib`, `@simplewebauthn/server`.
 - Optional peer **tidak pernah** di-import top-level; hanya di `src/drivers/*` lewat `await import()` dengan error peer yang jelas. Driver jobs tersedia melalui `jobsAdapter()` dari `@rikology/pupitre/drivers/queue`, dan dikonfigurasi dengan `defineConfig({ jobs: jobsAdapter() })`.
+- Realtime WP39 berada di package `@rikology/pupitre-transmit`, dengan optional peers `@adonisjs/transmit` (server) dan `@adonisjs/transmit-client` (browser). Host mendaftarkan `@adonisjs/transmit/transmit_provider`, membuat `config/transmit.ts` (`pingInterval: false`, `transport: null` untuk satu proses), serta `transmit.registerRoutes((route) => route.use(middleware.auth()))`. Konfigurasikan `realtime: transmitRealtime()` di `config/pupitre.ts`; buat instance stabil `transmitRealtimeClient()` dari subpath `/client` dan pasang pada `<Pupitre realtime={client} />`. Import peer tetap lazy di adapter/client; core dan renderer tidak mengimpor transport. Tanpa konfigurasi server/client, polling tetap bekerja.
 - `actions.export()` dan `actions.import()` CSV memakai `exports.maxSyncRows` (default 1.000); ekspor sampai ambang itu berjalan sinkron, ekspor lebih besar memakai jobs bila tersedia hingga `exports.maxAsyncRows` (default 100.000), dan tanpa adapter mengembalikan error limit. `exports.retentionMinutes` default 1.440. Handlers tetap `pupitre.export`, `pupitre.import`, dan `pupitre.bulk` diregistrasikan saat boot agar worker terpisah dapat menyelesaikan payload serializable. Import/bulk dapat memakai `.async()`; tanpa adapter keduanya tetap sinkron.
 - Social login uses the optional `@adonisjs/ally` peer. Add `ally_provider` and `config/ally.ts` to the host; Pupitre loads the peer only when a configured social route is used. Provider email fallback requires Ally to report a verified email.
 - `exports` dengan `@rikology/source` + `types` + `default` untuk setiap subpath:
@@ -136,13 +148,20 @@ Pengujian host memakai `@rikology/pupitre/testing`: `visitResource(slug, page, {
 4. `registry:check` — mulai M4 (WP40).
 5. `e2e` (Playwright, example app, SQLite) — artefak report saat gagal.
 
-`release.yml` (`workflow_dispatch`, input package + bump): `release-it` dengan `@release-it/conventional-changelog`, publish via npm trusted publishing (OIDC, tanpa token), tag `@rikology/pupitre@x.y.z`.
+Langkah WP40 aktif di job `checks`, tepat sesudah `verify:exports`; perubahan sumber tanpa regenerasi JSON menyebabkan CI gagal dengan instruksi `npm run registry:build`.
+
+| Gate WP42 pada job `checks` | Posisi | Kegagalan yang dideteksi |
+| --- | --- | --- |
+| `npm run bundle:budget` | Langsung setelah build example | Budget gzip/Brotli terlampaui, fitur berat tidak lazy, referensi manifest tidak lengkap |
+| `npm run verify:exports` | Setelah test package | Import runtime tidak dideklarasikan/tidak resolve, tarball kotor, aset rilis hilang |
+
+`release.yml` (`workflow_dispatch`, input `target`: `core` = `pupitre` + `pupitre-react` + `pupitre-ui` lockstep, atau satu plugin/scaffolder) menjalankan gerbang yang sama dengan CI (build, lint, typecheck, test, `verify:exports`, `registry:check`), lalu `npm publish --provenance` per workspace lewat npm trusted publishing (OIDC, tanpa token) dan mendorong tag `@rikology/<package>@x.y.z`. Versi tidak di-bump oleh workflow: bump dan CHANGELOG di-commit lebih dulu. Versi berisi `-` dipublikasikan dengan dist-tag `next`, selain itu `latest`.
 
 ## 9. Versi & rilis
 
-- Semua package inti (`pupitre`, `pupitre-react`, `pupitre-ui`) dirilis **lockstep** dengan versi sama; `pupitre-react` mendeklarasikan `peerDependencies: { "@rikology/pupitre": "^<versi saat ini>" }` yang di-bump oleh script rilis (npm workspaces tidak mengenal protokol `workspace:`; link lokal terjadi otomatis selama range cocok). Plugin berversi sendiri.
+- Semua package inti (`pupitre`, `pupitre-react`, `pupitre-ui`) dirilis **lockstep** dengan versi sama; `pupitre-react`, `pupitre-ui`, dan plugin resmi mendeklarasikan `peerDependencies: { "@rikology/pupitre": "^<major>.0.0" }` yang di-bump bersama versi (npm workspaces tidak mengenal protokol `workspace:`; link lokal terjadi otomatis selama range cocok). Plugin berversi sendiri.
 - `catalogVersion` = `major.minor` package.
-- Pre-release M1: `0.1.0-beta.x` dengan tag npm `next`.
+- Pre-release M1–M3: `0.x.0-beta.x` dengan tag npm `next`. Rilis 1.0 (M4): semua package `1.0.0` (inti lockstep; plugin resmi dan scaffolder mulai di `1.0.0` lalu berversi sendiri), `catalogVersion` `1.0`, range peer antar package `^1.0.0`.
 - Conventional Commits; scope = nama package (`feat(react): ...`, `fix(ui): ...`, `docs:`).
 
 ## 10. Example app
@@ -166,3 +185,11 @@ cd apps/example && cp .env.example .env && node ace migration:fresh --seed && np
 - `node ace make:resource Comment [--model=#models/comment] [--from-migration] [--force]` — membuat `app/admin/resources/comment_resource.ts` dari metadata Lucid (`$columnsDefinitions`, tipe deklarasi model/schema, enum dan belongsTo). Gunakan `--from-migration` saat model tidak mendeklarasikan tipe kolom. File yang sudah ada dilewati kecuali `--force`; relasi selain belongsTo dilewati dan dilaporkan.
 - `node ace pupitre:inspect [resource] [--json]` — policy/ability report, hasil lift closure tiap field (`expression`, `computed`, `static`, `server`) dan kolom searchable tanpa indeks (SQLite `PRAGMA index_list/index_info`, PostgreSQL `pg_indexes`). JSON memuat laporan yang sama; action modal forms tidak dievaluasi oleh endpoint server.
 - Di client: `window.__pupitre` (hanya dev) mengekspos store dan spec aktif.
+
+## Dokumentasi pengguna (WP41)
+
+`apps/docs` memakai Astro 7 dan Starlight 0.42, bahasa Inggris, dengan `site: https://pupitre.dev` dan output statis `dist/`. Jalankan `npm run dev -w apps/docs`, `npm run check -w apps/docs`, dan `npm run build -w apps/docs`; preview lokal: `npm run preview -w apps/docs -- --port 4321`.
+
+Hook npm `predev`/`precheck`/`prebuild` menjalankan `scripts/prepare-content.mjs`: reference API dibentuk dari deklarasi TypeScript sumber menggunakan parser TypeScript, dan halaman changelog mengimpor seluruh `packages/*/CHANGELOG.md`. File hasil ini diabaikan Git; jangan diedit manual. Panduan, landing, CLI dan migrasi Filament ada di `src/content/docs/`.
+
+Build docs mensyaratkan registry hasil WP40 di `packages/pupitre-ui/registry/public/r/`; hook Astro menyalin payload ke `dist/r/` dan index publik ke `dist/registry.json`. Registry belum dihasilkan menyebabkan build gagal dengan pesan eksplisit. Deploy seluruh `dist/` agar dokumentasi dan endpoint registry `/r/<name>.json` tersedia bersama.

@@ -63,8 +63,8 @@ Satu monorepo npm workspaces (konsisten dengan adonisjs-periscope) `rikoriswandh
 | `@rikology/pupitre-react` | Runtime client: page generik `Pupitre`, Inertia bridge, action handlers, state store, hooks; kontrak catalog diimpor dari core (@rikology/pupitre/catalog) | react, @inertiajs/react 3, @json-render/core, @json-render/react, zod | npm |
 | `@rikology/pupitre-ui` | Implementasi default semua komponen catalog (field, column cell, layout, modal, widget, shell) | shadcn/ui (Base UI), @base-ui-components/react, tailwind 4, @tanstack/react-table, recharts, tiptap, lucide | npm + shadcn registry (`registry.json` di repo yang sama) |
 | `@rikology/pupitre-shield` | Roles & permissions, UI pengelolaannya, sinkron ke Bouncer | pupitre | npm (plugin resmi pertama) |
-| `@rikology/pupitre-transmit` | Driver notifikasi realtime via @adonisjs/transmit | pupitre, @adonisjs/transmit | npm (plugin) |
-| `@rikology/create-pupitre-plugin` | Template plugin (dipakai `make:plugin`) | — | npm |
+| `@rikology/pupitre-transmit` | Adapter push tabel/notifikasi via @adonisjs/transmit; client di subpath `/client` | pupitre, optional peers @adonisjs/transmit dan @adonisjs/transmit-client | npm (plugin) |
+| `@rikology/create-pupitre-plugin` | Template package plugin (dijalankan oleh `make:plugin --package [--dir]`; tanpa flag menghasilkan plugin lokal) | — | npm |
 
 Tambahan: `@rikology/pupitre-audit` (plugin, UI di atas `adonisjs-audit-trail`). Driver untuk package pihak ketiga dan package `@rikology/adonisjs-*` tidak jadi package terpisah; mereka subpath di core (`@rikology/pupitre/drivers/tenant`, `/drivers/notifications`, `/drivers/queue`, `/drivers/audit`) dengan optional peer dependency, sehingga `pupitre` tetap satu install dan host hanya memasang peer yang dipakai. Kontrak catalog (Zod) juga di core, subpath `@rikology/pupitre/catalog`, supaya renderer Vue/Svelte nanti memakai kontrak yang sama tanpa bergantung pada `pupitre-react`.
 
@@ -116,7 +116,7 @@ export default definePanel('admin')
   ])
   .globalSearch({ keyBinding: 'mod+k' })
   .notifications({ driver: 'polling', interval: 30_000 })
-  .plugins([shield({ superAdminRole: 'super_admin' })])
+  .plugins([shield({ userModel: () => import('#models/user'), superAdminRole: 'super_admin' })])
   .brand({ name: 'Acme', logo: '/logo.svg', favicon: '/favicon.ico' })
   .theme({ primary: 'violet', darkMode: 'system' })
 ```
@@ -268,7 +268,7 @@ import { table as t } from '@rikology/pupitre'
 | Summaries | Query agregasi terpisah di atas query yang sudah terfilter, dikirim sebagai `summary` prop |
 | Inline edit (`toggle`, `select`, `textInput` column) | `PATCH .../posts/:id/column/:name` dengan validasi VineJS satu field |
 | Reorder | `reorderable('sortOrder')` → endpoint `POST .../reorder` dengan `ids[]` |
-| Polling | `poll()` → Inertia `router.reload` berkala; diganti push kalau plugin Transmit aktif |
+| Polling / push | `poll()` → Inertia `router.reload` berkala; client realtime + channel mengganti interval dengan ping invalidasi. Tanpa keduanya, polling tetap aktif |
 | Column toggles & layout | Disimpan di `localStorage` per tabel; `t.layout.grid()` untuk card layout |
 
 Kolom v1: `text`, `badge`, `icon`, `image`, `color`, `toggle`, `select`, `textInput`, `checkbox`, `custom` (komponen React host) atau t.fragment() untuk spec deklaratif. Kolom relasi memakai notasi titik `author.name`; compiler menerjemahkannya ke `preload` + `whereHas` untuk sort dan search.
@@ -358,7 +358,7 @@ export default definePage('settings').path('/settings').icon('settings')
 
 **Global search.** Tiap resource dengan `globallySearchable()` menyumbang query; endpoint `GET /_pupitre/search?q=` menjalankan semuanya paralel dengan batas 5 hasil per resource, hasil = `{ resource, title, details, url }`. Client memakai cmdk; shortcut dari panel.
 
-**Notifications.** Dua jalur, seperti Filament: flash (shared prop `flash` → toast) dan database notifications (inbox lewat adapter `notifications` dengan driver `@rikology/adonisjs-notifications`, bukan tabel milik Pupitre; polling via `router.reload({ only: ['notifications'] })`). API server: `notify.success('Saved').body('...').actions([...]).sendToDatabase(user)`. Adapter realtime hanya mengganti mekanisme pemicu reload; plugin Transmit mengirim event `pupitre:notification` ke channel user.
+**Notifications.** Dua jalur: flash (shared prop `flash` → toast) dan database notifications (inbox lewat adapter `notifications`, bukan tabel milik Pupitre). API server: `notify.success('Saved').body('...').actions([...]).sendToDatabase(user)`. Dengan `transmitRealtime()` dan instance host `transmitRealtimeClient()` pada `<Pupitre realtime={client} />`, ping `{ type: 'pupitre:notification' }` pada channel user setiap panel yang mengaktifkan notifications memicu reload shared props dan inbox terbuka. Tanpa client/channel, interval panel tetap menjadi fallback. Tabel memakai `{ type: 'pupitre:table', resource }` di channel panel/tenant untuk mengambil ulang `dataProp`; event tidak memuat data sensitif.
 
 ## Compiler: builder → spec json-render
 
@@ -415,7 +415,11 @@ Empat bagian runtime di `pupitre-react`:
 3. **Inertia bridge**: implementasi semua action json-render: `setState` (bawaan), `visit`, `reload({ only })`, `submitForm`, `openAction`, `runAction`, `evaluate` (untuk `live({ server: true })`), `fetchOptions`, `upload`. Semuanya memakai `router` Inertia v3 (deferred props, `only`, `preserveState`), bukan fetch manual, sehingga flash, redirect, dan error 422 ditangani seragam.
 4. **Registry**: `defineRegistry(catalog, components)`; default `components` diimpor dari `pupitre-ui`. Host menimpa satu-satu: `components: { ...pupitreUi, Select: MySelect }`. Komponen hasil `shadcn add` punya kontrak Zod yang sama, jadi penggantiannya type-checked.
 
-Distribusi `pupitre-ui` ganda: dipublikasikan ke npm sebagai paket biasa, dan folder sumbernya diekspos sebagai shadcn registry (`registry.json` + `components/*.tsx`) sehingga `npx shadcn add https://pupitre.dev/r/select` menyalin file ke `inertia/components/pupitre/`. Keduanya dibangun dari sumber yang sama; CI memastikan registry tidak tertinggal. Semua komponen dibangun di atas Base UI, bukan Radix, dan registry mem-pin `registry:base` ke `base`; varian Radix tidak disediakan di v1, project Radix lama memakai paket npm `pupitre-ui` apa adanya.
+Distribusi `pupitre-ui` ganda: paket npm dan registry shadcn dari sumber yang sama. `npx shadcn@4 add https://pupitre.dev/r/select.json` menyalin sumber ke `inertia/components/pupitre/`; CI memastikan registry tidak tertinggal. Semua komponen memakai Base UI, bukan Radix.
+
+Kontrak WP40: manifest di `packages/pupitre-ui/registry/registry.json`, payload berisi `content` di `registry/public/r/`, index publik di `registry/public/registry.json`. Docs menyajikan `/registry.json` dan `/r/*`. Jenis item tetap semantik (`registry:component`, `registry:lib`, `registry:hook`, dan lainnya), tetapi setiap file memakai `registry:file` dengan target `~/inertia/components/pupitre/<path-sumber>`. Shadcn menyelesaikan `~/` relatif terhadap root host (`--cwd`), bukan alias `components.json` atau direktori `src`. Nama item hook memakai kebab-case; nama file underscore tetap dipertahankan agar import relatif tidak berubah. Jangan memakai `--path`: shadcn meratakan semua file ke basename dan memutus import.
+
+Ace: `node ace pupitre:ui add select --yes`; `add` ialah operasi. `--registry <origin>` mengganti origin index/item; `--dry-run` memvalidasi tanpa menyalin. Installer memakai `npx shadcn@4 add` tanpa passthrough `--path`. Aktifkan override di `inertia/admin/registry.ts`.
 
 Batasan SSR-safe: tidak ada akses `window`/`document` di module scope; editor (Tiptap, CodeMirror), chart, dan map di-lazy-load lewat `React.lazy`; store dibuat di dalam provider, bukan singleton modul.
 
@@ -442,17 +446,19 @@ Batasan SSR-safe: tidak ada akses `window`/`document` di module scope; editor (T
 
 Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan peringatan di `pupitre:inspect`. Perintah ini juga melaporkan ability yang dibutuhkan resource tetapi tidak diimplementasikan policy. Plugin `pupitre-shield` menambah tabel roles/permissions, UI pengelolaannya, dan policy generik yang membaca permission `posts.update` dari DB.
 
+Shield WP37 memakai permission global `<slug>.<ability>`, semua ability memiliki method policy sendiri sehingga tidak memakai fallback core. `.policy()` eksplisit tetap utuh; gunakan `except` untuk kebijakan yang hanya terdaftar melalui config. `shieldRolesField()` membutuhkan relation `roles` pada User host; `shieldCan('settings.access')` dipasang pada `.canAccess()` page dengan grant eksplisit. `shield:sync --user=<id|email>` menyinkronkan permission dan bootstrap super-admin; semua lookup role/permission di-cache per request/user, bukan lintas request.
+
 **Adapters.** Semua di `config/pupitre.ts`, tipe interface diekspor dari core:
 
 - `jobs`: `{ dispatch(job, payload): Promise<void>; register(job, handler): void }` untuk export/import besar, scheduled report, bulk action `.async()`. Driver resmi memakai @adonisjs/queue (optional peer, lazy import dari @rikology/pupitre/drivers/queue); handler harus diregistrasi saat boot agar worker dapat menjalankan job. Tanpa adapter, jalur sinkron dibatasi konfigurasi baris.
-- `realtime`: `{ subscribe(channel, cb), publish(channel, payload) }`; bawaan `polling` (tanpa server push, interval dari panel). `pupitre-transmit` mengimplementasikannya di atas `@adonisjs/transmit`.
+- `realtime`: `{ driver, publish(channel, event), initialize?(manager) }` di server; client memiliki `{ subscribe(channel, cb) }`. Tanpa client, polling memakai interval panel. `pupitre-transmit` menggunakan `panelGuard` dan `realtimeChannels.patterns` milik core untuk otorisasi channel, bukan format/guard salinan.
 - `storage`: disk Flydrive untuk `fileUpload`, `export`, avatar.
 - `mail`: mailer `@adonisjs/mail` untuk reset password, verifikasi, notifikasi email.
 - `cache`: untuk compiled schema dan hasil `summarize`; default in-memory, bisa Bentocache.
 
 * `tenancy`: `{ resolve(ctx), scope(query, tenant), fill(record, tenant), listForUser(user) }`. Driver resmi memakai `@rikology/adonisjs-tenant`: mode `url` = `PathResolver` + prefix route, mode `implicit` = resolver custom dari kolom user; scoping lewat mixin `TenantScope` bila model memakainya, atau `scope` default dari driver bila tidak.
 * `notifications`: `{ flash(ctx, message), toInbox(user, message), inbox(user, page), markRead(user, ids) }`. Driver resmi memakai `@rikology/adonisjs-notifications`: `notify.success().sendToDatabase(user)` menjadi notification class ke channel `database`, inbox dibaca dari `user.notifications()`. Tanpa driver, hanya flash yang bekerja.
-* `audit`: `{ forRecord(model, id), recent(filters) }`, dipakai plugin `pupitre-audit`; driver resmi membaca `Audit` dari `@rikology/adonisjs-audit-trail`.
+* `audit`: `{ forRecord(model, id, { page, perPage, tenantId? }) }` untuk timeline record. Driver resmi membaca `Audit` dari `@rikology/adonisjs-audit-trail`. Adapter kustom hanya menyediakan timeline; resource Activity milik `pupitre-audit` secara khusus memakai model audit-trail, bukan adapter ini.
 
 ## Ace commands & discovery hook
 
@@ -466,7 +472,7 @@ Tanpa policy, default `allow` (sama seperti Filament tanpa Shield), dengan perin
 | `make:widget PostStats --type=stats\|chart\|table` | Stub widget |
 | `make:relation-manager Post comments` | Stub dengan table + form relasi |
 | `make:panel app` | Panel kedua dengan path dan guard sendiri |
-| `make:plugin acme-audit` | Scaffold package plugin dari template `create-pupitre-plugin` |
+| `make:plugin acme-audit [--package] [--dir ./plugins/audit]` | Default: `app/admin/plugins/acme_audit_plugin.ts`; `--package`: jalankan `npx --yes @rikology/create-pupitre-plugin@<major-core> acme-audit --dir <dir>` untuk package mandiri |
 | `pupitre:inspect posts` | Cetak closure yang jatuh ke `static`/`server`, policy yang hilang, kolom tanpa index untuk `searchable` |
 | `pupitre:routes` | Daftar route panel + nama `urlFor` |
 | `pupitre:ui add select` | Pembungkus `npx shadcn add` dari registry Pupitre |
