@@ -7,6 +7,96 @@
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
+export class AuditArchiveEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'hash', 'id', 'prevHash', 'seq', 'stream'] as const
+  $columns = AuditArchiveEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare hash: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare prevHash: string
+  @column()
+  declare seq: bigint | number
+  @column()
+  declare stream: string
+}
+
+export class AuditChainCheckpointSchema extends BaseModel {
+  static $columns = ['createdAt', 'hash', 'seq', 'stream'] as const
+  $columns = AuditChainCheckpointSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare hash: string
+  @column()
+  declare seq: bigint | number
+  @column()
+  declare stream: string
+}
+
+export class AuditMaintenanceGuardSchema extends BaseModel {
+  static $columns = ['operation'] as const
+  $columns = AuditMaintenanceGuardSchema.$columns
+  @column({ isPrimary: true })
+  declare operation: string
+}
+
+export class AuditSchema extends BaseModel {
+  static $columns = ['actorId', 'actorLabel', 'actorType', 'auditableId', 'auditableType', 'correlationId', 'createdAt', 'event', 'hash', 'httpMethod', 'id', 'ipAddress', 'metadata', 'newValues', 'oldValues', 'prevHash', 'requestId', 'schemaVersion', 'seq', 'stream', 'tags', 'tenantId', 'url', 'userAgent'] as const
+  $columns = AuditSchema.$columns
+  @column()
+  declare actorId: string | null
+  @column()
+  declare actorLabel: string | null
+  @column()
+  declare actorType: string | null
+  @column()
+  declare auditableId: string | null
+  @column()
+  declare auditableType: string | null
+  @column()
+  declare correlationId: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare event: string
+  @column()
+  declare hash: string
+  @column()
+  declare httpMethod: string | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare ipAddress: string | null
+  @column()
+  declare metadata: any | null
+  @column()
+  declare newValues: any | null
+  @column()
+  declare oldValues: any | null
+  @column()
+  declare prevHash: string
+  @column()
+  declare requestId: string | null
+  @column()
+  declare schemaVersion: string
+  @column()
+  declare seq: bigint | number
+  @column()
+  declare stream: string
+  @column()
+  declare tags: any
+  @column()
+  declare tenantId: string | null
+  @column()
+  declare url: string | null
+  @column()
+  declare userAgent: string | null
+}
+
 export class CategorySchema extends BaseModel {
   static $columns = ['createdAt', 'id', 'name', 'slug', 'sortOrder', 'tenantId', 'updatedAt'] as const
   $columns = CategorySchema.$columns
@@ -224,6 +314,50 @@ export class PupitrePasswordResetSchema extends BaseModel {
   declare tokenHash: string
   @column()
   declare userId: number
+}
+
+export class PupitrePermissionRoleSchema extends BaseModel {
+  static $columns = ['permissionId', 'roleId'] as const
+  $columns = PupitrePermissionRoleSchema.$columns
+  @column()
+  declare permissionId: number
+  @column({ isPrimary: true })
+  declare roleId: number
+}
+
+export class PupitrePermissionSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'name', 'updatedAt'] as const
+  $columns = PupitrePermissionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+}
+
+export class PupitreRoleUserSchema extends BaseModel {
+  static $columns = ['roleId', 'userId'] as const
+  $columns = PupitreRoleUserSchema.$columns
+  @column({ isPrimary: true })
+  declare roleId: number
+  @column()
+  declare userId: number
+}
+
+export class PupitreRoleSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'name', 'updatedAt'] as const
+  $columns = PupitreRoleSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }
 
 export class RevisionSchema extends BaseModel {

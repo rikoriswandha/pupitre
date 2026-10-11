@@ -10,6 +10,7 @@ export default defineTheme({
   sidebarCollapsibleOnDesktop: true,
   contentWidth: '7xl',
   darkMode: 'system',
-  primary: 'oklch(0.55 0.18 255)',
+  // L=0.50 keeps primary text ≥4.5:1 on the tinted active-nav and muted badge backgrounds.
+  primary: 'oklch(0.5 0.18 255)',
   radius: '0.5rem',
 })

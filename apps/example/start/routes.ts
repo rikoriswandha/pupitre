@@ -10,8 +10,12 @@
 import { middleware } from '#start/kernel'
 import { controllers } from '#generated/controllers'
 import router from '@adonisjs/core/services/router'
+import transmit from '@adonisjs/transmit/services/main'
 
-router.on('/').renderInertia('home', {}).as('home')
+// The example exists to demo Pupitre: the site root opens the admin panel.
+router.on('/').redirectToPath('/admin').as('home')
+
+transmit.registerRoutes((route) => route.use(middleware.auth()))
 
 router
   .group(() => {
@@ -25,7 +29,8 @@ router
 
 router
   .group(() => {
-    router.on('/dashboard').renderInertia('dashboard', {}).as('dashboard')
+    // Host login/signup land here; send them to the admin panel.
+    router.on('/dashboard').redirectToPath('/admin').as('dashboard')
     router.post('logout', [controllers.Session, 'destroy'])
   })
   .use(middleware.auth())

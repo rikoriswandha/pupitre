@@ -1,4 +1,5 @@
 import { actions, defineResource, pages, table } from '@rikology/pupitre'
+import { shieldRolesField } from '@rikology/pupitre-shield'
 import User from '#models/user'
 import UserPolicy from '#policies/user_policy'
 
@@ -20,6 +21,7 @@ export default defineResource(User)
         s.text('fullName').label('Full name').maxLength(160),
         s.email('email').required().maxLength(254).unique({ ignoreRecord: true }),
         s.text('timezone').label('Timezone').placeholder('Asia/Jakarta'),
+        shieldRolesField(),
       ]),
   ])
   .table((t) =>

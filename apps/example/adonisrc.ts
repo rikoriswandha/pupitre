@@ -33,6 +33,7 @@ export default defineConfig({
     () => import('@adonisjs/session/commands'),
     () => import('@adonisjs/inertia/commands'),
     () => import('@rikology/pupitre/commands'),
+    () => import('@rikology/pupitre-shield/commands'),
   ],
 
   /*
@@ -65,6 +66,8 @@ export default defineConfig({
     () => import('@adonisjs/drive/drive_provider'),
     () => import('#providers/api_provider'),
     () => import('@rikology/adonisjs-notifications/notification_provider'),
+    () => import('@adonisjs/transmit/transmit_provider'),
+    () => import('@rikology/adonisjs-audit-trail/audit_provider'),
     () => import('@rikology/pupitre/pupitre_provider'),
     () => import('@adonisjs/limiter/limiter_provider'),
   ],

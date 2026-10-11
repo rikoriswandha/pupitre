@@ -12,16 +12,16 @@
   --serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
 
   --paper: #f5f5f6;
-  --card: #ffffff;
+  --site-card: #ffffff;
   --ink: #0a0a0b;
   --ink-2: #2a2c30;
-  --muted: #6b6f76;
+  --site-muted: #6b6f76;
   --subtle: #a4a8af;
   --line: #ededee;
   --line-2: #dddfe2;
   --btn: #0a0a0b;
   --btn-fg: #ffffff;
-  --ring: rgba(10, 10, 11, 0.13);
+  --site-ring: rgba(10, 10, 11, 0.13);
   --field: #ffffff;
   --ok: #18794e;
 
@@ -32,56 +32,62 @@
 
 :root[data-theme='dark'] {
   --paper: #08080a;
-  --card: #111114;
+  --site-card: #111114;
   --ink: #ededee;
   --ink-2: #c4c6ca;
-  --muted: #8b8f97;
+  --site-muted: #8b8f97;
   --subtle: #585c64;
   --line: #1e1f23;
   --line-2: #2c2e33;
   --btn: #ededee;
   --btn-fg: #0a0a0b;
-  --ring: rgba(237, 237, 238, 0.14);
+  --site-ring: rgba(237, 237, 238, 0.14);
   --field: #0c0c0f;
   --ok: #3ecf8e;
   color-scheme: dark;
 }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-html,
-body {
-  height: 100%;
-}
-body {
-  font-family: var(--sans);
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 15px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-a {
-  color: inherit;
-  text-decoration: none;
-}
-button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-input {
-  font: inherit;
-}
-::selection {
-  background: var(--ink);
-  color: var(--paper);
+/*
+ * Element resets live in the base layer: unlayered rules would beat Tailwind's
+ * layered utilities and strip padding/margins/backgrounds from Pupitre components.
+ */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    font-family: var(--sans);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  input {
+    font: inherit;
+  }
+  ::selection {
+    background: var(--ink);
+    color: var(--paper);
+  }
 }
 
 /* --- type helpers --- */
@@ -119,7 +125,7 @@ input {
 }
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow: 0 0 0 3px var(--site-ring);
 }
 .btn:active:not(:disabled) {
   scale: 0.96;
@@ -132,7 +138,7 @@ input {
   opacity: 0.88;
 }
 .btn--secondary {
-  background: var(--card);
+  background: var(--site-card);
   color: var(--ink);
   border-color: var(--line-2);
 }
@@ -143,7 +149,7 @@ input {
   color: var(--ink);
 }
 .btn--ghost:hover {
-  color: var(--muted);
+  color: var(--site-muted);
 }
 .btn--block {
   width: 100%;
@@ -193,7 +199,7 @@ input {
 .field__input:focus {
   outline: none;
   border-color: var(--ink);
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow: 0 0 0 3px var(--site-ring);
 }
 .field__input:-webkit-autofill,
 .field__input:-webkit-autofill:hover,
@@ -215,7 +221,7 @@ input {
 }
 .field__hint {
   font-size: 12.5px;
-  color: var(--muted);
+  color: var(--site-muted);
   text-wrap: pretty;
 }
 .field__error {
@@ -248,7 +254,7 @@ input {
   height: 36px;
   border-radius: var(--r);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--site-muted);
   transition:
     background 0.15s,
     color 0.15s,
@@ -262,7 +268,7 @@ input {
   inset: -2px;
 }
 .iconbtn:hover {
-  background: var(--card);
+  background: var(--site-card);
   color: var(--ink);
   border-color: var(--line-2);
 }
@@ -322,7 +328,7 @@ input {
 .header--bar {
   display: flex;
   height: 60px;
-  background: var(--card);
+  background: var(--site-card);
   border-bottom: 1px solid var(--line);
 }
 
@@ -337,7 +343,7 @@ input {
 .prose-card {
   width: 580px;
   max-width: 100%;
-  background: var(--card);
+  background: var(--site-card);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
   padding: 42px 46px 24px;
@@ -460,7 +466,7 @@ input {
   letter-spacing: -0.01em;
 }
 .lrow__desc {
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 13.5px;
   white-space: nowrap;
 }
@@ -503,7 +509,7 @@ input {
   font-weight: 600;
   font-size: 12px;
   box-shadow:
-    0 0 0 3px var(--card),
+    0 0 0 3px var(--site-card),
     0 2px 6px rgba(0, 0, 0, 0.18);
   position: relative;
   transition:
@@ -538,7 +544,7 @@ input {
   flex-direction: column;
   padding: 30px 36px;
   position: relative;
-  background: var(--card);
+  background: var(--site-card);
 }
 .auth__form-wrap {
   margin: auto;
@@ -560,7 +566,7 @@ input {
   text-wrap: balance;
 }
 .auth__sub {
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 14px;
   margin-top: 4px;
 }
@@ -568,7 +574,7 @@ input {
   margin-top: 18px;
   text-align: center;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--site-muted);
 }
 
 .auth__aside {
@@ -601,7 +607,7 @@ input {
   letter-spacing: -0.01em;
 }
 .pitch__p {
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 13.5px;
   line-height: 1.55;
   text-wrap: pretty;
@@ -622,7 +628,7 @@ input {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--line);
-  background: var(--card);
+  background: var(--site-card);
 }
 .subnav__inner {
   display: flex;
@@ -638,7 +644,7 @@ input {
   gap: 7px;
   font-size: 14px;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--site-muted);
   position: relative;
 }
 .subnav__item:hover {
@@ -689,7 +695,7 @@ input {
 }
 .page__description {
   margin-top: 4px;
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 14.5px;
   text-wrap: pretty;
 }
@@ -698,7 +704,7 @@ input {
   gap: 10px;
 }
 .panel {
-  background: var(--card);
+  background: var(--site-card);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
   padding: 28px;
@@ -715,7 +721,7 @@ input {
 }
 .section__description {
   margin-top: 2px;
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 13.5px;
   text-wrap: pretty;
 }
@@ -738,7 +744,7 @@ input {
   flex-direction: column;
   gap: 2px;
   padding: 8px;
-  background: var(--card);
+  background: var(--site-card);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
 }
@@ -751,7 +757,7 @@ input {
   border-radius: var(--r);
   font-size: 14px;
   font-weight: 500;
-  color: var(--muted);
+  color: var(--site-muted);
   white-space: nowrap;
   transition:
     background 0.15s,
@@ -762,11 +768,11 @@ input {
 }
 .sidebar-layout__item[aria-current='page'] {
   color: var(--ink);
-  background: color-mix(in oklab, var(--ink) 6%, var(--card));
+  background: color-mix(in oklab, var(--ink) 6%, var(--site-card));
 }
 .sidebar-layout__item:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--ring);
+  box-shadow: 0 0 0 3px var(--site-ring);
 }
 .sidebar-layout__content {
   min-width: 0;
@@ -787,7 +793,7 @@ input {
   height: 54px;
   border-radius: var(--r);
   border: 1px solid var(--line-2);
-  background: var(--card);
+  background: var(--site-card);
   display: grid;
   place-items: center;
   color: var(--subtle);
@@ -800,7 +806,7 @@ input {
   text-wrap: balance;
 }
 .empty p {
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 14.5px;
   line-height: 1.55;
   text-wrap: pretty;
@@ -808,11 +814,11 @@ input {
 .kbd {
   font-family: var(--mono);
   font-size: 12px;
-  background: var(--card);
+  background: var(--site-card);
   border: 1px solid var(--line-2);
   border-radius: 6px;
   padding: 2px 7px;
-  color: var(--muted);
+  color: var(--site-muted);
 }
 
 /* ==========================================================================
@@ -828,7 +834,7 @@ input {
   align-items: flex-start;
   gap: 12px;
   width: 100%;
-  background: var(--card);
+  background: var(--site-card);
   border: 1px solid var(--line-2);
   border-radius: var(--r-lg);
   box-shadow:
@@ -862,7 +868,7 @@ input {
   letter-spacing: -0.005em;
 }
 [data-sonner-toaster] [data-sonner-toast] [data-description] {
-  color: var(--muted);
+  color: var(--site-muted);
   font-size: 13.5px;
   line-height: 1.5;
 }

@@ -8,8 +8,9 @@ import User from '#models/user'
 import PostLink from '#models/post_link'
 import Tag from '#models/tag'
 import Revision from '#models/revision'
+import { Auditable } from '@rikology/adonisjs-audit-trail/auditable'
 
-export default class Post extends PostSchema {
+export default class Post extends Auditable(PostSchema) {
   @column({
     prepare: (value) => JSON.stringify(value),
     consume: (value: unknown) => (typeof value === 'string' ? JSON.parse(value) : value),

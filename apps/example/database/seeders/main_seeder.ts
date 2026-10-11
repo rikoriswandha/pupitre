@@ -7,6 +7,7 @@ import Comment from '#models/comment'
 import Tenant from '#models/tenant'
 import Tag from '#models/tag'
 import User from '#models/user'
+import { Role, Permission } from '@rikology/pupitre-shield'
 
 export default class MainSeeder extends BaseSeeder {
   async run() {
@@ -28,6 +29,18 @@ export default class MainSeeder extends BaseSeeder {
         emailVerifiedAt: DateTime.now(),
       }
     )
+    const superAdmin = await Role.firstOrCreate({ name: 'super-admin' })
+    const editorRole = await Role.firstOrCreate({ name: 'editor' })
+    const editorPermissions = await Permission.fetchOrCreateMany('name', [
+      { name: 'posts.viewAny' },
+      { name: 'posts.view' },
+      { name: 'posts.update' },
+    ])
+    await editorRole
+      .related('permissions')
+      .sync(editorPermissions.map((permission) => permission.id))
+    await admin.related('roles').sync([superAdmin.id])
+    await editor.related('roles').sync([editorRole.id])
     // Dedicated account for the password-reset e2e flow so it can't affect other logins.
     const resetUser = await User.updateOrCreate(
       { email: 'reset@example.com' },

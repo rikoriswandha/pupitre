@@ -1,4 +1,6 @@
 import { definePanel, nav } from '@rikology/pupitre'
+import { shield } from '@rikology/pupitre-shield'
+import { audit } from '@rikology/pupitre-audit'
 import { resources, pages, widgets } from '#generated/admin'
 import Post from '#models/post'
 import type User from '#models/user'
@@ -63,6 +65,14 @@ const adminPanel = definePanel('admin')
   ])
   .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])
   .theme(adminTheme)
+  .plugins([
+    shield({
+      userModel: () => import('#models/user'),
+      resources: ['roles'],
+      navigationGroup: 'Administration',
+    }),
+    audit({ resources: ['posts'], authorize: (ctx) => Boolean(ctx.auth.user) }),
+  ])
 
 const socialProviders = [
   ...(process.env.PUPITRE_FAKE_ALLY === 'true' ? ['fake'] : []),

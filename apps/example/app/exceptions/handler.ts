@@ -1,6 +1,7 @@
 import app from '@adonisjs/core/services/app'
 import { type HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 import type { StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
+import { errors as shieldErrors } from '@adonisjs/shield'
 
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
@@ -30,6 +31,15 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * response to the client
    */
   async handle(error: unknown, ctx: HttpContext) {
+    // Rejected mutations remain 403, including browser forms. Inertia callers
+    // receive a valid page response instead of opening the raw-JSON error modal.
+    if (error instanceof shieldErrors.E_BAD_CSRF_TOKEN) {
+      if (ctx.request.header('x-inertia') || ctx.request.accepts(['html', 'json']) === 'html') {
+        ctx.response.status(403)
+        return ctx.response.send(await ctx.inertia.render('errors/csrf_expired', {}))
+      }
+      return ctx.response.forbidden({ errors: [{ code: error.code, message: error.message }] })
+    }
     return super.handle(error, ctx)
   }
 

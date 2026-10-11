@@ -54,6 +54,7 @@ pupitreTest(
         .getByRole('button', { name: /create|save/i })
         .last()
         .click()
+      await page.waitForURL(/\/admin\/acme\/categories\/\d+\/edit/)
       await page.goto('/admin/acme/categories')
     }
     await page.getByRole('searchbox', { name: 'Search' }).fill(orderBatch)

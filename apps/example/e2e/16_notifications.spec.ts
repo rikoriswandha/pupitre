@@ -24,7 +24,7 @@ pupitreTest(
     await tray.click()
     await expect(tray.locator('span')).toHaveText('1')
     await expect(
-      page.getByRole('region', { name: 'Notifications' }).getByText('Post published').first()
+      page.getByRole('dialog', { name: 'Notifications' }).getByText('Post published').first()
     ).toBeVisible()
     await page.getByRole('button', { name: 'Mark all read' }).click()
     await expect(tray.locator('span')).toHaveCount(0)
