@@ -12,3 +12,4 @@ tmp/
 playwright-report/
 test-results/
 packages/pupitre-ui/playwright/.cache/
+*.tsbuildinfo

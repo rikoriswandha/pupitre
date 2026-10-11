@@ -7,12 +7,30 @@
  */
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { checkDependencies } from './dependencies.mjs'
+import { checkPackedFiles } from './packaging.mjs'
 
 const root = fileURLToPath(new URL('../../', import.meta.url))
-const packages = ['packages/pupitre', 'packages/pupitre-react', 'packages/pupitre-ui']
+const packages = [
+  'packages/pupitre',
+  'packages/pupitre-react',
+  'packages/pupitre-ui',
+  'packages/pupitre-shield',
+  'packages/pupitre-audit',
+  'packages/pupitre-transmit',
+  'packages/create-pupitre-plugin',
+]
+
+// Declaration-only mode supports checking an isolated unpacked package fixture.
+if (process.argv[2] === '--package') {
+  const result = await checkDependencies(process.argv[3])
+  for (const error of result.errors) console.error(error)
+  console.log(`${result.files} runtime files, ${result.errors.length} dependency errors`)
+  process.exit(result.errors.length ? 1 : 0)
+}
 
 /**
  * Optional shape checks per `<package name><subpath>`. Subpaths without an
@@ -44,6 +62,21 @@ const shapeChecks = {
   '@rikology/pupitre-ui/testing': (mod) => {
     assert.equal(typeof mod.pupitreTest, 'function')
     assert.equal(typeof mod.AdminPage, 'function')
+  },
+  '@rikology/pupitre-shield': (mod) => {
+    assert.equal(typeof mod.shield, 'function')
+  },
+  '@rikology/pupitre-audit': (mod) => {
+    assert.equal(typeof mod.audit, 'function')
+  },
+  '@rikology/pupitre-transmit': (mod) => {
+    assert.equal(typeof mod.transmitRealtime, 'function')
+  },
+  '@rikology/pupitre-transmit/client': (mod) => {
+    assert.equal(typeof mod.transmitRealtimeClient, 'function')
+  },
+  '@rikology/create-pupitre-plugin': (mod) => {
+    assert.equal(typeof mod.createPlugin, 'function')
   },
 }
 
@@ -81,6 +114,34 @@ let failed = 0
 for (const relative of packages) {
   const pkgDir = join(root, relative)
   const pkg = JSON.parse(await readFile(join(pkgDir, 'package.json'), 'utf-8'))
+  const pack = spawnSync('npm', ['pack', '--dry-run', '--json', '-w', relative], {
+    cwd: root,
+    encoding: 'utf8',
+  })
+  const packErrors =
+    pack.status === 0
+      ? checkPackedFiles(pkg.name, JSON.parse(pack.stdout)[0].files)
+      : [`${pkg.name}: npm pack failed: ${pack.stderr}`]
+  if (packErrors.length) {
+    failed += packErrors.length
+    for (const error of packErrors) console.error(`✗ ${error}`)
+  } else {
+    passed++
+    console.log(`✓ ${pkg.name}: tarball hygiene and release assets`)
+  }
+  const dependencies = await checkDependencies(pkgDir)
+  if (dependencies.errors.length) {
+    failed += dependencies.errors.length
+    for (const error of dependencies.errors) console.error(`✗ ${error}`)
+  } else {
+    passed++
+    console.log(`✓ ${pkg.name}: ${dependencies.files} runtime files use declared dependencies`)
+  }
+  // Dependencies must stay external: a `build/node_modules` means tsdown inlined an undeclared one.
+  if (await stat(join(pkgDir, 'build/node_modules')).catch(() => undefined)) {
+    failed++
+    console.error(`✗ ${pkg.name}: build/node_modules exists (undeclared dependency was bundled)`)
+  }
   for (const [subpath, target] of Object.entries(pkg.exports)) {
     const file = runtimeTarget(target)
     if (!file.endsWith('.js')) {
@@ -133,6 +194,47 @@ if (isolation.status === 0) {
 } else {
   failed++
   console.error(`✗ catalog isolation: ${isolation.stderr.trim()}`)
+}
+
+/**
+ * Source imports do not prove bundled dependency ordering. Install the browser
+ * CSP trap in a fresh process before importing the built catalog, and count even
+ * Function probes whose errors Zod catches internally.
+ */
+const catalogCsp = spawnSync(
+  process.execPath,
+  [
+    '--input-type=module',
+    '-e',
+    `
+    import assert from 'node:assert/strict'
+    globalThis.window = {}
+    let probes = 0
+    const blocked = () => {
+      probes++
+      throw new Error('CSP blocks Function')
+    }
+    globalThis.Function = new Proxy(globalThis.Function, {
+      apply: blocked,
+      construct: blocked,
+    })
+    const mod = await import(${JSON.stringify(pathToFileURL(join(root, 'packages/pupitre/build/catalog/index.js')).href)})
+    const { z } = await import('zod')
+    assert.equal(z.config().jitless, true, 'Browser catalog must configure Zod as jitless')
+    mod.actionResult.safeParse({})
+    mod.realtimeEvent.parse({ type: 'pupitre:notification' })
+    mod.actions.visit.params.parse({ url: '/admin' })
+    assert.equal(probes, 0, 'Built catalog must never attempt a CSP Function probe')
+    `,
+  ],
+  { encoding: 'utf-8', cwd: join(root, 'packages/pupitre') }
+)
+if (catalogCsp.status === 0) {
+  console.log('✓ built @rikology/pupitre/catalog initializes and parses without Function probes')
+  passed++
+} else {
+  failed++
+  console.error(`✗ built catalog CSP: ${catalogCsp.error?.message ?? catalogCsp.stderr.trim()}`)
 }
 
 console.log(`\n${passed} passed, ${failed} failed`)

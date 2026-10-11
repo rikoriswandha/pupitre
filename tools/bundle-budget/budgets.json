@@ -1,0 +1,41 @@
+{
+  "headroom": "10% above measured Node compressed byte totals, rounded up; gzip level 9, brotli quality 11; sums of individually compressed files",
+  "limits": {
+    "initialJS": {
+      "gzip": 137850,
+      "brotli": 119705
+    },
+    "initialCSS": {
+      "gzip": 11932,
+      "brotli": 10301
+    },
+    "tiptap": {
+      "gzip": 390008,
+      "brotli": 327477
+    },
+    "codemirror": {
+      "gzip": 288887,
+      "brotli": 249036
+    },
+    "charts": {
+      "gzip": 361872,
+      "brotli": 298280
+    },
+    "markdown": {
+      "gzip": 26980,
+      "brotli": 24406
+    },
+    "cropper": {
+      "gzip": 246923,
+      "brotli": 203373
+    },
+    "transmit": {
+      "gzip": 240767,
+      "brotli": 197805
+    },
+    "largestLazy": {
+      "gzip": 235793,
+      "brotli": 193340
+    }
+  }
+}
