@@ -14,7 +14,7 @@
       "path": "../src/components/Step.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Step.tsx",
-      "content": "import { useContext, type ReactNode } from 'react'\nimport { WizardContext } from './Wizard.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Step({ props, children }: RuntimeProps) {\n  const wizard = useContext(WizardContext)\n  const key = typeof props.key === 'string' ? props.key : ''\n  const selected = !wizard || wizard.keys.indexOf(key) === wizard.active\n  return (\n    <section\n      role=\"group\"\n      aria-label={typeof props.label === 'string' ? props.label : undefined}\n      hidden={!selected}\n      data-wizard-step={key}\n    >\n      {children}\n    </section>\n  )\n}\nexport default Step\n"
+      "content": "import { useContext, type ReactNode } from 'react'\nimport { WizardContext } from './Wizard.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Step({ props, children }: RuntimeProps) {\n  const wizard = useContext(WizardContext)\n  const key = typeof props.key === 'string' ? props.key : ''\n  const selected = !wizard || wizard.keys.indexOf(key) === wizard.active\n  return (\n    <section\n      role=\"group\"\n      aria-label={typeof props.label === 'string' ? props.label : undefined}\n      hidden={!selected}\n      data-wizard-step={key}\n      className=\"min-w-0 space-y-5\"\n    >\n      {children}\n    </section>\n  )\n}\nexport default Step\n"
     }
   ]
 }

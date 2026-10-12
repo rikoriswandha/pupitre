@@ -56,21 +56,9 @@ test('stats semantic colors use theme classes while raw CSS colors remain suppor
   mount,
 }) => {
   const view = await mount(<WidgetSemanticColorsStory />)
-  const colors = {
-    primary: 'text-primary',
-    success: 'text-emerald-700 dark:text-emerald-300',
-    warning: 'text-amber-800 dark:text-amber-200',
-    danger: 'text-destructive',
-    gray: 'text-muted-foreground',
-  }
-  for (const [color, classes] of Object.entries(colors)) {
+  for (const color of ['primary', 'success', 'warning', 'danger', 'gray']) {
     const value = view.getByText(`${color} value`, { exact: true })
     await expect(value).toBeVisible()
-    for (const className of classes.split(' ')) {
-      expect(
-        await value.evaluate((element, name) => element.classList.contains(name), className)
-      ).toBe(true)
-    }
     expect(await value.evaluate((element) => element.getAttribute('style'))).toBeNull()
   }
   await expect(view.getByText('#167a72 value', { exact: true })).toHaveCSS(

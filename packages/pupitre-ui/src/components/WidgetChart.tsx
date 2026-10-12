@@ -1,23 +1,21 @@
 import { lazy, Suspense } from 'react'
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
+import { Panel, PanelHeader, Skeleton } from '../primitives/index.js'
 const ChartBody = lazy(() =>
   import('./WidgetChartBody.js').then((module) => ({ default: module.WidgetChartBody }))
 )
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
 export function WidgetChart({ descriptor, data }: Props) {
   return (
-    <section aria-label={descriptor.heading ?? 'Chart'} className="rounded-lg border bg-card p-4">
+    <Panel role="region" aria-label={descriptor.heading ?? 'Chart'} className="overflow-hidden">
       {(descriptor.heading || descriptor.description) && (
-        <header className="mb-4">
-          <h2 className="font-semibold">{descriptor.heading}</h2>
-          {descriptor.description && (
-            <p className="text-sm text-muted-foreground">{descriptor.description}</p>
-          )}
-        </header>
+        <PanelHeader heading={descriptor.heading} description={descriptor.description} />
       )}
-      <Suspense fallback={<div aria-busy="true" className="h-64 animate-pulse rounded bg-muted" />}>
-        <ChartBody chartType={descriptor.chartType ?? 'line'} data={data} />
-      </Suspense>
+      <div className="px-3 pb-5 pt-2 sm:px-5 sm:pb-6">
+        <Suspense fallback={<Skeleton className="h-64" />}>
+          <ChartBody chartType={descriptor.chartType ?? 'line'} data={data} />
+        </Suspense>
+      </div>
       {data?.kind === 'chart' && (
         <div className="sr-only">
           <table>
@@ -45,6 +43,6 @@ export function WidgetChart({ descriptor, data }: Props) {
           </table>
         </div>
       )}
-    </section>
+    </Panel>
   )
 }

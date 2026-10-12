@@ -2,8 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
-import { Field, FieldError, Label } from '../primitives/index.js'
+import { CheckboxControl, Field, FieldDescription, FieldError, Label } from '../primitives/index.js'
 
 type Props = Infer<typeof components.Checkbox.props>
 type Runtime = {
@@ -38,8 +37,8 @@ export function Checkbox({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        <div className={props.inline ? 'inline-flex items-center gap-2' : 'flex items-start gap-2'}>
-          <BaseCheckbox.Root
+        <div className={props.inline ? 'inline-flex items-start gap-2' : 'flex items-start gap-2'}>
+          <CheckboxControl
             {...props.extraAttributes}
             id={id}
             name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
@@ -52,34 +51,26 @@ export function Checkbox({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className="mt-0.5 grid size-6 place-items-center rounded border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
-          >
-            <BaseCheckbox.Indicator className="text-xs">✓</BaseCheckbox.Indicator>
-          </BaseCheckbox.Root>
-          <div className="grid gap-1">
+            className="size-6"
+          />
+          <div className="grid min-w-0 gap-1">
             {props.label !== null && (
-              <Label htmlFor={id}>
+              <Label htmlFor={id} className="cursor-pointer leading-6">
                 {props.label ?? props.name}
                 {props.required && <span aria-hidden="true"> *</span>}
               </Label>
             )}
-            {props.hint && (
-              <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-                {props.hint}
-              </p>
-            )}
+            {props.hint && <FieldDescription id={`${id}-hint`}>{props.hint}</FieldDescription>}
             {props.helperText && (
-              <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-                {props.helperText}
-              </p>
+              <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
+            )}
+            {error && (
+              <div id={`${id}-error`}>
+                <FieldError>{error}</FieldError>
+              </div>
             )}
           </div>
         </div>
-        {error && (
-          <div id={`${id}-error`}>
-            <FieldError>{error}</FieldError>
-          </div>
-        )}
       </Field>
     </div>
   )

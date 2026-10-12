@@ -2,6 +2,16 @@ import { lazy, Suspense, useCallback, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
+import { Icon } from '../icons.js'
+import {
+  Button,
+  FieldDescription,
+  Tooltip,
+  cn,
+  controlGroupClasses,
+  segmentedItemClasses,
+  segmentedListClasses,
+} from '../primitives/index.js'
 
 type Props = {
   props: {
@@ -55,7 +65,10 @@ const Preview = lazy(async () => {
   function MarkdownPreview({ value }: { value: string }) {
     const html = DOMPurify.sanitize(marked.parse(value, { async: false }) as string)
     return (
-      <div className="prose prose-sm max-w-none p-3" dangerouslySetInnerHTML={{ __html: html }} />
+      <div
+        className="min-h-64 px-4 py-3 text-sm leading-7 text-foreground [&_p]:my-2 [&_h1]:mb-3 [&_h1]:mt-5 [&_h1]:text-2xl [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:mt-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:mt-3 [&_h3]:text-lg [&_h3]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 [&_a]:text-primary-ink [&_a]:underline [&_a]:underline-offset-2 [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono [&_code]:text-[0.8125rem] [&_pre]:overflow-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_blockquote]:my-3 [&_blockquote]:rounded-lg [&_blockquote]:bg-muted/60 [&_blockquote]:px-4 [&_blockquote]:py-2 [&_blockquote]:text-muted-foreground [&_img]:max-w-full"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
     )
   }
   return { default: MarkdownPreview }
@@ -116,34 +129,47 @@ function MarkdownInput({
     code: () => insert('`'),
     codeBlock: () => insert('```\n', '\n```'),
   }
+  const formatting: Record<string, { icon: string; label: string }> = {
+    bold: { icon: 'bold', label: 'Bold' },
+    italic: { icon: 'italic', label: 'Italic' },
+    link: { icon: 'link', label: 'Link' },
+    heading: { icon: 'heading', label: 'Heading' },
+    h2: { icon: 'heading', label: 'Heading 2' },
+    bulletList: { icon: 'list', label: 'Bulleted list' },
+    orderedList: { icon: 'list-ordered', label: 'Numbered list' },
+    code: { icon: 'code', label: 'Inline code' },
+    codeBlock: { icon: 'code', label: 'Code block' },
+    image: { icon: 'image', label: 'Insert image' },
+  }
   return (
-    <div className="overflow-hidden rounded-md border border-input bg-background">
-      <div className="flex flex-wrap items-center gap-1 border-b p-2">
-        {toolbar
-          .filter((item) => item === 'image' || supportedToolbar[item] === true)
-          .map((item) =>
-            item === 'image' ? (
-              <button
-                key={item}
-                type="button"
-                disabled={!uploadUrl || disabled || readOnly}
-                onClick={() => imageInput.current?.click()}
-                className="rounded px-2 py-1 text-sm hover:bg-muted"
-              >
-                Image
-              </button>
-            ) : (
-              <button
-                key={item}
-                type="button"
-                disabled={disabled || readOnly}
-                onClick={actions[item]}
-                className="rounded px-2 py-1 text-sm hover:bg-muted"
-              >
-                {item}
-              </button>
-            )
-          )}
+    <div className={cn(controlGroupClasses, 'flex-col', disabled && 'bg-muted shadow-none')}>
+      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 p-1.5">
+        <div
+          className="flex flex-wrap items-center gap-0.5"
+          role="toolbar"
+          aria-label="Markdown formatting"
+        >
+          {toolbar
+            .filter((item) => item === 'image' || supportedToolbar[item] === true)
+            .map((item) => (
+              <Tooltip key={item} label={formatting[item]!.label}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  aria-label={item === 'image' ? 'Image' : item}
+                  disabled={
+                    disabled || readOnly || mode === 'preview' || (item === 'image' && !uploadUrl)
+                  }
+                  className="active:bg-accent"
+                  onClick={item === 'image' ? () => imageInput.current?.click() : actions[item]}
+                >
+                  <Icon name={formatting[item]!.icon} />
+                </Button>
+              </Tooltip>
+            ))}
+        </div>
         <input
           ref={imageInput}
           className="sr-only"
@@ -157,12 +183,22 @@ function MarkdownInput({
           }}
         />
         {preview && (
-          <div className="ml-auto flex gap-1">
-            <button type="button" onClick={() => setMode('write')} aria-pressed={mode === 'write'}>
+          <div
+            className={cn(segmentedListClasses, 'ml-auto')}
+            role="group"
+            aria-label="Markdown editor mode"
+          >
+            <button
+              type="button"
+              className={segmentedItemClasses}
+              onClick={() => setMode('write')}
+              aria-pressed={mode === 'write'}
+            >
               Write
             </button>
             <button
               type="button"
+              className={segmentedItemClasses}
               onClick={() => setMode('preview')}
               aria-pressed={mode === 'preview'}
             >
@@ -181,7 +217,7 @@ function MarkdownInput({
             [helperText && `${id}-helper`, errorId].filter(Boolean).join(' ') || undefined
           }
           aria-invalid={invalid || undefined}
-          className="block w-full resize-y bg-background p-3 font-mono text-sm outline-none"
+          className="block min-h-64 w-full resize-y bg-transparent px-4 py-3 font-mono text-[0.8125rem] leading-7 text-foreground outline-none placeholder:text-subtle-foreground disabled:cursor-not-allowed disabled:text-muted-foreground"
           rows={10}
           value={value}
           disabled={disabled}
@@ -231,21 +267,16 @@ export function MarkdownEditor({ props, emit, bindings, children, loading = fals
     [emit, setValue]
   )
   return (
-    <div className="space-y-2" aria-busy={loading}>
+    <div className="grid gap-1.5" aria-busy={loading}>
       {props.label && (
-        <label htmlFor={id} className="block text-sm font-medium">
+        <label htmlFor={id} className="text-sm font-medium leading-5 text-foreground">
           {props.label}
         </label>
-      )}
-      {props.helperText && (
-        <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-          {props.helperText}
-        </p>
       )}
       <Suspense
         fallback={
           <div
-            className="h-64 rounded-md border bg-muted/20"
+            className="h-64 rounded-lg border border-input bg-card shadow-control"
             aria-label="Loading Markdown editor"
             role="status"
           />
@@ -278,9 +309,17 @@ export function MarkdownEditor({ props, emit, bindings, children, loading = fals
           preview={props.preview ?? true}
         />
       </Suspense>
+      {props.helperText && (
+        <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
+      )}
       {error && (
-        <p id={errorId} className="text-sm text-destructive" role="alert">
-          {error}
+        <p
+          id={errorId}
+          className="flex items-start gap-1.5 text-[0.8125rem] leading-5 text-danger-ink"
+          role="alert"
+        >
+          <Icon name="circle-alert" className="mt-0.5 size-3.5 shrink-0" />
+          <span>{error}</span>
         </p>
       )}
       {children}

@@ -3,6 +3,7 @@ import { useBoundValue, useFieldError, t } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field, FieldError, Label } from '../primitives/index.js'
+import { Slider as BaseSlider } from '@base-ui/react/slider'
 
 type Props = Infer<typeof components.Slider.props>
 type Runtime = {
@@ -28,16 +29,6 @@ export function Slider({ props, bindings }: Runtime) {
   const low = Math.min(max, Math.max(min, Number(rangeValue[0] ?? min)))
   const high = Math.min(max, Math.max(low, Number(rangeValue[1] ?? max)))
   const scalar = typeof value === 'number' ? Math.min(max, Math.max(min, value)) : low
-  const update = (index: 0 | 1, next: number) => {
-    if (!props.range) {
-      setValue(next)
-      return
-    }
-    const nextValue: [number, number] = [low, high]
-    nextValue[index] = Math.min(max, Math.max(min, next))
-    if (nextValue[0] > nextValue[1]) nextValue[index === 0 ? 0 : 1] = nextValue[index === 0 ? 1 : 0]
-    setValue(nextValue)
-  }
   return (
     <Field invalid={!!error}>
       {props.label !== null && props.label !== undefined && (
@@ -46,73 +37,74 @@ export function Slider({ props, bindings }: Runtime) {
           {props.required && <span aria-hidden="true"> *</span>}
         </Label>
       )}
-      <div className="grid gap-2">
-        {props.range ? (
-          <>
-            <input
-              {...props.extraAttributes}
-              id={`${id}-0`}
-              aria-label={`${props.label ?? id} ${t('minimum')}`}
-              aria-describedby={error ? `${id}-error` : undefined}
-              aria-invalid={!!error}
-              type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={low}
-              disabled={props.disabled}
-              onChange={(event) => update(0, Number(event.currentTarget.value))}
-              className="w-full accent-primary"
-            />
-            <input
-              id={`${id}-1`}
-              aria-label={`${props.label ?? id} ${t('maximum')}`}
-              aria-describedby={error ? `${id}-error` : undefined}
-              aria-invalid={!!error}
-              type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={high}
-              disabled={props.disabled}
-              onChange={(event) => update(1, Number(event.currentTarget.value))}
-              className="w-full accent-primary"
-            />
-            <output>
-              {low} – {high}
-            </output>
-          </>
-        ) : (
-          <>
-            <input
-              {...props.extraAttributes}
-              id={`${id}-0`}
-              aria-label={props.label ?? id}
-              aria-describedby={error ? `${id}-error` : undefined}
-              aria-invalid={!!error}
-              aria-required={props.required}
-              type="range"
-              min={min}
-              max={max}
-              step={step}
-              value={scalar}
-              disabled={props.disabled}
-              onChange={(event) => update(0, Number(event.currentTarget.value))}
-              className="w-full accent-primary"
-            />
-            <output>{scalar}</output>
-          </>
-        )}
+      <BaseSlider.Root
+        value={props.range ? [low, high] : scalar}
+        min={min}
+        max={max}
+        step={step}
+        disabled={props.disabled || props.readOnly}
+        onValueChange={(next) => setValue(next)}
+        className="grid min-w-0 gap-1 data-disabled:opacity-50"
+      >
+        <div className="flex justify-end">
+          <output className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-foreground">
+            {props.range ? `${low} – ${high}` : scalar}
+          </output>
+        </div>
+        <BaseSlider.Control className="flex w-full touch-none select-none items-center py-3">
+          <BaseSlider.Track className="relative h-1.5 w-full rounded-full bg-muted">
+            <BaseSlider.Indicator className="rounded-full bg-primary" />
+            {(props.range ? [low, high] : [scalar]).map((_, index) => (
+              <BaseSlider.Thumb
+                {...props.extraAttributes}
+                key={index}
+                index={index}
+                id={`${id}-${index}`}
+                aria-label={
+                  props.range
+                    ? `${props.label ?? id} ${t(index === 0 ? 'minimum' : 'maximum')}`
+                    : (props.label ?? id)
+                }
+                aria-describedby={
+                  [
+                    props.hint && `${id}-hint`,
+                    props.helperText && `${id}-helper`,
+                    error && `${id}-error`,
+                  ]
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
+                aria-invalid={!!error}
+                aria-required={props.required}
+                className="size-5 rounded-full border-2 border-primary bg-card shadow-control ring-2 ring-card outline-none transition-shadow has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/40 data-dragging:ring-[3px] data-dragging:ring-ring/40"
+              />
+            ))}
+          </BaseSlider.Track>
+        </BaseSlider.Control>
         {props.marks?.length ? (
-          <div className="flex justify-between text-xs text-muted-foreground">
+          <div className="relative mx-2.5 h-5 text-xs tabular-nums text-muted-foreground">
             {props.marks.map((mark) => (
-              <span key={mark}>{mark}</span>
+              <span
+                key={mark}
+                className="absolute -translate-x-1/2"
+                style={{ left: `${max === min ? 0 : ((mark - min) / (max - min)) * 100}%` }}
+              >
+                {mark}
+              </span>
             ))}
           </div>
         ) : null}
-      </div>
-      {props.hint && <p className="text-sm text-muted-foreground">{props.hint}</p>}
-      {props.helperText && <p className="text-sm text-muted-foreground">{props.helperText}</p>}
+      </BaseSlider.Root>
+      {props.hint && (
+        <p id={`${id}-hint`} className="text-[0.8125rem] text-muted-foreground">
+          {props.hint}
+        </p>
+      )}
+      {props.helperText && (
+        <p id={`${id}-helper`} className="text-[0.8125rem] text-muted-foreground">
+          {props.helperText}
+        </p>
+      )}
       {error && (
         <div id={`${id}-error`}>
           <FieldError>{error}</FieldError>

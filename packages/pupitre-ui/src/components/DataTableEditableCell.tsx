@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ColumnDescriptor } from '@rikology/pupitre/catalog'
 import { jsonFetch, t, useRuntime } from '@rikology/pupitre-react'
+import { CheckboxControl, SwitchControl, Input, cn, controlClasses } from '../primitives/index.js'
 
 type Props = {
   column: ColumnDescriptor
@@ -70,14 +71,23 @@ export function DataTableEditableCell({
     }
   }
 
-  if (column.type === 'toggle' || column.type === 'checkbox') {
+  if (column.type === 'toggle') {
     return (
-      <input
+      <SwitchControl
         aria-label={`${column.label}, ${t('row')} ${rowKey}`}
-        type="checkbox"
         checked={value === true}
         disabled={disabled || pending}
-        onChange={(event) => void save(event.currentTarget.checked)}
+        onCheckedChange={(checked) => void save(checked)}
+      />
+    )
+  }
+  if (column.type === 'checkbox') {
+    return (
+      <CheckboxControl
+        aria-label={`${column.label}, ${t('row')} ${rowKey}`}
+        checked={value === true}
+        disabled={disabled || pending}
+        onCheckedChange={(checked) => void save(checked)}
       />
     )
   }
@@ -88,7 +98,7 @@ export function DataTableEditableCell({
     return (
       <select
         aria-label={`${column.label}, ${t('row')} ${rowKey}`}
-        className="h-8 rounded border bg-background px-2"
+        className={cn(controlClasses, 'pupitre-native-select h-8 w-auto [--select-inset:0.5rem]')}
         value={String(value ?? '')}
         disabled={disabled || pending}
         onChange={(event) => void save(event.currentTarget.value)}
@@ -102,10 +112,10 @@ export function DataTableEditableCell({
     )
   }
   const content: ReactNode = editing ? (
-    <input
+    <Input
       autoFocus
       aria-label={`${column.label}, ${t('row')} ${rowKey}`}
-      className="h-8 w-full rounded border bg-background px-2"
+      className="h-8 w-full px-2"
       value={String(draft ?? '')}
       disabled={disabled || pending}
       onChange={(event) => setDraft(event.currentTarget.value)}
@@ -139,7 +149,7 @@ export function DataTableEditableCell({
       ref={buttonRef}
       type="button"
       disabled={disabled}
-      className="text-left"
+      className="min-h-8 rounded-md px-1 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
       aria-label={`${t('Edit')} ${column.label}, ${String(value ?? '')}, ${t('row')} ${rowKey}`}
       onClick={() => {
         canceling.current = false

@@ -336,9 +336,7 @@ export default defineResource(Post)
       .groups([t.group('status').label('Post status').collapsible()])
       .poll('30s')
       .deferFilters()
-      .rowClass(({ record }) =>
-        (record as Post).status === 'draft' ? 'bg-amber-50 text-amber-900' : ''
-      )
+      .rowClass(({ record }) => ((record as Post).status === 'draft' ? 'bg-warning-soft/50' : ''))
   )
   .infolist((s) => [
     s.textEntry('title').label('Title'),

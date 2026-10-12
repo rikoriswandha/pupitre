@@ -254,7 +254,11 @@ export const components = {
     descriptor: fileUploadDescriptor,
   }),
   'Repeater': container(
-    { descriptor: repeaterDescriptor, value: dynamic(z.array(z.unknown())).optional() },
+    {
+      ...common,
+      descriptor: repeaterDescriptor,
+      value: dynamic(z.array(z.unknown())).optional(),
+    },
     'Repeater emits add, remove, move, clone, and collapse events.'
   ),
   'RepeaterItem': container(
@@ -266,7 +270,11 @@ export const components = {
     'RepeaterItem emits remove, move, clone, and collapse events.'
   ),
   'Builder': container(
-    { descriptor: builderDescriptor, value: dynamic(z.array(z.unknown())).optional() },
+    {
+      ...common,
+      descriptor: builderDescriptor,
+      value: dynamic(z.array(z.unknown())).optional(),
+    },
     'Builder manages typed content blocks using block templates.'
   ),
   'BuilderItem': container(

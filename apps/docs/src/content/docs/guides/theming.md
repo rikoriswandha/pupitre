@@ -29,4 +29,6 @@ Theme fields: font family/URL, compact/comfortable density, expanded/collapsed/t
 
 Both `defineTheme()` and panel `.theme()` validate values. Color names must be identifier-like; custom variable names start with `--`. CSS containing unsafe delimiters or `url(...)` is rejected. Font/stylesheet URLs must be same-origin paths or HTTPS; themes are not raw inline CSS source. Keep your host Tailwind stylesheet and import `@rikology/pupitre-ui/styles.css` after Tailwind.
 
+The default skin uses warm neutrals and a green primary. Every colored state derives from a handful of base tokens: setting `primary` (or `colors: { primary }`) also re-tints selection fills (`--primary-soft`), colored text (`--primary-ink`), focus rings and the first chart series, in both light and dark mode. The same pattern applies to `success`, `warning`, `destructive` and `info`. Override `--background`, `--card`, `--sidebar`, `--foreground`, `--border` or `--input` through `vars` to change the neutral layers; keep `--primary-foreground` readable on your primary.
+
 Use the registry for structural component changes, not theme tokens. The sidebar collapse/group state persists per panel; table column visibility persists separately. [Customizing UI](/customizing-ui/) explains replacement component ownership.

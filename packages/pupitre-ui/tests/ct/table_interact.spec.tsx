@@ -1,7 +1,10 @@
 import { test, expect } from '@playwright/experimental-ct-react'
 import { TableInteractStory } from './stories/table_interact.story.js'
 
-test('editable cells revert on validation failure and send PATCH requests', async ({ mount }) => {
+test('editable cells revert on validation failure and send PATCH requests', async ({
+  mount,
+  page,
+}) => {
   const view = await mount(<TableInteractStory />)
   await view.getByRole('button', { name: /Edit Title, Hello, row 10/ }).click()
   const input = view.getByRole('textbox', { name: 'Title, row 10' })
@@ -17,10 +20,10 @@ test('editable cells revert on validation failure and send PATCH requests', asyn
   await reopened.fill('discard me')
   await reopened.press('Escape')
   await expect(editButton).toBeFocused()
-  await view.getByText('Columns', { exact: true }).click()
-  await view.getByRole('checkbox', { name: 'Featured' }).check()
-  await view.getByText('Columns', { exact: true }).click()
-  const featured = view.getByRole('checkbox', { name: 'Featured, row 10', exact: true })
+  await view.getByRole('button', { name: 'Columns', exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Featured', exact: true }).check()
+  await view.getByRole('button', { name: 'Columns', exact: true }).click()
+  const featured = view.getByRole('switch', { name: 'Featured, row 10', exact: true })
   await expect(featured).toHaveCount(1)
   await featured.check()
   await featured.click()
@@ -99,8 +102,8 @@ test('grid layout, visibility persistence, deferred filters, keyboard reorder, a
   await view.getByRole('button', { name: 'Apply' }).click()
   await expect.poll(visits).toBeGreaterThan(beforeFilter)
 
-  await view.getByText('Columns', { exact: true }).click()
-  await view.getByLabel('Featured').check()
+  await view.getByRole('button', { name: 'Columns', exact: true }).click()
+  await page.getByRole('checkbox', { name: 'Featured', exact: true }).check()
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem('pupitre:columns:table-interact')))
     .toContain('"isFeatured":true')

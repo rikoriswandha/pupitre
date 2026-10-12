@@ -27,12 +27,12 @@ pupitreTest(
       (response) =>
         response.request().method() === 'PATCH' && response.url().includes('/column/isFeatured')
     )
-    await row.getByRole('checkbox', { name: /featured/i }).check()
+    await row.getByRole('switch', { name: /featured/i }).check()
     const patchResponse = await patch
     expect(patchResponse.status()).toBe(204)
 
     const listUrl = page.url()
-    await page.getByText('Filters', { exact: true }).click()
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
     await page.getByLabel('Filter Status', { exact: true }).selectOption('published')
     await expect(page).toHaveURL(listUrl)
     await page.getByRole('button', { name: 'Apply' }).click()
@@ -77,11 +77,11 @@ pupitreTest(
     await expect(first).toBeVisible()
 
     await page.goto('/admin/acme/posts')
-    await page.getByText('Columns', { exact: true }).click()
+    await page.getByRole('button', { name: 'Columns', exact: true }).click()
     const views = page.getByRole('checkbox', { name: 'Views', exact: true })
     await views.check()
     await page.reload()
-    await page.getByText('Columns', { exact: true }).click()
+    await page.getByRole('button', { name: 'Columns', exact: true }).click()
     await expect(page.getByRole('checkbox', { name: 'Views', exact: true })).toBeChecked()
 
     await page.goto('/admin/acme/users')

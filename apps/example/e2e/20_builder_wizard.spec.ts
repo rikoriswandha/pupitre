@@ -9,8 +9,11 @@ pupitreTest(
     await admin.fillField('Title', `Builder wizard ${nonce}`)
     await admin.fillField('Slug', `builder-wizard-${nonce}`)
     await admin.fillField('Category', 'Culture')
-    await page.getByRole('button', { name: 'Add block Paragraph' }).click()
-    await page.getByRole('button', { name: 'Add block Heading' }).click()
+    // Block types live in the "Add block" menu.
+    await page.getByRole('button', { name: 'Add block', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Add block Paragraph' }).click()
+    await page.getByRole('button', { name: 'Add block', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Add block Heading' }).click()
     await page.getByRole('button', { name: 'Move block 2 up' }).click()
     await page.getByRole('button', { name: 'Remove block 2' }).click()
     await admin.fillField('Heading text', 'A typed heading block')
@@ -21,10 +24,7 @@ pupitreTest(
     await admin.expectToast('created')
 
     await page.goto(`/admin/acme/posts?q=${encodeURIComponent(`Builder wizard ${nonce}`)}`)
-    await admin
-      .row(`Builder wizard ${nonce}`)
-      .getByRole('button', { name: 'Publish', exact: true })
-      .click()
+    await admin.openAction('Publish', admin.row(`Builder wizard ${nonce}`))
     const publishDate = page.getByLabel('Publish at')
     await publishDate.fill('')
     await page.getByRole('dialog').getByRole('button', { name: 'Next', exact: true }).click()

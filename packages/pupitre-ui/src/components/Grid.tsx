@@ -32,7 +32,7 @@ export function Grid({ props, children }: RuntimeProps) {
   const gap = typeof props.gap === 'number' ? `${Math.max(0, props.gap) * 0.25}rem` : undefined
   return (
     <div
-      className="grid min-w-0 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]"
+      className="grid min-w-0 gap-x-6 gap-y-5 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]"
       style={{ ...style, gap }}
     >
       {children}

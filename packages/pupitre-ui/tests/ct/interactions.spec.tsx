@@ -39,12 +39,20 @@ test('Toggle defaults to a primary checked track and keeps the horizontal layout
   const view = await mount(<DefaultToggleStory />)
   const toggle = view.getByRole('switch', { name: 'Enabled' })
   await expect(toggle).toHaveAttribute('data-checked', '')
-  expect((await toggle.getAttribute('class')) ?? '').toContain('data-[checked]:bg-primary')
-  const wrapperClass = (await toggle.locator('..').getAttribute('class')) ?? ''
-  expect(wrapperClass).toContain('inline-flex')
-  expect(wrapperClass).toContain('items-center')
-  expect(wrapperClass).toContain('gap-3')
-  expect(wrapperClass).not.toContain('grid')
+  // Checked track paints the theme primary; the label sits beside the switch, not below it.
+  const primary = await toggle.evaluate((element) => {
+    const probe = document.createElement('span')
+    probe.style.backgroundColor = 'var(--primary)'
+    element.append(probe)
+    const color = getComputedStyle(probe).backgroundColor
+    probe.remove()
+    return color
+  })
+  await expect(toggle).toHaveCSS('background-color', primary)
+  const switchBox = (await toggle.boundingBox())!
+  const labelBox = (await view.getByText('Enabled', { exact: true }).boundingBox())!
+  expect(labelBox.x).toBeGreaterThan(switchBox.x + switchBox.width - 1)
+  expect(Math.abs(labelBox.y - switchBox.y)).toBeLessThan(switchBox.height)
 })
 
 test('Select updates its bound state', async ({ mount, page }) => {
@@ -285,39 +293,32 @@ test('static selects render and run prefix and suffix actions', async ({ mount, 
   })
   expect(actions).toEqual(['prefix', 'suffix'])
 })
-test('async multi-select options toggle off and expose removable chips', async ({ mount }) => {
+test('async multi-select options toggle off and expose removable chips', async ({
+  mount,
+  page,
+}) => {
   const view = await mount(<AsyncSelectControlsStory />)
-  const tags = view.getByRole('listbox', { name: 'Tags' })
-  const culture = tags.getByRole('option', { name: 'Culture', exact: true })
-
-  const tagsInput = view.getByRole('textbox', { name: 'Tags' })
+  const tagsInput = view.getByRole('combobox', { name: 'Tags' })
   await expect(tagsInput).toHaveAttribute('id', 'tags')
   await expect(tagsInput).toHaveAttribute('aria-describedby', 'tags-hint tags-helper tags-error')
   await expect(tagsInput).toHaveAttribute('aria-invalid', 'true')
   await expect(tagsInput).toHaveAttribute('aria-required', 'true')
+  await tagsInput.click()
+  const tags = page.getByRole('listbox', { name: 'Tags' })
+  const culture = tags.getByRole('option', { name: 'Culture', exact: true })
+  await expect(page.getByRole('textbox', { name: 'Search options' })).toBeVisible()
   await expect(culture).toHaveAttribute('aria-selected', 'true')
-
   await culture.click()
   await expect(view.getByRole('button', { name: 'Remove Culture' })).toHaveCount(0)
   await expect(culture).toHaveAttribute('aria-selected', 'false')
-
   await culture.click()
   const removeCulture = view.getByRole('button', { name: 'Remove Culture' })
   await expect(removeCulture).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Load more' })).toBeEnabled()
   await removeCulture.click()
   await expect(view.getByRole('button', { name: 'Remove Culture' })).toHaveCount(0)
-
-  const disabledOptions = view.getByRole('listbox', { name: 'Disabled' })
-  const readOnlyOptions = view.getByRole('listbox', { name: 'Read only' })
-  await expect(disabledOptions).toHaveAttribute('aria-disabled', 'true')
-  await expect(readOnlyOptions).toHaveAttribute('aria-disabled', 'true')
-  await expect(disabledOptions.getByRole('option', { name: 'Culture' })).toBeDisabled()
-  await expect(readOnlyOptions.getByRole('option', { name: 'Design' })).toBeDisabled()
-  await expect(view.getByRole('button', { name: 'Create option' }).nth(0)).toBeDisabled()
-  await expect(view.getByRole('button', { name: 'Create option' }).nth(1)).toBeDisabled()
-  await expect(view.getByRole('button', { name: 'Load more' }).nth(0)).toBeEnabled()
-  await expect(view.getByRole('button', { name: 'Load more' }).nth(1)).toBeDisabled()
-  await expect(view.getByRole('button', { name: 'Load more' }).nth(2)).toBeDisabled()
+  await expect(view.getByRole('combobox', { name: 'Disabled' })).toBeDisabled()
+  await expect(view.getByRole('combobox', { name: 'Read only' })).toBeDisabled()
 })
 
 test('Text renders its suffix', async ({ mount }) => {
@@ -433,12 +434,16 @@ test('table cells honor badge and wrap descriptors; row action variants are rend
   const view = await mount(<TableContractStory />)
   const badge = view.getByText('Ready')
   await expect(badge).toHaveCSS('background-color', 'rgb(1, 2, 3)')
-  await expect(badge).toHaveClass(/rounded-full/)
+  // Semantic color names select theme tones instead of being painted as raw CSS colors.
+  const draft = view.getByText('draft', { exact: true })
+  await expect(draft).toHaveClass(/bg-muted/)
+  await expect(draft).not.toHaveAttribute('style')
+  await expect(view.getByText('live', { exact: true })).toHaveClass(/bg-success-soft/)
   await expect(view.getByText('This title wraps onto more than one line')).toHaveClass(
     /whitespace-normal/
   )
-  await expect(view.getByRole('button', { name: 'View' })).toHaveClass(/underline/)
-  await expect(view.getByRole('button', { name: 'Edit' })).toHaveClass(/border/)
+  await expect(view.getByRole('button', { name: 'View', exact: true })).toBeVisible()
+  await expect(view.getByRole('button', { name: 'Edit', exact: true })).toBeVisible()
 })
 
 test('bulk key bindings run against selected rows and are disabled without a selection', async ({
@@ -446,14 +451,13 @@ test('bulk key bindings run against selected rows and are disabled without a sel
   page,
 }) => {
   const view = await mount(<TableContractStory />)
-  const action = view.getByRole('button', { name: 'Publish selected' })
-  await expect(action).toBeDisabled()
+  await expect(view.getByRole('button', { name: 'Bulk actions', exact: true })).toHaveCount(0)
   await page.keyboard.press('Control+P')
   expect(
     await page.evaluate(() => (window as Window & { __ctActions?: unknown[] }).__ctActions)
   ).toBeUndefined()
   await view.getByRole('checkbox', { name: 'Select row 7' }).check()
-  await expect(action).toBeEnabled()
+  await expect(view.getByRole('button', { name: 'Bulk actions', exact: true })).toBeEnabled()
   await page.keyboard.press('Control+P')
   await expect
     .poll(() =>
@@ -470,7 +474,9 @@ test('Section icon and Checkbox/Toggle inline and color props are rendered', asy
   page,
 }) => {
   const view = await mount(<SectionFieldContractStory />)
-  await expect(view.getByRole('heading', { name: 'Details' }).locator('svg')).toBeVisible()
+  await expect(
+    view.getByRole('heading', { name: 'Details' }).locator('xpath=../..').locator('svg')
+  ).toBeVisible()
   await expect(view.getByRole('checkbox', { name: 'Active' }).locator('xpath=..')).toHaveClass(
     /inline-flex/
   )

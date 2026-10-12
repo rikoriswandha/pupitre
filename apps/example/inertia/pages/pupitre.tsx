@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import type { ComponentProps } from 'react'
 import { usePage } from '@inertiajs/react'
 import { Pupitre } from '@rikology/pupitre-react'
+import { PupitreViewsProvider } from '@rikology/pupitre-ui'
 import type { RealtimeClient } from '@rikology/pupitre/catalog'
-import { registry } from '../admin/registry.js'
+import { registry, views } from '../admin/registry.js'
 
 export default function PupitrePage(props: ComponentProps<typeof Pupitre>) {
   const { pupitre } = usePage<{ pupitre?: { realtime?: { driver: string } } }>().props
@@ -19,5 +20,9 @@ export default function PupitrePage(props: ComponentProps<typeof Pupitre>) {
       active = false
     }
   }, [enabled])
-  return <Pupitre {...props} registry={registry} realtime={enabled ? realtime : undefined} />
+  return (
+    <PupitreViewsProvider registry={views}>
+      <Pupitre {...props} registry={registry} realtime={enabled ? realtime : undefined} />
+    </PupitreViewsProvider>
+  )
 }

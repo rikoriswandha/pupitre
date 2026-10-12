@@ -42,7 +42,7 @@ export function Radio({ props, bindings }: Runtime) {
     <div style={columnStyle}>
       <Field invalid={!!error}>
         <fieldset
-          className="grid gap-2"
+          className="grid min-w-0 gap-3"
           disabled={props.disabled}
           aria-describedby={describedBy}
           aria-invalid={!!error}
@@ -67,7 +67,7 @@ export function Radio({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className={`grid gap-2 ${props.inline ? 'sm:flex sm:flex-wrap' : ''}`}
+            className={`grid gap-x-6 gap-y-3 ${props.inline ? 'sm:flex sm:flex-wrap' : ''}`}
           >
             {options.map((option) => {
               const optionId = `${id}-${String(option.value)}`
@@ -75,7 +75,7 @@ export function Radio({ props, bindings }: Runtime) {
               return (
                 <BaseField.Item
                   key={String(option.value)}
-                  className="flex min-h-6 items-start gap-2 text-sm"
+                  className="flex min-h-6 items-start gap-3 text-sm"
                 >
                   <BaseRadio.Root
                     {...props.extraAttributes}
@@ -83,17 +83,30 @@ export function Radio({ props, bindings }: Runtime) {
                     aria-labelledby={`${optionId}-label`}
                     value={String(option.value)}
                     disabled={option.disabled || props.disabled || props.readOnly}
-                    aria-describedby={describedBy}
+                    aria-describedby={
+                      [describedBy, description && `${optionId}-description`]
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
                     aria-invalid={!!error}
-                    className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary"
+                    className="group -mx-1 -mt-0.5 grid size-6 shrink-0 place-items-center rounded-full outline-none data-disabled:opacity-50"
                   >
-                    <BaseRadio.Indicator className="size-2 rounded-full bg-primary" />
+                    <span className="grid size-4 place-items-center rounded-full border border-input-strong bg-card shadow-control transition-colors group-focus-visible:ring-[3px] group-focus-visible:ring-ring/30 group-data-checked:border-primary group-aria-invalid:border-destructive">
+                      <BaseRadio.Indicator className="size-2 rounded-full bg-primary data-unchecked:hidden" />
+                    </span>
                   </BaseRadio.Root>
-                  <div>
+                  <div className="grid min-w-0 gap-1">
                     <Label id={`${optionId}-label`} htmlFor={optionId}>
                       {option.label}
                     </Label>
-                    {description && <p className="text-muted-foreground">{description}</p>}
+                    {description && (
+                      <p
+                        id={`${optionId}-description`}
+                        className="text-[0.8125rem] leading-5 text-muted-foreground"
+                      >
+                        {description}
+                      </p>
+                    )}
                   </div>
                 </BaseField.Item>
               )

@@ -1,6 +1,8 @@
 import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import { RepeaterContext } from './Repeater.js'
-import { Button } from '../primitives/index.js'
+import { Button, cn, Collapse } from '../primitives/index.js'
+import { Icon } from '../icons.js'
+import { PanelNestingContext } from './Section.js'
 
 type RuntimeProps = {
   props: Record<string, unknown>
@@ -23,31 +25,38 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
         )
   ) as CSSProperties
   return (
-    <article className="min-w-0 rounded-md border border-border bg-card">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h3 className="min-w-0 truncate text-sm font-medium">{label}</h3>
+    <article className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
+      <header className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          {context.reorderable && (
+            <Icon name="grip-vertical" className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <h3 className="min-w-0 truncate text-sm font-medium">{label}</h3>
+        </div>
         <div className="flex shrink-0 items-center gap-1">
           {context.reorderable && (
             <>
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-8 px-2"
+                size="sm"
+                square
                 aria-label={`Move ${label} up`}
                 onClick={() => context.move(index, 'up')}
                 disabled={loading || index === 0}
               >
-                ↑
+                <Icon name="arrow-up" className="size-4" />
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                className="min-h-8 px-2"
+                size="sm"
+                square
                 aria-label={`Move ${label} down`}
                 onClick={() => context.move(index, 'down')}
                 disabled={loading || index >= context.itemCount - 1}
               >
-                ↓
+                <Icon name="arrow-down" className="size-4" />
               </Button>
             </>
           )}
@@ -55,48 +64,61 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
             <Button
               type="button"
               variant="ghost"
-              className="min-h-8 px-2"
+              size="sm"
+              square
+              aria-label={collapsed ? 'Expand' : 'Collapse'}
               onClick={() => setCollapsed((value) => !value)}
               aria-expanded={!collapsed}
             >
-              {collapsed ? 'Expand' : 'Collapse'}
+              <Icon
+                name="chevron-down"
+                className={cn(
+                  'size-4 transition-transform duration-200 ease-ui',
+                  !collapsed && 'rotate-180'
+                )}
+              />
             </Button>
           )}
           {context.cloneable && (
             <Button
               type="button"
               variant="ghost"
-              className="min-h-8 px-2"
+              size="sm"
+              square
+              aria-label="Clone"
               onClick={() => context.clone(index)}
               disabled={loading || context.itemCount >= context.maxItems}
             >
-              Clone
+              <Icon name="copy" className="size-4" />
             </Button>
           )}
           <Button
             type="button"
             variant="ghost"
-            className="min-h-8 px-2 text-destructive"
+            size="sm"
+            square
+            color="danger"
+            aria-label="Remove"
             onClick={() => context.remove(index)}
             disabled={loading || context.itemCount <= context.minItems}
           >
-            Remove
+            <Icon name="trash-2" className="size-4" />
           </Button>
         </div>
       </header>
-      {!collapsed && (
+      <Collapse open={!collapsed}>
         <div
           data-repeater-fields
           className={
             context.grid === undefined
-              ? 'space-y-4 p-4'
-              : 'grid min-w-0 gap-4 p-4 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]'
+              ? 'space-y-5 border-t border-border p-4'
+              : 'grid min-w-0 gap-x-6 gap-y-5 border-t border-border p-4 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]'
           }
           style={gridStyle}
         >
-          {children}
+          <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
         </div>
-      )}
+      </Collapse>
     </article>
   )
 }

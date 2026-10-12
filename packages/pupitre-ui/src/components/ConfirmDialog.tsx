@@ -1,6 +1,6 @@
 import { Dialog } from '@base-ui/react/dialog'
 import { Icon } from '../icons.js'
-import { Button } from '../primitives/index.js'
+import { Button, backdropClasses, dialogPopupClasses } from '../primitives/index.js'
 
 export type ConfirmDialogProps = {
   open: boolean
@@ -35,30 +35,35 @@ export function ConfirmDialog({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-[60] bg-black/45" />
-        <Dialog.Popup className="fixed left-1/2 top-1/2 z-[60] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-background p-6 shadow-xl outline-none">
-          <div className="flex items-start gap-3">
-            {icon && (
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted">
-                <Icon name={icon} className="size-4" />
-              </span>
-            )}
-            <div>
-              <Dialog.Title className="text-lg font-semibold">{heading}</Dialog.Title>
+        <Dialog.Backdrop className={backdropClasses} />
+        <Dialog.Popup data-pupitre-popup="" className={dialogPopupClasses('sm')}>
+          <div className="flex items-start gap-4 px-6 py-5">
+            <span
+              className={`grid size-10 shrink-0 place-items-center rounded-full ${destructive ? 'bg-danger-soft text-danger-ink' : 'bg-info-soft text-info-ink'}`}
+            >
+              <Icon
+                name={destructive ? 'triangle-alert' : (icon ?? 'circle-help')}
+                className="size-5"
+              />
+            </span>
+            <div className="min-w-0 pt-2">
+              <Dialog.Title className="text-base font-semibold leading-6 text-pretty">
+                {heading}
+              </Dialog.Title>
               {description && (
-                <Dialog.Description className="mt-2 text-sm text-muted-foreground">
+                <Dialog.Description className="mt-1.5 text-sm leading-5 text-muted-foreground text-pretty">
                   {description}
                 </Dialog.Description>
               )}
             </div>
           </div>
-          <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" disabled={loading} onClick={onCancel}>
+          <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-6 py-3">
+            <Button color="gray" disabled={loading} onClick={onCancel}>
               {cancelLabel}
             </Button>
             <Button
-              variant={destructive ? 'destructive' : 'default'}
-              disabled={loading}
+              color={destructive ? 'danger' : 'primary'}
+              loading={loading}
               onClick={onConfirm}
             >
               {loading ? 'Working…' : submitLabel}

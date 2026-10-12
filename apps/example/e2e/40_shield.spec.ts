@@ -23,6 +23,8 @@ pupitreTest(
     await expect(page.getByRole('button', { name: /^Save/ }).last()).toBeVisible()
     await expect(page.getByText('Roles', { exact: true })).toHaveCount(0)
 
+    // Leave the app first so no in-flight response re-sets the cookie session after clearing.
+    await page.goto('about:blank')
     await page.context().clearCookies()
     await admin.login('admin@example.com')
     await page.getByRole('link', { name: /^Roles$/ }).click()
@@ -41,7 +43,7 @@ pupitreTest(
     await admin.expectToast('Saved')
     await page.goto('/admin/acme/roles')
     await expect(admin.row(`${name}-edited`)).toBeVisible()
-    await admin.row(`${name}-edited`).getByRole('button', { name: 'Delete' }).click()
+    await admin.openAction('Delete', admin.row(`${name}-edited`))
     await page
       .getByRole('button', { name: /delete|confirm/i })
       .last()

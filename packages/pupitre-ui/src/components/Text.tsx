@@ -2,7 +2,19 @@ import { useId, useState, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Button, Field, FieldError, Input, Label } from '../primitives/index.js'
+import {
+  Button,
+  Field,
+  FieldError,
+  Input,
+  InputGroup,
+  InputAddon,
+  InputSlot,
+  Label,
+  FieldDescription,
+  RequiredMark,
+  Tooltip,
+} from '../primitives/index.js'
 import { ActionButton } from './ActionButton.js'
 import { Icon } from '../icons.js'
 import { useLiveField } from './use_live_field.js'
@@ -64,6 +76,66 @@ export function unmaskInput(value: string, mask: string): string {
   }
   return result
 }
+
+/** Label-row anatomy shared by the input fields. */
+export function InputFieldLabel({
+  id,
+  props,
+  fallback,
+}: {
+  id: string
+  props: {
+    label?: string | null
+    required?: boolean
+    hint?: string | null
+    hintIcon?: string | null
+    hintTooltip?: string | null
+    hintColor?: string | null
+    hintAction?: Infer<typeof components.Text.props>['hintAction']
+  }
+  fallback?: string
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      {props.label !== null && (props.label !== undefined || fallback) && (
+        <Label id={`${id}-label`} htmlFor={id}>
+          {props.label ?? fallback}
+          {props.required && <RequiredMark />}
+        </Label>
+      )}
+      <div className="ml-auto flex h-5 items-center gap-2 whitespace-nowrap text-[0.8125rem] text-muted-foreground">
+        {(props.hint || props.hintIcon) && (
+          <span
+            id={`${id}-hint`}
+            className="flex items-center gap-1"
+            style={props.hintColor ? { color: props.hintColor } : undefined}
+          >
+            {props.hint}
+            {props.hintIcon &&
+              (props.hintTooltip ? (
+                <Tooltip label={props.hintTooltip}>
+                  <button
+                    type="button"
+                    title={props.hintTooltip}
+                    aria-label={props.hintTooltip}
+                    // 24px hit target, but -m-0.5 keeps the label row at the 20px label height
+                    // so inputs with and without hints line up across grid columns.
+                    className="-m-0.5 inline-flex size-6 items-center justify-center rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Icon name={props.hintIcon} className="size-4" />
+                  </button>
+                </Tooltip>
+              ) : (
+                <Icon name={props.hintIcon} className="size-4" />
+              ))}
+          </span>
+        )}
+        {props.hintAction && <ActionButton action={props.hintAction} variant="link" size="xs" />}
+      </div>
+    </div>
+  )
+}
+
 export function Text({ props, bindings }: Runtime) {
   const [showPassword, setShowPassword] = useState(false)
   const [boundValue, setValue] = useBoundValue(props.value ?? '', bindings?.value)
@@ -93,19 +165,25 @@ export function Text({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && (
-          <div className="flex items-center justify-between gap-2">
-            <Label htmlFor={id}>
-              {props.label ?? props.name ?? id}
-              {props.required && <span aria-hidden="true"> *</span>}
-            </Label>
-            {props.hintAction && <ActionButton action={props.hintAction} />}
-          </div>
-        )}
-        <div className="flex items-center gap-2 rounded-md border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-          {props.prefixAction && <ActionButton action={props.prefixAction} />}
-          {props.prefix && <span className="text-sm text-muted-foreground">{props.prefix}</span>}
+        <InputFieldLabel id={id} props={props} fallback={props.name ?? id} />
+        <InputGroup>
+          {props.prefixAction && (
+            <InputSlot
+              className={props.prefixAction.icon ? undefined : 'border-r border-input bg-muted/60'}
+            >
+              <ActionButton
+                action={{
+                  ...props.prefixAction,
+                  variant: props.prefixAction.icon ? 'iconButton' : props.prefixAction.variant,
+                }}
+                size="xs"
+                variant="ghost"
+              />
+            </InputSlot>
+          )}
+          {props.prefix && <InputAddon>{props.prefix}</InputAddon>}
           <Input
+            bare
             {...props.extraAttributes}
             id={id}
             name={id}
@@ -131,23 +209,38 @@ export function Text({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className="h-10 min-w-0 flex-1 border-0 bg-transparent shadow-none outline-none focus-visible:ring-0"
           />
-          {props.suffix && <span className="text-sm text-muted-foreground">{props.suffix}</span>}
-          {props.suffixAction && <ActionButton action={props.suffixAction} />}
-          {props.revealable && props.type === 'password' && (
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-              disabled={props.disabled}
-              className="min-h-8 px-2 text-xs"
+          {props.suffix && <InputAddon position="end">{props.suffix}</InputAddon>}
+          {props.suffixAction && (
+            <InputSlot
+              className={props.suffixAction.icon ? undefined : 'border-l border-input bg-muted/60'}
             >
-              {showPassword ? 'Hide' : 'Show'}
-            </Button>
+              <ActionButton
+                action={{
+                  ...props.suffixAction,
+                  variant: props.suffixAction.icon ? 'iconButton' : props.suffixAction.variant,
+                }}
+                size="xs"
+                variant="ghost"
+              />
+            </InputSlot>
           )}
-        </div>
+          {props.revealable && props.type === 'password' && (
+            <InputSlot>
+              <Button
+                size="xs"
+                square
+                variant="ghost"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                disabled={props.disabled}
+              >
+                <Icon name={showPassword ? 'eye-off' : 'eye'} className="size-4" />
+              </Button>
+            </InputSlot>
+          )}
+        </InputGroup>
         {listId && (
           <datalist id={listId}>
             {props.datalist?.map((item: string) => (
@@ -155,29 +248,9 @@ export function Text({ props, bindings }: Runtime) {
             ))}
           </datalist>
         )}
-        {props.hint && (
-          <p
-            id={`${id}-hint`}
-            className="flex items-center gap-1 text-sm text-muted-foreground"
-            style={props.hintColor ? { color: props.hintColor } : undefined}
-          >
-            {props.hintIcon && (
-              <span
-                role={props.hintTooltip ? 'img' : undefined}
-                aria-hidden={props.hintTooltip ? undefined : true}
-                title={props.hintTooltip}
-                aria-label={props.hintTooltip ?? undefined}
-              >
-                <Icon name={props.hintIcon} className="size-4" />
-              </span>
-            )}
-            {props.hint}
-          </p>
-        )}
+
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>

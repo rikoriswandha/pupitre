@@ -1,32 +1,28 @@
 import { Icon } from '../icons.js'
-import type { EntryProps } from './EntryShell.js'
-import { EntryShell } from './EntryShell.js'
+import { toneText, toTone } from '../primitives/index.js'
+import {
+  EntryCopyButton,
+  EntryShell,
+  entryColorStyle,
+  type EntryDisplayProps,
+} from './EntryShell.js'
 
-export function IconEntry({ props = {} }: { props?: EntryProps }) {
+export function IconEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const name = typeof props.value === 'string' ? props.value : props.icon
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan}>
-      <span className="inline-flex items-center gap-2">
+    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+      <span className="inline-flex items-center gap-1.5">
         {name ? (
           <Icon
             name={name}
-            className="size-5"
-            style={props.color ? { color: props.color } : undefined}
+            className={`size-5 ${toneText[toTone(props.color)]}`}
+            style={entryColorStyle(props.color)}
           />
         ) : (
-          <span>{props.placeholder ?? '—'}</span>
+          <span className="text-subtle-foreground">{props.placeholder ?? '—'}</span>
         )}
         {props.copyable && name && (
-          <button
-            type="button"
-            aria-label={`Copy ${props.label ?? 'icon name'}`}
-            onClick={() => {
-              if (typeof navigator !== 'undefined') void navigator.clipboard?.writeText(name)
-            }}
-            className="text-xs text-muted-foreground"
-          >
-            Copy
-          </button>
+          <EntryCopyButton value={name} label={props.label ?? 'icon name'} />
         )}
       </span>
     </EntryShell>

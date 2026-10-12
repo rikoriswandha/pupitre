@@ -1,74 +1,224 @@
 /* Host integration: import `tailwindcss` first, then `@rikology/pupitre-ui/styles.css`. */
 @source "./components/**/*.{tsx,js}";
+@source "./primitives/**/*.{tsx,js}";
+
+/*
+ * Pupitre "writing desk" skin.
+ * Warm paper neutrals (hue ~75), one blotter-green primary, semantic colors that
+ * derive soft fills and readable ink from a single base value. A panel overriding
+ * `--primary` (theme.primary) re-skins every derived token automatically.
+ */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger: var(--destructive);
+  --color-danger-foreground: var(--destructive-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-ink: var(--danger-ink);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-input-strong: var(--input-strong);
+  --color-switch-thumb: var(--switch-thumb);
   --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  /*
+   * Motion vocabulary. `ease-ui` for things entering/leaving, `ease-move` for on-screen
+   * movement, `ease-drawer` for edge sheets. Durations stay at 100-250ms.
+   */
+  --ease-ui: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --shadow-panel: var(--elevation-panel);
+  --shadow-control: var(--elevation-control);
+  --shadow-popover: var(--elevation-popover);
+  --shadow-dialog: var(--elevation-dialog);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.965 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.965 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --destructive-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.965 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --destructive: oklch(0.55 0.23 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  color-scheme: light;
+  --radius: 0.5rem;
+
+  /* Surfaces: canvas < sidebar < card. */
+  --background: oklch(0.978 0.0035 84);
+  --foreground: oklch(0.225 0.012 65);
+  --card: oklch(0.996 0.0015 84);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.996 0.0015 84);
+  --popover-foreground: var(--foreground);
+  --sidebar: oklch(0.963 0.005 82);
+  --sidebar-foreground: oklch(0.32 0.012 65);
+  --sidebar-accent: oklch(0.935 0.007 80);
+  --sidebar-border: oklch(0.905 0.006 78);
+
+  --primary: oklch(0.47 0.095 163);
+  --primary-foreground: oklch(0.985 0.008 160);
+  --secondary: oklch(0.952 0.005 82);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.952 0.005 82);
+  --muted-foreground: oklch(0.49 0.012 68);
+  --subtle-foreground: oklch(0.62 0.01 70);
+  /* chevrons-up-down in --muted-foreground; data URIs cannot read CSS variables. */
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23655f59' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+  --accent: oklch(0.945 0.006 82);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.908 0.006 78);
+  --input: oklch(0.868 0.008 76);
+  /* Boundary of state-only controls (checkbox, radio, switch track): >= 3:1 on card. */
+  --input-strong: oklch(0.6 0.012 72);
+  /* Switch thumb stays light in both themes so it reads as a raised knob, not a hole. */
+  --switch-thumb: oklch(0.995 0.002 82);
+  --ring: var(--primary);
+
+  --destructive: oklch(0.545 0.19 27);
+  --destructive-foreground: oklch(0.985 0.006 27);
+  --success: oklch(0.52 0.12 148);
+  --success-foreground: oklch(0.985 0.008 148);
+  --warning: oklch(0.72 0.15 72);
+  --warning-foreground: oklch(0.25 0.04 60);
+  --info: oklch(0.52 0.13 245);
+  --info-foreground: oklch(0.985 0.006 245);
+
+  /* Derived: soft fills for badges/selection, ink for readable colored text. */
+  --primary-soft: color-mix(in oklab, var(--primary) 11%, var(--card));
+  --primary-ink: color-mix(in oklab, var(--primary) 85%, var(--foreground));
+  --danger-soft: color-mix(in oklab, var(--destructive) 10%, var(--card));
+  --danger-ink: color-mix(in oklab, var(--destructive) 82%, var(--foreground));
+  --success-soft: color-mix(in oklab, var(--success) 11%, var(--card));
+  --success-ink: color-mix(in oklab, var(--success) 78%, var(--foreground));
+  --warning-soft: color-mix(in oklab, var(--warning) 16%, var(--card));
+  --warning-ink: color-mix(in oklab, var(--warning) 52%, var(--foreground));
+  --info-soft: color-mix(in oklab, var(--info) 10%, var(--card));
+  --info-ink: color-mix(in oklab, var(--info) 82%, var(--foreground));
+
+  --chart-1: var(--primary);
+  --chart-2: oklch(0.68 0.13 68);
+  --chart-3: oklch(0.52 0.12 250);
+  --chart-4: oklch(0.6 0.15 28);
+  --chart-5: oklch(0.55 0.1 310);
+  --chart-6: oklch(0.66 0.08 115);
+
+  --elevation-control: 0 1px 1.5px 0 oklch(0.3 0.02 70 / 0.06);
+  --elevation-panel:
+    0 1px 2px 0 oklch(0.3 0.02 70 / 0.05), 0 1px 1px -1px oklch(0.3 0.02 70 / 0.04);
+  --elevation-popover:
+    0 12px 32px -12px oklch(0.25 0.02 70 / 0.22), 0 3px 8px -3px oklch(0.25 0.02 70 / 0.12);
+  --elevation-dialog:
+    0 24px 64px -20px oklch(0.2 0.02 70 / 0.35), 0 4px 12px -4px oklch(0.2 0.02 70 / 0.12);
+  --scrim: oklch(0.2 0.015 70 / 0.42);
+
+  /* Density: comfortable is the default; `data-density="compact"` tightens controls and rows. */
+  --control-h: 2.25rem;
+  --control-h-sm: 2rem;
+  --row-py: 0.75rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --destructive-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: oklch(0.172 0.005 70);
+  --foreground: oklch(0.94 0.006 82);
+  --card: oklch(0.205 0.006 70);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.228 0.007 70);
+  --popover-foreground: var(--foreground);
+  --sidebar: oklch(0.155 0.005 70);
+  --sidebar-foreground: oklch(0.86 0.008 80);
+  --sidebar-accent: oklch(0.235 0.007 70);
+  --sidebar-border: oklch(0.255 0.006 70);
+
+  --primary: oklch(0.56 0.1 163);
+  --primary-foreground: oklch(0.985 0.008 160);
+  --secondary: oklch(0.25 0.007 70);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.245 0.007 70);
+  --muted-foreground: oklch(0.72 0.01 76);
+  --subtle-foreground: oklch(0.58 0.01 74);
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8a49e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
+  --accent: oklch(0.27 0.008 70);
+  --accent-foreground: var(--foreground);
+  --border: oklch(0.285 0.007 70);
+  --input: oklch(0.36 0.008 70);
+  --input-strong: oklch(0.56 0.01 72);
+  --switch-thumb: oklch(0.93 0.006 82);
+
+  --destructive: oklch(0.62 0.19 25);
+  --destructive-foreground: oklch(0.985 0.006 27);
+  --success: oklch(0.62 0.13 150);
+  --success-foreground: oklch(0.18 0.03 150);
+  --warning: oklch(0.78 0.14 75);
+  --warning-foreground: oklch(0.22 0.04 60);
+  --info: oklch(0.62 0.13 245);
+  --info-foreground: oklch(0.985 0.006 245);
+
+  --primary-soft: color-mix(in oklab, var(--primary) 20%, var(--card));
+  --primary-ink: color-mix(in oklab, var(--primary) 58%, var(--foreground));
+  --danger-soft: color-mix(in oklab, var(--destructive) 18%, var(--card));
+  --danger-ink: color-mix(in oklab, var(--destructive) 62%, var(--foreground));
+  --success-soft: color-mix(in oklab, var(--success) 18%, var(--card));
+  --success-ink: color-mix(in oklab, var(--success) 62%, var(--foreground));
+  --warning-soft: color-mix(in oklab, var(--warning) 16%, var(--card));
+  --warning-ink: color-mix(in oklab, var(--warning) 72%, var(--foreground));
+  --info-soft: color-mix(in oklab, var(--info) 18%, var(--card));
+  --info-ink: color-mix(in oklab, var(--info) 62%, var(--foreground));
+
+  --chart-2: oklch(0.74 0.12 70);
+  --chart-3: oklch(0.65 0.12 250);
+  --chart-4: oklch(0.68 0.14 30);
+  --chart-5: oklch(0.66 0.1 310);
+  --chart-6: oklch(0.72 0.08 115);
+
+  --elevation-control: 0 1px 1px 0 oklch(0 0 0 / 0.2);
+  --elevation-panel: 0 1px 2px 0 oklch(0 0 0 / 0.25);
+  --elevation-popover: 0 16px 40px -12px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.04);
+  --elevation-dialog: 0 28px 72px -20px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 0 0 / 0.05);
+  --scrim: oklch(0.08 0.005 70 / 0.62);
+}
+
+[data-density='compact'] {
+  --control-h: 2rem;
+  --control-h-sm: 1.75rem;
+  --row-py: 0.5rem;
 }
 
 /*
@@ -86,34 +236,83 @@
 }
 
 @layer components {
-  /* Density adjusts minimum touch size without distorting intrinsic or icon-sized controls. */
-  [data-density='compact']
-    :where(
-      input:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='range']):not(
-          [type='color']
-        ):not([type='file']),
-      select,
-      textarea,
-      button:not([class*='size-'])
-    ) {
-    min-height: 2rem;
+  .pupitre-tabular {
+    font-variant-numeric: tabular-nums;
   }
-  [data-density='comfortable']
-    :where(
-      input:not([type='hidden']):not([type='checkbox']):not([type='radio']):not([type='range']):not(
-          [type='color']
-        ):not([type='file']),
-      select,
-      textarea,
-      button:not([class*='size-'])
-    ) {
-    min-height: 2.5rem;
+  /* Thin, theme-aware scrollbars inside scroll containers (sidebar, tables, popups). */
+  .pupitre-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--input) transparent;
+  }
+  /* Native <select>: the UA arrow is pinned to the border and ignores padding, so draw the
+     same icon as the Base UI select trigger. Compact callers set `[--select-inset:…]`. */
+  .pupitre-native-select {
+    --select-inset: 0.75rem;
+    padding-inline: var(--select-inset);
+  }
+  .pupitre-native-select:not([multiple], [size]) {
+    appearance: none;
+    padding-inline-end: calc(var(--select-inset) + 1.5rem);
+    background-image: var(--select-chevron);
+    background-repeat: no-repeat;
+    background-position: right var(--select-inset) center;
+    background-size: 1rem;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-pupitre-shell] *,
+  [data-pupitre-popup],
+  [data-pupitre-popup] * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Desktop sidebar rail toggle (Shell runs it inside `document.startViewTransition`).
+ * The sidebar crossfades rail <-> full while its box resizes. The content column
+ * shows only its new layout and slides/resizes into place, so text never ghosts.
+ * Snapshots keep their natural size pinned top-left instead of being stretched.
+ */
+[data-sidebar-morph] > aside {
+  view-transition-name: pupitre-sidebar;
+}
+[data-sidebar-morph] > [data-pupitre-content] {
+  view-transition-name: pupitre-content;
+}
+::view-transition-group(pupitre-sidebar),
+::view-transition-group(pupitre-content) {
+  animation-duration: 220ms;
+  animation-timing-function: var(--ease-move);
+  overflow: clip;
+}
+::view-transition-old(pupitre-sidebar),
+::view-transition-new(pupitre-sidebar),
+::view-transition-new(pupitre-content) {
+  width: auto;
+  height: auto;
+  object-fit: none;
+  object-position: left top;
+}
+::view-transition-old(pupitre-sidebar),
+::view-transition-new(pupitre-sidebar) {
+  animation-duration: 220ms;
+  animation-timing-function: var(--ease-ui);
+}
+::view-transition-old(pupitre-content) {
+  display: none;
+}
+::view-transition-new(pupitre-content),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
 [data-sidebar='top-nav'] > header nav {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   overflow: visible;
 }
 [data-sidebar='top-nav'] > header nav section {

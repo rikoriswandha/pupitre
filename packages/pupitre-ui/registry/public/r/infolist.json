@@ -8,13 +8,17 @@
     "react@^19.2.3",
     "zod@^4.3.6"
   ],
-  "registryDependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/entry-shell.json",
+    "https://pupitre.dev/r/primitives.json",
+    "https://pupitre.dev/r/section.json"
+  ],
   "files": [
     {
       "path": "../src/components/Infolist.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Infolist.tsx",
-      "content": "import type { ReactNode } from 'react'\nimport type { components } from '@rikology/pupitre/catalog'\nimport type { infer as Infer } from 'zod'\n\ntype Props = Infer<typeof components.Infolist.props>\n\nexport function Infolist({ children }: { props: Props; children?: ReactNode }) {\n  return <div className=\"grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2\">{children}</div>\n}\n"
+      "content": "import { useContext, type CSSProperties, type ReactNode } from 'react'\nimport type { components } from '@rikology/pupitre/catalog'\nimport type { infer as Infer } from 'zod'\nimport { cn, Panel } from '../primitives/index.js'\nimport { PanelNestingContext } from './Section.js'\nimport { InlineEntryLabelContext } from './EntryShell.js'\n\ntype Props = Infer<typeof components.Infolist.props> & {\n  columns?: number | Record<string, number>\n  inlineLabel?: boolean\n  className?: string\n}\n\nexport function Infolist({ props = {}, children }: { props?: Props; children?: ReactNode }) {\n  const insidePanel = useContext(PanelNestingContext)\n  const inheritedInlineLabel = useContext(InlineEntryLabelContext)\n  const columns = props.columns ?? 2\n  const responsive = typeof columns === 'object' ? columns : { default: 1, sm: columns }\n  const columnCount = (count?: number) => Math.max(1, Math.min(12, Math.floor(count ?? 1)))\n  const style = {\n    '--entry-cols': columnCount(responsive.default),\n    '--entry-cols-sm': columnCount(responsive.sm ?? responsive.default),\n    '--entry-cols-md': columnCount(responsive.md ?? responsive.sm ?? responsive.default),\n    '--entry-cols-lg': columnCount(\n      responsive.lg ?? responsive.md ?? responsive.sm ?? responsive.default\n    ),\n    '--entry-cols-xl': columnCount(\n      responsive.xl ?? responsive.lg ?? responsive.md ?? responsive.sm ?? responsive.default\n    ),\n  } as CSSProperties\n  const body = (\n    <InlineEntryLabelContext.Provider value={props.inlineLabel ?? inheritedInlineLabel}>\n      <div\n        className={cn(\n          'grid min-w-0 grid-cols-[repeat(var(--entry-cols),minmax(0,1fr))] gap-x-6 gap-y-5 sm:grid-cols-[repeat(var(--entry-cols-sm),minmax(0,1fr))] md:grid-cols-[repeat(var(--entry-cols-md),minmax(0,1fr))] lg:grid-cols-[repeat(var(--entry-cols-lg),minmax(0,1fr))] xl:grid-cols-[repeat(var(--entry-cols-xl),minmax(0,1fr))]',\n          !insidePanel && 'p-5 sm:p-6',\n          props.className\n        )}\n        style={style}\n      >\n        {children}\n      </div>\n    </InlineEntryLabelContext.Provider>\n  )\n  return insidePanel ? (\n    body\n  ) : (\n    <PanelNestingContext.Provider value={true}>\n      <Panel>{body}</Panel>\n    </PanelNestingContext.Provider>\n  )\n}\n"
     }
   ]
 }

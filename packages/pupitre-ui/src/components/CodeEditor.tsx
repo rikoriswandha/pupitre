@@ -1,6 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { Icon } from '../icons.js'
+import { FieldDescription, cn, controlGroupClasses } from '../primitives/index.js'
 
 type Language =
   'json' | 'javascript' | 'typescript' | 'html' | 'css' | 'markdown' | 'sql' | 'python' | 'php'
@@ -22,6 +24,7 @@ type Props = {
   loading?: boolean
 }
 type EditorProps = {
+  id: string
   value: string
   label?: string
   describedBy?: string
@@ -36,17 +39,73 @@ type EditorProps = {
 // CodeMirror remains in its own chunk; only the selected language extension is imported on demand.
 const Editor = lazy(async () => {
   const [
-    { EditorView, keymap, lineNumbers },
+    {
+      EditorView,
+      keymap,
+      lineNumbers,
+      drawSelection,
+      highlightActiveLine,
+      highlightActiveLineGutter,
+    },
     { defaultKeymap, history, historyKeymap },
-    { syntaxHighlighting, defaultHighlightStyle },
+    { syntaxHighlighting, HighlightStyle },
     { Compartment, EditorState },
+    { tags },
   ] = await Promise.all([
     import('@codemirror/view'),
     import('@codemirror/commands'),
     import('@codemirror/language'),
     import('@codemirror/state'),
+    import('@lezer/highlight'),
+  ])
+  const theme = EditorView.theme({
+    '&': {
+      backgroundColor: 'var(--card)',
+      color: 'var(--foreground)',
+      minHeight: 'var(--editor-min-height)',
+      fontSize: '13px',
+    },
+    '&.cm-focused': { outline: 'none' },
+    '&:has(.cm-content[aria-disabled=true])': {
+      backgroundColor: 'var(--muted)',
+      color: 'var(--muted-foreground)',
+    },
+    '.cm-scroller': { fontFamily: 'var(--font-mono, ui-monospace, monospace)', lineHeight: '1.75' },
+    '.cm-content': {
+      padding: '12px 0',
+      caretColor: 'var(--foreground)',
+      minHeight: 'var(--editor-min-height)',
+    },
+    '.cm-line': { padding: '0 16px' },
+    '.cm-gutters': {
+      backgroundColor: 'var(--muted)',
+      color: 'var(--muted-foreground)',
+      borderRight: '1px solid var(--border)',
+    },
+    '.cm-gutterElement': { padding: '0 8px' },
+    '.cm-activeLine, .cm-activeLineGutter': {
+      backgroundColor: 'color-mix(in oklch, var(--primary) 6%, transparent)',
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+      backgroundColor: 'color-mix(in oklch, var(--primary) 18%, transparent)',
+    },
+    '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--foreground)' },
+  })
+  const highlightStyle = HighlightStyle.define([
+    { tag: [tags.keyword, tags.controlKeyword, tags.operatorKeyword], color: 'var(--primary-ink)' },
+    { tag: [tags.string, tags.special(tags.string), tags.regexp], color: 'var(--success-ink)' },
+    { tag: [tags.number, tags.bool, tags.null, tags.atom], color: 'var(--warning-ink)' },
+    { tag: [tags.comment, tags.meta], color: 'var(--muted-foreground)' },
+    { tag: [tags.typeName, tags.className, tags.tagName], color: 'var(--info-ink)' },
+    { tag: [tags.propertyName, tags.attributeName], color: 'var(--foreground)' },
+    { tag: tags.invalid, color: 'var(--danger-ink)' },
+    { tag: tags.heading, color: 'var(--foreground)', fontWeight: '600' },
+    { tag: tags.link, color: 'var(--primary-ink)', textDecoration: 'underline' },
+    { tag: tags.strong, fontWeight: '600' },
+    { tag: tags.emphasis, fontStyle: 'italic' },
   ])
   function CodeMirrorEditor({
+    id,
     value,
     label,
     describedBy,
@@ -68,6 +127,7 @@ const Editor = lazy(async () => {
         EditorState.readOnly.of(disabled || readOnly),
         EditorView.editable.of(!disabled && !readOnly),
         EditorView.contentAttributes.of({
+          'id': id,
           'tabindex': '0',
           'aria-label': label ?? 'Code editor',
           'aria-readonly': String(readOnly),
@@ -76,7 +136,7 @@ const Editor = lazy(async () => {
           'aria-invalid': String(invalid),
         }),
       ],
-      [disabled, readOnly, label, describedBy, invalid]
+      [id, disabled, readOnly, label, describedBy, invalid]
     )
     const accessRef = useRef(accessExtensions)
     useEffect(() => {
@@ -146,10 +206,14 @@ const Editor = lazy(async () => {
           doc: valueRef.current,
           extensions: [
             history(),
+            theme,
+            drawSelection(),
+            highlightActiveLine(),
+            highlightActiveLineGutter(),
             keymap.of([...defaultKeymap, ...historyKeymap]),
             ...(showLineNumbers ? [lineNumbers()] : []),
             languageExtension,
-            syntaxHighlighting(defaultHighlightStyle),
+            syntaxHighlighting(highlightStyle),
             access.of(accessRef.current()),
             EditorView.updateListener.of((update) => {
               if (update.docChanged) onChangeRef.current(update.state.doc.toString())
@@ -173,12 +237,27 @@ const Editor = lazy(async () => {
     }, [value])
     return (
       <div
-        ref={host}
-        className="overflow-auto rounded-md border border-input bg-background text-sm"
+        className={cn(controlGroupClasses, 'flex-col', disabled && 'bg-muted shadow-none')}
         role="group"
         aria-label={label ?? 'Code editor'}
-        style={{ minHeight }}
-      />
+      >
+        <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <Icon name="code" className="size-3.5" />
+          <span>
+            {language === 'javascript'
+              ? 'JavaScript'
+              : language === 'typescript'
+                ? 'TypeScript'
+                : language.toUpperCase()}
+          </span>
+          {(readOnly || disabled) && <span className="ml-auto">Read only</span>}
+        </div>
+        <div
+          ref={host}
+          className="min-w-0 overflow-auto"
+          style={{ '--editor-min-height': `${minHeight}px`, minHeight } as CSSProperties}
+        />
+      </div>
     )
   }
   return { default: CodeMirrorEditor }
@@ -198,17 +277,16 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
     [emit, setValue]
   )
   return (
-    <div className="space-y-2" aria-busy={loading}>
-      {props.label && <label className="block text-sm font-medium">{props.label}</label>}
-      {props.helperText && (
-        <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-          {props.helperText}
-        </p>
+    <div className="grid gap-1.5" aria-busy={loading}>
+      {props.label && (
+        <label htmlFor={id} className="text-sm font-medium leading-5 text-foreground">
+          {props.label}
+        </label>
       )}
       <Suspense
         fallback={
           <div
-            className="rounded-md border bg-muted/20"
+            className="rounded-lg border border-input bg-card shadow-control"
             style={{ minHeight: props.minHeight ?? 180 }}
             aria-label="Loading code editor"
             role="status"
@@ -216,6 +294,7 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
         }
       >
         <Editor
+          id={id}
           value={value ?? ''}
           label={props.label ?? undefined}
           describedBy={describedBy}
@@ -228,9 +307,17 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
           onChange={update}
         />
       </Suspense>
+      {props.helperText && (
+        <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
+      )}
       {error && (
-        <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
-          {error}
+        <p
+          id={`${id}-error`}
+          className="flex items-start gap-1.5 text-[0.8125rem] leading-5 text-danger-ink"
+          role="alert"
+        >
+          <Icon name="circle-alert" className="mt-0.5 size-3.5 shrink-0" />
+          <span>{error}</span>
         </p>
       )}
       {children}

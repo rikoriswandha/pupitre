@@ -1,6 +1,8 @@
 import { useContext, type ReactNode } from 'react'
 import { BuilderContext } from './Builder.js'
-import { Button } from '../primitives/index.js'
+import { Button, cn, Collapse } from '../primitives/index.js'
+import { Icon } from '../icons.js'
+import { PanelNestingContext } from './Section.js'
 
 type RuntimeProps = { props: Record<string, unknown>; children?: ReactNode; loading?: boolean }
 export function BuilderItem({ props, children, loading = false }: RuntimeProps) {
@@ -15,36 +17,51 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
   const collapsed = builder.collapsed[item._key] === true
   const busy = loading || builder.loading
   return (
-    <article key={item._key} className="rounded-md border border-border bg-card">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-        <h3 className="text-sm font-medium">{label}</h3>
+    <article
+      key={item._key}
+      className="min-w-0 overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <header className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          {builder.descriptor.reorderable && (
+            <Icon name="grip-vertical" className="size-4 shrink-0 text-muted-foreground" />
+          )}
+          <h3 className="truncate text-sm font-medium">{label}</h3>
+          <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+        </div>
         <div className="flex gap-1">
           {builder.descriptor.reorderable && (
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
+                square
                 aria-label={`Move block ${index + 1} up`}
                 disabled={index === 0 || busy}
                 onClick={() => builder.move(index, -1)}
               >
-                ↑
+                <Icon name="arrow-up" className="size-4" />
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="sm"
+                square
                 aria-label={`Move block ${index + 1} down`}
                 disabled={index === builder.items.length - 1 || busy}
                 onClick={() => builder.move(index, 1)}
               >
-                ↓
+                <Icon name="arrow-down" className="size-4" />
               </Button>
             </>
           )}
           {builder.descriptor.cloneable && (
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
+              square
               aria-label={`Clone block ${index + 1}`}
               disabled={
                 busy ||
@@ -52,32 +69,47 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
               }
               onClick={() => builder.clone(index)}
             >
-              Clone
+              <Icon name="copy" className="size-4" />
             </Button>
           )}
           {builder.descriptor.collapsible && (
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
+              size="sm"
+              square
               aria-label={`Toggle block ${index + 1}`}
               aria-expanded={!collapsed}
               onClick={() => builder.toggleCollapsed(item._key)}
             >
-              {collapsed ? 'Expand' : 'Collapse'}
+              <Icon
+                name="chevron-down"
+                className={cn(
+                  'size-4 transition-transform duration-200 ease-ui',
+                  !collapsed && 'rotate-180'
+                )}
+              />
             </Button>
           )}
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
+            size="sm"
+            square
+            color="danger"
             aria-label={`Remove block ${index + 1}`}
             disabled={busy || builder.items.length <= (builder.descriptor.minItems ?? 0)}
             onClick={() => builder.remove(index)}
           >
-            Remove
+            <Icon name="trash-2" className="size-4" />
           </Button>
         </div>
       </header>
-      {!collapsed && <div className="space-y-4 p-4">{children}</div>}
+      <Collapse open={!collapsed}>
+        <div className="grid gap-x-6 gap-y-5 border-t border-border p-4">
+          <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
+        </div>
+      </Collapse>
     </article>
   )
 }

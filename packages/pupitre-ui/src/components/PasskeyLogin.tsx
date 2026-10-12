@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { t } from '@rikology/pupitre-react'
+import { Button } from '../primitives/index.js'
+import { Icon } from '../icons.js'
 
 function xsrfToken() {
   const cookie = document.cookie.split('; ').find((entry) => entry.startsWith('XSRF-TOKEN='))
@@ -44,17 +46,25 @@ export function PasskeyLogin({ panelPath }: { panelPath: string }) {
   }
 
   return (
-    <div className="mt-5 border-t border-border pt-5">
-      <button
+    <div className="mt-5">
+      <div className="mb-4 flex items-center gap-3 text-xs text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        <span>{t('or')}</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <Button
         type="button"
         onClick={signIn}
         disabled={busy}
-        className="flex min-h-10 w-full items-center justify-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted disabled:opacity-60"
+        color="gray"
+        loading={busy}
+        className="w-full"
       >
+        {!busy && <Icon name="fingerprint" className="size-4" />}
         {busy ? t('Waiting for passkey…') : t('Sign in with a passkey')}
-      </button>
+      </Button>
       {error && (
-        <p className="mt-2 text-sm text-destructive" role="alert">
+        <p className="mt-2 text-[0.8125rem] text-danger-ink" role="alert">
           {error}
         </p>
       )}

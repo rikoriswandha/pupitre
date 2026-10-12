@@ -90,6 +90,18 @@ pupitreTest('registers and uses a passkey with a virtual authenticator', async (
     await page.goto('/admin/login')
     await page.getByRole('button', { name: 'Sign in with a passkey' }).click()
     await expect(page).toHaveURL(/\/admin\/acme$/)
+
+    await page.goto('/admin/profile')
+    const passkey = page.getByRole('listitem').filter({ hasText: 'E2E virtual authenticator' })
+    const confirm = page.getByRole('dialog', { name: 'Delete this passkey?' })
+    await passkey.getByRole('button', { name: 'Delete' }).click()
+    await confirm.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(confirm).toBeHidden()
+    await expect(passkey).toBeVisible()
+    await passkey.getByRole('button', { name: 'Delete' }).click()
+    await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
+    await expect(confirm).toBeHidden()
+    await expect(passkey).toHaveCount(0)
   } finally {
     try {
       if (!page.isClosed())

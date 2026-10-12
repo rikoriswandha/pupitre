@@ -61,6 +61,17 @@ const adminPanel = definePanel('admin')
       .group('System')
       .sort(30)
       .items([nav.item().page('settings')]),
+    nav
+      .group('Showcase')
+      .sort(25)
+      // Explicit item sorts keep the tour order; equal sorts fall back to label order.
+      .items([
+        nav.item().page('store-overview').sort(1),
+        nav.item().resource('products').sort(2),
+        nav.item().resource('orders').sort(3),
+        nav.item().page('form-playground').sort(4),
+        nav.item().page('tour').sort(5),
+      ]),
     nav.item('Documentation').url('https://pupitre.dev/docs').external(),
   ])
   .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])

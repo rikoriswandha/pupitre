@@ -8,7 +8,7 @@ export function DataTableSummary({ summary, columns }: Props) {
     <div
       role="region"
       aria-label={t('Table summary')}
-      className="flex flex-wrap gap-4 rounded-md border bg-muted/20 p-3 text-sm"
+      className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border bg-muted/40 px-5 py-3 text-[0.8125rem] tabular-nums"
     >
       {Object.entries(summary).flatMap(([column, summaries]) =>
         Object.entries(summaries).map(([name, value]) => (
@@ -16,7 +16,7 @@ export function DataTableSummary({ summary, columns }: Props) {
             <span className="text-muted-foreground">
               {columns.find((item) => item.name === column)?.label ?? column} {name}:{' '}
             </span>
-            <strong>{value}</strong>
+            <strong className="font-medium text-foreground">{value}</strong>
           </div>
         ))
       )}

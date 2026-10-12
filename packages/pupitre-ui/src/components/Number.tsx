@@ -4,7 +4,19 @@ import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field'
 import { useLiveField } from './use_live_field.js'
-import { Field, FieldError, Label } from '../primitives/index.js'
+import {
+  Field,
+  FieldError,
+  FieldDescription,
+  controlGroupClasses,
+  bareControlClasses,
+  InputAddon,
+  InputSlot,
+  buttonClasses,
+} from '../primitives/index.js'
+
+import { Icon } from '../icons.js'
+import { InputFieldLabel } from './Text.js'
 
 type Props = Infer<typeof components.Number.props>
 type Runtime = {
@@ -40,12 +52,7 @@ export function Number({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
-          <Label htmlFor={id}>
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </Label>
-        )}
+        <InputFieldLabel id={id} props={props} />
         <BaseNumberField.Root
           value={
             value === '' || value === null || value === undefined ? null : globalThis.Number(value)
@@ -58,8 +65,8 @@ export function Number({ props, bindings }: Runtime) {
           disabled={props.disabled}
           readOnly={props.readOnly}
         >
-          <BaseNumberField.Group className="flex items-center gap-2 rounded-md border border-input bg-background px-3 focus-within:ring-2 focus-within:ring-ring">
-            {props.prefix && <span className="text-sm text-muted-foreground">{props.prefix}</span>}
+          <BaseNumberField.Group className={`${controlGroupClasses} h-(--control-h)`}>
+            {props.prefix && <InputAddon>{props.prefix}</InputAddon>}
             <BaseNumberField.Input
               aria-label={props.label ?? id}
               {...props.extraAttributes}
@@ -70,34 +77,30 @@ export function Number({ props, bindings }: Runtime) {
               aria-describedby={describedBy}
               aria-invalid={!!error}
               onBlur={() => commitValue()}
-              className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
+              className={bareControlClasses}
             />
-            <BaseNumberField.Decrement
-              aria-controls={id}
-              aria-label="Decrease value"
-              className="rounded border border-input px-2 text-sm"
-            >
-              −
-            </BaseNumberField.Decrement>
-            <BaseNumberField.Increment
-              aria-controls={id}
-              aria-label="Increase value"
-              className="rounded border border-input px-2 text-sm"
-            >
-              +
-            </BaseNumberField.Increment>
-            {props.suffix && <span className="text-sm text-muted-foreground">{props.suffix}</span>}
+            <InputSlot>
+              <BaseNumberField.Decrement
+                aria-controls={id}
+                aria-label="Decrease value"
+                className={buttonClasses({ variant: 'ghost', size: 'xs', square: true })}
+              >
+                <Icon name="minus" className="size-4" />
+              </BaseNumberField.Decrement>
+              <BaseNumberField.Increment
+                aria-controls={id}
+                aria-label="Increase value"
+                className={buttonClasses({ variant: 'ghost', size: 'xs', square: true })}
+              >
+                <Icon name="plus" className="size-4" />
+              </BaseNumberField.Increment>
+            </InputSlot>
+            {props.suffix && <InputAddon position="end">{props.suffix}</InputAddon>}
           </BaseNumberField.Group>
         </BaseNumberField.Root>
-        {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {props.hint}
-          </p>
-        )}
+
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>

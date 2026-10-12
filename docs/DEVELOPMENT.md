@@ -166,8 +166,20 @@ Langkah WP40 aktif di job `checks`, tepat sesudah `verify:exports`; perubahan su
 
 ## 10. Example app
 
-`apps/example` adalah host AdonisJS v7 + Inertia React (starter kit) yang sudah menjalankan `node ace add @rikology/pupitre` (hasilnya di-commit). Isi: model `User`, `Post`, `Category`, `Comment`, `Tag`, `Revision`, `Tenant`; policy; seeder deterministik (`node ace db:seed`); panel `admin` (tenancy url) dan `app` (tanpa tenancy). Post menampilkan relation manager Comments (`hasMany`) dan Tags (`manyToMany`, pivot note), serta nested Revisions; Tags memakai halaman list dengan create/edit modal. Dipakai oleh Playwright dan sebagai referensi dokumentasi — setiap fitur baru wajib tampil di sini.
+`apps/example` adalah host AdonisJS v7 + Inertia React (starter kit) yang sudah menjalankan `node ace add @rikology/pupitre` (hasilnya di-commit). Isi: model `User`, `Post`, `Category`, `Comment`, `Tag`, `Revision`, `Tenant`, `Product`, `ProductVariant`, `Order`, `OrderEvent`; policy; seeder deterministik (`node ace db:seed`); panel `admin` (tenancy url) dan `app` (tanpa tenancy). Post menampilkan relation manager Comments (`hasMany`) dan Tags (`manyToMany`, pivot note), serta nested Revisions; Tags memakai halaman list dengan create/edit modal. Dipakai oleh Playwright dan sebagai referensi dokumentasi — setiap fitur baru wajib tampil di sini.
 Contoh Post memakai kolom `summary` (ditambah migrasi contoh idempotent) untuk `MarkdownEditor` dan `TextEntry.markdown()`; field `body` tetap memakai `RichEditor` HTML. Halaman Settings menunjukkan `CodeEditor` JSON, dan cover Post mengaktifkan editor crop gambar.
+
+Grup navigasi **Showcase** (`/admin/<tenant>/…`) adalah tur fitur yang dibaca dari atas ke bawah; tiap file diberi komentar fitur yang ia tunjukkan:
+
+| Permukaan | File | Yang ditunjukkan |
+| --- | --- | --- |
+| Store overview (`/store`) | `app/admin/pages/store_overview_page.ts`, `app/admin/widgets/store_*` | Semua jenis widget (stats + sparkline/deskripsi/warna, line, area multi-dataset, pie, doughnut, table, timeline eager, komponen host), `poll`, `sort`, `canView`, filter halaman berbasis URL |
+| Products | `app/admin/resources/product_resource.ts` | Hampir semua field input (checkbox list, tags, multi-select, toggle buttons, slider range, key-value, color, date/time, file upload publik & privat, code/markdown editor), view host `MarginPreview`, server watch slug, semua jenis kolom/filter (termasuk sel editable dan filter custom), grouping, ringkasan, tab list, empty state, aksi row/bulk/header (slide-over, grup, konfirmasi, URL tab baru, key binding), relation manager Variants, widget header/footer berbasis record |
+| Orders | `app/admin/resources/order_resource.ts` | Wizard + repeater (opsi async ter-scope tenant, `itemLabel`, grid), field `hidden`/`readOnly`/`dehydrated(false)`, hook `mutateBefore*`/`beforeSave`/`afterCreate` (memakai `trx`), aksi status ber-`can()`, notifikasi database, timeline riwayat, relation manager read-only, `defaultGroup` |
+| Form playground (`/playground`) | `app/admin/pages/form_playground_page.ts` | Primitif layout (grid, split, fieldset, group, tabs, divider, html, placeholder), aturan validasi lintas field, reaktivitas yang diangkat ke klien, `dehydrate`, `dehydratedWhenHidden`, `canAccess` |
+| Showcase tour (`/tour`) | `app/admin/pages/showcase_tour_page.ts`, `inertia/pages/admin/showcase_tour.tsx` | Custom page `.component()` milik host di dalam `PupitreShell`; indeks semua permukaan contoh |
+
+Komponen host didaftarkan di `inertia/admin/registry.ts`: nama non-catalog di `defineRegistry` (widget `StoreTipsWidget`) dan map `views` untuk `schema.view()` yang dipasang lewat `PupitreViewsProvider` di `inertia/pages/pupitre.tsx`. Regresi E2E ada di `e2e/60_showcase.spec.ts`.
 
 ```bash
 cd apps/example && cp .env.example .env && node ace migration:fresh --seed && npm run dev

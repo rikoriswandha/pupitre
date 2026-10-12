@@ -37,7 +37,7 @@ export function View({ props, children }: RuntimeProps) {
   if (!Component)
     return (
       <div
-        className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground"
+        className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
         data-view-component={name || undefined}
       >
         View component unavailable

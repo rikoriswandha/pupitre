@@ -1,8 +1,16 @@
-import { createContext, useState, type CSSProperties, type ReactNode } from 'react'
+import { createContext, useState, type ReactNode } from 'react'
 import { useSetState, useStateValue } from '@rikology/pupitre-react'
-import { Button } from '../primitives/index.js'
+import { Menu } from '@base-ui/react/menu'
+import {
+  buttonClasses,
+  positionerClasses,
+  popupClasses,
+  menuItemClasses,
+} from '../primitives/index.js'
+import { Icon } from '../icons.js'
+import { CollectionField } from './CollectionField.js'
 
-type Block = { key: string; label: string; template: string }
+type Block = { key: string; label: string; template: string; icon?: string }
 type Descriptor = {
   name: string
   blocks: Block[]
@@ -61,40 +69,50 @@ export function Builder({ props, children, bindings, loading = false }: RuntimeP
     update([...items.slice(0, index + 1), copied, ...items.slice(index + 1)])
   }
   const toggleCollapsed = (key: string) => setCollapsed((old) => ({ ...old, [key]: !old[key] }))
-  const pickerStyle =
-    typeof descriptor.blockPickerColumns === 'number' && descriptor.blockPickerColumns > 0
-      ? ({
-          gridTemplateColumns: `repeat(${Math.floor(descriptor.blockPickerColumns)}, minmax(0, 1fr))`,
-        } satisfies CSSProperties)
-      : undefined
   const canAdd = items.length < max
   return (
     <BuilderContext.Provider
       value={{ descriptor, items, remove, move, clone, toggleCollapsed, collapsed, loading }}
     >
-      <div className="space-y-4" data-builder={descriptor.name}>
-        {children}
-        <div
-          className="grid gap-2"
-          style={pickerStyle}
-          role="group"
-          aria-label={descriptor.addLabel ?? 'Add block'}
-        >
-          {descriptor.blocks.map((block) => (
-            <Button
-              key={block.key}
-              type="button"
-              variant="outline"
-              disabled={!canAdd || loading}
-              onClick={() =>
-                update([...items, { _key: `builder-${++itemSequence}`, type: block.key, data: {} }])
-              }
-            >
-              {descriptor.addLabel ?? 'Add'} {block.label}
-            </Button>
-          ))}
+      <CollectionField props={props} name={descriptor.name}>
+        <div className="space-y-3" data-builder={descriptor.name}>
+          {children}
+          {items.length === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
+              No blocks yet. Add a block to build your content.
+            </div>
+          )}
+          <Menu.Root>
+            <Menu.Trigger disabled={!canAdd || loading} className={buttonClasses({ size: 'sm' })}>
+              <Icon name="plus" className="size-4" />
+              {descriptor.addLabel ?? 'Add block'}
+              <Icon name="chevron-down" className="size-4" />
+            </Menu.Trigger>
+            <Menu.Portal>
+              <Menu.Positioner sideOffset={6} align="start" className={positionerClasses}>
+                <Menu.Popup data-pupitre-popup="" className={popupClasses}>
+                  {descriptor.blocks.map((block) => (
+                    <Menu.Item
+                      key={block.key}
+                      className={menuItemClasses}
+                      aria-label={`${descriptor.addLabel ?? 'Add'} ${block.label}`}
+                      onClick={() =>
+                        update([
+                          ...items,
+                          { _key: `builder-${++itemSequence}`, type: block.key, data: {} },
+                        ])
+                      }
+                    >
+                      <Icon name={block.icon ?? 'layers'} className="size-4" />
+                      {block.label}
+                    </Menu.Item>
+                  ))}
+                </Menu.Popup>
+              </Menu.Positioner>
+            </Menu.Portal>
+          </Menu.Root>
         </div>
-      </div>
+      </CollectionField>
     </BuilderContext.Provider>
   )
 }

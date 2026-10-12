@@ -12,6 +12,7 @@ export function Step({ props, children }: RuntimeProps) {
       aria-label={typeof props.label === 'string' ? props.label : undefined}
       hidden={!selected}
       data-wizard-step={key}
+      className="min-w-0 space-y-5"
     >
       {children}
     </section>

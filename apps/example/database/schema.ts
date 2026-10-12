@@ -160,6 +160,72 @@ export class NotificationSchema extends BaseModel {
   declare updatedAt: DateTime | null
 }
 
+export class OrderEventSchema extends BaseModel {
+  static $columns = ['actor', 'createdAt', 'event', 'fromStatus', 'id', 'note', 'orderId', 'tenantId', 'toStatus', 'updatedAt'] as const
+  $columns = OrderEventSchema.$columns
+  @column()
+  declare actor: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare event: string
+  @column()
+  declare fromStatus: string | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare note: string | null
+  @column()
+  declare orderId: number
+  @column()
+  declare tenantId: number
+  @column()
+  declare toStatus: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class OrderSchema extends BaseModel {
+  static $columns = ['createdAt', 'customerEmail', 'customerName', 'customerPhone', 'giftMessage', 'id', 'isGift', 'items', 'notes', 'number', 'paymentMethod', 'placedAt', 'shippingAddress', 'source', 'status', 'tenantId', 'total', 'updatedAt'] as const
+  $columns = OrderSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare customerEmail: string
+  @column()
+  declare customerName: string
+  @column()
+  declare customerPhone: string | null
+  @column()
+  declare giftMessage: string | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare isGift: boolean
+  @column()
+  declare items: string | null
+  @column()
+  declare notes: string | null
+  @column()
+  declare number: string
+  @column()
+  declare paymentMethod: string
+  @column.dateTime()
+  declare placedAt: DateTime | null
+  @column()
+  declare shippingAddress: string | null
+  @column()
+  declare source: string | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: number
+  @column()
+  declare total: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
 export class PostLinkSchema extends BaseModel {
   static $columns = ['createdAt', 'id', 'label', 'postId', 'sort', 'updatedAt', 'url'] as const
   $columns = PostLinkSchema.$columns
@@ -237,6 +303,94 @@ export class PostSchema extends BaseModel {
   declare viewsCount: number
   @column()
   declare website: string | null
+}
+
+export class ProductVariantSchema extends BaseModel {
+  static $columns = ['color', 'createdAt', 'id', 'name', 'price', 'productId', 'sku', 'stock', 'tenantId', 'updatedAt'] as const
+  $columns = ProductVariantSchema.$columns
+  @column()
+  declare color: string | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare name: string
+  @column()
+  declare price: number
+  @column()
+  declare productId: number
+  @column()
+  declare sku: string
+  @column()
+  declare stock: number
+  @column()
+  declare tenantId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+}
+
+export class ProductSchema extends BaseModel {
+  static $columns = ['ageRange', 'attributes', 'availableFrom', 'brandColor', 'channels', 'cost', 'createdAt', 'description', 'gallery', 'id', 'isActive', 'labels', 'launchAt', 'markets', 'name', 'price', 'rating', 'restockTime', 'shippingClass', 'sizes', 'sku', 'slug', 'specSheet', 'specs', 'status', 'stock', 'tenantId', 'updatedAt', 'visibility'] as const
+  $columns = ProductSchema.$columns
+  @column()
+  declare ageRange: string | null
+  @column()
+  declare attributes: string | null
+  @column.date()
+  declare availableFrom: DateTime | null
+  @column()
+  declare brandColor: string | null
+  @column()
+  declare channels: string | null
+  @column()
+  declare cost: number | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare description: string | null
+  @column()
+  declare gallery: string | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare isActive: boolean
+  @column()
+  declare labels: string | null
+  @column.dateTime()
+  declare launchAt: DateTime | null
+  @column()
+  declare markets: string | null
+  @column()
+  declare name: string
+  @column()
+  declare price: number
+  @column()
+  declare rating: number
+  @column()
+  declare restockTime: string | null
+  @column()
+  declare shippingClass: string
+  @column()
+  declare sizes: string | null
+  @column()
+  declare sku: string
+  @column()
+  declare slug: string
+  @column()
+  declare specSheet: string | null
+  @column()
+  declare specs: string | null
+  @column()
+  declare status: string
+  @column()
+  declare stock: number
+  @column()
+  declare tenantId: number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime | null
+  @column()
+  declare visibility: string
 }
 
 export class PupitreExportSchema extends BaseModel {

@@ -881,7 +881,12 @@ export function TableContractStory() {
     rows: [
       {
         key: 7,
-        cells: { status: 'Ready', title: 'This title wraps onto more than one line' },
+        cells: {
+          status: 'Ready',
+          stage: { value: 'draft', color: 'gray' },
+          health: { value: 'live', color: 'success' },
+          title: 'This title wraps onto more than one line',
+        },
         actions: [
           {
             name: 'view',
@@ -934,6 +939,22 @@ export function TableContractStory() {
                   sortable: false,
                   searchable: false,
                   props: { badge: true, colors: { Ready: 'rgb(1, 2, 3)' } },
+                },
+                {
+                  name: 'stage',
+                  label: 'Stage',
+                  type: 'badge',
+                  sortable: false,
+                  searchable: false,
+                  props: { colors: { draft: 'gray' } },
+                },
+                {
+                  name: 'health',
+                  label: 'Health',
+                  type: 'badge',
+                  sortable: false,
+                  searchable: false,
+                  props: { colors: { live: 'success' } },
                 },
                 {
                   name: 'title',

@@ -484,6 +484,22 @@ test.group('Pupitre MFA and passkeys', () => {
         credential: assertion,
       })
       assert.equal(replay.status, 422)
+
+      const deleteOwnPasskey = await fetch(
+        `${fixture.baseUrl}/admin/profile/passkeys/${usedPasskey!.id}`,
+        {
+          method: 'DELETE',
+          headers: { Cookie: session.value, Accept: 'application/json' },
+          redirect: 'manual',
+        }
+      )
+      assert.equal(deleteOwnPasskey.status, 204, await deleteOwnPasskey.clone().text())
+      assert.notExists(
+        await fixture.database.from('pupitre_passkeys').where('id', usedPasskey!.id).first()
+      )
+      assert.exists(
+        await fixture.database.from('pupitre_passkeys').where('id', otherPasskey!.id).first()
+      )
     } finally {
       await closeTestApp(fixture)
     }

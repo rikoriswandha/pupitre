@@ -270,9 +270,9 @@ export async function renamePasskey(
 
 export async function deletePasskey(ctx: HttpContext, userId: string | number, id: string) {
   const db = await database(ctx)
-  const query = db.from('pupitre_passkeys').where('id', id).where('user_id', userId)
-  const row = await query.first()
+  // Separate builders: `first()` adds `limit 1`, which Lucid rejects on `delete`.
+  const row = await db.from('pupitre_passkeys').where('id', id).where('user_id', userId).first()
   if (!row) return false
-  await query.delete()
+  await db.from('pupitre_passkeys').where('id', id).where('user_id', userId).delete()
   return true
 }

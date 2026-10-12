@@ -13,7 +13,8 @@ pupitreTest(
     await admin.fillField('Slug', `schema-parity-${stamp}`)
     await admin.fillField('Category', 'Culture')
     await expect(page.locator('[title="Use lowercase words separated by hyphens."]')).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Manage categories' })).toHaveCount(4)
+    // Hint, prefix and suffix actions render inline; the header copy sits in "More actions".
+    await expect(page.getByRole('button', { name: 'Manage categories' })).toHaveCount(3)
 
     await admin.fillField('Phone', '2125550199')
     const phone = await admin.field('Phone')
@@ -36,9 +37,11 @@ pupitreTest(
       )
       .toBeGreaterThan(initialHeight)
 
-    const priority = await admin.field('Priority')
-    await priority.fill('35')
-    await expect(priority).toHaveValue('35')
+    const priority = page.getByRole('slider', { name: 'Priority' })
+    await priority.focus()
+    await priority.press('Home')
+    for (let step = 0; step < 7; step++) await priority.press('ArrowRight')
+    await expect(priority).toHaveAttribute('aria-valuenow', '35')
 
     await page.getByRole('button', { name: /add related link/i }).click()
     await admin.fillField('Label', 'Project home')

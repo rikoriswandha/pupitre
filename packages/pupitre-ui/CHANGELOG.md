@@ -2,6 +2,14 @@
 
 ## Unreleased (1.0.0, milestone M4)
 
+### Changed
+- Redesign (M4): new default "writing desk" skin. Warm OKLCH neutrals (canvas, sidebar, card layers), blotter-green default primary, semantic `success`/`warning`/`danger`/`info` tokens with derived `-soft`/`-ink` variants (mixed in oklab so a `theme.primary` override re-skins every state), `--input-strong` for checkbox/radio/switch boundaries, chart palette, elevation and density (`--control-h`, `--row-py`) tokens. See the root `DESIGN.md`.
+- Primitives (M4): `Button` now takes `variant` (`solid`/`outline`/`ghost`/`link`) × `color` (`primary`/`gray`/`success`/`warning`/`danger`/`info`) × `size` (`xs`–`lg`) plus `square` and `loading`; the old `default`/`secondary`/`outline`/`destructive` variants are removed. New exports: `buttonClasses`, `controlClasses`, `Textarea`, `InputGroup`/`InputAddon`/`InputSlot`, `FieldDescription`, `RequiredMark`, `CheckboxControl`, `SwitchControl`, `Avatar`, `Kbd`, `Spinner`, `Skeleton`, `Tooltip`, `Panel`/`PanelHeader`, `EmptyState`, `toTone`, and popup/dialog/tab class helpers.
+- Shell (M4): sticky topbar (search field, notifications, avatar menu), breadcrumbs above the page title, raised active navigation items, icon-rail tooltips, tenant switcher card, mobile drawer, and header actions laid out by the new `ActionList` (leading action promoted to primary, overflow in a "More actions" menu).
+- Components (M4): every catalog component restyled: tables in a single panel with toolbar search, filter/column popovers, bulk-action menu and row actions collapsed after two; form sections, tabs and wizards as panels (nested panels flatten through `PanelNestingContext`); selects and pickers open popups; infolists, widgets, modals, toasts, auth and profile screens follow the same system in light and dark.
+- Testing (M4): `AdminPage.openAction(name, row)` opens a row's "More actions" menu when the action is not inline.
+- Motion (M4): shared easing tokens (`ease-ui`, `ease-move`, `ease-drawer`) replace ad hoc curves. The desktop sidebar rail toggle morphs via the View Transitions API (sidebar crossfades and resizes, content slides; instant under reduced motion or without browser support). Section, Repeater item, Builder block and sidebar nav group bodies open and close with a height and fade transition through the new `Collapse` primitive, with rotating chevrons. Toasts grow in from the bottom edge and close their slot on dismissal instead of disappearing. Top-navigation group dropdowns and the bulk-selection toolbar fade in, and buttons give subtle press feedback.
+
 ### Added
 - Registry (WP40): deterministic shadcn registry generated from UI sources, versioned npm/import-graph dependencies, preserved relative targets, public `/r/*.json` payloads and index, CI drift check, and copy-ability tests.
 - Audit (WP38): `Widget.Timeline` catalog renderer and exported `WidgetTimeline` display server-formatted activity times, actors, icons/colors, structured field changes, and empty states; `WidgetGrid` supports timeline spans and deferred data.
@@ -10,6 +18,17 @@
 - Accessibility (WP42): strict WCAG 2.1 A/AA axe coverage across registry fixtures, shell/account components, dialogs and interactive popup/editor/table states, plus an example auth/CRUD/settings/security audit.
 
 ### Fixed
+- Class merging (M4): `cn()` now resolves conflicting utilities with `tailwind-merge`, so a component's `className` reliably overrides primitive defaults instead of depending on CSS order. Template-literal class concatenations with conflicts now go through `cn()`.
+- Native selects (M4): table filters, grouping, rows-per-page, editable cells, widget filters, import mapping and `Select native` draw the same `chevrons-up-down` icon as the Base UI select (`.pupitre-native-select`, inset via `--select-inset`), instead of the UA arrow pinned against the right border.
+- Color (M4): the swatch fills its slot instead of collapsing to a sliver; presets are 28px square buttons.
+- Switch (M4): the thumb keeps an even 2px inset in both states instead of overrunning the track when checked, and stays light in dark mode (new `--switch-thumb` token) instead of reading as a hole in the track.
+- Tags and multi-select (M4): chips and the draft input are centered and compact, so a single row matches the control height.
+- Checkbox layout: keep compact 16px checkbox visuals within 24px form hit targets, align option labels, and separate CheckboxList legends from options. Label clicks, target-edge clicks, and keyboard toggling remain supported.
+- ConfirmDialog: narrower (`sm`) dialog with the heading centred on the tone icon and full-size description text.
+- Confirmations (M4): the Form `dirtyGuard` prompt ("Discard unsaved changes?", Stay / Leave page) now renders the registry `ConfirmDialog`, the same dialog as action confirmations such as Delete, instead of `window.confirm`; passkey deletion in `ProfileSecurity` uses `ConfirmDialog` too. Closing or reloading the tab still shows the browser's native prompt.
+- DataTable (M4): an absent data prop no longer re-renders forever (stable empty rows, manual pagination).
+- Wizard (M4): advancing to the last step no longer submits the form when Next becomes the submit button.
+- Repeater/Builder (M4): render their field label, hint, helper text and required marker.
 - Host styling (M4): namespace the example's card/focus tokens so public-site defaults cannot override Pupitre light/dark surfaces and keyboard focus.
 - Host styling (M4): `styles.css` points every border at `--border` in the base layer; bare `border` utilities no longer paint Tailwind v4's currentColor (near-black) on cards, tables, chart panels, selects and buttons. Stat cards size to their widget column instead of the viewport, and the table page indicator no longer wraps.
 - Navigation (M4): sidebar, brand, breadcrumb, record sub-navigation and table record links navigate through the Inertia router (new `NavLink` primitive) instead of reloading the document; modified clicks, new-tab targets, downloads, fragments and cross-origin URLs keep native behavior.

@@ -199,16 +199,22 @@ export function ActionModal({
         width={action.modal?.width}
         slideOver={action.modal?.slideOver}
         footer={
-          <div className="flex w-full flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {action.modal?.cancel !== false && (
-                <button type="button" onClick={close} disabled={loading}>
+                <button
+                  className="inline-flex h-(--control-h) items-center justify-center rounded-lg border border-input bg-card px-3.5 text-sm font-medium text-foreground shadow-control outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
+                  type="button"
+                  onClick={close}
+                  disabled={loading}
+                >
                   {action.modal?.cancelLabel ?? 'Cancel'}
                 </button>
               )}
               {wizardEntry && wizardStep > 0 ? (
                 <button
                   type="button"
+                  className="inline-flex h-(--control-h) items-center justify-center rounded-lg border border-input bg-card px-3.5 text-sm font-medium text-foreground shadow-control outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
                   onClick={() => selectWizardStep(wizardStep - 1)}
                   disabled={loading}
                 >
@@ -219,6 +225,7 @@ export function ActionModal({
                 <button
                   key={footerAction.name}
                   type="button"
+                  className="inline-flex min-h-8 items-center justify-center rounded-lg px-2 text-[0.8125rem] font-medium text-primary-ink outline-none transition-colors hover:bg-primary-soft focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50"
                   onClick={() => void runFooterAction(footerAction)}
                   disabled={loading || !footerAction.enabled}
                 >
@@ -230,6 +237,7 @@ export function ActionModal({
             action.modal?.submit !== false ? (
               <button
                 type="button"
+                className={`inline-flex h-(--control-h) items-center justify-center rounded-lg px-3.5 text-sm font-medium shadow-control outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:pointer-events-none disabled:opacity-50 ${action.color === 'danger' || action.confirm?.destructive ? 'bg-danger text-danger-foreground hover:bg-danger/90' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}
                 onClick={() => void onSubmit()}
                 disabled={loading || !formResponse}
               >

@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ColumnDescriptor, TableData, TableDescriptor } from '@rikology/pupitre/catalog'
 import { t } from '@rikology/pupitre-react'
+import { Icon } from '../icons.js'
 type Props = {
   groups: NonNullable<TableData['groups']>
   columns: ColumnDescriptor[]
@@ -27,7 +28,7 @@ export function DataTableGroups({
         const canCollapse = definition?.collapsible ?? false
         const isCollapsed = collapsed[group.key] ?? false
         const summary = group.summary && (
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap gap-3 text-[0.8125rem] tabular-nums text-muted-foreground">
             {Object.entries(group.summary).flatMap(([column, summaries]) =>
               Object.entries(summaries).map(([name, value]) => (
                 <span key={`${column}-${name}`}>
@@ -41,17 +42,23 @@ export function DataTableGroups({
         if (layout === 'grid') {
           return (
             <section key={group.key} className="grid gap-2">
-              <header className="rounded-md border bg-muted/20 p-3">
+              <header className="border-b border-border bg-muted/50 px-5 py-3">
                 {canCollapse ? (
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between text-left text-sm font-medium"
+                    className="flex min-h-7 w-full items-center justify-between rounded text-left text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                     aria-expanded={!isCollapsed}
                     onClick={() =>
                       setCollapsed((current) => ({ ...current, [group.key]: !isCollapsed }))
                     }
                   >
-                    <span>{group.label}</span>
+                    <span className="flex items-center gap-2">
+                      <Icon
+                        name={isCollapsed ? 'chevron-right' : 'chevron-down'}
+                        className="size-4 text-muted-foreground"
+                      />
+                      {group.label}
+                    </span>
                     <span className="text-muted-foreground">
                       {group.rows.length} {t('rows')}
                     </span>
@@ -67,18 +74,24 @@ export function DataTableGroups({
         }
         return (
           <Fragment key={group.key}>
-            <tr className="border-t bg-muted/20">
-              <th colSpan={colSpan} className="px-3 py-2 text-left">
+            <tr className="border-t border-border bg-muted/50">
+              <th colSpan={colSpan} className="px-4 py-3 text-left">
                 {canCollapse ? (
                   <button
                     type="button"
-                    className="flex w-full items-center justify-between text-left font-medium"
+                    className="flex min-h-7 w-full items-center justify-between rounded text-left font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                     aria-expanded={!isCollapsed}
                     onClick={() =>
                       setCollapsed((current) => ({ ...current, [group.key]: !isCollapsed }))
                     }
                   >
-                    <span>{group.label}</span>
+                    <span className="flex items-center gap-2">
+                      <Icon
+                        name={isCollapsed ? 'chevron-right' : 'chevron-down'}
+                        className="size-4 text-muted-foreground"
+                      />
+                      {group.label}
+                    </span>
                     <span className="text-sm text-muted-foreground">
                       {group.rows.length} {t('rows')}
                     </span>
@@ -90,8 +103,8 @@ export function DataTableGroups({
             </tr>
             {!isCollapsed && renderRows(group.rows)}
             {summary && !isCollapsed && (
-              <tr className="border-t bg-muted/10">
-                <td colSpan={colSpan} className="px-3 py-2">
+              <tr className="border-t border-border bg-muted/40">
+                <td colSpan={colSpan} className="px-4 py-3">
                   {summary}
                 </td>
               </tr>

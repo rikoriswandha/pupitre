@@ -2,10 +2,12 @@ import { useEffect, useLayoutEffect, useRef, useId, type ReactNode } from 'react
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Field, FieldError, Label } from '../primitives/index.js'
+import { Field, FieldError, FieldDescription, controlClasses } from '../primitives/index.js'
 import { useLiveField } from './use_live_field.js'
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+import { InputFieldLabel } from './Text.js'
 
 type Props = Infer<typeof components.Textarea.props>
 type Runtime = {
@@ -48,12 +50,7 @@ export function Textarea({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
-          <Label htmlFor={id}>
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </Label>
-        )}
+        <InputFieldLabel id={id} props={props} />
         <textarea
           ref={textareaRef}
           aria-label={props.label ?? id}
@@ -72,18 +69,12 @@ export function Textarea({ props, bindings }: Runtime) {
           aria-required={props.required}
           aria-describedby={describedBy}
           aria-invalid={!!error}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className={`${controlClasses} px-3 py-2`}
           style={props.autosize ? { overflow: 'hidden', resize: 'none' } : undefined}
         />
-        {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {props.hint}
-          </p>
-        )}
+
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>

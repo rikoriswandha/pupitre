@@ -17,6 +17,15 @@ import { GlobalSearchStory } from './stories/global_search.story.js'
 import { ImportModalDialogStory } from './stories/import_modal.story.js'
 
 async function axe(page: Page) {
+  // Popups fade/scale in; check settled colors, not a mid-transition blend.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {}))
+    )
+  )
   const results = await new AxeBuilder({ page: page as never })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
     // Base UI's nonmodal menu focus guards are invisible redirect sentinels,

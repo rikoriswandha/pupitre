@@ -1,4 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import {
+  Children,
+  createContext,
+  isValidElement,
+  useContext,
+  useCallback,
+  useEffect,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import {
   useNavigationGuard,
   useSetState,
@@ -6,11 +16,14 @@ import {
   useEmbedded,
   useSubmitForm,
   useVisit,
+  useRuntime,
   matchesKeyBinding,
+  t,
 } from '@rikology/pupitre-react'
-import { Button } from '../primitives/index.js'
-import { cn } from '../primitives/index.js'
+import { Button, Panel, cn } from '../primitives/index.js'
+import { PanelNestingContext } from './Section.js'
 
+export const FormWizardContext = createContext<{ label: string; submitting: boolean } | null>(null)
 type Props = Record<string, unknown>
 type RuntimeProps = {
   props: Props
@@ -25,6 +38,43 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   const setState = useSetState()
   const submitForm = useSubmitForm()
   const embedded = useEmbedded()
+  // Same registry dialog as action confirmations (delete etc.), so host overrides apply.
+  const LeaveConfirm = useRuntime().registry.shell.ConfirmDialog
+  const nested = useContext(PanelNestingContext)
+  const content: ReactNode[] = []
+  let fields: ReactNode[] = []
+  const flush = () => {
+    if (!fields.length) return
+    content.push(
+      <Panel key={`fields-${content.length}`} className="p-5 sm:p-6">
+        <PanelNestingContext.Provider value={true}>
+          <div className="space-y-5">{fields}</div>
+        </PanelNestingContext.Provider>
+      </Panel>
+    )
+    fields = []
+  }
+  Children.forEach(children, (child) => {
+    const metadata = isValidElement<{ element?: { type?: string } }>(child)
+      ? child.props.element
+      : undefined
+    const name =
+      metadata?.type ??
+      (isValidElement(child) && typeof child.type === 'function' ? child.type.name : '')
+    if (['Section', 'Tabs', 'Wizard'].includes(name)) {
+      flush()
+      content.push(child)
+    } else fields.push(child)
+  })
+  flush()
+  const onlyWizard =
+    Children.count(children) === 1 &&
+    Children.toArray(children).some(
+      (child) =>
+        isValidElement<{ element?: { type?: string } }>(child) &&
+        (child.props.element?.type === 'Wizard' ||
+          (typeof child.type === 'function' && child.type.name === 'Wizard'))
+    )
   const submitting = useStateValue('/meta/submitting') === true
   const submitted = useStateValue('/meta/submitted') === true
   const errors = useStateValue('/errors')
@@ -38,12 +88,11 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
     setInitialState(JSON.stringify(formData))
   }
   const dirty = JSON.stringify(formData) !== initialState
-  useNavigationGuard(
+  const guard = useNavigationGuard(
     useCallback(
       () => !embedded && props.dirtyGuard === true && dirty,
       [dirty, embedded, props.dirtyGuard]
-    ),
-    'You have unsaved changes. Leave this page?'
+    )
   )
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -82,20 +131,43 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
       data-dirty={dirty || undefined}
       data-binding={bindings?.value}
     >
-      {children}
+      <FormWizardContext.Provider
+        value={
+          onlyWizard
+            ? {
+                label: typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit',
+                submitting: loading || submitting,
+              }
+            : null
+        }
+      >
+        {embedded || nested ? children : content}
+      </FormWizardContext.Provider>
       {/* Inside an action modal the modal footer owns submit/cancel. */}
       {!embedded && (
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {!onlyWizard && (
+            <Button type="submit" color="primary" loading={loading || submitting}>
+              {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}
+            </Button>
+          )}
           {typeof props.cancelUrl === 'string' && (
-            <Button type="button" variant="outline" onClick={cancel} disabled={loading}>
+            <Button type="button" color="gray" onClick={cancel} disabled={loading}>
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={loading || submitting}>
-            {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}
-          </Button>
         </div>
       )}
+      <LeaveConfirm
+        open={guard.pending}
+        heading={t('Discard unsaved changes?')}
+        description={t('You have unsaved changes. If you leave this page, they will be lost.')}
+        submitLabel={t('Leave page')}
+        cancelLabel={t('Stay')}
+        destructive
+        onConfirm={guard.proceed}
+        onCancel={guard.cancel}
+      />
     </form>
   )
 }

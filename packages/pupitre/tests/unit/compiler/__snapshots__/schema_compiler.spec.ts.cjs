@@ -37,6 +37,8 @@ exports[`schema compiler > compiles a form, nested repeaters, defaults and snaps
           "name": "items",
           "reorderable": true,
         },
+        "label": "Items",
+        "name": "items",
         "value": {
           "$bindState": "/data/items",
         },
@@ -102,6 +104,8 @@ exports[`schema compiler > compiles a form, nested repeaters, defaults and snaps
           "name": "items.variants",
           "reorderable": false,
         },
+        "label": "Variants",
+        "name": "items.variants",
         "value": {
           "$bindItem": "variants",
         },
@@ -691,6 +695,8 @@ exports[`schema compiler > snapshots every compiler-emitted catalog component an
           "name": "repeater",
           "reorderable": false,
         },
+        "label": "Repeater",
+        "name": "repeater",
         "value": {
           "$bindState": "/data/repeater",
         },

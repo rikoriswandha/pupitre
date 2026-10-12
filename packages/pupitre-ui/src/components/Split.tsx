@@ -13,7 +13,7 @@ export function Split({ props, children }: RuntimeProps) {
   } as CSSProperties
   return (
     <div
-      className={`grid min-w-0 grid-cols-1 gap-6 ${breakpoint}:grid-cols-[minmax(0,var(--split-ratio,1fr))_minmax(0,var(--split-remainder,1fr))]`}
+      className={`grid min-w-0 grid-cols-1 gap-6 ${breakpoint === 'lg' ? 'lg:grid-cols-[minmax(0,var(--split-ratio,1fr))_minmax(0,var(--split-remainder,1fr))]' : 'md:grid-cols-[minmax(0,var(--split-ratio,1fr))_minmax(0,var(--split-remainder,1fr))]'}`}
       style={style}
     >
       {children}

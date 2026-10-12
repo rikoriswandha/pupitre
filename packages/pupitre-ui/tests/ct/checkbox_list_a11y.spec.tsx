@@ -43,6 +43,13 @@ test('CheckboxList exposes exactly one independently named checkbox per permissi
     await checkbox.focus()
     await page.keyboard.press('Space')
     await expect(checkbox).toBeChecked()
+    await view
+      .locator('label')
+      .filter({ hasText: new RegExp(`^${name}$`) })
+      .click()
+    await expect(checkbox).not.toBeChecked()
+    await checkbox.click({ position: { x: 1, y: 1 } })
+    await expect(checkbox).toBeChecked()
     const size = await checkbox.boundingBox()
     expect(size?.width).toBeGreaterThanOrEqual(24)
     expect(size?.height).toBeGreaterThanOrEqual(24)
@@ -65,7 +72,11 @@ test('single checkbox keeps a visible keyboard focus ring and 24px target', asyn
   const size = await checkbox.boundingBox()
   expect(size?.width).toBeGreaterThanOrEqual(24)
   expect(size?.height).toBeGreaterThanOrEqual(24)
-  await expect(checkbox).toHaveClass(/focus-visible:outline-2/)
+  await checkbox.click({ position: { x: 1, y: 1 } })
+  await expect(checkbox).not.toBeChecked()
+  await view.locator('label').click()
+  await expect(checkbox).toBeChecked()
+  await expect(checkbox).toBeFocused()
 })
 
 test('Text falls back to the field name and links invalid required descriptions', async ({

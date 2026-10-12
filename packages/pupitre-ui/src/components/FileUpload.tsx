@@ -3,6 +3,14 @@ import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
 import type { FileUploadDescriptor, UploadResponse } from '@rikology/pupitre/catalog'
+import { Button, buttonClasses, FieldDescription } from '../primitives/index.js'
+import { Icon } from '../icons.js'
+
+function formatSize(size: number): string {
+  return size < 1024 * 1024
+    ? `${Math.ceil(size / 1024)} KB`
+    : `${(size / (1024 * 1024)).toFixed(1)} MB`
+}
 
 const ImageCropper = lazy(() => import('./ImageCropper.js'))
 export type FileUploadProps = {
@@ -39,6 +47,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
   const [localError, setLocalError] = useState<string>()
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadResponse>>({})
   const [cropFile, setCropFile] = useState<File | null>(null)
+  const [cropKey, setCropKey] = useState<string | null>(null)
   const dirty = useStateValue('/meta/dirty')
   const wasDirty = useRef(false)
   useEffect(() => {
@@ -61,9 +70,12 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     if (!files?.length) return
     setLocalError(undefined)
     const chosen = Array.from(files)
-    const capacity = descriptor.multiple
-      ? Math.max(0, (descriptor.maxFiles ?? Infinity) - keys.length)
-      : 1
+    const capacity =
+      cropApplied && cropKey
+        ? 1
+        : descriptor.multiple
+          ? Math.max(0, (descriptor.maxFiles ?? Infinity) - keys.length)
+          : 1
     if (chosen.length > capacity) {
       setLocalError(
         descriptor.maxFiles === undefined
@@ -100,7 +112,12 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         setWorkingFile(activeFile)
         const response = await uploadApi.upload(file)
         setUploadedFiles((current) => ({ ...current, [response.key]: response }))
-        nextKeys = descriptor.multiple ? [...nextKeys, response.key] : [response.key]
+        nextKeys =
+          cropApplied && cropKey
+            ? nextKeys.map((key) => (key === cropKey ? response.key : key))
+            : descriptor.multiple
+              ? [...nextKeys, response.key]
+              : [response.key]
         setValue(descriptor.multiple ? nextKeys : response.key)
         emit('change', descriptor.multiple ? nextKeys : response.key)
       }
@@ -111,6 +128,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     } finally {
       setWorking(false)
       setWorkingFile(null)
+      setCropKey(null)
     }
   }
 
@@ -148,10 +166,29 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
       setWorking(false)
     }
   }
+  async function editImage(key: string) {
+    setLocalError(undefined)
+    setWorking(true)
+    try {
+      const response = await fetch(uploadedFiles[key]?.url ?? key)
+      if (!response.ok) throw new Error('Could not load image.')
+      const blob = await response.blob()
+      setCropKey(key)
+      setCropFile(
+        new File([blob], uploadedFiles[key]?.name ?? key.split('/').pop() ?? 'image', {
+          type: blob.type,
+        })
+      )
+    } catch (cause) {
+      setLocalError(cause instanceof Error ? cause.message : 'Could not load image.')
+    } finally {
+      setWorking(false)
+    }
+  }
 
   return (
     <div
-      className={`space-y-2 rounded-md transition-colors ${dragOver ? 'bg-accent/40 ring-2 ring-primary' : ''}`}
+      className="space-y-3"
       onDragOver={(event) => {
         event.preventDefault()
         if (canChoose) setDragOver(true)
@@ -172,30 +209,51 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         </label>
       )}
       {props.helperText && (
-        <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-          {props.helperText}
-        </p>
+        <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="space-y-2">
         {keys.map((key, index) => {
           const file = uploadedFiles[key]
           return (
             <div
-              className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm"
+              className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
               key={key}
             >
-              {descriptor.image && descriptor.previewable && file?.url && (
-                <img className="h-10 w-10 rounded object-cover" src={file.url} alt={file.name} />
+              {descriptor.image && descriptor.previewable && file?.url ? (
+                <img className="size-12 rounded-lg object-cover" src={file.url} alt={file.name} />
+              ) : (
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-muted-foreground">
+                  <Icon name={descriptor.image ? 'image' : 'file'} className="size-5" />
+                </span>
               )}
-              <span className="max-w-64 truncate">{file?.name ?? key}</span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{file?.name ?? key}</p>
+                {file?.size !== undefined && (
+                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+                    {formatSize(file.size)}
+                  </p>
+                )}
+              </div>
               {descriptor.downloadable && (
-                <a className="text-primary underline" href={file?.url ?? key} download>
+                <a
+                  className={buttonClasses({
+                    variant: 'link',
+                    color: 'primary',
+                    className: 'min-h-6 text-xs',
+                  })}
+                  href={file?.url ?? key}
+                  download
+                >
                   Download
                 </a>
               )}
               {descriptor.previewable && (
                 <a
-                  className="text-primary underline"
+                  className={buttonClasses({
+                    variant: 'link',
+                    color: 'primary',
+                    className: 'min-h-6 text-xs',
+                  })}
                   href={file?.url ?? key}
                   target="_blank"
                   rel="noreferrer"
@@ -203,17 +261,36 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                   Preview
                 </a>
               )}
+              {descriptor.imageEditor && descriptor.image && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  square
+                  aria-label={`Edit ${file?.name ?? key}`}
+                  disabled={props.disabled || props.readOnly || loading || working}
+                  onClick={() => void editImage(key)}
+                >
+                  <Icon name="pencil" />
+                </Button>
+              )}
               {descriptor.reorderable && (
                 <span className="inline-flex gap-1">
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    square
                     type="button"
                     aria-label={`Move ${key} earlier`}
                     disabled={index === 0 || props.disabled || props.readOnly || working}
                     onClick={() => moveFile(index, -1)}
                   >
-                    ↑
-                  </button>
-                  <button
+                    <Icon name="arrow-up" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    square
                     type="button"
                     aria-label={`Move ${key} later`}
                     disabled={
@@ -221,26 +298,52 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                     }
                     onClick={() => moveFile(index, 1)}
                   >
-                    ↓
-                  </button>
+                    <Icon name="arrow-down" />
+                  </Button>
                 </span>
               )}
-              <button
+              <Button
+                variant="ghost"
+                color="danger"
+                size="sm"
+                square
                 type="button"
                 aria-label={`Remove ${key}`}
                 disabled={props.disabled || props.readOnly || loading || working}
-                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                 onClick={() => void removeFile(key)}
               >
-                Remove
-              </button>
+                <Icon name="x" />
+              </Button>
             </div>
           )
         })}
         <label
-          className={`inline-flex h-9 cursor-pointer items-center rounded-md border border-input px-3 text-sm font-medium hover:bg-accent ${!canChoose ? 'pointer-events-none opacity-50' : ''}`}
+          htmlFor={id}
+          className={`flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-input bg-muted/30 px-5 py-6 text-center transition-colors hover:border-primary/50 hover:bg-muted/50 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20 ${dragOver ? 'border-primary bg-primary-soft/40' : ''} ${!canChoose ? 'cursor-not-allowed opacity-50' : ''}`}
         >
-          {working ? 'Uploading…' : 'Choose file'}
+          <span className="mb-1 grid size-10 place-items-center rounded-full bg-muted text-muted-foreground">
+            <Icon name="upload" className="size-5" />
+          </span>
+          <span className="text-sm text-foreground">
+            {working ? (
+              'Uploading…'
+            ) : (
+              <>
+                Drag and drop or{' '}
+                <span className="font-medium text-primary-ink underline-offset-4 hover:underline">
+                  browse
+                </span>
+              </>
+            )}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {descriptor.accept?.length
+              ? descriptor.accept.join(', ')
+              : descriptor.image
+                ? 'Image files'
+                : 'All file types'}
+            {descriptor.maxSize !== undefined && ` · Max ${formatSize(descriptor.maxSize)}`}
+          </span>
           <input
             className="sr-only"
             id={id}
@@ -265,12 +368,18 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         {working && (
           <div className="w-full space-y-1 text-sm text-muted-foreground" role="status">
             <span>Uploading {workingFile ?? 'file'}…</span>
-            <progress className="h-1 w-full accent-primary" aria-label="Upload progress" />
+            <div
+              role="progressbar"
+              aria-label="Upload progress"
+              className="h-1.5 overflow-hidden rounded-full bg-muted"
+            >
+              <div className="h-full w-1/2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />
+            </div>
           </div>
         )}
       </div>
       {(error || localError) && (
-        <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
+        <p id={`${id}-error`} className="text-[0.8125rem] text-danger-ink" role="alert">
           {error ?? localError}
         </p>
       )}
@@ -279,7 +388,10 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
           <ImageCropper
             file={cropFile}
             ratios={descriptor.imageEditorAspectRatios}
-            onCancel={() => setCropFile(null)}
+            onCancel={() => {
+              setCropFile(null)
+              setCropKey(null)
+            }}
             onComplete={(cropped) => {
               setCropFile(null)
               const transfer = new DataTransfer()

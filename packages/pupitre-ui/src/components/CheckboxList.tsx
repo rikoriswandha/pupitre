@@ -1,10 +1,18 @@
-import { useId, type ReactNode } from 'react'
+import { useId, useState, type CSSProperties, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
 import { Field as BaseField } from '@base-ui/react/field'
-import { Field, FieldError } from '../primitives/index.js'
+import {
+  Button,
+  CheckboxControl,
+  Field,
+  FieldError,
+  Input,
+  InputGroup,
+  InputSlot,
+} from '../primitives/index.js'
+import { Icon } from '../icons.js'
 
 type Props = Infer<typeof components.CheckboxList.props>
 type Runtime = {
@@ -20,6 +28,18 @@ export function CheckboxList({ props, bindings }: Runtime) {
   const [value, setValue] = useBoundValue(props.value ?? [], bindings?.value)
   const options = Array.isArray(props.options) ? props.options : []
   const selected = Array.isArray(value) ? value : []
+  const [query, setQuery] = useState('')
+  const filteredOptions = options.filter((option) =>
+    `${option.label} ${option.description ?? ''}`
+      .toLocaleLowerCase()
+      .includes(query.toLocaleLowerCase())
+  )
+  const editableOptions = options.filter((option) => !option.disabled)
+  const allSelected =
+    editableOptions.length > 0 &&
+    editableOptions.every((option) =>
+      selected.some((item) => String(item) === String(option.value))
+    )
   function update(optionValue: string | number, checked: boolean | 'indeterminate') {
     const canonical =
       options.find((option) => String(option.value) === String(optionValue))?.value ?? optionValue
@@ -52,31 +72,71 @@ export function CheckboxList({ props, bindings }: Runtime) {
       <Field invalid={!!error}>
         <fieldset
           {...props.extraAttributes}
-          className="grid gap-2"
+          className="grid min-w-0 gap-3"
           disabled={props.disabled}
           aria-describedby={describedBy}
           aria-invalid={!!error}
         >
           {props.label !== null && props.label !== undefined && (
-            <legend className="text-sm font-medium">
+            <legend className="mb-3 text-sm font-medium">
               {props.label}
               {props.required && <span aria-hidden="true"> *</span>}
             </legend>
           )}
+          {props.searchable && (
+            <InputGroup>
+              <InputSlot>
+                <Icon name="search" className="ml-2 size-4 text-muted-foreground" />
+              </InputSlot>
+              <Input
+                bare
+                aria-label="Search options"
+                placeholder="Search options..."
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                disabled={props.disabled}
+              />
+            </InputGroup>
+          )}
+          {props.bulkToggleable && (
+            <Button
+              type="button"
+              variant="link"
+              color="primary"
+              className="min-h-6 justify-self-start"
+              disabled={props.disabled || props.readOnly || editableOptions.length === 0}
+              onClick={() =>
+                setValue(
+                  allSelected
+                    ? selected.filter(
+                        (item) =>
+                          !editableOptions.some((option) => String(option.value) === String(item))
+                      )
+                    : [
+                        ...selected.filter(
+                          (item) =>
+                            !editableOptions.some((option) => String(option.value) === String(item))
+                        ),
+                        ...editableOptions.map((option) => option.value),
+                      ]
+                )
+              }
+            >
+              {allSelected ? 'Deselect all' : 'Select all'}
+            </Button>
+          )}
           <div
-            className="grid gap-2"
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(1, Number(props.columns) || 1)}, minmax(0, 1fr))`,
-            }}
+            className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[repeat(var(--option-columns),minmax(0,1fr))]"
+            style={{ '--option-columns': Math.max(1, Number(props.columns) || 1) } as CSSProperties}
           >
-            {options.map((option) => {
+            {filteredOptions.map((option) => {
               const optionId = `${id}-${String(option.value)}`
               return (
                 <BaseField.Item
                   key={String(option.value)}
-                  className="flex min-h-6 items-center gap-2 text-sm"
+                  className="flex min-h-6 items-start gap-2 text-sm"
                 >
-                  <BaseCheckbox.Root
+                  <CheckboxControl
                     {...props.extraAttributes}
                     id={optionId}
                     aria-labelledby={`${optionId}-label`}
@@ -89,19 +149,38 @@ export function CheckboxList({ props, bindings }: Runtime) {
                     readOnly={props.readOnly}
                     onCheckedChange={(checked) => update(option.value, checked)}
                     aria-required={props.required}
-                    aria-describedby={describedBy}
+                    aria-describedby={
+                      [describedBy, option.description && `${optionId}-description`]
+                        .filter(Boolean)
+                        .join(' ') || undefined
+                    }
                     aria-invalid={!!error}
-                    className="grid size-6 place-items-center rounded border border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[checked]:border-primary data-[checked]:bg-primary data-[checked]:text-primary-foreground"
-                  >
-                    <BaseCheckbox.Indicator className="text-xs">✓</BaseCheckbox.Indicator>
-                  </BaseCheckbox.Root>
-                  <BaseField.Label id={`${optionId}-label`} htmlFor={optionId}>
-                    {option.label}
-                  </BaseField.Label>
+                    className="size-6"
+                  />
+                  <div className="grid min-w-0 gap-1">
+                    <BaseField.Label
+                      id={`${optionId}-label`}
+                      htmlFor={optionId}
+                      className="cursor-pointer text-sm font-medium leading-6"
+                    >
+                      {option.label}
+                    </BaseField.Label>
+                    {option.description && (
+                      <p
+                        id={`${optionId}-description`}
+                        className="text-[0.8125rem] leading-5 text-muted-foreground"
+                      >
+                        {option.description}
+                      </p>
+                    )}
+                  </div>
                 </BaseField.Item>
               )
             })}
           </div>
+          {filteredOptions.length === 0 && (
+            <p className="text-[0.8125rem] text-muted-foreground">No matching options.</p>
+          )}
           {props.hint && (
             <p id={`${id}-hint`} className="text-sm text-muted-foreground">
               {props.hint}

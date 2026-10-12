@@ -2,8 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Switch as BaseSwitch } from '@base-ui/react/switch'
-import { Field, FieldError, Label } from '../primitives/index.js'
+import { SwitchControl, Field, FieldDescription, FieldError, Label } from '../primitives/index.js'
 
 type Props = Infer<typeof components.Toggle.props>
 type Runtime = {
@@ -39,8 +38,8 @@ export function Toggle({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        <div className="inline-flex items-center gap-3 text-sm">
-          <BaseSwitch.Root
+        <div className={props.inline ? 'inline-flex items-start gap-3' : 'flex items-start gap-3'}>
+          <SwitchControl
             {...props.extraAttributes}
             id={id}
             name={bindings?.value ? bindings.value.split('/').slice(2).join('.') : props.name}
@@ -53,16 +52,14 @@ export function Toggle({ props, bindings }: Runtime) {
             aria-required={props.required}
             aria-describedby={describedBy}
             aria-invalid={!!error}
-            className="relative h-6 w-11 rounded-full bg-muted-foreground/40 transition-colors data-[checked]:bg-primary data-[disabled]:opacity-50"
+            className="mt-0.5"
             style={{
               backgroundColor: checked
                 ? (props.onColor ?? undefined)
                 : (props.offColor ?? undefined),
             }}
-          >
-            <BaseSwitch.Thumb className="block size-5 translate-x-0.5 rounded-full bg-white transition-transform data-[checked]:translate-x-5" />
-          </BaseSwitch.Root>
-          <div className="grid gap-1">
+          />
+          <div className="grid min-w-0 gap-1">
             {props.label !== null && (
               <Label htmlFor={id}>
                 {props.label ?? props.name}
@@ -72,23 +69,17 @@ export function Toggle({ props, bindings }: Runtime) {
             <span className="sr-only">
               {checked ? (props.onIcon ?? 'On') : (props.offIcon ?? 'Off')}
             </span>
-            {props.hint && (
-              <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-                {props.hint}
-              </p>
-            )}
+            {props.hint && <FieldDescription id={`${id}-hint`}>{props.hint}</FieldDescription>}
             {props.helperText && (
-              <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-                {props.helperText}
-              </p>
+              <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
+            )}
+            {error && (
+              <div id={`${id}-error`}>
+                <FieldError>{error}</FieldError>
+              </div>
             )}
           </div>
         </div>
-        {error && (
-          <div id={`${id}-error`}>
-            <FieldError>{error}</FieldError>
-          </div>
-        )}
       </Field>
     </div>
   )

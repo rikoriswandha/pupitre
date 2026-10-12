@@ -8,12 +8,11 @@
       "type": "registry:component",
       "title": "ActionBar",
       "dependencies": [
-        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/action-list.json"
       ],
       "files": [
         {
@@ -44,6 +43,28 @@
       ]
     },
     {
+      "name": "action-list",
+      "type": "registry:component",
+      "title": "ActionList",
+      "dependencies": [
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
+        "@rikology/pupitre@^1.0.0"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/ActionList.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/ActionList.tsx"
+        }
+      ]
+    },
+    {
       "name": "actions",
       "type": "registry:component",
       "title": "Actions",
@@ -51,7 +72,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json"
+        "https://pupitre.dev/r/action-list.json"
       ],
       "files": [
         {
@@ -71,6 +92,8 @@
       "registryDependencies": [
         "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/passkey-login.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json",
         "https://pupitre.dev/r/use-panel-theme.json"
       ],
       "files": [
@@ -103,10 +126,13 @@
       "type": "registry:component",
       "title": "Builder",
       "dependencies": [
+        "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/collection-field.json",
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
@@ -126,7 +152,9 @@
       ],
       "registryDependencies": [
         "https://pupitre.dev/r/builder.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
       ],
       "files": [
         {
@@ -141,7 +169,6 @@
       "type": "registry:component",
       "title": "Checkbox",
       "dependencies": [
-        "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3",
@@ -170,6 +197,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
@@ -197,10 +225,14 @@
         "@codemirror/language@^6.13.1",
         "@codemirror/state@^6.7.6",
         "@codemirror/view@^6.43.14",
+        "@lezer/highlight@^1.2.5",
         "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/CodeEditor.tsx",
@@ -213,15 +245,37 @@
       "name": "code-entry",
       "type": "registry:component",
       "title": "CodeEntry",
-      "dependencies": [],
+      "dependencies": [
+        "react@^19.2.3"
+      ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
           "path": "../src/components/CodeEntry.tsx",
           "type": "registry:file",
           "target": "~/inertia/components/pupitre/components/CodeEntry.tsx"
+        }
+      ]
+    },
+    {
+      "name": "collection-field",
+      "type": "registry:component",
+      "title": "CollectionField",
+      "dependencies": [
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/CollectionField.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/CollectionField.tsx"
         }
       ]
     },
@@ -236,7 +290,8 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json"
       ],
       "files": [
         {
@@ -286,18 +341,21 @@
       "type": "registry:component",
       "title": "DataTable",
       "dependencies": [
+        "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "@tanstack/react-table@^8.21.3",
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/action-list.json",
         "https://pupitre.dev/r/data-table-editable-cell.json",
         "https://pupitre.dev/r/data-table-grid.json",
         "https://pupitre.dev/r/data-table-groups.json",
         "https://pupitre.dev/r/data-table-summary.json",
         "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
       ],
       "files": [
         {
@@ -316,7 +374,9 @@
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/DataTableEditableCell.tsx",
@@ -350,7 +410,9 @@
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
       "files": [
         {
           "path": "../src/components/DataTableGroups.tsx",
@@ -387,7 +449,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json"
       ],
       "files": [
         {
@@ -408,7 +472,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json"
       ],
       "files": [
         {
@@ -439,7 +505,10 @@
       "dependencies": [
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/EntryShell.tsx",
@@ -476,7 +545,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/image-cropper.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/image-cropper.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -495,7 +566,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
       ],
       "files": [
         {
@@ -620,7 +692,8 @@
       "dependencies": [],
       "registryDependencies": [
         "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -652,11 +725,13 @@
       "type": "registry:component",
       "title": "ImageCropper",
       "dependencies": [
+        "@base-ui/react@^1.9.0",
         "react-easy-crop@^6.2.4",
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/modal.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -672,7 +747,8 @@
       "title": "ImageEntry",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -693,6 +769,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
@@ -712,7 +789,11 @@
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
+      ],
       "files": [
         {
           "path": "../src/components/Infolist.tsx",
@@ -732,7 +813,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json",
         "https://pupitre.dev/r/use-live-field.json"
       ],
       "files": [
@@ -770,7 +853,10 @@
         "marked@^18.1.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/MarkdownEditor.tsx",
@@ -803,10 +889,10 @@
       "name": "not-found",
       "type": "registry:component",
       "title": "NotFound",
-      "dependencies": [
-        "lucide-react@^1.55.0"
+      "dependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
       ],
-      "registryDependencies": [],
       "files": [
         {
           "path": "../src/components/NotFound.tsx",
@@ -849,7 +935,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json",
         "https://pupitre.dev/r/use-live-field.json"
       ],
       "files": [
@@ -869,7 +957,10 @@
         "@simplewebauthn/browser@^14.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/PasskeyLogin.tsx",
@@ -901,9 +992,12 @@
       "dependencies": [
         "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
-        "react@^19.2.3"
+        "react@^19.2.3",
+        "tailwind-merge@^3.7.0"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json"
+      ],
       "files": [
         {
           "path": "../src/primitives/date_value.ts",
@@ -931,7 +1025,11 @@
         "@simplewebauthn/browser@^14.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/confirm-dialog.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/ProfileSecurity.tsx",
@@ -970,8 +1068,9 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-bar.json",
-        "https://pupitre.dev/r/data-table.json"
+        "https://pupitre.dev/r/action-list.json",
+        "https://pupitre.dev/r/data-table.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1008,6 +1107,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/collection-field.json",
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
@@ -1026,8 +1127,10 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/repeater.json"
+        "https://pupitre.dev/r/repeater.json",
+        "https://pupitre.dev/r/section.json"
       ],
       "files": [
         {
@@ -1050,7 +1153,10 @@
         "@tiptap/starter-kit@^3.31.4",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
+      ],
       "files": [
         {
           "path": "../src/components/RichEditor.tsx",
@@ -1069,7 +1175,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/action-list.json",
         "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
@@ -1094,7 +1200,9 @@
       ],
       "registryDependencies": [
         "https://pupitre.dev/r/action-button.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json"
       ],
       "files": [
         {
@@ -1111,10 +1219,11 @@
       "dependencies": [
         "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
+        "react-dom@^19.2.3",
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json",
+        "https://pupitre.dev/r/action-list.json",
         "https://pupitre.dev/r/global-search.json",
         "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/notification-tray.json",
@@ -1157,6 +1266,7 @@
       "type": "registry:component",
       "title": "Slider",
       "dependencies": [
+        "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3",
@@ -1247,7 +1357,10 @@
         "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
-      "registryDependencies": [],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
+      ],
       "files": [
         {
           "path": "../src/components/Tabs.tsx",
@@ -1267,7 +1380,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json",
         "https://pupitre.dev/r/use-live-field.json"
       ],
       "files": [
@@ -1287,7 +1402,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1325,9 +1441,13 @@
       "name": "text-entry",
       "type": "registry:component",
       "title": "TextEntry",
-      "dependencies": [],
+      "dependencies": [
+        "react@^19.2.3"
+      ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.dev/r/entry-shell.json",
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1349,6 +1469,7 @@
       ],
       "registryDependencies": [
         "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json",
         "https://pupitre.dev/r/use-live-field.json"
       ],
       "files": [
@@ -1370,7 +1491,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/text.json"
       ],
       "files": [
         {
@@ -1385,10 +1508,12 @@
       "type": "registry:component",
       "title": "Toaster",
       "dependencies": [
-        "@rikology/pupitre-react@^1.0.0"
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1403,7 +1528,6 @@
       "type": "registry:component",
       "title": "Toggle",
       "dependencies": [
-        "@base-ui/react@^1.9.0",
         "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3",
@@ -1432,6 +1556,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
@@ -1484,7 +1609,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1543,6 +1669,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
         "https://pupitre.dev/r/widget-chart-body.json"
       ],
       "files": [
@@ -1596,6 +1723,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json",
         "https://pupitre.dev/r/widget-chart.json",
         "https://pupitre.dev/r/widget-stats.json",
         "https://pupitre.dev/r/widget-table.json",
@@ -1617,7 +1745,8 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/icons.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1635,7 +1764,8 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/data-table.json"
+        "https://pupitre.dev/r/data-table.json",
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1653,7 +1783,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.dev/r/primitives.json"
       ],
       "files": [
         {
@@ -1672,8 +1802,10 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
+        "https://pupitre.dev/r/form.json",
         "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.dev/r/primitives.json",
+        "https://pupitre.dev/r/section.json"
       ],
       "files": [
         {

@@ -3,16 +3,16 @@
   "name": "not-found",
   "type": "registry:component",
   "title": "NotFound",
-  "dependencies": [
-    "lucide-react@^1.55.0"
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
   ],
-  "registryDependencies": [],
   "files": [
     {
       "path": "../src/components/NotFound.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/NotFound.tsx",
-      "content": "import { CircleHelp } from 'lucide-react'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className=\"max-w-md\">\n        <span className=\"mx-auto mb-5 grid size-14 place-items-center rounded-full bg-muted text-muted-foreground\">\n          <CircleHelp aria-hidden=\"true\" className=\"size-7\" />\n        </span>\n        <h1 className=\"text-2xl font-semibold tracking-tight\">{title}</h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a\n          href=\"/\"\n          className=\"mt-6 inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground\"\n        >\n          Return home\n        </a>\n      </div>\n    </main>\n  )\n}\n"
+      "content": "import { buttonClasses } from '../primitives/index.js'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className=\"max-w-md\">\n        <p\n          aria-hidden=\"true\"\n          className=\"mb-5 text-8xl font-semibold tracking-tight tabular-nums text-subtle-foreground\"\n        >\n          404\n        </p>\n        <h1 className=\"text-2xl font-semibold tracking-tight\">{title}</h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a href=\"/\" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>\n          Return home\n        </a>\n      </div>\n    </main>\n  )\n}\n"
     }
   ]
 }

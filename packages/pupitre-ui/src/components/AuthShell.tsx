@@ -3,6 +3,8 @@ import type { AuthShellProps } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { usePanelTheme } from './use_panel_theme.js'
 import { PasskeyLogin } from './PasskeyLogin.js'
+import { Panel, buttonClasses } from '../primitives/index.js'
+import { PanelNestingContext } from './Section.js'
 
 /** Centered card layout for auth pages (login, password reset, registration). */
 export function AuthShell({ panel, title, children }: AuthShellProps) {
@@ -23,40 +25,71 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
     .map((feature) => feature.slice('social:'.length))
   return (
     <div
-      className="grid min-h-screen place-items-center bg-muted px-4 py-10 text-foreground"
+      className="grid min-h-dvh place-items-center bg-background px-4 py-12 text-foreground"
       style={style}
     >
       <main className="w-full max-w-md">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          {panel.brand.logo ? (
-            <img src={panel.brand.logo} alt="" className="size-10 object-contain" />
+          {panel.brand.logo || panel.brand.logoDark ? (
+            <>
+              {panel.brand.logo && (
+                <img
+                  src={panel.brand.logo}
+                  alt=""
+                  className={`h-10 w-auto max-w-40 object-contain ${panel.brand.logoDark ? 'dark:hidden' : ''}`}
+                />
+              )}
+              {panel.brand.logoDark && (
+                <img
+                  src={panel.brand.logoDark}
+                  alt=""
+                  className={`h-10 w-auto max-w-40 object-contain ${panel.brand.logo ? 'hidden dark:block' : ''}`}
+                />
+              )}
+            </>
           ) : (
-            <span className="grid size-10 place-items-center rounded-md bg-primary text-primary-foreground">
-              <Icon name="layout-dashboard" className="size-5" />
+            <span
+              aria-hidden="true"
+              className="grid size-10 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-control"
+            >
+              {panel.brand.name.slice(0, 1).toUpperCase()}
             </span>
           )}
-          <p className="text-sm font-medium text-muted-foreground">{panel.brand.name}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <p className="text-sm font-semibold text-foreground">{panel.brand.name}</p>
         </div>
-        <div className="rounded-lg border border-border bg-background p-6 shadow-sm">
-          {children}
+        <Panel className="p-6 sm:p-8 [&_form]:space-y-5 [&_form_input]:w-full [&_form_button[type=submit]]:w-full [&_form_button[type=submit]]:bg-primary [&_form_button[type=submit]]:text-primary-foreground">
+          <header className="mb-6">
+            <h1 className="text-[1.375rem] font-semibold leading-7 tracking-tight">{title}</h1>
+            {title === t('Sign in') && (
+              <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
+                {t('Sign in to your account.')}
+              </p>
+            )}
+          </header>
+          <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
           {title === t('Sign in') && panel.features.passkeys && (
             <PasskeyLogin panelPath={panel.path} />
           )}
           {title === t('Sign in') && socialProviders.length > 0 && (
-            <div className="mt-5 grid gap-2 border-t border-border pt-5">
+            <div className="mt-5 grid gap-2">
+              <div className="mb-2 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                <span>{t('or')}</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
               {socialProviders.map((provider) => (
                 <a
                   key={provider}
                   href={`${panel.path}/auth/${encodeURIComponent(provider)}/redirect`}
-                  className="flex min-h-10 items-center justify-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+                  className={buttonClasses({ color: 'gray', className: 'w-full' })}
                 >
+                  <Icon name="globe" className="size-4" />
                   {t('Continue with')} {provider}
                 </a>
               ))}
             </div>
           )}
-        </div>
+        </Panel>
         {links.length > 0 && (
           <nav
             aria-label={t('Authentication')}
@@ -66,7 +99,7 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
               <a
                 key={link.href}
                 href={link.href}
-                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                className="rounded-sm text-muted-foreground underline-offset-4 outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring/40"
               >
                 {link.label}
               </a>

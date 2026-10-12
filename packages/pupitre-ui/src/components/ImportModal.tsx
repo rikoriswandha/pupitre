@@ -12,7 +12,15 @@ import type { ImportModalProps } from '@rikology/pupitre-react'
 import { jsonFetch } from '@rikology/pupitre-react'
 import { t } from '@rikology/pupitre-react'
 import { useToast, waitForExport } from '@rikology/pupitre-react'
-import { Button, Input } from '../primitives/index.js'
+import {
+  Badge,
+  Button,
+  backdropClasses,
+  buttonClasses,
+  controlClasses,
+  dialogPopupClasses,
+} from '../primitives/index.js'
+import { Icon } from '../icons.js'
 
 function importUrl(actionUrl: string, suffix: string): string {
   const url = new URL(actionUrl, window.location.origin)
@@ -50,6 +58,7 @@ async function uploadCsv(url: string, file: File, mapping?: Record<string, strin
 export function ImportModal({ open, action, onClose, onComplete }: ImportModalProps) {
   const toast = useToast()
   const pollController = useRef<AbortController | null>(null)
+  const fileInput = useRef<HTMLInputElement | null>(null)
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<ImportPreviewResponse | null>(null)
   const [mapping, setMapping] = useState<Record<string, string>>({})
@@ -180,19 +189,25 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
     </Button>
   ) : preview ? (
     <div className="flex justify-end gap-2">
-      <Button type="button" variant="outline" disabled={busy && !polling} onClick={close}>
+      <Button type="button" color="gray" disabled={busy && !polling} onClick={close}>
         {t('Cancel')}
       </Button>
-      <Button type="button" disabled={busy} onClick={() => void importRows()}>
+      <Button type="button" color="primary" loading={busy} onClick={() => void importRows()}>
         {busy ? t('Importing…') : t('Import CSV')}
       </Button>
     </div>
   ) : (
     <div className="flex justify-end gap-2">
-      <Button type="button" variant="outline" disabled={busy && !polling} onClick={close}>
+      <Button type="button" color="gray" disabled={busy && !polling} onClick={close}>
         {t('Cancel')}
       </Button>
-      <Button type="button" disabled={busy || !file} onClick={() => void previewCsv()}>
+      <Button
+        type="button"
+        color="primary"
+        loading={busy}
+        disabled={!file}
+        onClick={() => void previewCsv()}
+      >
         {busy ? t('Reading…') : t('Continue')}
       </Button>
     </div>
@@ -206,114 +221,168 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
       }}
     >
       <Dialog.Portal>
-        <Dialog.Backdrop
-          className="fixed inset-0 z-[70] bg-black/45"
-          style={{ position: 'fixed', inset: 0, zIndex: 70 }}
-        />
+        <Dialog.Backdrop className={backdropClasses} />
         <Dialog.Popup
-          className="fixed left-1/2 top-1/2 z-[70] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border border-border bg-background shadow-xl outline-none"
-          style={{
-            position: 'fixed',
-            zIndex: 71,
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: 'calc(100% - 2rem)',
-            maxWidth: '42rem',
-            maxHeight: 'calc(100dvh - 2rem)',
-            overflowY: 'auto',
-          }}
+          data-pupitre-popup=""
+          initialFocus={preview ? true : fileInput}
+          className={dialogPopupClasses('2xl')}
         >
-          <header className="border-b border-border p-5">
-            <Dialog.Title id="pupitre-import-heading" className="text-lg font-semibold">
-              {t('Import CSV')}
-            </Dialog.Title>
-            <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-              {t('Upload a CSV file, map its headers to form fields, then review the import.')}
-            </Dialog.Description>
+          <header className="flex shrink-0 items-start gap-3 px-6 pt-5 pb-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-ink">
+              <Icon name="upload" className="size-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <Dialog.Title
+                id="pupitre-import-heading"
+                className="text-base font-semibold leading-6"
+              >
+                {t('Import CSV')}
+              </Dialog.Title>
+              <Dialog.Description className="mt-1 text-[0.8125rem] leading-5 text-muted-foreground">
+                {t('Upload a CSV file, map its headers to form fields, then review the import.')}
+              </Dialog.Description>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              square
+              size="sm"
+              aria-label={t('Close dialog')}
+              disabled={busy && !polling}
+              onClick={close}
+            >
+              <Icon name="x" className="size-4" />
+            </Button>
           </header>
-          <div className="grid gap-4 p-5">
+          <div className="grid min-h-0 gap-5 overflow-y-auto px-6 pb-5">
             {!preview && (
-              <div className="grid gap-2">
-                <label
-                  className="text-sm font-medium leading-none text-foreground"
-                  htmlFor="pupitre-import-file"
-                >
-                  {t('CSV file')}
-                </label>
-                <Input
+              <label
+                className="relative flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-input bg-muted/20 px-6 py-8 text-center transition-colors hover:border-primary/50 hover:bg-primary-soft/30 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/20"
+                htmlFor="pupitre-import-file"
+              >
+                <span className="grid size-11 place-items-center rounded-full bg-muted text-muted-foreground">
+                  <Icon name={file ? 'file-text' : 'upload'} className="size-5" />
+                </span>
+                <span className="text-sm font-medium">{file ? file.name : t('CSV file')}</span>
+                <span className="text-[0.8125rem] text-muted-foreground">
+                  {t('Choose a CSV file to import')}
+                </span>
+                <input
+                  ref={fileInput}
+                  className="absolute inset-0 size-full cursor-pointer opacity-0"
                   id="pupitre-import-file"
                   type="file"
                   aria-label={t('CSV file')}
                   accept=".csv,text/csv"
+                  disabled={busy}
                   onChange={chooseFile}
                 />
-              </div>
+              </label>
             )}
             {preview && (
               <>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-[0.8125rem] leading-5 text-muted-foreground">
                   {t('Previewing')} {preview.preview.length} {t('sample rows from')}{' '}
                   {preview.headers.length} {t('columns')}.
                 </p>
-                <div className="max-h-80 overflow-auto rounded-md border border-border">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr>
-                        <th className="p-2 text-left">{t('CSV header')}</th>
-                        <th className="p-2 text-left">{t('Import field')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {preview.headers.map((header) => (
-                        <tr key={header} className="border-t border-border">
-                          <td className="p-2">{header}</td>
-                          <td className="p-2">
-                            <select
-                              className="h-9 w-full rounded-md border border-border bg-background px-2"
-                              aria-label={`${t('Map')} ${header}`}
-                              value={mapping[header] ?? ''}
-                              onChange={(event) =>
-                                setMapping((current) => ({
-                                  ...current,
-                                  [header]: event.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">{t('Skip column')}</option>
-                              {preview.fields.map((field) => (
-                                <option key={field.name} value={field.name}>
-                                  {field.label}
-                                  {field.required ? ' *' : ''}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="max-h-80 overflow-auto rounded-lg border border-border">
+                  <div className="grid grid-cols-2 gap-4 bg-muted/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                    <span>{t('CSV header')}</span>
+                    <span>{t('Import field')}</span>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {preview.headers.map((header) => (
+                      <div key={header} className="grid grid-cols-2 items-center gap-4 px-4 py-3">
+                        <label
+                          htmlFor={`pupitre-import-map-${header}`}
+                          className="min-w-0 break-words text-sm font-medium"
+                        >
+                          {header}
+                        </label>
+                        <select
+                          id={`pupitre-import-map-${header}`}
+                          className={`${controlClasses} pupitre-native-select h-(--control-h)`}
+                          aria-label={`${t('Map')} ${header}`}
+                          value={mapping[header] ?? ''}
+                          disabled={busy}
+                          onChange={(event) =>
+                            setMapping((current) => ({
+                              ...current,
+                              [header]: event.target.value,
+                            }))
+                          }
+                        >
+                          <option value="">{t('Skip column')}</option>
+                          {preview.fields.map((field) => (
+                            <option key={field.name} value={field.name}>
+                              {field.label}
+                              {field.required ? ' *' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </>
             )}
-            {progress && progress.status !== 'done' && (
-              <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
-                {t('Import progress')}: {progress.processedRows} / {progress.totalRows}
-              </p>
-            )}
-            {summary && (
+            {polling && (
               <div
-                className="rounded-md border border-border p-3 text-sm"
+                className="grid gap-3 rounded-lg bg-muted/40 p-4"
                 role="status"
                 aria-live="polite"
               >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[0.8125rem] text-muted-foreground">
+                    {t('Import progress')}: {progress?.processedRows ?? 0} /{' '}
+                    {progress?.totalRows ?? 0}
+                  </p>
+                  <Badge color="info" icon="loader-circle">
+                    {t('Importing…')}
+                  </Badge>
+                </div>
+                <div
+                  role="progressbar"
+                  aria-label={t('Import progress')}
+                  aria-valuemin={0}
+                  aria-valuemax={progress?.totalRows || 100}
+                  aria-valuenow={progress?.processedRows ?? 0}
+                  className="h-1.5 overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className="h-full rounded-full bg-primary"
+                    style={{
+                      width: `${progress?.totalRows ? Math.min(100, (progress.processedRows / progress.totalRows) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            {summary && (
+              <div
+                className="grid gap-3 rounded-lg bg-muted/40 p-4 text-sm"
+                role="status"
+                aria-live="polite"
+              >
+                <div>
+                  <Badge
+                    color={summary.failed ? 'warning' : 'success'}
+                    icon={summary.failed ? 'triangle-alert' : 'circle-check'}
+                  >
+                    {t('Import complete')}
+                  </Badge>
+                </div>
                 <p>
                   {summary.created} {t('created')}, {summary.updated} {t('updated')},{' '}
                   {summary.failed} {t('failed')}.
                 </p>
                 {summary.failedRowsUrl && (
                   <a
-                    className="mt-2 inline-block text-primary underline"
+                    className={buttonClasses({
+                      variant: 'link',
+                      color: 'primary',
+                      className: 'min-h-6 justify-self-start text-[0.8125rem]',
+                    })}
                     href={summary.failedRowsUrl}
                   >
                     {t('Download failed rows CSV')}
@@ -322,12 +391,17 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
               </div>
             )}
             {error && (
-              <p role="alert" className="text-sm text-destructive">
+              <p
+                role="alert"
+                className="rounded-lg bg-danger-soft px-4 py-3 text-[0.8125rem] leading-5 text-danger-ink"
+              >
                 {error}
               </p>
             )}
           </div>
-          <footer className="border-t border-border p-4">{footer}</footer>
+          <footer className="flex shrink-0 justify-end border-t border-border bg-muted/30 px-6 py-3">
+            {footer}
+          </footer>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

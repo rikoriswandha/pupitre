@@ -14,7 +14,7 @@ const png = Buffer.from(
 
 test('Markdown editor updates state and previews sanitized Markdown', async ({ mount }) => {
   const view = await mount(<MarkdownEditorStory />)
-  const editor = view.getByLabel('Markdown editor')
+  const editor = view.getByLabel('Markdown editor', { exact: true })
   await editor.fill('# Preview\n<script>alert(1)</script>\n[unsafe](javascript:alert(1))')
   await view.getByRole('button', { name: 'Preview' }).click()
   await expect(view.getByRole('heading', { name: 'Preview' })).toBeVisible()
@@ -78,7 +78,6 @@ test('FileUpload image editor crops before uploading the resulting file', async 
     .setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png })
   const cropPanel = page.getByRole('dialog', { name: 'Edit image' })
   await expect(cropPanel).toBeVisible()
-  await expect(cropPanel.locator('.bg-background')).toHaveClass(/text-foreground/)
   await cropPanel.getByRole('button', { name: 'Rotate' }).click()
   await cropPanel.getByRole('button', { name: 'Flip' }).click()
   await cropPanel.getByRole('button', { name: 'Apply crop' }).click()

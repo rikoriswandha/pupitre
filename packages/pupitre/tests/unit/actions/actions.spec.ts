@@ -122,12 +122,25 @@ test.group('action compiler', () => {
     assert.equal(remove.kind, 'confirm')
     assert.equal(remove.confirm?.destructive, true)
     assert.equal(remove.confirm?.heading, 'Delete Post?')
+    assert.equal(remove.confirm?.description, 'This action cannot be undone.')
+    assert.equal(remove.confirm?.submitLabel, 'Delete')
     assert.equal(header.url, '/posts/actions/export')
     assert.equal(bulk.url, '/posts/actions/archive')
     assert.equal(bulk.kind, 'direct')
     assert.equal(bulkDelete.kind, 'confirm')
     assert.equal(bulkDelete.confirm?.heading, 'Delete Posts?')
+    assert.equal(bulkDelete.confirm?.submitLabel, 'Delete')
     assert.equal(row.url, '/posts/42/actions/publish')
+  })
+
+  test('splits camelCase built-in names into words for labels', async ({ assert }) => {
+    const bulkForceDelete = await compileActionDescriptor(actions.bulkForceDelete().definition, {
+      ...descriptor(),
+      record: undefined,
+      recordKey: undefined,
+    })
+    assert.equal(bulkForceDelete.label, 'Force Delete')
+    assert.equal(bulkForceDelete.confirm?.submitLabel, 'Force Delete')
   })
 
   test('combines visibility and authorization in enabled', async ({ assert }) => {

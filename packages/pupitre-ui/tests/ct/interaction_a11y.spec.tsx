@@ -24,6 +24,8 @@ async function assertAccessible(page: Page) {
   })
   const results = await new AxeBuilder({ page: page as never })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    // Base UI's popup focus guards are invisible redirect sentinels, not content.
+    .exclude('[data-base-ui-focus-guard]')
     .analyze()
   expect(results.violations).toEqual([])
 }
@@ -116,10 +118,11 @@ test('Searchable async multiple Select declares multiselection and supports list
   page,
 }) => {
   const view = await mount(<ChoiceA11yStory kind="Select" multiple async />)
-  const list = view.getByRole('listbox', { name: 'Status' })
+  await view.getByRole('combobox', { name: 'Status' }).click()
+  const list = page.getByRole('listbox', { name: 'Status' })
   await expect(list).toHaveAttribute('aria-multiselectable', 'true')
-  const draft = view.getByRole('option', { name: 'Draft' })
-  const published = view.getByRole('option', { name: 'Published' })
+  const draft = page.getByRole('option', { name: 'Draft' })
+  const published = page.getByRole('option', { name: 'Published' })
   await draft.focus()
   await draft.press('ArrowDown')
   await expect(published).toBeFocused()
@@ -131,6 +134,7 @@ test('Searchable async multiple Select declares multiselection and supports list
   await expect(published).toBeFocused()
   await assertAccessible(page)
   await view.getByRole('button', { name: 'Remove Published' }).click()
+  await view.getByRole('combobox', { name: 'Status' }).click()
   await expect(published).toHaveAttribute('aria-selected', 'false')
 })
 
@@ -153,29 +157,28 @@ test('DataTable selection announces mixed state and filter/column/row disclosure
   const selected = view.getByRole('checkbox', { name: 'Select row 1', exact: true })
   await selected.focus()
   await selected.press('Space')
-  await expect(view.getByRole('checkbox', { name: 'Select all rows' })).toHaveJSProperty(
-    'indeterminate',
-    true
+  await expect(view.getByRole('checkbox', { name: 'Select all rows' })).toHaveAttribute(
+    'aria-checked',
+    'mixed'
   )
   for (const name of ['Filters', 'Columns', 'Row actions']) {
-    const summary = view.locator('summary').filter({ hasText: name }).first()
-    await summary.focus()
-    await summary.press('Enter')
-    await expect(summary.locator('..')).toHaveAttribute('open', '')
+    const trigger = view.getByRole('button', { name, exact: true }).first()
+    await trigger.focus()
+    await trigger.press('Enter')
+    await expect(trigger).toHaveAttribute('aria-expanded', 'true')
     await assertAccessible(page)
     if (name === 'Filters')
-      await expect(view.getByRole('combobox', { name: 'Filter Status' })).toBeVisible()
+      await expect(page.getByRole('combobox', { name: 'Filter Status' })).toBeVisible()
     if (name === 'Columns') {
-      const column = view.getByRole('checkbox', { name: 'Status', exact: true })
+      const column = page.getByRole('checkbox', { name: 'Status', exact: true })
       await column.focus()
       await column.press('Space')
       await expect(view.getByRole('columnheader', { name: 'Status', exact: true })).toHaveCount(0)
     }
-    if (name === 'Row actions') {
-      await summary.press('Tab')
-      await expect(view.getByRole('button', { name: 'Edit' }).first()).toBeFocused()
-    }
-    await summary.press('Enter')
+    if (name === 'Row actions')
+      await expect(page.getByRole('menuitem', { name: 'Edit' }).first()).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   }
 })
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "collection-field",
+  "type": "registry:component",
+  "title": "CollectionField",
+  "dependencies": [
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/CollectionField.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/CollectionField.tsx",
+      "content": "import type { ReactNode } from 'react'\nimport { FieldDescription, RequiredMark } from '../primitives/index.js'\n\n/**\n * Field chrome for list-valued fields (Repeater, Builder): label row with hint,\n * a labelled group around the items, and helper copy. The items are not a single\n * form control, so the label names the group rather than pointing `for` at an input.\n */\nexport function CollectionField({\n  props,\n  name,\n  children,\n}: {\n  props: Record<string, unknown>\n  name: string\n  children: ReactNode\n}) {\n  const id = `collection-${name.replaceAll('.', '-')}`\n  const label = typeof props.label === 'string' ? props.label : undefined\n  const hint = typeof props.hint === 'string' ? props.hint : undefined\n  const helperText = typeof props.helperText === 'string' ? props.helperText : undefined\n  const span = props.columnSpan\n  const style =\n    span === 'full'\n      ? { gridColumn: '1 / -1' }\n      : typeof span === 'number'\n        ? { gridColumn: `span ${span} / span ${span}` }\n        : undefined\n  return (\n    <div\n      role=\"group\"\n      aria-labelledby={label ? `${id}-label` : undefined}\n      aria-describedby={helperText ? `${id}-helper` : undefined}\n      className=\"grid min-w-0 gap-2\"\n      style={style}\n    >\n      {(label || hint) && (\n        <div className=\"flex min-w-0 items-center justify-between gap-3\">\n          {label && (\n            <span id={`${id}-label`} className=\"text-sm font-medium leading-5 text-foreground\">\n              {label}\n              {props.required === true && <RequiredMark />}\n            </span>\n          )}\n          {hint && <span className=\"ml-auto text-[0.8125rem] text-muted-foreground\">{hint}</span>}\n        </div>\n      )}\n      {children}\n      {helperText && <FieldDescription id={`${id}-helper`}>{helperText}</FieldDescription>}\n    </div>\n  )\n}\n"
+    }
+  ]
+}

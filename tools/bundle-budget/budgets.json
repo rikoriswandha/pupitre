@@ -6,36 +6,36 @@
       "brotli": 119705
     },
     "initialCSS": {
-      "gzip": 11932,
-      "brotli": 10301
+      "gzip": 17985,
+      "brotli": 15028
     },
     "tiptap": {
-      "gzip": 390008,
-      "brotli": 327477
+      "gzip": 398949,
+      "brotli": 335009
     },
     "codemirror": {
       "gzip": 288887,
       "brotli": 249036
     },
     "charts": {
-      "gzip": 361872,
-      "brotli": 298280
+      "gzip": 370812,
+      "brotli": 305840
     },
     "markdown": {
       "gzip": 26980,
       "brotli": 24406
     },
     "cropper": {
-      "gzip": 246923,
-      "brotli": 203373
+      "gzip": 281461,
+      "brotli": 229694
     },
     "transmit": {
-      "gzip": 240767,
-      "brotli": 197805
+      "gzip": 275032,
+      "brotli": 223919
     },
     "largestLazy": {
-      "gzip": 235793,
-      "brotli": 193340
+      "gzip": 269932,
+      "brotli": 219311
     }
   }
 }

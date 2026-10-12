@@ -13,7 +13,7 @@ pupitreTest(
     const unique = Date.now()
     await page.getByLabel('Title').fill(`Editors ${unique}`)
     await page.getByLabel('Slug').fill(`editors-${unique}`)
-    await page.getByRole('textbox', { name: 'Category', exact: true }).click()
+    await page.getByRole('combobox', { name: 'Category', exact: true }).click()
     await page.getByRole('option', { name: 'Culture' }).click()
 
     await page.getByRole('tab', { name: 'Content' }).click()

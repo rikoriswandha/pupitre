@@ -17,6 +17,9 @@ export default defineConfig({
     alias: {
       '~/': `${import.meta.dirname}/inertia/`,
       '@generated': `${import.meta.dirname}/.adonisjs/client/`,
+      // Tailwind resolves CSS @imports without custom conditions; point the skin at source
+      // so token edits and new utility classes in pupitre-ui/src apply without a rebuild.
+      '@rikology/pupitre-ui/styles.css': `${import.meta.dirname}/../../packages/pupitre-ui/src/styles.css`,
     },
     conditions: ['@rikology/source', 'module', 'browser', 'development|production'],
     dedupe: ['react', 'react-dom'],

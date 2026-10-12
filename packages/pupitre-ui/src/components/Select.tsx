@@ -1,15 +1,26 @@
 import { useId, useMemo, useState, type ReactNode } from 'react'
-import {
-  useBoundValue,
-  useFieldError,
-  useOptions,
-  useRunAction,
-  useRuntime,
-} from '@rikology/pupitre-react'
+import { useBoundValue, useFieldError, useOptions, useRuntime } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Select as BaseSelect } from '@base-ui/react/select'
-import { Field, FieldError, Label } from '../primitives/index.js'
+import { Popover } from '@base-ui/react/popover'
+import { Icon } from '../icons.js'
+import { InputFieldLabel } from './Text.js'
+import {
+  Badge,
+  Button,
+  Field,
+  FieldError,
+  FieldDescription,
+  InputSlot,
+  cn,
+  controlGroupClasses,
+  controlClasses,
+  popupClasses,
+  positionerClasses,
+  menuItemClasses,
+  Spinner,
+} from '../primitives/index.js'
 import { ActionModal } from '@rikology/pupitre-react'
 import { t } from '@rikology/pupitre-react'
 import { ActionButton } from './ActionButton.js'
@@ -28,8 +39,12 @@ export function Select({ props, bindings }: Runtime) {
   const [value, setValue] = useBoundValue(initial, bindings?.value)
   const error = useFieldError(props.error, bindings?.value)
   const [createOpen, setCreateOpen] = useState(false)
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [createdOptions, setCreatedOptions] = useState<
+    Array<{ value: string | number; label: string; description?: string; disabled?: boolean }>
+  >([])
   const runtime = useRuntime()
-  const runAction = useRunAction()
   const staticOptions = Array.isArray(props.options) ? props.options : []
   const asyncOptions = useOptions({
     url: props.optionsUrl,
@@ -41,7 +56,21 @@ export function Select({ props, bindings }: Runtime) {
   const id = bindings?.value
     ? bindings.value.split('/').slice(2).join('.')
     : (props.name ?? generatedId)
-  const options = props.optionsUrl ? asyncOptions.options : staticOptions
+  const options = [
+    ...(props.optionsUrl ? asyncOptions.options : staticOptions),
+    ...createdOptions,
+  ].filter(
+    (option, index, all) =>
+      all.findIndex((item) => String(item.value) === String(option.value)) === index
+  )
+  const query = props.optionsUrl ? asyncOptions.search : search
+  const visibleOptions = props.optionsUrl
+    ? options
+    : options.filter((option) => option.label.toLowerCase().includes(query.toLowerCase()))
+  const selected = (option: (typeof options)[number]) =>
+    Array.isArray(value)
+      ? value.some((item) => String(item) === String(option.value))
+      : String(value) === String(option.value)
   const selectedOptions = Array.isArray(value)
     ? options.filter((option) =>
         value.some((selectedValue) => String(selectedValue) === String(option.value))
@@ -57,6 +86,7 @@ export function Select({ props, bindings }: Runtime) {
       )
     } else {
       setValue(option.value)
+      setOpen(false)
     }
   }
   const createOptionUrl = props.createOption?.url
@@ -87,201 +117,71 @@ export function Select({ props, bindings }: Runtime) {
               ? '1 / -1'
               : `span ${props.columnSpan} / span ${props.columnSpan}`,
         }
+  const placeholder = props.placeholder ?? t('Select an option')
+  const triggerValue = Array.isArray(selectedOptions)
+    ? selectedOptions.length
+      ? selectedOptions.map((option) => option.label).join(', ')
+      : placeholder
+    : (selectedOptions?.label ?? placeholder)
+  const complex = props.searchable || props.optionsUrl || props.multiple || createAction
+  const triggerProps = {
+    id,
+    'aria-label': props.label ?? id,
+    'aria-required': props.required,
+    'aria-describedby': describedBy,
+    'aria-invalid': !!error,
+    'disabled': props.disabled || props.readOnly,
+    'className': `${controlClasses} flex h-(--control-h) items-center justify-between gap-2 px-3 text-left`,
+  }
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
-          <Label id={`${id}-label`} htmlFor={id}>
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </Label>
-        )}
-        {props.optionsUrl ? (
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2">
-              {props.prefixAction && (
-                <button
-                  type="button"
-                  disabled={!props.prefixAction.enabled}
-                  onClick={() => void runAction(props.prefixAction!)}
-                >
-                  {props.prefixAction.label}
-                </button>
-              )}
-              {props.searchable && (
-                <input
-                  id={id}
-                  data-options-search
-                  aria-label={props.label ?? t('Search options')}
-                  aria-invalid={!!error}
-                  aria-required={props.required}
-                  aria-describedby={describedBy}
-                  value={asyncOptions.search}
-                  onChange={(event) => asyncOptions.setSearch(event.currentTarget.value)}
-                  disabled={props.disabled}
-                  className="min-h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              )}
-              <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-                {Array.isArray(value)
-                  ? ''
-                  : Array.isArray(selectedOptions)
-                    ? (props.placeholder ?? t('Select an option'))
-                    : (selectedOptions?.label ?? props.placeholder ?? t('Select an option'))}
-              </span>
-              {props.suffixAction && (
-                <button
-                  type="button"
-                  disabled={!props.suffixAction.enabled}
-                  onClick={() => void runAction(props.suffixAction!)}
-                >
-                  {props.suffixAction.label}
-                </button>
-              )}
-            </div>
-            {Array.isArray(value) &&
-              Array.isArray(selectedOptions) &&
-              selectedOptions.length > 0 && (
-                <ul aria-label={t('Selected options')} className="flex flex-wrap gap-1">
-                  {selectedOptions.map((option) => (
-                    <li
-                      key={String(option.value)}
-                      className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-1 text-xs"
-                    >
-                      <span>{option.label}</span>
-                      <button
-                        type="button"
-                        aria-label={`${t('Remove')} ${option.label}`}
-                        disabled={props.disabled || props.readOnly}
-                        onClick={() =>
-                          setValue(value.filter((item) => String(item) !== String(option.value)))
-                        }
-                        className="rounded px-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-                      >
-                        ×
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            <div
-              id={props.searchable ? undefined : id}
-              aria-multiselectable={props.multiple || undefined}
-              role="listbox"
-              aria-labelledby={
-                props.label !== null && props.label !== undefined ? `${id}-label` : undefined
-              }
-              aria-label={props.label ?? id}
-              aria-invalid={!!error}
-              aria-required={props.required}
-              aria-describedby={describedBy}
-              aria-disabled={props.disabled || props.readOnly}
-              onKeyDown={(event) => {
-                const list = event.currentTarget
-                const choices = Array.from(
-                  list.querySelectorAll<HTMLButtonElement>('[role="option"]:not(:disabled)')
-                )
-                const index = choices.indexOf(document.activeElement as HTMLButtonElement)
-                const next =
-                  event.key === 'Home'
-                    ? choices[0]
-                    : event.key === 'End'
-                      ? choices[choices.length - 1]
-                      : event.key === 'ArrowDown'
-                        ? choices[(index + 1) % choices.length]
-                        : event.key === 'ArrowUp'
-                          ? choices[(index - 1 + choices.length) % choices.length]
-                          : undefined
-                if (!next) return
-                event.preventDefault()
-                next.focus()
-              }}
-              className="max-h-56 overflow-auto rounded-md border border-border p-1"
-            >
-              {options.map((option) => (
-                <button
-                  key={String(option.value)}
-                  type="button"
-                  role="option"
-                  aria-selected={
-                    Array.isArray(value)
-                      ? value.some((item) => String(item) === String(option.value))
-                      : String(value) === String(option.value)
-                  }
-                  tabIndex={
-                    options.find((candidate) => !candidate.disabled)?.value === option.value
-                      ? 0
-                      : -1
-                  }
-                  disabled={props.disabled || props.readOnly || option.disabled}
-                  onClick={() => selectOption(option)}
-                  className="block w-full rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent disabled:opacity-50"
-                >
-                  {option.label}
-                  {option.description && (
-                    <span className="block text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            {asyncOptions.loading && <span role="status">{t('Loading options')}</span>}
-            {asyncOptions.error && <span role="alert">{asyncOptions.error}</span>}
-            {asyncOptions.hasMore && (
-              <button
-                type="button"
-                onClick={asyncOptions.loadMore}
-                disabled={props.disabled || props.readOnly || asyncOptions.loading}
-              >
-                {t('Load more')}
-              </button>
-            )}
-            {createAction && (
-              <button
-                type="button"
-                disabled={props.disabled || props.readOnly}
-                onClick={() => setCreateOpen(true)}
-              >
-                {t('Create option')}
-              </button>
-            )}
-          </div>
-        ) : props.native ? (
-          <div className="flex items-center gap-2">
-            {props.prefixAction && <ActionButton action={props.prefixAction} />}
+        <InputFieldLabel id={id} props={props} />
+        <div className="flex min-w-0 items-center gap-1">
+          {props.prefixAction && (
+            <InputSlot>
+              <ActionButton
+                action={{
+                  ...props.prefixAction,
+                  variant: props.prefixAction.icon ? 'iconButton' : props.prefixAction.variant,
+                }}
+                variant="ghost"
+                size="xs"
+              />
+            </InputSlot>
+          )}
+          {props.native ? (
             <select
+              {...props.extraAttributes}
               id={id}
               name={id}
               value={Array.isArray(value) ? value.map(String) : String(value ?? '')}
               multiple={props.multiple}
               required={props.required}
-              disabled={props.disabled}
+              disabled={props.disabled || props.readOnly}
+              aria-label={props.label ?? id}
               aria-required={props.required}
               aria-describedby={describedBy}
               aria-invalid={!!error}
+              className={`${controlClasses} pupitre-native-select min-h-(--control-h)`}
               onChange={(event) => {
-                if (props.multiple) {
+                if (props.multiple)
                   setValue(
                     Array.from(
                       event.currentTarget.selectedOptions,
-                      (selected) =>
-                        options.find((option) => String(option.value) === selected.value)?.value ??
-                        selected.value
+                      (item) =>
+                        options.find((option) => String(option.value) === item.value)?.value ??
+                        item.value
                     )
                   )
-                } else {
-                  const selected = options.find(
-                    (option) => String(option.value) === event.currentTarget.value
+                else
+                  setValue(
+                    options.find((option) => String(option.value) === event.currentTarget.value)
+                      ?.value ?? ''
                   )
-                  setValue(selected?.value ?? '')
-                }
               }}
-              className="flex min-h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
-              {!props.multiple && (
-                <option value="">{props.placeholder ?? 'Select an option'}</option>
-              )}
+              {!props.multiple && <option value="">{placeholder}</option>}
               {options.map((option) => (
                 <option
                   key={String(option.value)}
@@ -292,84 +192,298 @@ export function Select({ props, bindings }: Runtime) {
                 </option>
               ))}
             </select>
-            {props.suffixAction && <ActionButton action={props.suffixAction} />}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            {props.prefixAction && <ActionButton action={props.prefixAction} />}
+          ) : complex ? (
+            <Popover.Root open={open} onOpenChange={setOpen}>
+              <div
+                className={
+                  props.multiple
+                    ? cn(
+                        controlGroupClasses,
+                        'min-h-(--control-h) flex-wrap items-center gap-1 px-1 py-0.5'
+                      )
+                    : 'contents'
+                }
+              >
+                {props.multiple && Array.isArray(selectedOptions) && selectedOptions.length > 0 && (
+                  <ul aria-label={t('Selected options')} className="flex flex-wrap gap-1">
+                    {selectedOptions.map((option) => (
+                      <li key={String(option.value)}>
+                        <Badge className="py-0 pr-0.5">
+                          {option.label}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            square
+                            className="size-6 rounded-sm"
+                            aria-label={`${t('Remove')} ${option.label}`}
+                            disabled={props.disabled || props.readOnly}
+                            onClick={() =>
+                              Array.isArray(value) &&
+                              setValue(
+                                value.filter((item) => String(item) !== String(option.value))
+                              )
+                            }
+                          >
+                            <Icon name="x" className="size-3.5" />
+                          </Button>
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Popover.Trigger
+                  role="combobox"
+                  {...props.extraAttributes}
+                  {...triggerProps}
+                  className={
+                    props.multiple
+                      ? 'flex min-h-6 min-w-8 flex-1 items-center justify-between gap-2 rounded-md px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:text-muted-foreground'
+                      : triggerProps.className
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                      event.preventDefault()
+                      setOpen(true)
+                    }
+                  }}
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {props.multiple && Array.isArray(selectedOptions) && selectedOptions.length
+                      ? ''
+                      : triggerValue}
+                  </span>
+                  <Icon name="chevrons-up-down" className="size-4 shrink-0 text-muted-foreground" />
+                </Popover.Trigger>
+              </div>
+              <Popover.Portal>
+                <Popover.Positioner sideOffset={5} align="start" className={positionerClasses}>
+                  <Popover.Popup
+                    data-pupitre-popup=""
+                    aria-label={props.label ?? id}
+                    className={cn(popupClasses, 'w-(--anchor-width) min-w-56')}
+                  >
+                    {(props.searchable || props.optionsUrl) && (
+                      <div className="p-1">
+                        <input
+                          className={`${controlClasses} h-(--control-h) px-3`}
+                          aria-label="Search options"
+                          data-options-search
+                          placeholder={t('Search options')}
+                          value={query}
+                          onChange={(event) => {
+                            const next = event.currentTarget.value
+                            if (props.optionsUrl) asyncOptions.setSearch(next)
+                            else setSearch(next)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === 'ArrowDown') {
+                              event.preventDefault()
+                              event.currentTarget
+                                .closest('[data-pupitre-popup]')
+                                ?.querySelector<HTMLButtonElement>('[role="option"]:not(:disabled)')
+                                ?.focus()
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+                    <div
+                      role="listbox"
+                      aria-label={props.label ?? id}
+                      aria-multiselectable={props.multiple || undefined}
+                      className="max-h-64 overflow-auto"
+                      onKeyDown={(event) => {
+                        const choices = Array.from(
+                          event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                            '[role="option"]:not(:disabled)'
+                          )
+                        )
+                        const index = choices.indexOf(document.activeElement as HTMLButtonElement)
+                        const next =
+                          event.key === 'Home'
+                            ? choices[0]
+                            : event.key === 'End'
+                              ? choices[choices.length - 1]
+                              : event.key === 'ArrowDown'
+                                ? choices[(index + 1) % choices.length]
+                                : event.key === 'ArrowUp'
+                                  ? choices[(index - 1 + choices.length) % choices.length]
+                                  : undefined
+                        if (next) {
+                          event.preventDefault()
+                          next.focus()
+                        }
+                      }}
+                    >
+                      {visibleOptions.map((option) => (
+                        <button
+                          key={String(option.value)}
+                          type="button"
+                          role="option"
+                          aria-label={option.label}
+                          aria-selected={selected(option)}
+                          disabled={option.disabled}
+                          onClick={() => selectOption(option)}
+                          className={`${menuItemClasses} hover:bg-accent focus-visible:bg-accent aria-selected:bg-primary-soft/50 disabled:opacity-50`}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span>{option.label}</span>
+                            {option.description && (
+                              <span className="block text-[0.8125rem] text-muted-foreground">
+                                {option.description}
+                              </span>
+                            )}
+                          </span>
+                          {selected(option) && (
+                            <Icon name="check" className="size-4 text-primary-ink" />
+                          )}
+                        </button>
+                      ))}
+                      {!visibleOptions.length && !asyncOptions.loading && (
+                        <p className="px-3 py-3 text-[0.8125rem] text-muted-foreground">
+                          {t('No options')}
+                        </p>
+                      )}
+                    </div>
+                    {asyncOptions.loading && (
+                      <div
+                        role="status"
+                        className="flex items-center gap-2 px-3 py-2 text-[0.8125rem] text-muted-foreground"
+                      >
+                        <Spinner />
+                        {t('Loading options')}
+                      </div>
+                    )}
+                    {asyncOptions.error && (
+                      <p role="alert" className="px-3 py-2 text-[0.8125rem] text-danger-ink">
+                        {asyncOptions.error}
+                      </p>
+                    )}
+                    {asyncOptions.hasMore && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="xs"
+                        onClick={asyncOptions.loadMore}
+                        disabled={asyncOptions.loading}
+                        className="w-full"
+                      >
+                        {t('Load more')}
+                      </Button>
+                    )}
+                    {createAction && (
+                      <div className="mt-1 border-t border-border pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start"
+                          onClick={() => {
+                            setOpen(false)
+                            setCreateOpen(true)
+                          }}
+                        >
+                          <Icon name="plus" className="size-4" />
+                          {t('Create option')}
+                        </Button>
+                      </div>
+                    )}
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
+          ) : (
             <BaseSelect.Root
               items={options}
-              id={id}
               name={id}
-              value={selectedOptions}
-              onValueChange={(next) => {
-                if (Array.isArray(next)) {
-                  setValue(next.map((option) => option.value))
-                  return
-                }
-                setValue(next?.value ?? '')
-              }}
-              multiple={props.multiple}
+              value={Array.isArray(selectedOptions) ? null : selectedOptions}
               required={props.required}
               disabled={props.disabled}
               readOnly={props.readOnly}
+              onValueChange={(next) => setValue(next?.value ?? '')}
             >
-              <BaseSelect.Trigger
-                aria-label={props.label ?? id}
-                {...props.extraAttributes}
-                id={id}
-                aria-required={props.required}
-                aria-describedby={describedBy}
-                aria-invalid={!!error}
-                className="flex min-h-10 w-full flex-1 items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-left text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              >
-                <BaseSelect.Value placeholder={props.placeholder ?? 'Select an option'} />
-                <BaseSelect.Icon aria-hidden="true">⌄</BaseSelect.Icon>
+              <BaseSelect.Trigger role="combobox" {...props.extraAttributes} {...triggerProps}>
+                <BaseSelect.Value placeholder={placeholder} />
+                <Icon name="chevrons-up-down" className="size-4 text-muted-foreground" />
               </BaseSelect.Trigger>
               <BaseSelect.Portal>
-                <BaseSelect.Positioner className="z-50 outline-none">
-                  <BaseSelect.Popup className="max-h-64 min-w-[var(--anchor-width)] overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md">
-                    <BaseSelect.List>
+                <BaseSelect.Positioner
+                  sideOffset={5}
+                  alignItemWithTrigger={false}
+                  className={positionerClasses}
+                >
+                  <BaseSelect.Popup
+                    data-pupitre-popup=""
+                    className={cn(popupClasses, 'min-w-(--anchor-width)')}
+                  >
+                    <BaseSelect.List className="max-h-64 overflow-auto">
                       {options.map((option) => (
                         <BaseSelect.Item
                           key={String(option.value)}
                           value={option}
                           disabled={option.disabled}
-                          className="flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:opacity-50"
+                          aria-label={option.label}
+                          className={menuItemClasses}
                         >
-                          <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
+                          <span className="min-w-0 flex-1">
+                            <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
+                            {option.description && (
+                              <span className="block text-[0.8125rem] text-muted-foreground">
+                                {option.description}
+                              </span>
+                            )}
+                          </span>
+                          <BaseSelect.ItemIndicator>
+                            <Icon name="check" className="size-4" />
+                          </BaseSelect.ItemIndicator>
                         </BaseSelect.Item>
                       ))}
+                      {!options.length && (
+                        <p className="px-3 py-3 text-[0.8125rem] text-muted-foreground">
+                          {t('No options')}
+                        </p>
+                      )}
                     </BaseSelect.List>
                   </BaseSelect.Popup>
                 </BaseSelect.Positioner>
               </BaseSelect.Portal>
             </BaseSelect.Root>
-            {props.suffixAction && <ActionButton action={props.suffixAction} />}
-          </div>
-        )}
-        {props.clearable &&
-          !props.multiple &&
-          value !== '' &&
-          value !== null &&
-          value !== undefined && (
-            <button
-              type="button"
-              aria-label={`Clear ${props.label ?? 'selection'}`}
-              onClick={() => setValue('')}
-            >
-              Clear
-            </button>
           )}
-        {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {props.hint}
-          </p>
-        )}
+          {props.clearable &&
+            !props.multiple &&
+            value !== '' &&
+            value !== null &&
+            value !== undefined && (
+              <InputSlot>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  aria-label={`Clear ${props.label ?? 'selection'}`}
+                  disabled={props.disabled || props.readOnly}
+                  onClick={() => setValue('')}
+                >
+                  <Icon name="x" className="size-4" />
+                </Button>
+              </InputSlot>
+            )}
+          {props.suffixAction && (
+            <InputSlot>
+              <ActionButton
+                action={{
+                  ...props.suffixAction,
+                  variant: props.suffixAction.icon ? 'iconButton' : props.suffixAction.variant,
+                }}
+                variant="ghost"
+                size="xs"
+              />
+            </InputSlot>
+          )}
+        </div>
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>
@@ -390,6 +504,7 @@ export function Select({ props, bindings }: Runtime) {
           }}
           onOptionCreated={(option) => {
             asyncOptions.addOption(option)
+            setCreatedOptions((previous) => [...previous, option])
             if (Array.isArray(value)) {
               setValue(
                 value.some((item) => String(item) === String(option.value))

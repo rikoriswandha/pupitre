@@ -5,6 +5,11 @@ test('charts expose their series legend with distinct default colors', async ({ 
   const view = await mount(<ChartAccessibilityStory />)
   await expect(view.getByText('Revenue', { exact: true })).toBeVisible()
   await expect(view.getByText('Orders', { exact: true })).toBeVisible()
-  await expect(view.locator('path.recharts-line-curve[stroke="#2563eb"]')).toHaveCount(1)
-  await expect(view.locator('path.recharts-line-curve[stroke="#db2777"]')).toHaveCount(1)
+  const colors = await view
+    .locator('path.recharts-line-curve')
+    .evaluateAll((paths) => paths.map((path) => path.getAttribute('stroke')))
+  expect(colors).toHaveLength(2)
+  expect(colors[0]).toBeTruthy()
+  expect(colors[1]).toBeTruthy()
+  expect(colors[0]).not.toBe(colors[1])
 })

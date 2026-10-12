@@ -1,21 +1,21 @@
-import type { EntryProps } from './EntryShell.js'
+import type { EntryDisplayProps } from './EntryShell.js'
 import { EntryShell } from './EntryShell.js'
 
-export function ColorEntry({ props = {} }: { props?: EntryProps }) {
+export function ColorEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const color = typeof props.value === 'string' ? props.value : props.color
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan}>
+    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
       {color ? (
         <span className="inline-flex items-center gap-2">
           <span
             aria-hidden="true"
-            className="size-5 rounded border border-border"
+            className="size-6 shrink-0 rounded-md ring-1 ring-inset ring-border"
             style={{ backgroundColor: color }}
           />
-          <code>{color}</code>
+          <code className="font-mono text-[0.8125rem]">{color}</code>
         </span>
       ) : (
-        <span className="text-muted-foreground">{props.placeholder ?? '—'}</span>
+        <span className="text-subtle-foreground">{props.placeholder ?? '—'}</span>
       )}
     </EntryShell>
   )

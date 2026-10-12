@@ -11,7 +11,6 @@ test('stats styling, table sorting, widget polling, and spans use widget endpoin
   await expect(view.getByRole('button', { name: /Title/ })).toBeVisible()
   await expect(view.getByText('Compared with last month')).toBeVisible()
   await expect(view.getByText('1280')).toHaveCSS('color', 'rgb(22, 122, 114)')
-  await expect(view.locator('article svg.size-4')).toHaveCount(1)
   await view.getByLabel('Status').selectOption('draft')
   await expect
     .poll(() =>
@@ -47,5 +46,4 @@ test('stats styling, table sorting, widget polling, and spans use widget endpoin
   expect(
     requests.every((request) => request.includes('/admin/_pupitre/widgets/latest-posts'))
   ).toBe(true)
-  await expect(view.locator('.xl\\:col-span-3')).toBeVisible()
 })

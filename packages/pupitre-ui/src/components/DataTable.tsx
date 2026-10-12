@@ -1,5 +1,5 @@
-import { createElement, useEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import { createElement, useContext, useEffect, useRef, useState } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { matchesKeyBinding } from '@rikology/pupitre-react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
 import type { Cell, ColumnDef, Row } from '@tanstack/react-table'
@@ -17,6 +17,31 @@ import { NavLink } from '../primitives/nav_link.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
 import { DataTableEditableCell } from './DataTableEditableCell.js'
 import { DataTableGrid } from './DataTableGrid.js'
+import { Popover } from '@base-ui/react/popover'
+import { Dialog } from '@base-ui/react/dialog'
+import {
+  Badge,
+  Button,
+  CheckboxControl,
+  EmptyState,
+  Input,
+  InputGroup,
+  InputSlot,
+  Panel,
+  Skeleton,
+  buttonClasses,
+  cn,
+  controlClasses,
+  popupClasses,
+  positionerClasses,
+  backdropClasses,
+  sheetPopupClasses,
+  segmentedListClasses,
+  segmentedItemClasses,
+  toTone,
+} from '../primitives/index.js'
+import { ActionList, ActionMenu } from './ActionList.js'
+import { PanelNestingContext } from './Section.js'
 
 import { DataTableGroups } from './DataTableGroups.js'
 import { DataTableSummary } from './DataTableSummary.js'
@@ -187,15 +212,21 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
         {text}
       </span>
     ) : null
-  if (column.type === 'badge' || (column.type === 'text' && column.props.badge))
+  if (column.type === 'badge' || (column.type === 'text' && column.props.badge)) {
+    // Semantic names (success, gray, …) select a theme tone; anything else is a raw CSS color.
+    const color =
+      (typeof cell?.color === 'string' ? cell.color : undefined) ??
+      colors?.[text] ??
+      (column.props.color as string | undefined)
+    const tone = toTone(color, 'gray')
+    const semantic =
+      color === undefined || tone === color || color === 'destructive' || color === 'secondary'
     return (
-      <span
-        className="inline-flex rounded-full bg-muted px-2 py-0.5 text-xs font-medium"
-        style={{ backgroundColor: colors?.[text] }}
-      >
+      <Badge color={tone} style={semantic ? undefined : { backgroundColor: color }}>
         {text}
-      </span>
+      </Badge>
     )
+  }
   if (column.type === 'toggle')
     return (
       <span
@@ -233,7 +264,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   const content =
     typeof url === 'string' && url ? (
       <a
-        className={`text-primary hover:underline ${column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}`}
+        className={`text-foreground hover:underline ${column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}`}
         href={url}
       >
         {truncated}
@@ -273,6 +304,15 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   )
 }
 
+// A fresh `[]` per render makes TanStack recompute its row model and queue a
+// page-index reset on every render, which loops forever once anything re-renders.
+const NO_ROWS: TableRow[] = []
+
+/** Bordered, shadowless table container for tables rendered inside another panel. */
+function NestedTableSurface({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('rounded-lg border border-border bg-card', className)} {...props} />
+}
+
 export function DataTable({
   props,
   children,
@@ -282,13 +322,15 @@ export function DataTable({
 }: DataTableProps) {
   const descriptor = props.descriptor as TableDescriptor & { striped?: boolean }
   const tableState = useTable(descriptor, fallbackData)
+  // Inside another panel (tabs, sections, modals) the table drops its own panel chrome.
+  const TableSurface = useContext(PanelNestingContext) ? NestedTableSurface : Panel
   const runAction = useRunAction()
   const realtime = useTableRealtime(descriptor)
   const tableData =
     tableState.data && typeof tableState.data === 'object' && 'rows' in tableState.data
       ? (tableState.data as TableData)
       : undefined
-  const rows = tableData?.rows ?? []
+  const rows = tableData?.rows ?? NO_ROWS
   const activeGroup =
     descriptor.groups?.find((group) => group.key === tableData?.query.groupBy) ??
     descriptor.groups?.[0]
@@ -418,6 +460,8 @@ export function DataTable({
     columns,
     getRowId: (row) => String(row.key),
     getCoreRowModel: getCoreRowModel(),
+    // Paging, sorting and filtering are server-side (URL state); never auto-reset locally.
+    manualPagination: true,
     state: { columnVisibility: visibility },
     onColumnVisibilityChange: (updater) =>
       setVisibility((current) => (typeof updater === 'function' ? updater(current) : updater)),
@@ -510,49 +554,17 @@ export function DataTable({
     if (response.ok) getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
   }
   function renderActions(row: TableRow) {
-    const groups = new Map<string, typeof row.actions>()
-    const ungrouped = row.actions.filter((action) => action.enabled && !action.group)
-    for (const action of row.actions) {
-      if (!action.enabled || !action.group) continue
-      groups.set(action.group, [...(groups.get(action.group) ?? []), action])
-    }
-    const actionButton = (action: (typeof row.actions)[number]) => (
-      <button
-        key={action.name}
-        type="button"
-        aria-label={action.variant === 'iconButton' ? action.label : undefined}
-        title={action.variant === 'iconButton' ? action.label : undefined}
-        disabled={!action.enabled || loading || props.disabled}
-        className={
-          action.variant === 'link'
-            ? 'text-primary underline-offset-4 hover:underline disabled:opacity-50'
-            : 'inline-flex min-h-8 items-center gap-2 rounded-md border border-input px-2 text-sm disabled:opacity-50'
-        }
-        onClick={async () => {
-          await runAction(action, { ids: [row.key], record: row.cells })
-          emit('action', { action: action.name, id: row.key })
-        }}
-      >
-        {action.icon && <Icon name={action.icon} className="size-4" />}
-        {action.variant === 'iconButton' ? (
-          <span className="sr-only">{action.label}</span>
-        ) : (
-          action.label
-        )}
-      </button>
-    )
     return (
-      <div className="flex flex-wrap justify-end gap-2">
-        {ungrouped.map(actionButton)}
-        {[...groups].map(([name, actions]) => (
-          <details className="relative" key={name}>
-            <summary className="cursor-pointer list-none rounded border px-2 py-1">{name}</summary>
-            <div className="absolute right-0 z-20 mt-1 flex min-w-max flex-col gap-1 rounded-md border bg-popover p-2 text-popover-foreground shadow-md">
-              {actions.map(actionButton)}
-            </div>
-          </details>
-        ))}
-      </div>
+      <ActionList
+        actions={row.actions.filter((action) => action.enabled)}
+        appearance="links"
+        max={2}
+        align="end"
+        ids={[row.key]}
+        record={row.cells}
+        disabled={loading || props.disabled}
+        onRun={(action) => emit('action', { action: action.name, id: row.key })}
+      />
     )
   }
   function renderGridCard(row: Row<TableRow>) {
@@ -561,7 +573,7 @@ export function DataTable({
     return (
       <article
         key={row.original.key}
-        className="space-y-3 rounded-md border p-4"
+        className={`space-y-3 rounded-lg border border-border p-4 text-sm transition-colors hover:bg-muted/40 ${selected.includes(row.original.key) ? 'bg-primary-soft/60' : ''} ${row.original.className ?? ''}`}
         draggable={reorderMode}
         onDragOver={(event) => {
           if (reorderMode) event.preventDefault()
@@ -572,44 +584,52 @@ export function DataTable({
       >
         {reorderMode && (
           <div className="flex gap-1">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
+              square
               draggable
               aria-label={`Drag ${row.original.key}`}
               onDragStart={() => setDraggedKey(row.original.key)}
             >
-              ⠿
-            </button>
-            <button
-              type="button"
+              <Icon name="grip-vertical" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              square
               aria-label={`Move ${row.original.key} up`}
               onClick={() => void moveRow(row.original.key, -1)}
             >
-              ↑
-            </button>
-            <button
-              type="button"
+              <Icon name="chevron-up" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="xs"
+              square
               aria-label={`Move ${row.original.key} down`}
               onClick={() => void moveRow(row.original.key, 1)}
             >
-              ↓
-            </button>
+              <Icon name="chevron-down" />
+            </Button>
           </div>
         )}
         <div className="flex items-center justify-between gap-3">
           {descriptor.selectable && (
-            <input
-              type="checkbox"
+            <CheckboxControl
               aria-label={`Select row ${row.original.key}`}
               disabled={!row.original.selectable}
               checked={selected.includes(row.original.key)}
-              onChange={(event) => selectRow(row.original.key, event.currentTarget.checked)}
+              onCheckedChange={(checked) => selectRow(row.original.key, checked)}
             />
           )}
           {firstColumn?.editable && firstCell ? (
             renderCell(firstCell)
           ) : row.original.url ? (
-            <NavLink className="font-medium text-primary hover:underline" href={row.original.url}>
+            <NavLink
+              className="font-medium text-foreground hover:underline"
+              href={row.original.url}
+            >
               {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
                 String(row.original.key)}
             </NavLink>
@@ -640,9 +660,7 @@ export function DataTable({
     return (
       <tr
         key={row.original.key}
-        className={`border-t ${item.className ?? ''} ${
-          descriptor.striped && row.index % 2 ? 'bg-muted/30' : ''
-        }`}
+        className={`border-t border-border transition-colors hover:bg-muted/40 ${selected.includes(item.key) ? 'bg-primary-soft/60' : ''} ${item.className ?? ''} ${descriptor.striped && row.index % 2 ? 'bg-muted/30' : ''}`}
         draggable={reorderMode}
         onDragOver={(event) => {
           if (reorderMode) event.preventDefault()
@@ -655,40 +673,45 @@ export function DataTable({
           <td className="px-2 text-muted-foreground">
             {reorderMode && (
               <div className="flex items-center gap-1">
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  square
                   draggable
                   aria-label={`${t('Drag')} ${item.key}`}
                   onDragStart={() => setDraggedKey(item.key)}
                 >
-                  ⠿
-                </button>
-                <button
-                  type="button"
+                  <Icon name="grip-vertical" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  square
                   aria-label={`${t('Move')} ${item.key} ${t('up')}`}
                   onClick={() => void moveRow(item.key, -1)}
                 >
-                  ↑
-                </button>
-                <button
-                  type="button"
+                  <Icon name="chevron-up" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  square
                   aria-label={`${t('Move')} ${item.key} ${t('down')}`}
                   onClick={() => void moveRow(item.key, 1)}
                 >
-                  ↓
-                </button>
+                  <Icon name="chevron-down" />
+                </Button>
               </div>
             )}
           </td>
         )}
         {descriptor.selectable && (
-          <td className="px-3 py-2">
-            <input
-              type="checkbox"
+          <td className="px-4 py-(--row-py)">
+            <CheckboxControl
               aria-label={`Select row ${item.key}`}
               disabled={!item.selectable}
               checked={selected.includes(item.key)}
-              onChange={(event) => selectRow(item.key, event.currentTarget.checked)}
+              onCheckedChange={(checked) => selectRow(item.key, checked)}
             />
           </td>
         )}
@@ -697,7 +720,7 @@ export function DataTable({
           return (
             <td
               key={cell.id}
-              className={`px-3 py-2 ${
+              className={`px-4 py-(--row-py) tabular-nums ${index === 0 ? 'font-medium text-foreground' : 'text-muted-foreground'} ${
                 column?.alignment === 'end'
                   ? 'text-right'
                   : column?.alignment === 'center'
@@ -707,7 +730,7 @@ export function DataTable({
               style={{ width: column?.width }}
             >
               {index === 0 && item.url && !column?.editable ? (
-                <NavLink className="text-primary hover:underline" href={item.url}>
+                <NavLink className="text-foreground hover:underline" href={item.url}>
                   {renderCell(cell)}
                 </NavLink>
               ) : (
@@ -716,7 +739,7 @@ export function DataTable({
             </td>
           )
         })}
-        <td className="px-3 py-2">{renderActions(item)}</td>
+        <td className="px-4 py-(--row-py)">{renderActions(item)}</td>
       </tr>
     )
   }
@@ -767,7 +790,7 @@ export function DataTable({
           <span>{filter.label}</span>
           <select
             aria-label={`${t('Filter')} ${filter.label}`}
-            className="h-9 rounded-md border border-input bg-background px-2"
+            className={`${controlClasses} pupitre-native-select h-9`}
             value={String(current)}
             onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
           >
@@ -786,7 +809,7 @@ export function DataTable({
           <span>{filter.label}</span>
           <select
             aria-label={`${t('Filter')} ${filter.label}`}
-            className="h-9 rounded-md border border-input bg-background px-2"
+            className={`${controlClasses} pupitre-native-select h-9`}
             value={String(current)}
             onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
           >
@@ -807,7 +830,7 @@ export function DataTable({
           <input
             aria-label={`${filter.label} from`}
             type="date"
-            className="h-9 rounded-md border border-input bg-background px-2"
+            className={cn(controlClasses, 'h-9 w-auto px-3 tabular-nums')}
             value={String(range.from ?? tableState.query[`filters[${filter.name}][from]`] ?? '')}
             onChange={(event) =>
               descriptor.deferFilters
@@ -821,7 +844,7 @@ export function DataTable({
           <input
             aria-label={`${filter.label} to`}
             type="date"
-            className="h-9 rounded-md border border-input bg-background px-2"
+            className={cn(controlClasses, 'h-9 w-auto px-3 tabular-nums')}
             value={String(range.to ?? tableState.query[`filters[${filter.name}][to]`] ?? '')}
             onChange={(event) =>
               descriptor.deferFilters
@@ -840,7 +863,7 @@ export function DataTable({
         <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <select
-            className="h-9 rounded-md border border-input bg-background px-2"
+            className={`${controlClasses} pupitre-native-select h-9`}
             value={String(current || 'without')}
             onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
           >
@@ -853,438 +876,515 @@ export function DataTable({
     return null
   }
 
+  const activeFilterCount = descriptor.filters.filter((filter) =>
+    Object.entries(tableState.query).some(
+      ([key, value]) =>
+        (key === `filters[${filter.name}]` || key.startsWith(`filters[${filter.name}][`)) &&
+        value !== '' &&
+        value !== null &&
+        value !== undefined &&
+        value !== 'without'
+    )
+  ).length
+  const filterForm = (
+    <div className="grid gap-4">
+      {descriptor.filters.map(renderFilter)}
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => (descriptor.deferFilters ? resetFilterDraft() : tableState.resetFilters())}
+        >
+          {t('Reset filters')}
+        </Button>
+        {descriptor.deferFilters && (
+          <Button color="primary" size="sm" onClick={applyFilterDraft}>
+            {t('Apply')}
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+  const filterIcon = (
+    <>
+      <Icon name="list-filter" className="size-4" />
+      {activeFilterCount > 0 && (
+        <Badge size="sm" color="primary" className="absolute -right-1 -top-1">
+          {activeFilterCount}
+        </Badge>
+      )}
+    </>
+  )
+  const emptyContent =
+    loading || tableState.isLoading || (descriptor.deferLoading && !tableData) ? (
+      <div aria-label={t('Loading records')} className="grid gap-4 p-6">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton key={index} className="h-6 w-full" />
+        ))}
+      </div>
+    ) : (
+      <EmptyState
+        icon={descriptor.emptyState?.icon ?? 'inbox'}
+        heading={descriptor.emptyState?.heading ?? t('No records found')}
+        description={
+          descriptor.emptyState?.description ??
+          (search || activeFilterCount
+            ? t('Try clearing your search or filters to find records.')
+            : t('Records will appear here once they are created.'))
+        }
+        actions={
+          descriptor.emptyState?.action && (
+            <ActionList
+              actions={[descriptor.emptyState.action]}
+              disabled={loading || props.disabled}
+              onRun={(action) => emit('action', { action: action.name })}
+            />
+          )
+        }
+      />
+    )
   return (
     <section className="space-y-3" aria-busy={loading || tableState.isLoading}>
       {props.label && <h2 className="text-base font-medium">{props.label}</h2>}
       {!reorderMode && descriptor.tabs && descriptor.tabs.length > 0 && (
-        <nav className="flex gap-1 border-b" aria-label="Table tabs">
+        <nav className={segmentedListClasses} aria-label="Table tabs">
           {descriptor.tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               aria-current={String(tableState.query.tab ?? '') === tab.key ? 'page' : undefined}
-              className={`border-b-2 px-3 py-2 text-sm ${String(tableState.query.tab ?? '') === tab.key ? 'border-primary font-medium' : 'border-transparent text-muted-foreground'}`}
+              className={segmentedItemClasses}
               onClick={() => tableState.setQuery({ tab: tab.key, page: 1 })}
             >
               {tab.label}
-              {tab.badge !== undefined && (
-                <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-xs">
-                  {tab.badge}
-                </span>
-              )}
+              {tab.badge !== undefined && <Badge size="sm">{tab.badge}</Badge>}
             </button>
           ))}
         </nav>
       )}
-      {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
-        <label className="flex max-w-xs flex-col gap-1 text-sm">
-          <span>Group</span>
-          <select
-            className="h-9 rounded-md border border-input bg-background px-2"
-            value={String(tableState.query.groupBy ?? '')}
-            onChange={(event) =>
-              tableState.setQuery({ groupBy: event.currentTarget.value, page: 1 })
-            }
-          >
-            <option value="">All groups</option>
-            {descriptor.groups.map((group) => (
-              <option key={group.key} value={group.key}>
-                {group.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <div className="flex flex-wrap items-end gap-3">
-        {descriptor.searchable && (
-          <label className="flex min-w-48 flex-1 flex-col gap-1 text-sm">
-            <span>Search</span>
-            <input
-              type="search"
-              className="h-9 rounded-md border border-input bg-background px-2"
-              value={search}
-              disabled={reorderMode}
-              onChange={(event) => setSearch(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  if (searchTimer.current !== undefined) window.clearTimeout(searchTimer.current)
-                  searchTimer.current = undefined
-                  lastSubmittedSearch.current = search
-                  tableState.search(search)
-                }
-              }}
-            />
-          </label>
-        )}
-        {!reorderMode &&
-          descriptor.filters.length > 0 &&
-          (descriptor.filtersLayout === 'above' ? (
-            <div className="flex flex-wrap items-end gap-3">
-              {descriptor.filters.map(renderFilter)}
-              <button
-                type="button"
-                className="h-9 rounded-md border px-3 text-sm"
-                onClick={() =>
-                  descriptor.deferFilters ? resetFilterDraft() : tableState.resetFilters()
-                }
-              >
-                {t('Reset filters')}
-              </button>
-              {descriptor.deferFilters && (
-                <button
-                  type="button"
-                  className="h-9 rounded-md border px-3 text-sm"
-                  onClick={applyFilterDraft}
-                >
-                  {t('Apply')}
-                </button>
-              )}
-            </div>
-          ) : (
-            <details className="relative">
-              <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-md border px-3 text-sm">
-                Filters
-              </summary>
-              <div
-                className={`absolute left-0 z-20 mt-1 flex min-w-64 flex-col gap-3 rounded-md border bg-popover p-3 text-popover-foreground shadow-md ${descriptor.filtersLayout === 'slideover' ? 'fixed inset-y-0 right-0 left-auto z-50 mt-0 min-w-[min(22rem,90vw)] rounded-l-xl' : ''}`}
-              >
-                {descriptor.filters.map(renderFilter)}
-                <button
-                  type="button"
-                  className="h-9 rounded-md border px-3 text-sm"
-                  onClick={() =>
-                    descriptor.deferFilters ? resetFilterDraft() : tableState.resetFilters()
+      <TableSurface className="overflow-hidden">
+        {(Boolean(descriptor.groups?.length) ||
+          selected.length > 0 ||
+          Boolean(descriptor.reorderable) ||
+          descriptor.searchable ||
+          (descriptor.filters.length > 0 && descriptor.filtersLayout !== 'above') ||
+          columnsVisible) && (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+            <div className="flex flex-wrap items-center gap-3">
+              {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
+                <select
+                  aria-label="Group"
+                  className={`${controlClasses} pupitre-native-select h-9 max-w-48`}
+                  style={{ width: 'auto' }}
+                  value={String(tableState.query.groupBy ?? '')}
+                  onChange={(event) =>
+                    tableState.setQuery({ groupBy: event.currentTarget.value, page: 1 })
                   }
                 >
-                  {t('Reset filters')}
-                </button>
-                {descriptor.deferFilters && (
-                  <button
-                    type="button"
-                    className="h-9 rounded-md border px-3 text-sm"
-                    onClick={applyFilterDraft}
-                  >
-                    {t('Apply')}
-                  </button>
-                )}
-              </div>
-            </details>
-          ))}
-        {columnsVisible && (
-          <details className="relative">
-            <summary className="inline-flex h-9 cursor-pointer list-none items-center rounded-md border px-3 text-sm">
-              Columns
-            </summary>
-            <div className="absolute right-0 z-20 mt-1 flex min-w-max flex-col gap-2 rounded-md border bg-popover p-3 text-popover-foreground shadow-md">
-              {table
-                .getAllLeafColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <label key={column.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={column.getIsVisible()}
-                      onChange={column.getToggleVisibilityHandler()}
-                    />
-                    {descriptor.columns.find((item) => item.name === column.id)?.label ?? column.id}
-                  </label>
-                ))}
-            </div>
-          </details>
-        )}
-        {descriptor.reorderable && (
-          <button
-            type="button"
-            className="h-9 rounded-md border px-3 text-sm"
-            aria-pressed={reorderMode}
-            disabled={!reorderMode && !reorderableWindow}
-            title={
-              !reorderMode && !reorderableWindow
-                ? t('Clear filters and sorting before reordering')
-                : undefined
-            }
-            onClick={() => setReorderMode((current) => !current)}
-          >
-            {reorderMode ? t('Done reordering') : t('Reorder')}
-          </button>
-        )}
-      </div>
-      {bulkActions.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md bg-muted/50 p-2 text-sm">
-          <span>{selected.length} selected</span>
-          {bulkActions.map((action) => (
-            <button
-              key={action.name}
-              type="button"
-              aria-label={action.variant === 'iconButton' ? action.label : undefined}
-              disabled={loading || props.disabled || selected.length === 0}
-              className={
-                action.variant === 'link'
-                  ? 'text-primary underline-offset-4 hover:underline disabled:opacity-50'
-                  : 'rounded-md border px-3 py-1 hover:bg-background disabled:opacity-50'
-              }
-              onClick={async () => {
-                await runAction(action, { ids: selected })
-                emit('action', { action: action.name, ids: selected })
-              }}
-            >
-              {action.variant === 'iconButton' ? (
-                <>
-                  {action.icon && <Icon name={action.icon} className="size-4" />}
-                  <span className="sr-only">{action.label}</span>
-                </>
-              ) : (
-                action.label
+                  <option value="">All groups</option>
+                  {descriptor.groups.map((group) => (
+                    <option key={group.key} value={group.key}>
+                      {group.label}
+                    </option>
+                  ))}
+                </select>
               )}
-            </button>
-          ))}
-        </div>
-      )}
-      {descriptor.layout === 'grid' ? (
-        tableData?.groups ? (
-          <DataTableGroups
-            groups={tableData.groups}
-            columns={descriptor.columns}
-            definition={activeGroup}
-            layout="grid"
-            colSpan={descriptor.columns.length + (descriptor.selectable ? 1 : 0) + 1}
-            renderRows={(groupRows) => (
-              <DataTableGrid columns={descriptor.gridColumns}>
-                {groupRows.map((groupRow) => {
-                  const row = tableRowsByKey.get(groupRow.key)
-                  return row ? renderGridCard(row) : null
-                })}
-              </DataTableGrid>
-            )}
-          />
-        ) : (
-          <DataTableGrid columns={descriptor.gridColumns}>
-            {table.getRowModel().rows.map(renderGridCard)}
-          </DataTableGrid>
-        )
-      ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="w-full border-collapse text-sm">
-            <thead className="bg-muted/50">
-              <tr>
-                {descriptor.reorderable && <th className="w-8 px-2" aria-label="Reorder" />}
-                {descriptor.selectable && (
-                  <th className="w-10 px-3 py-2">
-                    <input
-                      type="checkbox"
-                      aria-label="Select all rows"
-                      checked={allSelected}
-                      ref={(input) => {
-                        if (input) input.indeterminate = selected.length > 0 && !allSelected
-                      }}
-                      onChange={(event) =>
-                        tableState.setSelected(
-                          event.currentTarget.checked ? selectableRows.map((row) => row.key) : []
-                        )
-                      }
+              {selected.length > 0 && (
+                <div className="flex items-center gap-3 transition-opacity duration-150 ease-ui starting:opacity-0">
+                  <span className="text-sm font-medium tabular-nums">
+                    {selected.length} selected
+                  </span>
+                  {bulkActions.length > 0 && (
+                    <ActionMenu
+                      label="Bulk actions"
+                      actions={bulkActions}
+                      ids={selected}
+                      size="sm"
+                      disabled={loading || props.disabled}
+                      onRun={(action) => emit('action', { action: action.name, ids: selected })}
                     />
-                  </th>
-                )}
-                {table.getHeaderGroups()[0]?.headers.map((header) => {
-                  const column = descriptor.columns.find((item) => item.name === header.column.id)
-                  return (
-                    <th
-                      key={header.id}
-                      aria-sort={
-                        tableState.query.sort === header.column.id
-                          ? 'ascending'
-                          : tableState.query.sort === `-${header.column.id}`
-                            ? 'descending'
-                            : header.column.getCanSort()
-                              ? 'none'
-                              : undefined
+                  )}
+                  <Button variant="ghost" size="sm" onClick={() => tableState.setSelected([])}>
+                    Deselect all
+                  </Button>
+                </div>
+              )}
+              {descriptor.reorderable && (
+                <Button
+                  variant="ghost"
+                  square
+                  aria-label={reorderMode ? t('Done reordering') : t('Reorder')}
+                  aria-pressed={reorderMode}
+                  disabled={!reorderMode && !reorderableWindow}
+                  title={
+                    !reorderMode && !reorderableWindow
+                      ? t('Clear filters and sorting before reordering')
+                      : undefined
+                  }
+                  onClick={() => setReorderMode((current) => !current)}
+                >
+                  <Icon name={reorderMode ? 'check' : 'grip-vertical'} className="size-4" />
+                </Button>
+              )}
+            </div>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {descriptor.searchable && (
+                <InputGroup className="max-w-full" style={{ width: '16rem' }}>
+                  <InputSlot className="pl-3 text-muted-foreground">
+                    <Icon name="search" className="size-4" />
+                  </InputSlot>
+                  <Input
+                    bare
+                    type="search"
+                    aria-label="Search"
+                    placeholder="Search"
+                    value={search}
+                    disabled={reorderMode}
+                    onChange={(event) => setSearch(event.currentTarget.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        if (searchTimer.current !== undefined)
+                          window.clearTimeout(searchTimer.current)
+                        searchTimer.current = undefined
+                        lastSubmittedSearch.current = search
+                        tableState.search(search)
                       }
-                      className={`px-3 py-2 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
-                      style={{ width: column?.width }}
-                    >
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <button
-                          type="button"
-                          className="hover:underline"
-                          onClick={() => changeSort(header.column.id)}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {tableState.query.sort === header.column.id
-                            ? ' ↑'
-                            : tableState.query.sort === `-${header.column.id}`
-                              ? ' ↓'
-                              : ''}
-                        </button>
-                      ) : (
-                        flexRender(header.column.columnDef.header, header.getContext())
-                      )}
-                    </th>
-                  )
-                })}
-                <th className="px-3 py-2 text-right font-medium">Actions</th>
-              </tr>
+                    }}
+                  />
+                </InputGroup>
+              )}
               {!reorderMode &&
-                descriptor.columns.some((column) => column.individuallySearchable) && (
-                  <tr>
-                    {descriptor.reorderable && <th className="px-2" />}
-                    {descriptor.selectable && <th className="px-3" />}
-                    {table.getHeaderGroups()[0]?.headers.map((header) => {
-                      const column = descriptor.columns.find(
-                        (item) => item.name === header.column.id
-                      )
-                      if (!column?.individuallySearchable) return <th key={header.id} />
-                      const queryKey = `columns[${column.name}][search]`
-                      const searchValue =
-                        columnSearchDraft[column.name] ?? tableState.query[queryKey] ?? ''
-                      return (
-                        <th key={header.id} className="px-3 pb-2">
-                          <input
-                            type="search"
-                            aria-label={`Search ${column.label}`}
-                            className="h-8 w-full rounded-md border bg-background px-2 font-normal"
-                            value={searchValue}
-                            onChange={(event) =>
-                              setColumnSearchDraft((current) => ({
-                                ...current,
-                                [column.name]: event.currentTarget.value,
-                              }))
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key !== 'Enter') return
-                              tableState.setQuery({ [queryKey]: searchValue, page: 1 })
-                            }}
-                          />
-                        </th>
-                      )
-                    })}
-                    <th />
-                  </tr>
-                )}
-            </thead>
-            <tbody>
-              {tableData?.groups ? (
-                <DataTableGroups
-                  groups={tableData.groups}
-                  columns={descriptor.columns}
-                  definition={activeGroup}
-                  layout="table"
-                  colSpan={
-                    descriptor.columns.length +
-                    (descriptor.selectable ? 1 : 0) +
-                    (descriptor.reorderable ? 1 : 0) +
-                    1
-                  }
-                  renderRows={(groupRows) =>
-                    groupRows.map((groupRow) => {
-                      const row = tableRowsByKey.get(groupRow.key)
-                      return row ? renderTableRow(row) : null
-                    })
-                  }
-                />
-              ) : (
-                table.getRowModel().rows.map(renderTableRow)
+                descriptor.filters.length > 0 &&
+                descriptor.filtersLayout !== 'above' &&
+                (descriptor.filtersLayout === 'slideover' ? (
+                  <Dialog.Root>
+                    <Dialog.Trigger
+                      aria-label="Filters"
+                      className={buttonClasses({ variant: 'ghost', square: true })}
+                    >
+                      {filterIcon}
+                    </Dialog.Trigger>
+                    <Dialog.Portal>
+                      <Dialog.Backdrop className={backdropClasses} />
+                      <Dialog.Popup data-pupitre-popup="" className={sheetPopupClasses('md')}>
+                        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                          <Dialog.Title className="text-[0.9375rem] font-semibold">
+                            Filters
+                          </Dialog.Title>
+                          <Dialog.Close
+                            aria-label="Close filters"
+                            className={buttonClasses({
+                              variant: 'ghost',
+                              square: true,
+                              size: 'sm',
+                            })}
+                          >
+                            <Icon name="x" />
+                          </Dialog.Close>
+                        </div>
+                        <div className="overflow-y-auto p-5">{filterForm}</div>
+                      </Dialog.Popup>
+                    </Dialog.Portal>
+                  </Dialog.Root>
+                ) : (
+                  <Popover.Root>
+                    <Popover.Trigger
+                      aria-label="Filters"
+                      className={buttonClasses({ variant: 'ghost', square: true })}
+                    >
+                      {filterIcon}
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Positioner align="end" sideOffset={8} className={positionerClasses}>
+                        <Popover.Popup
+                          data-pupitre-popup=""
+                          className={cn(popupClasses, 'w-80 max-w-[calc(100vw-2rem)] p-4')}
+                        >
+                          <Popover.Title className="mb-4 text-sm font-semibold">
+                            Filters
+                          </Popover.Title>
+                          {filterForm}
+                        </Popover.Popup>
+                      </Popover.Positioner>
+                    </Popover.Portal>
+                  </Popover.Root>
+                ))}
+              {columnsVisible && (
+                <Popover.Root>
+                  <Popover.Trigger
+                    aria-label="Columns"
+                    className={buttonClasses({ variant: 'ghost', square: true })}
+                  >
+                    <Icon name="columns-3" className="size-4" />
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <Popover.Positioner align="end" sideOffset={8} className={positionerClasses}>
+                      <Popover.Popup
+                        data-pupitre-popup=""
+                        className={cn(popupClasses, 'min-w-52 p-3')}
+                      >
+                        <Popover.Title className="mb-3 text-sm font-semibold">
+                          Columns
+                        </Popover.Title>
+                        <div className="grid gap-3">
+                          {table
+                            .getAllLeafColumns()
+                            .filter((column) => column.getCanHide())
+                            .map((column) => (
+                              <label key={column.id} className="flex items-center gap-2 text-sm">
+                                <CheckboxControl
+                                  checked={column.getIsVisible()}
+                                  onCheckedChange={(checked) => column.toggleVisibility(checked)}
+                                />
+                                {descriptor.columns.find((item) => item.name === column.id)
+                                  ?.label ?? column.id}
+                              </label>
+                            ))}
+                        </div>
+                      </Popover.Popup>
+                    </Popover.Positioner>
+                  </Popover.Portal>
+                </Popover.Root>
               )}
-              {rows.length === 0 && (
+            </div>
+          </div>
+        )}
+        {!reorderMode && descriptor.filters.length > 0 && descriptor.filtersLayout === 'above' && (
+          <div className="border-b border-border bg-muted/40 px-5 py-4">{filterForm}</div>
+        )}
+        {descriptor.layout === 'grid' ? (
+          rows.length === 0 ? (
+            emptyContent
+          ) : tableData?.groups ? (
+            <DataTableGroups
+              groups={tableData.groups}
+              columns={descriptor.columns}
+              definition={activeGroup}
+              layout="grid"
+              colSpan={descriptor.columns.length + (descriptor.selectable ? 1 : 0) + 1}
+              renderRows={(groupRows) => (
+                <DataTableGrid columns={descriptor.gridColumns}>
+                  {groupRows.map((groupRow) => {
+                    const row = tableRowsByKey.get(groupRow.key)
+                    return row ? renderGridCard(row) : null
+                  })}
+                </DataTableGrid>
+              )}
+            />
+          ) : (
+            <DataTableGrid columns={descriptor.gridColumns}>
+              {table.getRowModel().rows.map(renderGridCard)}
+            </DataTableGrid>
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
                 <tr>
-                  <td
-                    className="px-3 py-8 text-center text-muted-foreground"
+                  {descriptor.reorderable && <th className="w-8 px-2" aria-label="Reorder" />}
+                  {descriptor.selectable && (
+                    <th className="w-10 px-3 py-2">
+                      <CheckboxControl
+                        aria-label="Select all rows"
+                        checked={allSelected}
+                        indeterminate={selected.length > 0 && !allSelected}
+                        onCheckedChange={(checked) =>
+                          tableState.setSelected(
+                            checked ? selectableRows.map((row) => row.key) : []
+                          )
+                        }
+                      />
+                    </th>
+                  )}
+                  {table.getHeaderGroups()[0]?.headers.map((header) => {
+                    const column = descriptor.columns.find((item) => item.name === header.column.id)
+                    return (
+                      <th
+                        key={header.id}
+                        aria-sort={
+                          tableState.query.sort === header.column.id
+                            ? 'ascending'
+                            : tableState.query.sort === `-${header.column.id}`
+                              ? 'descending'
+                              : header.column.getCanSort()
+                                ? 'none'
+                                : undefined
+                        }
+                        className={`px-4 py-3 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
+                        style={{ width: column?.width }}
+                      >
+                        {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                            onClick={() => changeSort(header.column.id)}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            <Icon
+                              className="size-3.5 text-subtle-foreground"
+                              name={
+                                tableState.query.sort === header.column.id
+                                  ? 'arrow-up'
+                                  : tableState.query.sort === `-${header.column.id}`
+                                    ? 'arrow-down'
+                                    : 'chevrons-up-down'
+                              }
+                            />
+                          </button>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </th>
+                    )
+                  })}
+                  <th className="px-3 py-2 text-right font-medium">Actions</th>
+                </tr>
+                {!reorderMode &&
+                  descriptor.columns.some((column) => column.individuallySearchable) && (
+                    <tr>
+                      {descriptor.reorderable && <th className="px-2" />}
+                      {descriptor.selectable && <th className="px-3" />}
+                      {table.getHeaderGroups()[0]?.headers.map((header) => {
+                        const column = descriptor.columns.find(
+                          (item) => item.name === header.column.id
+                        )
+                        if (!column?.individuallySearchable) return <th key={header.id} />
+                        const queryKey = `columns[${column.name}][search]`
+                        const searchValue =
+                          columnSearchDraft[column.name] ?? tableState.query[queryKey] ?? ''
+                        return (
+                          <th key={header.id} className="px-3 pb-2">
+                            <input
+                              type="search"
+                              aria-label={`Search ${column.label}`}
+                              className={`${controlClasses} h-8 px-2 font-normal`}
+                              value={searchValue}
+                              onChange={(event) =>
+                                setColumnSearchDraft((current) => ({
+                                  ...current,
+                                  [column.name]: event.currentTarget.value,
+                                }))
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key !== 'Enter') return
+                                tableState.setQuery({ [queryKey]: searchValue, page: 1 })
+                              }}
+                            />
+                          </th>
+                        )
+                      })}
+                      <th />
+                    </tr>
+                  )}
+              </thead>
+              <tbody
+                aria-busy={loading || tableState.isLoading}
+                className={loading || tableState.isLoading ? 'opacity-60' : undefined}
+              >
+                {tableData?.groups ? (
+                  <DataTableGroups
+                    groups={tableData.groups}
+                    columns={descriptor.columns}
+                    definition={activeGroup}
+                    layout="table"
                     colSpan={
                       descriptor.columns.length +
                       (descriptor.selectable ? 1 : 0) +
                       (descriptor.reorderable ? 1 : 0) +
                       1
                     }
-                  >
-                    {descriptor.deferLoading && !tableData ? (
-                      <span
-                        className="inline-block h-5 w-32 animate-pulse rounded bg-muted"
-                        aria-label={t('Loading records')}
-                      />
-                    ) : (
-                      (descriptor.emptyState?.heading ?? t('No results.'))
-                    )}
-                    {descriptor.emptyState?.description && (
-                      <div className="mt-1">{descriptor.emptyState.description}</div>
-                    )}
-                    {descriptor.emptyState?.action && (
-                      <div>
-                        <button
-                          type="button"
-                          disabled={
-                            !descriptor.emptyState.action.enabled || loading || props.disabled
-                          }
-                          className="mt-3 rounded-md border px-3 py-1 text-foreground hover:bg-background disabled:opacity-50"
-                          onClick={async () => {
-                            const action = descriptor.emptyState?.action
-                            if (!action) return
-                            await runAction(action)
-                            emit('action', { action: action.name })
-                          }}
-                        >
-                          {descriptor.emptyState.action.label}
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {tableData?.summary && (
-        <DataTableSummary summary={tableData.summary} columns={descriptor.columns} />
-      )}
-      <footer className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-        <span>{meta ? `${meta.from}–${meta.to} of ${meta.total}` : `${rows.length} results`}</span>
-        <div className="flex items-center gap-2">
-          {descriptor.perPageOptions.length > 0 && (
-            <select
-              className="h-8 rounded-md border bg-background px-2"
-              aria-label="Rows per page"
-              value={String(
-                tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
-              )}
-              onChange={(event) =>
-                tableState.setPerPage(
-                  event.currentTarget.value === 'all' ? 'all' : Number(event.currentTarget.value)
-                )
-              }
-            >
-              {descriptor.perPageOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option} per page
-                </option>
-              ))}
-            </select>
-          )}
-          <button
-            type="button"
-            className="rounded-md border px-3 py-1 disabled:opacity-50"
-            disabled={page <= 1 || loading || props.disabled}
-            onClick={() => {
-              tableState.setPage(page - 1)
-              emit('reload', { page: page - 1 })
-            }}
-          >
-            Previous
-          </button>
-          <span className="whitespace-nowrap tabular-nums">
-            {page} / {lastPage}
+                    renderRows={(groupRows) =>
+                      groupRows.map((groupRow) => {
+                        const row = tableRowsByKey.get(groupRow.key)
+                        return row ? renderTableRow(row) : null
+                      })
+                    }
+                  />
+                ) : (
+                  table.getRowModel().rows.map(renderTableRow)
+                )}
+                {rows.length === 0 && (
+                  <tr>
+                    <td
+                      className="text-center"
+                      colSpan={
+                        descriptor.columns.length +
+                        (descriptor.selectable ? 1 : 0) +
+                        (descriptor.reorderable ? 1 : 0) +
+                        1
+                      }
+                    >
+                      {emptyContent}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {tableData?.summary && (
+          <DataTableSummary summary={tableData.summary} columns={descriptor.columns} />
+        )}
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
+          <span className="tabular-nums">
+            {meta
+              ? `Showing ${meta.from} to ${meta.to} of ${meta.total} results`
+              : `${rows.length} results`}
           </span>
-          <button
-            type="button"
-            className="rounded-md border px-3 py-1 disabled:opacity-50"
-            disabled={page >= lastPage || loading || props.disabled}
-            onClick={() => {
-              tableState.setPage(page + 1)
-              emit('reload', { page: page + 1 })
-            }}
-          >
-            Next
-          </button>
-        </div>
-      </footer>
+          <div className="flex items-center gap-2">
+            {descriptor.perPageOptions.length > 0 && (
+              <select
+                className={cn(
+                  controlClasses,
+                  'pupitre-native-select h-8 w-auto [--select-inset:0.5rem]'
+                )}
+                aria-label="Rows per page"
+                value={String(
+                  tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
+                )}
+                onChange={(event) =>
+                  tableState.setPerPage(
+                    event.currentTarget.value === 'all' ? 'all' : Number(event.currentTarget.value)
+                  )
+                }
+              >
+                {descriptor.perPageOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option} per page
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              type="button"
+              aria-label="Previous"
+              className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
+              disabled={page <= 1 || loading || props.disabled}
+              onClick={() => {
+                tableState.setPage(page - 1)
+                emit('reload', { page: page - 1 })
+              }}
+            >
+              <Icon name="chevron-left" />
+            </button>
+            <span className="whitespace-nowrap tabular-nums">
+              {page} / {lastPage}
+            </span>
+            <button
+              type="button"
+              aria-label="Next"
+              className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
+              disabled={page >= lastPage || loading || props.disabled}
+              onClick={() => {
+                tableState.setPage(page + 1)
+                emit('reload', { page: page + 1 })
+              }}
+            >
+              <Icon name="chevron-right" />
+            </button>
+          </div>
+        </footer>
+      </TableSurface>
       {children}
     </section>
   )

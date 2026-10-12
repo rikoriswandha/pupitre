@@ -48,6 +48,7 @@ export {
   useRealtimeSubscription,
   useTableRealtime,
 } from './hooks/index.js'
+export type { NavigationGuard } from './hooks/index.js'
 export type {
   ShellProps,
   AuthShellProps,

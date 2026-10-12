@@ -6,6 +6,9 @@
 - Realtime (WP39): optional `Pupitre`/`PupitreShell` client context, SSR-safe `useRealtimeSubscription` with stable callbacks and cleanup, coalesced descriptor-scoped `useTableRealtime`, and notification push refresh with polling fallback.
 - Security (WP42): preserve Request-input methods and headers in `jsonFetch`, ensuring XSRF headers on all mutating methods; add multipart/upload/deletion regressions.
 
+### Changed
+- Navigation guard (M4): `useNavigationGuard(shouldBlock)` no longer calls `window.confirm`. It returns `{ pending, proceed, cancel }` and holds the blocked Inertia visit, so the caller can render its own confirmation; `proceed()` re-issues the visit with its original options. Prefetch visits are no longer blocked. Tab close/reload still use the browser's native prompt.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

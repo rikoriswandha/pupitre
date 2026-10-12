@@ -5,14 +5,15 @@
   "title": "ImageEntry",
   "dependencies": [],
   "registryDependencies": [
-    "https://pupitre.dev/r/entry-shell.json"
+    "https://pupitre.dev/r/entry-shell.json",
+    "https://pupitre.dev/r/primitives.json"
   ],
   "files": [
     {
       "path": "../src/components/ImageEntry.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/ImageEntry.tsx",
-      "content": "import type { EntryProps } from './EntryShell.js'\nimport { EntryShell } from './EntryShell.js'\n\nfunction imageUrls(value: unknown): string[] {\n  if (typeof value === 'string') return [value]\n  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string')\n  if (value && typeof value === 'object' && 'url' in value && typeof value.url === 'string')\n    return [value.url]\n  return []\n}\n\nexport function ImageEntry({ props = {} }: { props?: EntryProps }) {\n  const urls = imageUrls(props.value)\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan}>\n      {urls.length > 0 ? (\n        <div className=\"flex flex-wrap gap-2\">\n          {urls.map((url) => (\n            <img\n              key={url}\n              src={url}\n              alt={props.label ?? ''}\n              className=\"max-h-48 max-w-full rounded-md border border-border object-contain\"\n            />\n          ))}\n        </div>\n      ) : (\n        <span className=\"text-muted-foreground\">{props.placeholder ?? '—'}</span>\n      )}\n    </EntryShell>\n  )\n}\n"
+      "content": "import type { EntryDisplayProps } from './EntryShell.js'\nimport { cn } from '../primitives/index.js'\nimport { EntryShell } from './EntryShell.js'\n\nfunction imageUrls(value: unknown): string[] {\n  if (typeof value === 'string') return [value]\n  if (Array.isArray(value)) return value.filter((item): item is string => typeof item === 'string')\n  if (value && typeof value === 'object' && 'url' in value && typeof value.url === 'string')\n    return [value.url]\n  return []\n}\n\nexport function ImageEntry({ props = {} }: { props?: EntryDisplayProps }) {\n  const urls = imageUrls(props.value)\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>\n      {urls.length > 0 ? (\n        <div className={cn('flex flex-wrap items-center', props.stacked ? '-space-x-3' : 'gap-2')}>\n          {urls.map((url, index) => (\n            <img\n              key={`${url}-${index}`}\n              src={url}\n              alt={props.label ?? ''}\n              className={cn(\n                'max-h-48 max-w-full bg-muted ring-1 ring-border',\n                props.circular || props.stacked ? 'rounded-full' : 'rounded-lg',\n                props.stacked\n                  ? 'size-10 object-cover ring-2 ring-card'\n                  : props.circular || props.square\n                    ? 'size-16 object-cover'\n                    : 'object-contain'\n              )}\n              style={{ width: props.width, height: props.height }}\n            />\n          ))}\n        </div>\n      ) : (\n        <span className=\"text-subtle-foreground\">{props.placeholder ?? '—'}</span>\n      )}\n    </EntryShell>\n  )\n}\n"
     }
   ]
 }

@@ -1,14 +1,8 @@
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
-import { Icon } from '../icons.js'
+import { Panel, PanelHeader, EmptyState, toneText } from '../primitives/index.js'
 
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
-const colors: Record<string, string> = {
-  primary: 'text-primary',
-  success: 'text-emerald-700 dark:text-emerald-300',
-  warning: 'text-amber-800 dark:text-amber-200',
-  danger: 'text-destructive',
-  gray: 'text-muted-foreground',
-}
+const colors: Record<string, string> = toneText
 function changeValue(value: unknown): string {
   if (value === undefined) return 'undefined'
   if (typeof value === 'string') return value
@@ -18,38 +12,49 @@ function changeValue(value: unknown): string {
 export function WidgetTimeline({ descriptor, data }: Props) {
   const items = data?.kind === 'timeline' ? data.items : []
   return (
-    <section aria-label={descriptor.heading ?? 'Activity'} className="space-y-3">
-      {descriptor.heading && <h2 className="text-base font-semibold">{descriptor.heading}</h2>}
-      {descriptor.description && (
-        <p className="text-sm text-muted-foreground">{descriptor.description}</p>
-      )}
+    <Panel role="region" aria-label={descriptor.heading ?? 'Activity'} className="overflow-hidden">
+      <PanelHeader heading={descriptor.heading} description={descriptor.description} />
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No activity yet.</p>
+        <EmptyState
+          icon="activity"
+          heading="No activity yet."
+          description="New activity will appear here."
+        />
       ) : (
-        <ol className="space-y-4 rounded-lg border bg-card p-4">
+        <ol className="px-5 pb-5 sm:px-6 sm:pb-6">
           {items.map((item, index) => {
             const colorClass = item.color ? colors[item.color] : undefined
             return (
-              <li key={index} className="flex gap-3">
+              <li key={index} className="relative flex gap-3 pb-6 last:pb-0">
+                {index < items.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute bottom-0 left-[0.3125rem] top-3 w-px bg-border"
+                  />
+                )}
                 <span
                   aria-hidden="true"
-                  className={`mt-1 shrink-0 ${colorClass ?? 'text-muted-foreground'}`}
+                  className={`relative mt-1.5 size-3 shrink-0 rounded-full border-2 border-card bg-current ${colorClass ?? 'text-muted-foreground'}`}
                   style={item.color && !colorClass ? { color: item.color } : undefined}
-                >
-                  <Icon name={item.icon ?? 'activity'} className="size-4" />
-                </span>
+                />
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="break-words font-medium">{item.title}</p>
-                  {item.description && <p className="break-words text-sm">{item.description}</p>}
-                  <p className="text-sm text-muted-foreground">
+                  <p className="break-words text-sm font-medium">{item.title}</p>
+                  {item.description && (
+                    <p className="break-words text-[0.8125rem] text-muted-foreground">
+                      {item.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
                     {item.actor && <span>{item.actor} · </span>}
-                    <time dateTime={item.time.iso}>{item.time.formatted}</time>
+                    <time className="tabular-nums" dateTime={item.time.iso}>
+                      {item.time.formatted}
+                    </time>
                   </p>
                   {item.changes && item.changes.length > 0 && (
-                    <div className="overflow-x-auto rounded-md border">
+                    <div className="mt-3 overflow-x-auto rounded-lg border border-border">
                       <table className="w-full text-left text-sm">
                         <caption className="sr-only">Changes for {item.title}</caption>
-                        <thead className="bg-muted">
+                        <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
                           <tr>
                             <th scope="col" className="p-2">
                               Field
@@ -64,7 +69,10 @@ export function WidgetTimeline({ descriptor, data }: Props) {
                         </thead>
                         <tbody>
                           {item.changes.map((change, changeIndex) => (
-                            <tr key={changeIndex} className="border-t">
+                            <tr
+                              key={changeIndex}
+                              className="border-t border-border hover:bg-muted/40"
+                            >
                               <th scope="row" className="break-words p-2 font-medium">
                                 {change.field}
                               </th>
@@ -82,6 +90,6 @@ export function WidgetTimeline({ descriptor, data }: Props) {
           })}
         </ol>
       )}
-    </section>
+    </Panel>
   )
 }

@@ -2,6 +2,10 @@
 
 ## Unreleased (1.0.0, milestone M4)
 
+### Changed
+- Catalog (M4): `Repeater` and `Builder` accept the common field props; the schema compiler now emits `name`, `label`, `helperText`, `hint`, `required` and `columnSpan` for repeaters, as it already did for builders.
+- Actions (M4): confirmation descriptors default the submit label to the action label ("Delete", "Restore") instead of "Confirm", and destructive confirmations carry a default "This action cannot be undone." description. `confirmation.description` is now forwarded. Camel-case built-in labels are split into words ("Force Delete", not "ForceDelete").
+
 ### Added
 - Shield (WP37): official `@rikology/pupitre-shield` plugin with Lucid roles/permissions, grouped role-management forms, request-cached Bouncer policies, super-admin bypass, explicit-policy preservation, custom action and nested resource grants, `shield:sync`, User-role assignment helper and custom-page access helper.
 - Shield review (M4): hidden relationship fields skip preload authorization/options queries using the current request context; Shield inventories are panel-local and include related-model custom abilities only for enforced resources.
@@ -30,6 +34,7 @@
 - Align passkey login verification and social callbacks with the 60/minute shared-IP sign-in budget; evict the oldest local limiter key at the 10,000-key cap rather than locking out every new identity.
 - Initialize browser CSP jitless configuration before every catalog schema module and probe the built catalog in a fresh process during `verify:exports`; retain repeated-success login and version-derived scaffolder regressions.
 - Widgets: stats widgets span the full dashboard row by default (Filament `StatsOverviewWidget` parity); an explicit `.span()` before or after `.stats()` still wins.
+- Passkeys: deleting your own passkey from the profile no longer fails with "`limit` has no effect on a `delete` statement". The ownership lookup and the delete now use separate query builders.
 
 ## Unreleased (0.3.0-beta, milestone M3)
 

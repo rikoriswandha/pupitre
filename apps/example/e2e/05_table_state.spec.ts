@@ -7,7 +7,7 @@ pupitreTest(
     await page.getByRole('searchbox', { name: 'Search' }).fill('Field Notes 0')
     await page.getByRole('searchbox', { name: 'Search' }).press('Enter')
     await expect(page).toHaveURL(/q=Field(?:%20|\+)Notes(?:%20|\+)0/)
-    await page.getByText('Filters', { exact: true }).click()
+    await page.getByRole('button', { name: 'Filters', exact: true }).click()
     await page.getByLabel('Filter Status', { exact: true }).selectOption('published')
     await expect(page).not.toHaveURL(/published/)
     await page.getByRole('button', { name: 'Apply', exact: true }).click()

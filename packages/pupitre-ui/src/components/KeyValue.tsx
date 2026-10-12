@@ -2,8 +2,11 @@ import { useId, useRef, useState, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Button, Field, FieldError, Input } from '../primitives/index.js'
+import { Button, Field, FieldError, Input, FieldDescription } from '../primitives/index.js'
 import { useLiveField } from './use_live_field.js'
+
+import { Icon } from '../icons.js'
+import { InputFieldLabel } from './Text.js'
 
 type Props = Infer<typeof components.KeyValue.props>
 type Runtime = {
@@ -82,19 +85,22 @@ export function KeyValue({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
-          <p id={`${id}-label`} className="text-sm font-medium">
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </p>
-        )}
-        <div className="grid gap-2">
+        <InputFieldLabel id={id} props={props} />
+        <div className="overflow-hidden rounded-lg border border-input bg-card">
+          <div className="grid grid-cols-[1fr_1fr_6rem] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+            <span>{props.keyLabel ?? 'Key'}</span>
+            <span>{props.valueLabel ?? 'Value'}</span>
+            <span className="sr-only">Actions</span>
+          </div>
           {entries.map((entry, index) => (
-            <div key={entry.id} className="flex gap-2">
+            <div
+              key={entry.id}
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border px-2 py-1 last:border-b-0"
+            >
               <Input
+                bare
                 {...props.extraAttributes}
                 aria-label={props.keyLabel ?? 'Key'}
-                aria-labelledby={`${id}-label`}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -103,12 +109,12 @@ export function KeyValue({ props, bindings }: Runtime) {
                 placeholder={props.keyPlaceholder}
                 onChange={(event) => update(index, 'key', event.currentTarget.value)}
                 onBlur={() => commitValue()}
-                className="min-w-0 flex-1"
+                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
               />
               <Input
+                bare
                 {...props.extraAttributes}
                 aria-label={props.valueLabel ?? 'Value'}
-                aria-labelledby={`${id}-label`}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -117,99 +123,102 @@ export function KeyValue({ props, bindings }: Runtime) {
                 placeholder={props.valuePlaceholder}
                 onChange={(event) => update(index, 'value', event.currentTarget.value)}
                 onBlur={() => commitValue()}
-                className="min-w-0 flex-1"
+                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
               />
-              {props.reorderable && (
-                <div className="flex gap-1">
+              <div className="flex items-center justify-end gap-0.5">
+                {props.reorderable && (
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      aria-label={`Move ${entry.key} up`}
+                      disabled={props.disabled || props.readOnly || index === 0}
+                      onClick={() => moveEntry(index, -1)}
+                    >
+                      <Icon name="arrow-up" className="size-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      aria-label={`Move ${entry.key} down`}
+                      disabled={props.disabled || props.readOnly || index === entries.length - 1}
+                      onClick={() => moveEntry(index, 1)}
+                    >
+                      <Icon name="arrow-down" className="size-4" />
+                    </Button>
+                  </div>
+                )}
+                {props.deletable !== false && (
                   <Button
                     type="button"
-                    variant="outline"
-                    aria-label={`Move ${entry.key} up`}
-                    disabled={props.disabled || props.readOnly || index === 0}
-                    onClick={() => moveEntry(index, -1)}
+                    variant="ghost"
+                    size="xs"
+                    square
+                    disabled={props.disabled || props.readOnly}
+                    aria-label={`Remove ${entry.key}`}
+                    onClick={() => {
+                      const nextEntries = entries.filter((_, i) => i !== index)
+                      const keys = nextEntries.map((row) => row.key.trim())
+                      if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
+                      setEntries(nextEntries)
+                      changeValue(
+                        Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item]))
+                      )
+                    }}
                   >
-                    ↑
+                    <Icon name="trash-2" className="size-4" />
                   </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    aria-label={`Move ${entry.key} down`}
-                    disabled={props.disabled || props.readOnly || index === entries.length - 1}
-                    onClick={() => moveEntry(index, 1)}
-                  >
-                    ↓
-                  </Button>
-                </div>
-              )}
-              {props.deletable !== false && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={props.disabled}
-                  aria-label={`Remove ${entry.key}`}
-                  onClick={() => {
-                    const nextEntries = entries.filter((_, i) => i !== index)
-                    const keys = nextEntries.map((row) => row.key.trim())
-                    if (keys.some((key) => !key) || new Set(keys).size !== keys.length) return
-                    setEntries(nextEntries)
-                    changeValue(
-                      Object.fromEntries(nextEntries.map(({ key, value: item }) => [key, item]))
-                    )
-                  }}
-                >
-                  Remove
-                </Button>
-              )}
+                )}
+              </div>
             </div>
           ))}
+          {props.addable !== false && (
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border px-2 py-1 last:border-b-0">
+              <Input
+                bare
+                {...props.extraAttributes}
+                aria-label={props.keyLabel ?? 'Key'}
+                aria-required={props.required}
+                aria-describedby={describedBy}
+                aria-invalid={!!error}
+                value={newEntry.key}
+                onChange={(event) => setNewEntry({ ...newEntry, key: event.currentTarget.value })}
+                placeholder={props.keyPlaceholder}
+                disabled={props.disabled || props.readOnly}
+                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+              />
+              <Input
+                bare
+                {...props.extraAttributes}
+                aria-label={props.valueLabel ?? 'Value'}
+                aria-required={props.required}
+                aria-describedby={describedBy}
+                aria-invalid={!!error}
+                value={newEntry.value}
+                onChange={(event) => setNewEntry({ ...newEntry, value: event.currentTarget.value })}
+                placeholder={props.valuePlaceholder}
+                disabled={props.disabled || props.readOnly}
+                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                disabled={props.disabled || props.readOnly || !newEntry.key.trim()}
+                onClick={addEntry}
+              >
+                Add
+              </Button>
+            </div>
+          )}
         </div>
-        {props.addable !== false && (
-          <div className="flex gap-2">
-            <Input
-              {...props.extraAttributes}
-              aria-label={props.keyLabel ?? 'Key'}
-              aria-labelledby={`${id}-label`}
-              aria-required={props.required}
-              aria-describedby={describedBy}
-              aria-invalid={!!error}
-              value={newEntry.key}
-              onChange={(event) => setNewEntry({ ...newEntry, key: event.currentTarget.value })}
-              placeholder={props.keyPlaceholder}
-              disabled={props.disabled}
-              className="min-w-0 flex-1"
-            />
-            <Input
-              {...props.extraAttributes}
-              aria-label={props.valueLabel ?? 'Value'}
-              aria-labelledby={`${id}-label`}
-              aria-required={props.required}
-              aria-describedby={describedBy}
-              aria-invalid={!!error}
-              value={newEntry.value}
-              onChange={(event) => setNewEntry({ ...newEntry, value: event.currentTarget.value })}
-              placeholder={props.valuePlaceholder}
-              disabled={props.disabled}
-              className="min-w-0 flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              disabled={props.disabled || !newEntry.key.trim()}
-              onClick={addEntry}
-            >
-              Add
-            </Button>
-          </div>
-        )}
-        {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {props.hint}
-          </p>
-        )}
+
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>

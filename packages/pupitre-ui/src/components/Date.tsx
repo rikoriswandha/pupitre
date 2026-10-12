@@ -2,8 +2,18 @@ import { useId, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Field, FieldError, Input, Label } from '../primitives/index.js'
+import {
+  Field,
+  FieldError,
+  Input,
+  FieldDescription,
+  InputGroup,
+  InputSlot,
+} from '../primitives/index.js'
 import { timezoneHint, toInputValue } from '../primitives/date_value.js'
+
+import { Icon } from '../icons.js'
+import { InputFieldLabel } from './Text.js'
 
 type Props = Infer<typeof components.Date.props>
 type Runtime = {
@@ -44,44 +54,34 @@ export function Date({ props, bindings }: Runtime) {
   return (
     <div style={columnStyle}>
       <Field invalid={!!error}>
-        {props.label !== null && props.label !== undefined && (
-          <Label htmlFor={id}>
-            {props.label}
-            {props.required && <span aria-hidden="true"> *</span>}
-          </Label>
-        )}
-        <Input
-          aria-label={props.label ?? id}
-          {...props.extraAttributes}
-          id={id}
-          name={id}
-          type="date"
-          value={toInputValue(value, 'date', props.seconds === true)}
-          min={props.min}
-          max={props.max}
-          disabled={props.disabled}
-          required={props.required}
-          readOnly={props.readOnly}
-          onChange={(event) => setValue(event.currentTarget.value || null)}
-          aria-required={props.required}
-          aria-describedby={describedBy}
-          aria-invalid={!!error}
-          className="h-10 w-full"
-        />
-        {zoneHint && (
-          <p id={`${id}-timezone`} className="text-sm text-muted-foreground">
-            {zoneHint}
-          </p>
-        )}
-        {props.hint && (
-          <p id={`${id}-hint`} className="text-sm text-muted-foreground">
-            {props.hint}
-          </p>
-        )}
+        <InputFieldLabel id={id} props={props} />
+        <InputGroup>
+          <InputSlot>
+            <Icon name="calendar" className="ml-2 size-4 text-muted-foreground" />
+          </InputSlot>
+          <Input
+            bare
+            aria-label={props.label ?? id}
+            {...props.extraAttributes}
+            id={id}
+            name={id}
+            type="date"
+            value={toInputValue(value, 'date', props.seconds === true)}
+            min={props.min}
+            max={props.max}
+            disabled={props.disabled}
+            required={props.required}
+            readOnly={props.readOnly}
+            onChange={(event) => setValue(event.currentTarget.value || null)}
+            aria-required={props.required}
+            aria-describedby={describedBy}
+            aria-invalid={!!error}
+          />
+        </InputGroup>
+        {zoneHint && <FieldDescription id={`${id}-timezone`}>{zoneHint}</FieldDescription>}
+
         {props.helperText && (
-          <p id={`${id}-helper`} className="text-sm text-muted-foreground">
-            {props.helperText}
-          </p>
+          <FieldDescription id={`${id}-helper`}>{props.helperText}</FieldDescription>
         )}
         {error && (
           <div id={`${id}-error`}>

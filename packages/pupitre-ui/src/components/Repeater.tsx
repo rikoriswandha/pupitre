@@ -1,6 +1,8 @@
 import { Children, createContext, type ReactNode } from 'react'
 import { useSetState, useStateValue } from '@rikology/pupitre-react'
 import { Button } from '../primitives/index.js'
+import { Icon } from '../icons.js'
+import { CollectionField } from './CollectionField.js'
 
 type RepeaterMetadata = {
   name: string
@@ -129,23 +131,27 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
   }
   return (
     <RepeaterContext.Provider value={context}>
-      <div className="space-y-4" data-repeater={descriptor?.name}>
-        <div className="space-y-4">{children}</div>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-muted-foreground">
-            {itemCount}
-            {Number.isFinite(max) ? ` / ${max}` : ''}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={add}
-            disabled={loading || itemCount >= max}
-          >
-            {descriptor?.addLabel ?? 'Add item'}
-          </Button>
+      <CollectionField props={props} name={descriptor?.name ?? 'repeater'}>
+        <div className="space-y-3" data-repeater={descriptor?.name}>
+          {children}
+          {itemCount === 0 && (
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
+              No items yet. Add an item to get started.
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <Button type="button" size="sm" onClick={add} disabled={loading || itemCount >= max}>
+              <Icon name="plus" />
+              {descriptor?.addLabel ?? 'Add item'}
+            </Button>
+            {Number.isFinite(max) && (
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {itemCount} / {max}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
+      </CollectionField>
     </RepeaterContext.Provider>
   )
 }

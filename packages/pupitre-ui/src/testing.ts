@@ -63,7 +63,12 @@ export class AdminPage {
   }
 
   async field(label: string) {
-    const dialogField = this.page.getByRole('dialog').getByLabel(label, { exact: false }).first()
+    // Select/date popovers are also dialogs; only modal forms (action dialogs) scope fields.
+    const dialogField = this.page
+      .getByRole('dialog')
+      .filter({ has: this.page.locator('form') })
+      .getByLabel(label, { exact: false })
+      .first()
     if ((await dialogField.count()) > 0) return dialogField
     return this.page.locator('form').getByLabel(label, { exact: false }).first()
   }
@@ -82,8 +87,16 @@ export class AdminPage {
     await this.page.getByRole('option', { name: value, exact: true }).click()
   }
 
+  /** Run an inline action or a row action tucked into its "More actions" menu. */
   async openAction(name: string, row?: Locator) {
-    await (row ?? this.page).getByRole('button', { name, exact: true }).click()
+    const scope = row ?? this.page
+    const inline = scope.getByRole('button', { name, exact: true })
+    if (await inline.isVisible().catch(() => false)) {
+      await inline.click()
+      return
+    }
+    await scope.getByRole('button', { name: 'More actions', exact: true }).click()
+    await this.page.getByRole('menuitem', { name, exact: true }).click()
   }
 
   async submitModal(name = 'Submit') {

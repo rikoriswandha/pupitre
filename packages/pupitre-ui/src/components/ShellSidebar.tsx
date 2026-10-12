@@ -1,7 +1,9 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { ShellProps } from '@rikology/pupitre-react'
+import { t } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { NavLink } from '../primitives/nav_link.js'
+import { Collapse, Tooltip, cn, popupClasses } from '../primitives/index.js'
 
 const navigationStorageEvent = 'pupitre:nav-storage'
 
@@ -31,6 +33,58 @@ function navigationStorageSnapshot(panelId: string, nav: ShellProps['nav']) {
   }
 }
 
+/** Brand mark: logo images, or a primary tile with the brand initial, plus the name. */
+export function ShellBrand({
+  panel,
+  compact = false,
+  onNavigate,
+}: {
+  panel: ShellProps['panel']
+  compact?: boolean
+  onNavigate?: () => void
+}) {
+  const brand = panel.brand
+  const name = brand?.name ?? (panel.id || 'Pupitre')
+  return (
+    <NavLink
+      href={panel.path || '/'}
+      onClick={onNavigate}
+      aria-label={compact ? name : undefined}
+      className="flex min-w-0 items-center gap-2.5 rounded-lg px-1 py-1 text-[0.9375rem] font-semibold tracking-tight text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+    >
+      {brand?.logo || brand?.logoDark ? (
+        <>
+          {brand.logo && (
+            <img
+              src={brand.logo}
+              alt=""
+              className={cn('h-7 w-auto max-w-32 object-contain', brand.logoDark && 'dark:hidden')}
+            />
+          )}
+          {brand.logoDark && (
+            <img
+              src={brand.logoDark}
+              alt=""
+              className={cn(
+                'h-7 w-auto max-w-32 object-contain',
+                brand.logo && 'hidden dark:block'
+              )}
+            />
+          )}
+        </>
+      ) : (
+        <span
+          aria-hidden="true"
+          className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-[0.8125rem] font-bold text-primary-foreground shadow-control"
+        >
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+      )}
+      {!compact && <span className="truncate">{name}</span>}
+    </NavLink>
+  )
+}
+
 export type ShellSidebarProps = {
   panel: ShellProps['panel']
   nav: ShellProps['nav']
@@ -38,6 +92,15 @@ export type ShellSidebarProps = {
   onNavigate: () => void
   collapsed?: boolean
   topNav?: boolean
+}
+
+type NavItem = ShellProps['nav'][number]['items'][number]
+
+function isActive(item: NavItem, currentUrl: string) {
+  return (
+    item.active ??
+    Boolean(item.url && (currentUrl === item.url || currentUrl.startsWith(`${item.url}/`)))
+  )
 }
 
 export function ShellSidebar({
@@ -48,9 +111,6 @@ export function ShellSidebar({
   collapsed: railCollapsed = false,
   topNav = false,
 }: ShellSidebarProps) {
-  const panelPath = panel.path || '/'
-  const panelBrand = panel.brand
-  const panelId = panel.id || 'Pupitre'
   const [fallbackCollapsed, setFallbackCollapsed] = useState<Record<string, boolean>>({})
   const storageSnapshot = useSyncExternalStore(
     subscribeNavigationStorage,
@@ -82,163 +142,246 @@ export function ShellSidebar({
       // Storage can be disabled by the browser; the in-memory state still works.
     }
   }
-  return (
-    <>
-      <NavLink
-        href={panelPath}
-        aria-label={railCollapsed ? (panelBrand?.name ?? panelId) : undefined}
-        className={`mb-6 flex min-h-10 items-center gap-3 px-2 font-semibold ${railCollapsed ? 'justify-center' : ''}`}
-      >
-        {panelBrand?.logo || panelBrand?.logoDark ? (
-          <>
-            {panelBrand.logo && (
-              <img src={panelBrand.logo} alt="" className="size-8 object-contain dark:hidden" />
-            )}
-            {panelBrand.logoDark && (
-              <img
-                src={panelBrand.logoDark}
-                alt=""
-                className="hidden size-8 object-contain dark:block"
-              />
-            )}
-          </>
-        ) : (
-          <span className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
-            <Icon name="layout-dashboard" className="size-4" />
-          </span>
-        )}
-        {!railCollapsed && <span>{panelBrand?.name ?? panelId}</span>}
-      </NavLink>
-      <nav
-        aria-label="Main navigation"
-        className={`flex-1 overflow-y-auto ${topNav ? 'flex items-center gap-2' : 'space-y-5'}`}
-      >
+
+  if (topNav)
+    return (
+      <nav aria-label={t('Main navigation')} className="flex min-w-0 items-center gap-1">
         {nav.map((group, groupIndex) => {
-          const groupCollapsed = group.collapsible && collapsedGroups[group.label]
-          return (
-            <section key={`${group.label}:${groupIndex}`} className={topNav ? 'relative' : ''}>
-              {topNav ? (
-                <details
-                  className="group"
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Escape' || !event.currentTarget.open) return
-                    event.preventDefault()
-                    event.currentTarget.open = false
-                    event.currentTarget.querySelector('summary')?.focus()
-                  }}
+          const groupActive = group.items.some((item) => isActive(item, currentUrl))
+          if (!group.label)
+            return group.items.map((item) => (
+              <section key={`${item.label}:${item.url ?? ''}`}>
+                <NavLink
+                  href={item.url ?? '#'}
+                  target={item.external ? '_blank' : undefined}
+                  rel={item.external ? 'noreferrer' : undefined}
+                  aria-current={isActive(item, currentUrl) ? 'page' : undefined}
+                  onClick={onNavigate}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary-ink"
                 >
-                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-muted">
-                    {group.icon && <Icon name={group.icon} className="size-4" />}
-                    <span>{group.label || 'Menu'}</span>
-                    <Icon name="chevron-down" className="size-3" />
-                  </summary>
-                  <ul className="absolute left-0 top-full z-40 mt-1 min-w-48 rounded-md border border-border bg-background p-1 shadow-lg">
-                    {group.items.map((item) => (
-                      <li key={`${item.label}:${item.url ?? ''}`}>
-                        <NavLink
-                          href={item.url ?? '#'}
-                          onClick={onNavigate}
-                          className="block rounded px-3 py-2 text-sm hover:bg-muted"
-                        >
-                          {item.label}
-                        </NavLink>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : (
-                <>
-                  {group.label &&
-                    (group.collapsible ? (
-                      <button
-                        type="button"
-                        className={`mb-2 flex w-full items-center gap-2 px-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground ${railCollapsed ? 'justify-center' : ''}`}
-                        aria-expanded={!groupCollapsed}
-                        title={railCollapsed ? group.label : undefined}
-                        onClick={() => toggleGroup(group.label)}
-                      >
-                        {group.icon && <Icon name={group.icon} className="size-4" />}
-                        {!railCollapsed && <span className="flex-1">{group.label}</span>}
-                        {!railCollapsed && (
-                          <Icon
-                            name={groupCollapsed ? 'chevron-right' : 'chevron-down'}
-                            className="size-3"
-                          />
-                        )}
-                      </button>
-                    ) : group.label && !railCollapsed ? (
-                      <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                        {group.label}
-                      </h2>
-                    ) : null)}
-                  {!groupCollapsed && (
-                    <ul className="space-y-1">
-                      {group.items.map((item) => {
-                        const active =
-                          item.active ??
-                          Boolean(
-                            item.url &&
-                            (currentUrl === item.url || currentUrl.startsWith(`${item.url}/`))
-                          )
-                        return (
-                          <li key={`${item.label}:${item.url ?? ''}`}>
-                            <NavLink
-                              href={item.url ?? '#'}
-                              target={item.external ? '_blank' : undefined}
-                              rel={item.external ? 'noreferrer' : undefined}
-                              aria-current={active ? 'page' : undefined}
-                              aria-label={`${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`}
-                              title={
-                                railCollapsed
-                                  ? `${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`
-                                  : undefined
-                              }
-                              onClick={onNavigate}
-                              className={`flex min-h-10 items-center gap-3 rounded-md px-3 text-sm transition-colors ${railCollapsed ? 'justify-center px-2' : ''} ${active ? 'bg-primary/10 font-medium text-primary' : 'text-foreground hover:bg-muted'}`}
-                            >
-                              {item.icon && <Icon name={item.icon} className="size-4 shrink-0" />}
-                              {railCollapsed && !item.icon && (
-                                <span
-                                  aria-hidden="true"
-                                  className="size-4 text-center font-semibold"
-                                >
-                                  {item.label.slice(0, 1).toUpperCase()}
-                                </span>
-                              )}
-                              {!railCollapsed && (
-                                <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                              )}
-                              {!railCollapsed && item.badge !== undefined && (
-                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                                  {item.badge}
-                                </span>
-                              )}
-                            </NavLink>
-                            {item.children?.length ? (
-                              <ul className="ml-5 mt-1 space-y-1 border-l border-border pl-3">
-                                {item.children.map((child) => (
-                                  <li key={child.label}>
-                                    <NavLink
-                                      href={child.url ?? '#'}
-                                      className="block rounded px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground"
-                                    >
-                                      {child.label}
-                                    </NavLink>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : null}
-                          </li>
-                        )
-                      })}
-                    </ul>
+                  {item.icon && <Icon name={item.icon} className="size-4" />}
+                  {item.label}
+                </NavLink>
+              </section>
+            ))
+          return (
+            <section key={`${group.label}:${groupIndex}`} className="relative">
+              <details
+                className="group"
+                onKeyDown={(event) => {
+                  if (event.key !== 'Escape' || !event.currentTarget.open) return
+                  event.preventDefault()
+                  event.currentTarget.open = false
+                  event.currentTarget.querySelector('summary')?.focus()
+                }}
+              >
+                <summary
+                  className={cn(
+                    'flex h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg px-3 text-sm font-medium outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 group-open:bg-muted group-open:text-foreground [&::-webkit-details-marker]:hidden',
+                    groupActive ? 'text-foreground' : 'text-muted-foreground'
                   )}
-                </>
-              )}
+                >
+                  {group.icon && <Icon name={group.icon} className="size-4" />}
+                  <span>{group.label}</span>
+                  <Icon
+                    name="chevron-down"
+                    className="size-3.5 opacity-60 transition-transform duration-150 group-open:rotate-180"
+                  />
+                </summary>
+                <ul
+                  data-pupitre-popup=""
+                  className={cn(
+                    popupClasses,
+                    'absolute left-0 top-full z-40 mt-1.5 min-w-52 [--transform-origin:0_0] starting:scale-[0.98] starting:opacity-0'
+                  )}
+                >
+                  {group.items.map((item) => (
+                    <li key={`${item.label}:${item.url ?? ''}`}>
+                      <NavLink
+                        href={item.url ?? '#'}
+                        target={item.external ? '_blank' : undefined}
+                        rel={item.external ? 'noreferrer' : undefined}
+                        aria-current={isActive(item, currentUrl) ? 'page' : undefined}
+                        onClick={onNavigate}
+                        className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent aria-[current=page]:font-medium aria-[current=page]:text-primary-ink [&_svg]:text-muted-foreground"
+                      >
+                        {item.icon && <Icon name={item.icon} className="size-4" />}
+                        <span className="flex-1">{item.label}</span>
+                        {item.badge !== undefined && (
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            {item.badge}
+                          </span>
+                        )}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </section>
           )
         })}
       </nav>
-    </>
+    )
+
+  return (
+    <nav
+      aria-label={t('Main navigation')}
+      className={cn(
+        'pupitre-scroll flex-1 space-y-5 overflow-y-auto pb-6 pt-2',
+        railCollapsed ? 'px-2' : 'px-3'
+      )}
+    >
+      {nav.map((group, groupIndex) => {
+        const groupCollapsed = group.collapsible && collapsedGroups[group.label]
+        return (
+          <section key={`${group.label}:${groupIndex}`}>
+            {group.label &&
+              !railCollapsed &&
+              (group.collapsible ? (
+                <button
+                  type="button"
+                  className="mb-1 flex h-7 w-full items-center gap-2 rounded-md px-2.5 text-left text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                  aria-expanded={!groupCollapsed}
+                  onClick={() => toggleGroup(group.label)}
+                >
+                  {group.icon && <Icon name={group.icon} className="size-3.5" />}
+                  <span className="flex-1">{group.label}</span>
+                  <Icon
+                    name="chevron-down"
+                    className={cn(
+                      'size-3.5 transition-transform duration-150',
+                      groupCollapsed && '-rotate-90'
+                    )}
+                  />
+                </button>
+              ) : (
+                <h2 className="mb-1 flex h-7 items-center px-2.5 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </h2>
+              ))}
+            {/* The icon rail replaces headings with a divider; collapsible groups keep a toggle. */}
+            {group.label && railCollapsed && group.collapsible && (
+              <Tooltip label={group.label} side="right">
+                <button
+                  type="button"
+                  aria-label={group.label}
+                  aria-expanded={!groupCollapsed}
+                  onClick={() => toggleGroup(group.label)}
+                  className="mb-1 flex h-6 w-full items-center justify-center gap-1 rounded-md text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                >
+                  {group.icon ? (
+                    <Icon name={group.icon} className="size-3.5" />
+                  ) : (
+                    <span aria-hidden="true" className="h-px w-3 bg-sidebar-border" />
+                  )}
+                  <Icon
+                    name="chevron-down"
+                    className={cn(
+                      'size-3 transition-transform duration-150',
+                      groupCollapsed && '-rotate-90'
+                    )}
+                  />
+                </button>
+              </Tooltip>
+            )}
+            {group.label && railCollapsed && !group.collapsible && groupIndex > 0 && (
+              <div aria-hidden="true" className="mx-2 mb-2 h-px bg-sidebar-border" />
+            )}
+            <Collapse open={!groupCollapsed}>
+              <ul className="space-y-0.5">
+                {group.items.map((item) => {
+                  const active = isActive(item, currentUrl)
+                  const label = `${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`
+                  const link = (
+                    <NavLink
+                      href={item.url ?? '#'}
+                      target={item.external ? '_blank' : undefined}
+                      rel={item.external ? 'noreferrer' : undefined}
+                      aria-current={active ? 'page' : undefined}
+                      aria-label={label}
+                      onClick={onNavigate}
+                      className={cn(
+                        'group/item flex h-8 items-center gap-2.5 rounded-lg text-sm outline-none transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                        railCollapsed ? 'justify-center px-0' : 'px-2.5',
+                        active
+                          ? 'bg-card font-medium text-foreground shadow-control ring-1 ring-sidebar-border'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
+                      )}
+                    >
+                      {item.icon ? (
+                        <Icon
+                          name={item.icon}
+                          className={cn(
+                            'size-4 shrink-0',
+                            active
+                              ? 'text-primary-ink'
+                              : 'text-muted-foreground group-hover/item:text-foreground'
+                          )}
+                        />
+                      ) : railCollapsed ? (
+                        <span
+                          aria-hidden="true"
+                          className="grid size-5 place-items-center rounded-md bg-sidebar-accent text-[0.6875rem] font-semibold"
+                        >
+                          {item.label.slice(0, 1).toUpperCase()}
+                        </span>
+                      ) : null}
+                      {!railCollapsed && (
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      )}
+                      {!railCollapsed && item.external && (
+                        <Icon name="arrow-up-right" className="size-3.5 text-subtle-foreground" />
+                      )}
+                      {!railCollapsed && item.badge !== undefined && (
+                        <span
+                          className={cn(
+                            'min-w-5 rounded-md px-1.5 text-center text-xs font-medium leading-5 tabular-nums',
+                            active
+                              ? 'bg-primary-soft text-primary-ink'
+                              : 'bg-sidebar-accent text-muted-foreground'
+                          )}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </NavLink>
+                  )
+                  return (
+                    <li key={`${item.label}:${item.url ?? ''}`}>
+                      {railCollapsed ? (
+                        <Tooltip label={label} side="right">
+                          {link}
+                        </Tooltip>
+                      ) : (
+                        link
+                      )}
+                      {!railCollapsed && item.children?.length ? (
+                        <ul className="ml-[1.125rem] mt-0.5 space-y-0.5 border-l border-sidebar-border pl-2.5">
+                          {item.children.map((child) => {
+                            const childActive = isActive(child, currentUrl)
+                            return (
+                              <li key={child.label}>
+                                <NavLink
+                                  href={child.url ?? '#'}
+                                  aria-current={childActive ? 'page' : undefined}
+                                  onClick={onNavigate}
+                                  className="flex h-7 items-center rounded-md px-2 text-[0.8125rem] text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+                                >
+                                  {child.label}
+                                </NavLink>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ul>
+            </Collapse>
+          </section>
+        )
+      })}
+    </nav>
   )
 }

@@ -392,7 +392,17 @@ async function addField(
       : { $bindState: statePath }
     const repeater: Element = {
       type: 'Repeater',
-      props: { descriptor, value: repeatValue },
+      props: {
+        name: path,
+        label:
+          typeof node.label === 'string' || node.label === null ? node.label : headline(node.name),
+        ...(node.helperText !== undefined ? { helperText: node.helperText } : {}),
+        ...(node.hint !== undefined ? { hint: node.hint } : {}),
+        ...(node.rules?.required ? { required: true } : {}),
+        ...(node.columnSpan !== undefined ? { columnSpan: node.columnSpan } : {}),
+        descriptor,
+        value: repeatValue,
+      },
       children: [templateId],
       repeat: { statePath, key: '_key' },
       on: {

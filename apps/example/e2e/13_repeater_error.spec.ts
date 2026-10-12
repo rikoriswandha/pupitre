@@ -33,8 +33,10 @@ pupitreTest(
     await page.getByRole('button', { name: 'Save post' }).click()
 
     const error = /sku.*must be defined/i
-    const itemOne = page.getByRole('heading', { name: 'Item 1' }).locator('xpath=../..')
-    const itemTwo = page.getByRole('heading', { name: 'Item 2' }).locator('xpath=../..')
+    const item = (label: string) =>
+      page.locator('article').filter({ has: page.getByRole('heading', { name: label }) })
+    const itemOne = item('Item 1')
+    const itemTwo = item('Item 2')
     await expect(itemTwo.getByText(error)).toBeVisible()
     await expect(itemOne.getByText(error)).toHaveCount(0)
     await expect(page.getByText(error)).toHaveCount(1)

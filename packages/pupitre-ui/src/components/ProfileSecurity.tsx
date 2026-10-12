@@ -1,6 +1,9 @@
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 import { t } from '@rikology/pupitre-react'
 import { useEffect, useId, useState } from 'react'
+import { Badge, buttonClasses, controlClasses } from '../primitives/index.js'
+import { Icon } from '../icons.js'
+import { ConfirmDialog } from './ConfirmDialog.js'
 
 type Passkey = { id: string | number; name: string | null }
 export type ProfileSecurityProps = {
@@ -44,6 +47,7 @@ export function ProfileSecurity({
   const [passkeys, setPasskeys] = useState<Passkey[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState<Passkey>()
 
   async function request(path: string, method = 'GET', body?: unknown) {
     const response = await fetch(`${basePath}${path}`, {
@@ -94,22 +98,30 @@ export function ProfileSecurity({
   }
 
   return (
-    <section className="mt-8 space-y-6 border-t pt-6" aria-label={t('Account security')}>
-      <h2 className="text-xl font-semibold">{t('Account security')}</h2>
+    <section className="mt-8 space-y-6" aria-label={t('Account security')}>
+      <h2 className="text-[0.9375rem] font-semibold">{t('Account security')}</h2>
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger-ink">
           {error}
         </p>
       )}
-      <section className="space-y-3" aria-labelledby={mfaHeadingId}>
-        <h3 id={mfaHeadingId} className="font-medium">
-          {t('Authenticator app')}
-        </h3>
+      <section className="space-y-5 border-t border-border pt-5" aria-labelledby={mfaHeadingId}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 id={mfaHeadingId} className="text-[0.9375rem] font-semibold">
+            {t('Authenticator app')}
+          </h3>
+          <Badge
+            color={mfaEnabled ? 'success' : 'gray'}
+            icon={mfaEnabled ? 'shield-check' : 'shield'}
+          >
+            {mfaEnabled ? t('Enabled') : t('Not enabled')}
+          </Badge>
+        </div>
         {!mfaEnabled && !enrollment && (
           <button
             type="button"
             disabled={busy}
-            className="rounded-md border px-3 py-2 text-sm"
+            className={buttonClasses({ color: 'primary' })}
             onClick={() =>
               void run(async () => {
                 const result = await request('/profile/mfa/setup', 'POST')
@@ -123,19 +135,22 @@ export function ProfileSecurity({
           </button>
         )}
         {enrollment && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <img
               src={enrollment.qrCode}
               alt={t('Scan this QR code with your authenticator app')}
-              className="h-44 w-44"
+              className="size-44 rounded-lg border border-border bg-muted p-3"
             />
-            <p>
-              {t('Or enter this secret manually')}: <code>{enrollment.secret}</code>
+            <p className="text-[0.8125rem] text-muted-foreground">
+              {t('Or enter this secret manually')}:{' '}
+              <code className="break-all rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">
+                {enrollment.secret}
+              </code>
             </p>
-            <label className="block text-sm">
+            <label className="block max-w-sm text-sm font-medium">
               {t('Authenticator code')}
               <input
-                className="mt-1 block rounded-md border px-3 py-2"
+                className={`${controlClasses} mt-1.5 block h-(--control-h) px-3`}
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 value={code}
@@ -145,7 +160,7 @@ export function ProfileSecurity({
             <button
               type="button"
               disabled={busy || !code}
-              className="rounded-md border px-3 py-2 text-sm"
+              className={buttonClasses({ color: 'primary' })}
               onClick={() =>
                 void run(async () => {
                   const result = await request('/profile/mfa/confirm', 'POST', { code })
@@ -161,12 +176,12 @@ export function ProfileSecurity({
           </div>
         )}
         {mfaEnabled && (
-          <div className="space-y-3">
-            <p>{t('MFA is enabled.')}</p>
-            <label className="block text-sm">
+          <div className="space-y-4">
+            <p className="text-[0.8125rem] text-muted-foreground">{t('MFA is enabled.')}</p>
+            <label className="block max-w-sm text-sm font-medium">
               {t('Authenticator code')}
               <input
-                className="mt-1 block rounded-md border px-3 py-2"
+                className={`${controlClasses} mt-1.5 block h-(--control-h) px-3`}
                 inputMode="numeric"
                 value={code}
                 onChange={(event) => setCode(event.currentTarget.value)}
@@ -175,7 +190,7 @@ export function ProfileSecurity({
             <button
               type="button"
               disabled={busy || !code}
-              className="rounded-md border px-3 py-2 text-sm"
+              className={buttonClasses({ color: 'gray' })}
               onClick={() =>
                 void run(async () => {
                   const result = await request('/profile/mfa/recovery-codes', 'POST', { code })
@@ -186,10 +201,10 @@ export function ProfileSecurity({
             >
               {t('Regenerate recovery codes')}
             </button>
-            <label className="block text-sm">
+            <label className="block max-w-sm text-sm font-medium">
               {t('Current password (or enter an authenticator code above)')}
               <input
-                className="mt-1 block rounded-md border px-3 py-2"
+                className={`${controlClasses} mt-1.5 block h-(--control-h) px-3`}
                 type="password"
                 autoComplete="current-password"
                 value={password}
@@ -199,7 +214,7 @@ export function ProfileSecurity({
             <button
               type="button"
               disabled={busy || (!password && !code)}
-              className="rounded-md border px-3 py-2 text-sm"
+              className={buttonClasses({ color: 'danger', variant: 'outline' })}
               onClick={() =>
                 void run(async () => {
                   await request(
@@ -219,19 +234,50 @@ export function ProfileSecurity({
           </div>
         )}
         {recoveryCodes && (
-          <div className="rounded-md border p-4">
-            <h4 className="font-medium">{t('Save these recovery codes now')}</h4>
-            <p className="text-sm">
+          <div className="space-y-3 rounded-lg bg-muted/50 p-4">
+            <h4 className="text-sm font-semibold">{t('Save these recovery codes now')}</h4>
+            <p className="text-[0.8125rem] text-muted-foreground">
               {t('Each code can be used once. They will not be shown again.')}
             </p>
-            <ul className="grid grid-cols-2 gap-1 font-mono text-sm">
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-2 font-mono text-sm tabular-nums sm:grid-cols-2">
               {recoveryCodes.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={buttonClasses({ size: 'sm' })}
+                onClick={() =>
+                  void run(async () => {
+                    await navigator.clipboard.writeText(recoveryCodes.join('\n'))
+                  })
+                }
+              >
+                <Icon name="copy" className="size-4" />
+                {t('Copy')}
+              </button>
+              <button
+                type="button"
+                className={buttonClasses({ size: 'sm' })}
+                onClick={() => {
+                  const url = URL.createObjectURL(
+                    new Blob([recoveryCodes.join('\n')], { type: 'text/plain' })
+                  )
+                  const link = document.createElement('a')
+                  link.href = url
+                  link.download = 'recovery-codes.txt'
+                  link.click()
+                  URL.revokeObjectURL(url)
+                }}
+              >
+                <Icon name="download" className="size-4" />
+                {t('Download')}
+              </button>
+            </div>
             <button
               type="button"
-              className="mt-3 underline"
+              className={buttonClasses({ variant: 'link' })}
               onClick={() => setRecoveryCodes(undefined)}
             >
               {t('I have saved these codes')}
@@ -240,54 +286,63 @@ export function ProfileSecurity({
         )}
       </section>
       {passkeysEnabled && (
-        <section className="space-y-3 border-t pt-5" aria-labelledby={passkeysHeadingId}>
-          <h3 id={passkeysHeadingId} className="font-medium">
-            {t('Passkeys')}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <label className="sr-only" htmlFor={passkeyNameId}>
-              {t('Passkey name')}
-            </label>
-            <input
-              id={passkeyNameId}
-              className="rounded-md border px-3 py-2 text-sm"
-              placeholder={t('Passkey name')}
-              required
-              maxLength={100}
-              value={passkeyName}
-              onChange={(event) => setPasskeyName(event.currentTarget.value)}
-            />
-            <button
-              type="button"
-              disabled={busy || !passkeyName.trim()}
-              className="rounded-md border px-3 py-2 text-sm"
-              onClick={() =>
-                void run(async () => {
-                  const options = await request('/profile/passkeys/register/options', 'POST')
-                  // Keep WebAuthn browser code out of the profile's initial client chunk.
-                  const { startRegistration } = await import('@simplewebauthn/browser')
-                  const credential = await startRegistration({
-                    optionsJSON: options as PublicKeyCredentialCreationOptionsJSON,
+        <section
+          className="space-y-4 border-t border-border pt-5"
+          aria-labelledby={passkeysHeadingId}
+        >
+          <div className="space-y-4">
+            <h3 id={passkeysHeadingId} className="text-[0.9375rem] font-semibold">
+              {t('Passkeys')}
+            </h3>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="sr-only" htmlFor={passkeyNameId}>
+                {t('Passkey name')}
+              </label>
+              <input
+                id={passkeyNameId}
+                className={`${controlClasses} h-(--control-h) px-3 sm:flex-1`}
+                placeholder={t('Passkey name')}
+                required
+                maxLength={100}
+                value={passkeyName}
+                onChange={(event) => setPasskeyName(event.currentTarget.value)}
+              />
+              <button
+                type="button"
+                disabled={busy || !passkeyName.trim()}
+                className={buttonClasses({ color: 'primary' })}
+                onClick={() =>
+                  void run(async () => {
+                    const options = await request('/profile/passkeys/register/options', 'POST')
+                    // Keep WebAuthn browser code out of the profile's initial client chunk.
+                    const { startRegistration } = await import('@simplewebauthn/browser')
+                    const credential = await startRegistration({
+                      optionsJSON: options as PublicKeyCredentialCreationOptionsJSON,
+                    })
+                    await request('/profile/passkeys/register/verify', 'POST', {
+                      name: passkeyName,
+                      credential,
+                    })
+                    setPasskeyName('')
+                    await refreshPasskeys()
                   })
-                  await request('/profile/passkeys/register/verify', 'POST', {
-                    name: passkeyName,
-                    credential,
-                  })
-                  setPasskeyName('')
-                  await refreshPasskeys()
-                })
-              }
-            >
-              {t('Register passkey')}
-            </button>
+                }
+              >
+                {t('Register passkey')}
+              </button>
+            </div>
           </div>
-          <ul className="space-y-2">
+          {passkeys.length === 0 && (
+            <p className="text-[0.8125rem] text-muted-foreground">{t('No passkeys registered.')}</p>
+          )}
+          <ul className="divide-y divide-border">
             {passkeys.map((item) => (
-              <li key={item.id} className="flex flex-wrap items-center gap-2 rounded-md border p-3">
-                <span className="mr-auto">{item.name ?? t('Passkey')}</span>
+              <li key={item.id} className="flex flex-wrap items-center gap-2 py-3">
+                <Icon name="fingerprint" className="size-4 text-muted-foreground" />
+                <span className="mr-auto text-sm font-medium">{item.name ?? t('Passkey')}</span>
                 <button
                   type="button"
-                  className="underline"
+                  className={buttonClasses({ variant: 'ghost', size: 'sm' })}
                   disabled={busy}
                   onClick={() => {
                     const name = window.prompt(t('New passkey name'), item.name ?? t('Passkey'))
@@ -302,21 +357,38 @@ export function ProfileSecurity({
                 </button>
                 <button
                   type="button"
-                  className="text-destructive underline"
+                  className={buttonClasses({
+                    color: 'danger',
+                    variant: 'ghost',
+                    size: 'sm',
+                    square: true,
+                  })}
+                  aria-label={t('Delete')}
                   disabled={busy}
-                  onClick={() => {
-                    if (window.confirm(t('Delete this passkey?')))
-                      void run(async () => {
-                        await request(`/profile/passkeys/${item.id}`, 'DELETE')
-                        await refreshPasskeys()
-                      })
-                  }}
+                  onClick={() => setPendingDelete(item)}
                 >
-                  {t('Delete')}
+                  <Icon name="trash-2" className="size-4" />
                 </button>
               </li>
             ))}
           </ul>
+          <ConfirmDialog
+            open={pendingDelete !== undefined}
+            heading={t('Delete this passkey?')}
+            description={t('You will no longer be able to sign in with it.')}
+            submitLabel={t('Delete')}
+            destructive
+            loading={busy}
+            onConfirm={() => {
+              const target = pendingDelete
+              if (!target) return
+              void run(async () => {
+                await request(`/profile/passkeys/${target.id}`, 'DELETE')
+                await refreshPasskeys()
+              }).then(() => setPendingDelete(undefined))
+            }}
+            onCancel={() => setPendingDelete(undefined)}
+          />
         </section>
       )}
     </section>

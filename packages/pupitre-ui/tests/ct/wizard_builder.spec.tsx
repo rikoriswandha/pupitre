@@ -3,10 +3,13 @@ import { BuilderStory, Wizard422Story, WizardStory } from './stories/wizard_buil
 
 test('Builder adds, reorders, removes and clones blocks without moving their typed data', async ({
   mount,
+  page,
 }) => {
   const view = await mount(<BuilderStory />)
-  await view.getByRole('button', { name: 'Add Heading' }).click()
-  await view.getByRole('button', { name: 'Add Heading' }).click()
+  await view.getByRole('button', { name: 'Add block', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Add Heading' }).click()
+  await view.getByRole('button', { name: 'Add block', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Add Heading' }).click()
   const inputs = view.locator('[data-builder="content"] input')
   await expect(inputs).toHaveCount(3)
   await inputs.nth(0).fill('Existing')

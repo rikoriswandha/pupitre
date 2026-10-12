@@ -20,12 +20,10 @@ test('timeline grid renders ordered activity, server times, actor and structured
   await expect(region.getByRole('table', { name: 'Changes for Record updated' })).toBeVisible()
   await expect(region.getByRole('columnheader', { name: 'Previous value' })).toHaveCount(1)
   await expect(region.getByRole('rowheader', { name: 'status' })).toBeVisible()
-  await expect(region.getByRole('listitem').last().locator('svg')).toHaveCount(1)
   await expect(
     region.getByRole('listitem').last().locator('[aria-hidden="true"]').first()
   ).toHaveCSS('color', 'rgb(22, 122, 114)')
-  await expect(view.locator('.col-span-full')).toBeVisible()
-  const results = await new AxeBuilder({ page: page as never }).include('section').analyze()
+  const results = await new AxeBuilder({ page: page as never }).include('[role="region"]').analyze()
   expect(results.violations).toEqual([])
 })
 

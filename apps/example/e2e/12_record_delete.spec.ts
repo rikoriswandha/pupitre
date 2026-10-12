@@ -22,7 +22,8 @@ pupitreTest(
     await expect(row).toBeVisible()
     await page.goto(`/admin/acme/posts/${postId}/edit`)
 
-    await page.getByRole('button', { name: 'Delete', exact: true }).click()
+    // Destructive header actions sit in the page header's "More actions" menu.
+    await admin.openAction('Delete', page.getByRole('main').locator('header').first())
     await page
       .getByRole('button', { name: /delete|confirm/i })
       .last()

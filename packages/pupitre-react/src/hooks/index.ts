@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { GlobalEvent, PendingVisit } from '@inertiajs/core'
 import { useBoundProp, useStateStore, useStateValue } from '@json-render/react'
 import type {
   FileUploadDescriptor,
@@ -73,37 +74,49 @@ export function useVisit() {
     []
   )
 }
+export type NavigationGuard = {
+  /** True while a blocked Inertia visit waits for the user's decision. */
+  pending: boolean
+  /** Resume the blocked visit with its original options. */
+  proceed: () => void
+  /** Drop the blocked visit and stay on the page. */
+  cancel: () => void
+}
 /**
- * Blocks Inertia navigation and tab close while `shouldBlock()` is true
- * (Form `dirtyGuard`). Inertia visits ask `window.confirm(message)`.
+ * Blocks full-page Inertia GET visits and tab close while `shouldBlock()` is
+ * true (Form `dirtyGuard`). A blocked visit is held as `pending` so the caller
+ * can render its own confirmation; tab close/reload falls back to the
+ * browser's native prompt, which pages cannot replace.
  */
-export function useNavigationGuard(shouldBlock: () => boolean, message: string) {
-  // Subscribe once per mount; read the latest predicate/message through a ref so
+export function useNavigationGuard(shouldBlock: () => boolean): NavigationGuard {
+  // Subscribe once per mount; read the latest predicate through a ref so
   // typing (which changes `dirty`) never re-subscribes to router events.
-  const latest = useRef({ shouldBlock, message })
+  const latest = useRef(shouldBlock)
   useEffect(() => {
-    latest.current = { shouldBlock, message }
+    latest.current = shouldBlock
   })
+  const bypass = useRef(false)
+  const [pending, setPending] = useState<PendingVisit | null>(null)
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
-    const removeBefore = getRouter().on(
-      'before',
-      (event: CustomEvent<{ visit: { method: string; only: string[] } }>) => {
-        const visit = event.detail.visit
-        if (
-          visit.method === 'get' &&
-          !visit.only.length &&
-          latest.current.shouldBlock() &&
-          !window.confirm(latest.current.message)
-        ) {
-          event.preventDefault()
-        }
+    const removeBefore = getRouter().on('before', (event: GlobalEvent<'before'>) => {
+      const visit = event.detail.visit
+      if (
+        bypass.current ||
+        visit.method !== 'get' ||
+        visit.only.length > 0 ||
+        visit.prefetch ||
+        !latest.current()
+      ) {
+        return
       }
-    )
+      event.preventDefault()
+      setPending(visit)
+    })
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (latest.current.shouldBlock()) {
+      if (latest.current()) {
         event.preventDefault()
       }
     }
@@ -113,6 +126,22 @@ export function useNavigationGuard(shouldBlock: () => boolean, message: string) 
       window.removeEventListener('beforeunload', onBeforeUnload)
     }
   }, [])
+  const proceed = useCallback(() => {
+    if (!pending) return
+    // Drop Inertia's per-visit bookkeeping; the rest are plain visit options.
+    const { id, url, completed, cancelled, interrupted, ...options } = pending
+    setPending(null)
+    // Inertia fires `before` synchronously inside `visit`, so the bypass only
+    // spans this one re-issued visit.
+    bypass.current = true
+    try {
+      getRouter().visit(url, options)
+    } finally {
+      bypass.current = false
+    }
+  }, [pending])
+  const cancel = useCallback(() => setPending(null), [])
+  return { pending: pending !== null, proceed, cancel }
 }
 export function useUpload(descriptor: FileUploadDescriptor) {
   const { page } = useRuntime()

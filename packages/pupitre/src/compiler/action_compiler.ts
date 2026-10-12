@@ -61,7 +61,8 @@ function defaultLabel(action: ActionDefinition): string {
   if (action.label) return action.label
   if (isBulkDelete(action)) return t('Delete')
   if (action.builtin && action.builtin !== 'bulk') {
-    return t(action.builtin[0]!.toUpperCase() + action.builtin.slice(1))
+    const words = action.builtin.replace(/([a-z])([A-Z])/g, '$1 $2')
+    return t(words[0]!.toUpperCase() + words.slice(1))
   }
   return action.name
 }
@@ -170,6 +171,13 @@ export async function compileActionDescriptor(
   const destructive =
     action.confirmation?.destructive ??
     (action.builtin === 'delete' || action.builtin === 'forceDelete' || isBulkDelete(action))
+  const confirmDescription =
+    action.confirmation?.description ??
+    (destructive ? t('This action cannot be undone.') : undefined)
+  // Name the action on the confirm button ("Delete", "Restore") instead of a generic "Confirm".
+  const confirmSubmitLabel =
+    action.confirmation?.submitLabel ??
+    (action.label || action.builtin ? defaultLabel(action) : undefined)
   const confirm =
     kind === 'confirm'
       ? {
@@ -178,9 +186,8 @@ export async function compileActionDescriptor(
             (destructive
               ? t(`Delete ${options.resourceLabel ?? recordLabel(record)}?`)
               : defaultLabel(action)),
-          ...(action.confirmation?.submitLabel
-            ? { submitLabel: action.confirmation.submitLabel }
-            : {}),
+          ...(confirmDescription ? { description: confirmDescription } : {}),
+          ...(confirmSubmitLabel ? { submitLabel: confirmSubmitLabel } : {}),
           ...(action.confirmation?.cancelLabel
             ? { cancelLabel: action.confirmation.cancelLabel }
             : {}),

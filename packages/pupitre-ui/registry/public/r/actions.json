@@ -7,14 +7,14 @@
     "@rikology/pupitre@^1.0.0"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/action-button.json"
+    "https://pupitre.dev/r/action-list.json"
   ],
   "files": [
     {
       "path": "../src/components/Actions.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Actions.tsx",
-      "content": "import type { ActionDescriptor } from '@rikology/pupitre/catalog'\nimport { ActionButton } from './ActionButton.js'\n\ntype RuntimeProps = { props: Record<string, unknown> }\nexport function Actions({ props }: RuntimeProps) {\n  const actions = Array.isArray(props.actions)\n    ? props.actions.filter(\n        (action): action is ActionDescriptor =>\n          !!action &&\n          typeof action === 'object' &&\n          'name' in action &&\n          'label' in action &&\n          typeof action.name === 'string' &&\n          typeof action.label === 'string'\n      )\n    : []\n  const alignment =\n    props.alignment === 'center'\n      ? 'justify-center'\n      : props.alignment === 'end'\n        ? 'justify-end'\n        : 'justify-start'\n  return (\n    <div className={`flex flex-wrap gap-2 ${alignment}`}>\n      {actions.map((action) => (\n        <ActionButton key={action.name} action={action} />\n      ))}\n    </div>\n  )\n}\nexport default Actions\n"
+      "content": "import type { ActionDescriptor } from '@rikology/pupitre/catalog'\nimport { ActionList } from './ActionList.js'\n\ntype RuntimeProps = { props: Record<string, unknown> }\nexport function Actions({ props }: RuntimeProps) {\n  const actions = Array.isArray(props.actions)\n    ? props.actions.filter(\n        (action): action is ActionDescriptor =>\n          !!action &&\n          typeof action === 'object' &&\n          'name' in action &&\n          'label' in action &&\n          typeof action.name === 'string' &&\n          typeof action.label === 'string'\n      )\n    : []\n  return (\n    <ActionList\n      actions={actions}\n      align={props.alignment === 'center' ? 'center' : props.alignment === 'end' ? 'end' : 'start'}\n    />\n  )\n}\nexport default Actions\n"
     }
   ]
 }

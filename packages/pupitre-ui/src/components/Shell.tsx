@@ -1,19 +1,44 @@
 import type { ShellProps } from '@rikology/pupitre-react'
 import { Dialog } from '@base-ui/react/dialog'
-import { useId, useState } from 'react'
+import { t } from '@rikology/pupitre-react'
+import { useId, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { Icon } from '../icons.js'
 import { NavLink } from '../primitives/nav_link.js'
-import { ActionButton } from './ActionButton.js'
+import {
+  Button,
+  Tooltip,
+  backdropClasses,
+  cn,
+  underlineTabClasses,
+  underlineTabListClasses,
+} from '../primitives/index.js'
+import { ActionList } from './ActionList.js'
 import { GlobalSearch } from './GlobalSearch.js'
 import { NotificationTray } from './NotificationTray.js'
-import { ShellSidebar } from './ShellSidebar.js'
+import { ShellBrand, ShellSidebar } from './ShellSidebar.js'
 import { TenantSwitcher } from './TenantSwitcher.js'
 import { UserMenu } from './UserMenu.js'
 import { usePanelTheme } from './use_panel_theme.js'
 
+const contentWidths: Record<string, string> = {
+  'md': '28rem',
+  'lg': '32rem',
+  'xl': '36rem',
+  '2xl': '42rem',
+  '3xl': '48rem',
+  '4xl': '56rem',
+  '5xl': '64rem',
+  '6xl': '72rem',
+  '7xl': '80rem',
+  'full': 'none',
+  'screen': '100vw',
+}
+
 /**
- * Panel shell: sidebar (brand, tenant switcher, navigation), topbar
- * (breadcrumbs, global search, notifications, user menu), page header.
+ * Panel shell: sidebar (brand, tenant switcher, navigation) or top navigation,
+ * a topbar (search, notifications, user menu), and the page header
+ * (breadcrumbs, title, header actions, record sub-navigation).
  */
 export function Shell({
   panel,
@@ -41,7 +66,8 @@ export function Shell({
       return panel.theme?.sidebar === 'collapsed'
     }
   })
-  const toggleSidebar = () =>
+  const shellRef = useRef<HTMLDivElement>(null)
+  const applySidebarToggle = () =>
     setSidebarCollapsed((collapsed) => {
       const next = !collapsed
       try {
@@ -51,169 +77,232 @@ export function Shell({
       }
       return next
     })
+  // The rail and the expanded sidebar have different layouts, so the toggle morphs
+  // between snapshots instead of transitioning individual properties.
+  const toggleSidebar = () => {
+    const shell = shellRef.current
+    if (
+      !shell ||
+      typeof document.startViewTransition !== 'function' ||
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    )
+      return applySidebarToggle()
+    shell.dataset.sidebarMorph = ''
+    void document
+      .startViewTransition(() => flushSync(applySidebarToggle))
+      .finished.finally(() => delete shell.dataset.sidebarMorph)
+  }
   const collapsed = panel.theme?.sidebarCollapsibleOnDesktop
     ? sidebarCollapsed
     : panel.theme?.sidebar === 'collapsed'
-  const width = panel.theme?.contentWidth ?? '7xl'
-  const widthValues: Record<string, string> = {
-    'md': '28rem',
-    'lg': '32rem',
-    'xl': '36rem',
-    '2xl': '42rem',
-    '3xl': '48rem',
-    '4xl': '56rem',
-    '5xl': '64rem',
-    '6xl': '72rem',
-    '7xl': '80rem',
-    'full': 'none',
-    'screen': '100vw',
-  }
-  const maxContentWidth = widthValues[width] ?? '80rem'
+  const maxContentWidth = contentWidths[panel.theme?.contentWidth ?? '7xl'] ?? '80rem'
+  const closeMobile = () => setMobileOpen(false)
+
+  const tools = (
+    <div className="flex shrink-0 items-center gap-1">
+      <NotificationTray notifications={notifications} />
+      <UserMenu panel={panel} user={user} />
+    </div>
+  )
 
   return (
     <div
-      className={`min-h-screen bg-background text-foreground ${topNav ? 'flex flex-col' : `md:grid ${collapsed ? 'md:grid-cols-[4rem_minmax(0,1fr)]' : 'md:grid-cols-[16rem_minmax(0,1fr)]'}`}`}
+      ref={shellRef}
+      data-pupitre-shell=""
+      className={cn(
+        'min-h-dvh bg-background font-sans text-foreground antialiased',
+        topNav
+          ? 'flex flex-col'
+          : cn(
+              'md:grid',
+              collapsed ? 'md:grid-cols-[4rem_minmax(0,1fr)]' : 'md:grid-cols-[16rem_minmax(0,1fr)]'
+            )
+      )}
       data-density={panel.theme?.density ?? 'comfortable'}
       data-sidebar={panel.theme?.sidebar ?? 'expanded'}
       style={style}
     >
       <a
         href={`#${mainId}`}
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-background focus:p-3 focus:text-foreground focus:outline-2 focus:outline-ring"
+        className="sr-only rounded-lg bg-card px-3 py-2 text-sm font-medium text-foreground shadow-popover focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[200] focus:outline-none focus:ring-[3px] focus:ring-ring/40"
       >
-        Skip to content
+        {t('Skip to content')}
       </a>
+
       {!topNav && (
-        <aside
-          className={`hidden flex-col border-r border-border bg-background p-4 md:flex ${collapsed ? 'md:w-16' : 'md:w-auto'}`}
-        >
-          <TenantSwitcher tenant={tenant} tenants={tenants} />
-          {panel.theme?.sidebarCollapsibleOnDesktop && (
-            <button
-              type="button"
-              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              onClick={toggleSidebar}
-              className="mb-2 hidden rounded-md p-2 text-muted-foreground hover:bg-muted md:block"
-            >
-              <Icon name={collapsed ? 'chevron-right' : 'chevron-left'} className="size-4" />
-            </button>
+        <aside className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-2 px-3',
+              collapsed ? 'flex-col justify-center py-3' : 'h-14 justify-between'
+            )}
+          >
+            <ShellBrand panel={panel} compact={collapsed} />
+            {panel.theme?.sidebarCollapsibleOnDesktop && (
+              <Tooltip label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')} side="right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  square
+                  aria-label={collapsed ? t('Expand sidebar') : t('Collapse sidebar')}
+                  onClick={toggleSidebar}
+                >
+                  <Icon name={collapsed ? 'panel-left-open' : 'panel-left-close'} />
+                </Button>
+              </Tooltip>
+            )}
+          </div>
+          {!collapsed && (
+            <div className="px-3 pb-2">
+              <TenantSwitcher tenant={tenant} tenants={tenants} />
+            </div>
           )}
           <ShellSidebar
             panel={panel}
             nav={nav}
             currentUrl={currentUrl}
-            onNavigate={() => setMobileOpen(false)}
+            onNavigate={closeMobile}
             collapsed={collapsed}
           />
         </aside>
       )}
+
       {topNav && (
-        <header className="flex items-center gap-4 border-b border-border px-4 py-3">
-          <TenantSwitcher tenant={tenant} tenants={tenants} />
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
+          <ShellBrand panel={panel} />
+          <TenantSwitcher tenant={tenant} tenants={tenants} compact />
           <ShellSidebar
             panel={panel}
             nav={nav}
             currentUrl={currentUrl}
-            onNavigate={() => setMobileOpen(false)}
+            onNavigate={closeMobile}
             topNav
           />
-        </header>
-      )}
-      {!topNav && (
-        <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
-          <Dialog.Trigger
-            aria-label="Open navigation"
-            className="fixed left-4 top-4 z-40 rounded-md border border-border bg-background p-2 md:hidden"
-          >
-            <Icon name="menu" className="size-4" />
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/30" />
-            <Dialog.Popup className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-background p-4 text-foreground outline-none">
-              <Dialog.Title className="sr-only">Navigation</Dialog.Title>
-              <Dialog.Close aria-label="Close navigation" className="mb-3 self-end rounded-md p-2">
-                <Icon name="x" className="size-4" />
-              </Dialog.Close>
-              <TenantSwitcher tenant={tenant} tenants={tenants} />
-              <ShellSidebar
-                panel={panel}
-                nav={nav}
-                currentUrl={currentUrl}
-                onNavigate={() => setMobileOpen(false)}
-              />
-            </Dialog.Popup>
-          </Dialog.Portal>
-        </Dialog.Root>
-      )}
-      <div
-        className="mx-auto min-w-0 w-full px-4 pb-10 pt-16 md:px-8 md:pt-6"
-        style={{ maxWidth: maxContentWidth }}
-      >
-        <header
-          role={topNav ? 'region' : undefined}
-          aria-label="Panel toolbar"
-          className="mb-5 flex min-h-10 items-center justify-between gap-4"
-        >
-          {breadcrumbs.length > 0 ? (
-            <nav
-              aria-label="Breadcrumb"
-              className="flex min-w-0 items-center gap-2 overflow-x-auto text-sm text-muted-foreground"
-            >
-              {breadcrumbs.map((crumb, index) => (
-                <span
-                  key={`${crumb.label}-${index}`}
-                  className="inline-flex shrink-0 items-center gap-2"
-                >
-                  {index > 0 && <Icon name="chevron-right" className="size-3" />}
-                  {crumb.url ? (
-                    <NavLink href={crumb.url} className="hover:text-foreground">
-                      {crumb.label}
-                    </NavLink>
-                  ) : (
-                    <span aria-current="page" className="text-foreground">
-                      {crumb.label}
-                    </span>
-                  )}
-                </span>
-              ))}
-            </nav>
-          ) : (
-            <span />
-          )}
-          <div className="flex shrink-0 items-center gap-2">
-            <GlobalSearch search={panel.search} />
-            <NotificationTray notifications={notifications} />
-            <UserMenu panel={panel} user={user} />
+          <div className="ml-auto flex items-center gap-2">
+            <GlobalSearch search={panel.search} compact />
+            {tools}
           </div>
         </header>
-        <main id={mainId} tabIndex={-1} style={{ maxWidth: maxContentWidth }}>
-          <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-            <div className="flex flex-wrap gap-2">
-              {headerActions.map((action) => (
-                <ActionButton key={action.name} action={action} />
-              ))}
+      )}
+
+      <div data-pupitre-content="" className="flex min-w-0 flex-col">
+        {!topNav && (
+          <header
+            aria-label={t('Panel toolbar')}
+            className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6 lg:px-8"
+          >
+            <Dialog.Root open={mobileOpen} onOpenChange={setMobileOpen}>
+              <Dialog.Trigger
+                aria-label={t('Open navigation')}
+                className="-ml-1.5 grid size-9 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 md:hidden"
+              >
+                <Icon name="menu" className="size-5" />
+              </Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Backdrop className={backdropClasses} />
+                <Dialog.Popup
+                  data-pupitre-popup=""
+                  className="fixed inset-y-0 left-0 z-[101] flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-dialog outline-none transition-transform duration-250 ease-drawer data-ending-style:-translate-x-full data-starting-style:-translate-x-full"
+                  style={style}
+                >
+                  <Dialog.Title className="sr-only">{t('Navigation')}</Dialog.Title>
+                  <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-3">
+                    <ShellBrand panel={panel} onNavigate={closeMobile} />
+                    <Dialog.Close
+                      aria-label={t('Close navigation')}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30"
+                    >
+                      <Icon name="x" className="size-4" />
+                    </Dialog.Close>
+                  </div>
+                  <div className="px-3 pb-2">
+                    <TenantSwitcher tenant={tenant} tenants={tenants} />
+                  </div>
+                  <ShellSidebar
+                    panel={panel}
+                    nav={nav}
+                    currentUrl={currentUrl}
+                    onNavigate={closeMobile}
+                  />
+                </Dialog.Popup>
+              </Dialog.Portal>
+            </Dialog.Root>
+            <GlobalSearch search={panel.search} />
+            <div className="ml-auto">{tools}</div>
+          </header>
+        )}
+
+        <main
+          id={mainId}
+          tabIndex={-1}
+          className="mx-auto w-full min-w-0 flex-1 px-4 pb-16 pt-6 outline-none sm:px-6 lg:px-8 lg:pt-8"
+          style={{ maxWidth: maxContentWidth }}
+        >
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+            <div className="min-w-0">
+              {breadcrumbs.length > 0 && (
+                <nav aria-label={t('Breadcrumb')} className="mb-1.5">
+                  <ol className="flex min-w-0 flex-wrap items-center gap-1 text-[0.8125rem] text-muted-foreground">
+                    {breadcrumbs.map((crumb, index) => (
+                      <li
+                        key={`${crumb.label}-${index}`}
+                        className="inline-flex min-w-0 items-center gap-1"
+                      >
+                        {index > 0 && (
+                          <Icon
+                            name="chevron-right"
+                            className="size-3.5 shrink-0 text-subtle-foreground"
+                          />
+                        )}
+                        {crumb.url && index < breadcrumbs.length - 1 ? (
+                          <NavLink
+                            href={crumb.url}
+                            className="truncate rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                          >
+                            {crumb.label}
+                          </NavLink>
+                        ) : (
+                          <span aria-current="page" className="truncate text-foreground/80">
+                            {crumb.label}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              )}
+              <h1 className="text-2xl font-semibold leading-8 tracking-tight text-foreground text-balance">
+                {title}
+              </h1>
             </div>
+            {headerActions.length > 0 && (
+              <ActionList
+                actions={headerActions}
+                promotePrimary
+                max={3}
+                className="sm:ml-auto sm:justify-end"
+              />
+            )}
           </header>
           {subNavigation.length > 0 && (
             <nav
-              aria-label="Record navigation"
-              className="mb-5 flex gap-1 overflow-x-auto border-b border-border"
+              aria-label={t('Record navigation')}
+              className={cn(underlineTabListClasses, 'mb-6')}
             >
               {subNavigation.map((item) => (
                 <NavLink
                   key={item.key}
                   href={item.url}
                   aria-current={item.active ? 'page' : undefined}
-                  className="shrink-0 border-b-2 border-transparent px-3 py-2 text-sm text-muted-foreground aria-[current=page]:border-primary aria-[current=page]:text-foreground"
+                  className={underlineTabClasses}
                 >
                   {item.label}
                 </NavLink>
               ))}
             </nav>
           )}
-          {children}
+          {/* Header widgets, page content and footer widgets stack as separate panels. */}
+          <div className="min-w-0 space-y-6">{children}</div>
         </main>
       </div>
     </div>

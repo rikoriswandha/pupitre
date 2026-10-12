@@ -14,10 +14,10 @@ export function Placeholder({ props, children }: RuntimeProps) {
   const output =
     content === null || content === undefined || content === '' ? 'No content available' : content
   return (
-    <div
-      className="min-w-0 rounded-md border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
-      aria-live="polite"
-    >
+    <div className="min-w-0 space-y-1.5 text-sm text-muted-foreground" aria-live="polite">
+      {typeof props.label === 'string' && (
+        <p className="font-medium text-foreground">{props.label}</p>
+      )}
       {output}
     </div>
   )

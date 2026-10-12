@@ -20,7 +20,7 @@ export function Tab({ props, children }: RuntimeProps) {
       aria-labelledby={`${context.id}-${key}-tab`}
       hidden={!selected}
       tabIndex={0}
-      className="min-w-0 space-y-3"
+      className="min-w-0 space-y-5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
     >
       {children}
     </section>

@@ -4,7 +4,13 @@ import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Toggle as BaseToggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
-import { Field, FieldError } from '../primitives/index.js'
+import {
+  Field,
+  FieldError,
+  segmentedListClasses,
+  segmentedItemClasses,
+} from '../primitives/index.js'
+import { Icon } from '../icons.js'
 
 type Props = Infer<typeof components.ToggleButtons.props>
 type Runtime = {
@@ -72,7 +78,11 @@ export function ToggleButtons({ props, bindings }: Runtime) {
           aria-labelledby={props.label ? `${id}-label` : undefined}
           aria-describedby={describedBy}
           aria-invalid={!!error}
-          className={`inline-flex w-fit overflow-hidden rounded-md border border-input ${props.grouped === false ? 'gap-2 border-0' : ''}`}
+          className={
+            props.grouped === false
+              ? 'grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3'
+              : segmentedListClasses
+          }
         >
           {options.map((option) => (
             <BaseToggle
@@ -84,12 +94,14 @@ export function ToggleButtons({ props, bindings }: Runtime) {
               aria-describedby={describedBy}
               aria-invalid={!!error}
               style={{ color: props.colors?.[String(option.value)] }}
-              className={`min-h-9 px-3 text-sm transition-colors data-[pressed]:bg-primary data-[pressed]:text-primary-foreground data-[unpressed]:bg-background data-[unpressed]:hover:bg-muted ${props.grouped === false ? 'rounded-md border border-input' : 'border-r border-input last:border-r-0'}`}
+              className={
+                props.grouped === false
+                  ? 'inline-flex min-h-(--control-h) items-center justify-center gap-2 rounded-lg border border-input bg-card px-3 py-2 text-sm font-medium shadow-control outline-none transition-colors hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/30 data-pressed:border-primary data-pressed:bg-primary-soft data-pressed:text-primary-ink disabled:cursor-not-allowed disabled:opacity-50'
+                  : `${segmentedItemClasses} disabled:cursor-not-allowed disabled:opacity-50`
+              }
             >
               {props.icons?.[String(option.value)] && (
-                <span aria-hidden="true" className="mr-2">
-                  {props.icons[String(option.value)]}
-                </span>
+                <Icon name={props.icons[String(option.value)]!} className="size-4" />
               )}
               {option.label}
             </BaseToggle>

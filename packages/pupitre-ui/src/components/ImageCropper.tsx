@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import Cropper from 'react-easy-crop'
-import { Modal } from './Modal.js'
+import { Dialog } from '@base-ui/react/dialog'
+import {
+  Button,
+  backdropClasses,
+  dialogPopupClasses,
+  segmentedListClasses,
+  segmentedItemClasses,
+} from '../primitives/index.js'
+import { Icon } from '../icons.js'
 
 type Crop = { x: number; y: number }
 type Area = { x: number; y: number; width: number; height: number }
@@ -101,73 +109,102 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
   const aspectRatios = ratios?.length ? ratios : [null]
 
   return (
-    <Modal open onClose={onCancel} heading="Edit image" width="2xl">
-      <div className="max-h-[calc(100vh-2rem)] w-[min(100%,42rem)] overflow-y-auto rounded-xl border border-border bg-background p-4 text-foreground shadow-xl">
-        <div
-          className="relative h-80 w-full bg-black"
-          style={{ position: 'relative', height: '20rem', width: '100%', backgroundColor: '#000' }}
-        >
-          <Cropper
-            image={imageUrl}
-            crop={crop}
-            zoom={zoom}
-            rotation={rotation}
-            aspect={aspect}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropComplete={onCropComplete}
-            onMediaLoaded={(media) => setOriginalAspect(media.naturalWidth / media.naturalHeight)}
-          />
-        </div>
-        <div
-          className="relative z-10 flex flex-wrap items-center gap-2"
-          style={{ position: 'relative', zIndex: 1000 }}
-        >
-          <label>
-            Zoom{' '}
-            <input
-              aria-label="Zoom"
-              type="range"
-              min={1}
-              max={3}
-              step={0.1}
-              value={zoom}
-              onChange={(event) => setZoom(Number(event.currentTarget.value))}
-            />
-          </label>
-          <button type="button" onClick={() => setRotation((value) => (value + 90) % 360)}>
-            Rotate
-          </button>
-          <button
-            type="button"
-            onClick={() => setFlipped((value) => !value)}
-            aria-pressed={flipped}
-          >
-            Flip
-          </button>
-          <label>
-            Aspect{' '}
-            <select
-              aria-label="Aspect ratio"
-              value={selectedRatio ?? ''}
-              onChange={(event) => setSelectedRatio(event.currentTarget.value || null)}
+    <Dialog.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel()
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Backdrop className={backdropClasses} />
+        <Dialog.Popup data-pupitre-popup="" className={dialogPopupClasses('2xl')}>
+          <div className="flex items-center justify-between border-b border-border px-5 py-4">
+            <Dialog.Title className="text-[0.9375rem] font-semibold">Edit image</Dialog.Title>
+            <Button
+              type="button"
+              variant="ghost"
+              square
+              size="sm"
+              aria-label="Close image editor"
+              onClick={onCancel}
             >
-              {aspectRatios.map((ratio, index) => (
-                <option key={`${ratio}-${index}`} value={ratio ?? ''}>
-                  {ratio ?? 'Original'}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="button" className="ml-auto" onClick={onCancel}>
-            Cancel
-          </button>
-          <button type="button" onClick={() => void save()}>
-            Apply crop
-          </button>
-        </div>
-      </div>
-    </Modal>
+              <Icon name="x" />
+            </Button>
+          </div>
+          <div className="space-y-5 overflow-y-auto p-5">
+            <div className="relative h-80 w-full overflow-hidden rounded-lg bg-muted">
+              <Cropper
+                image={imageUrl}
+                crop={crop}
+                zoom={zoom}
+                rotation={rotation}
+                aspect={aspect}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                onMediaLoaded={(media) =>
+                  setOriginalAspect(media.naturalWidth / media.naturalHeight)
+                }
+              />
+            </div>
+            <div className="relative flex flex-wrap items-center gap-3">
+              <label className="flex flex-1 items-center gap-3 text-sm font-medium">
+                Zoom
+                <input
+                  aria-label="Zoom"
+                  type="range"
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  value={zoom}
+                  onChange={(event) => setZoom(Number(event.currentTarget.value))}
+                  className="min-w-20 flex-1 accent-primary focus-visible:outline-2 focus-visible:outline-ring"
+                />
+              </label>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setRotation((value) => (value + 90) % 360)}
+              >
+                <Icon name="rotate-ccw" /> Rotate
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setFlipped((value) => !value)}
+                aria-pressed={flipped}
+              >
+                Flip
+              </Button>
+            </div>
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Aspect ratio</p>
+              <div role="group" aria-label="Aspect ratio" className={segmentedListClasses}>
+                {aspectRatios.map((ratio, index) => (
+                  <button
+                    type="button"
+                    key={`${ratio}-${index}`}
+                    className={segmentedItemClasses}
+                    aria-pressed={selectedRatio === ratio}
+                    onClick={() => setSelectedRatio(ratio)}
+                  >
+                    {ratio ?? 'Original'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-5 py-4">
+            <Button type="button" color="gray" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="button" color="primary" disabled={!area} onClick={() => void save()}>
+              Apply crop
+            </Button>
+          </div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { setRouter } from '@rikology/pupitre-react'
-import { ShellSidebar } from '../../../src/components/ShellSidebar.js'
+import { ShellBrand, ShellSidebar } from '../../../src/components/ShellSidebar.js'
 
 const panel = {
   id: 'ct-sidebar',
@@ -20,13 +20,16 @@ const nav = [
 
 export function SidebarStory({ collapsed = false }: { collapsed?: boolean }) {
   return (
-    <ShellSidebar
-      panel={panel as never}
-      nav={nav}
-      currentUrl="/admin/posts"
-      onNavigate={() => {}}
-      collapsed={collapsed}
-    />
+    <>
+      <ShellBrand panel={panel as never} compact={collapsed} />
+      <ShellSidebar
+        panel={panel as never}
+        nav={nav}
+        currentUrl="/admin/posts"
+        onNavigate={() => {}}
+        collapsed={collapsed}
+      />
+    </>
   )
 }
 
