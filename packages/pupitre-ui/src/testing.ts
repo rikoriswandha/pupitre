@@ -82,8 +82,12 @@ export class AdminPage {
       return
     }
     await field.click()
-    const search = this.page.getByRole('textbox', { name: 'Search options' }).last()
-    if (await search.isVisible().catch(() => false)) await search.fill(value)
+    // Plain selects open a listbox; only popover selects carry a search box. Skipping the lookup
+    // keeps a previous popover's search box (still unmounting) from being filled.
+    if ((await field.getAttribute('aria-haspopup')) !== 'listbox') {
+      const search = this.page.getByRole('textbox', { name: 'Search options' }).last()
+      if (await search.isVisible().catch(() => false)) await search.fill(value)
+    }
     await this.page.getByRole('option', { name: value, exact: true }).click()
   }
 
