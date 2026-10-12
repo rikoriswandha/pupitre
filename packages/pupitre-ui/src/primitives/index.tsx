@@ -190,7 +190,7 @@ export function Button({
 
 /** Shared look for bordered text-like controls (input, textarea, select trigger). */
 export const controlClasses =
-  'w-full min-w-0 rounded-lg border border-input bg-card text-sm text-foreground shadow-control outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-subtle-foreground hover:border-[color-mix(in_oklab,var(--input)_70%,var(--foreground))] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none read-only:bg-muted/40 aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/20'
+  'w-full min-w-0 rounded-lg border border-input bg-card text-sm text-foreground shadow-control outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-subtle-foreground hover:border-[color-mix(in_oklab,var(--input)_70%,var(--foreground))] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none [&:is(input,textarea):read-only]:bg-muted/40 aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/20'
 
 /** Wrapper look for grouped controls; the inner element uses `bareControlClasses`. */
 export const controlGroupClasses =
