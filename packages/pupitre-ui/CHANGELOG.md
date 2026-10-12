@@ -18,6 +18,8 @@
 - Accessibility (WP42): strict WCAG 2.1 A/AA axe coverage across registry fixtures, shell/account components, dialogs and interactive popup/editor/table states, plus an example auth/CRUD/settings/security audit.
 
 ### Fixed
+- DataTable: preserve versioned pending and settled inline edits across older in-flight refreshes (including rollback to a previously saved edit), release saved overrides when the server confirms them, a refresh issued after settlement lands, or host-supplied props change; ignore visits cancelled before they start, revert failures to the latest authoritative value, and memoize column definitions and descriptor lookup.
+- Accessibility: table selection and inline toggle targets are at least 24px without enlarging checkbox visuals, switch tracks, or text-only rows in compact and comfortable density.
 - Class merging (M4): `cn()` now resolves conflicting utilities with `tailwind-merge`, so a component's `className` reliably overrides primitive defaults instead of depending on CSS order. Template-literal class concatenations with conflicts now go through `cn()`.
 - Selects (M4): table filters, grouping, rows-per-page, editable cells, widget filters and import mapping use the new `SelectMenu` primitive, the same Base UI trigger and listbox as form `Select`, instead of native `<select>` elements. Their heights follow density (`--control-h`, `--control-h-sm`), and auto-width triggers size to their widest option like a native select, so a column of editable cells lines up. `.pupitre-native-select` remains for `Select native`, drawing the `chevrons-up-down` icon instead of the UA arrow.
 - Color (M4): the swatch fills its slot instead of collapsing to a sliver; presets are 28px square buttons.

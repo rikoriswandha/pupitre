@@ -9,6 +9,9 @@
 ### Changed
 - Navigation guard (M4): `useNavigationGuard(shouldBlock)` no longer calls `window.confirm`. It returns `{ pending, proceed, cancel }` and holds the blocked Inertia visit, so the caller can render its own confirmation; `proceed()` re-issues the visit with its original options. Prefetch visits are no longer blocked. Tab close/reload still use the browser's native prompt.
 
+### Fixed
+- Options: abort superseded searches during debounce and discard late responses without changing options, paging, loading, or errors.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

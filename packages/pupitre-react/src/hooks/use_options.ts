@@ -50,6 +50,7 @@ export function useOptions(args: {
           page: nextPage,
           signal: controller.signal,
         })
+        if (controller.signal.aborted || request.current !== controller) return
         setOptions((previous) => {
           const merged = append ? [...previous] : []
           for (const option of result.options) {
@@ -62,7 +63,11 @@ export function useOptions(args: {
         setHasMore(result.hasMore)
         setPage(nextPage)
       } catch (failure) {
-        if (!(failure instanceof DOMException && failure.name === 'AbortError'))
+        if (
+          !controller.signal.aborted &&
+          request.current === controller &&
+          !(failure instanceof DOMException && failure.name === 'AbortError')
+        )
           setError(failure instanceof Error ? failure.message : 'Unable to load options')
       } finally {
         if (request.current === controller) setLoading(false)
@@ -79,7 +84,10 @@ export function useOptions(args: {
       () => void load(search, 1, false, selectedValues),
       search ? debounce : 0
     )
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      request.current?.abort()
+    }
   }, [url, search, debounce, load, selected, preload])
 
   useEffect(() => () => request.current?.abort(), [])

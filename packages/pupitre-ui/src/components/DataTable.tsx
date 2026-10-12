@@ -1,4 +1,4 @@
-import { createElement, useContext, useEffect, useRef, useState } from 'react'
+import { createElement, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
 import { matchesKeyBinding } from '@rikology/pupitre-react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
@@ -348,11 +348,90 @@ export function DataTable({
     )
   )
   const [visibilityLoaded, setVisibilityLoaded] = useState(false)
-  const [optimisticCells, setOptimisticCells] = useState<Record<string, unknown>>({})
-  const [cellDataSource, setCellDataSource] = useState(tableData)
-  if (cellDataSource !== tableData) {
-    setCellDataSource(tableData)
-    setOptimisticCells({})
+  const editVersion = useRef(0)
+  const refreshSequence = useRef(0)
+  const refreshRequests = useRef(new Map<string, number>())
+  const [landedRefresh, setLandedRefresh] = useState<number | undefined>(undefined)
+  useEffect(() => {
+    const requests = refreshRequests.current
+    const removeStart = getRouter().on('start', (event) => {
+      const visit = event.detail.visit
+      if (
+        visit.method === 'get' &&
+        (visit.only.length === 0 || visit.only.includes(descriptor.dataProp ?? 'data'))
+      )
+        requests.set(visit.id, ++refreshSequence.current)
+    })
+    // Same-URL reloads replace history and need not emit `navigate`.
+    const removeSuccess = getRouter().on('success', (event) => {
+      const id = event.detail.visitId
+      if (id && requests.has(id)) {
+        setLandedRefresh(requests.get(id))
+        requests.delete(id)
+      }
+    })
+    const removeFinish = getRouter().on('finish', (event) => {
+      requests.delete(event.detail.visit.id)
+    })
+    return () => {
+      removeStart()
+      removeSuccess()
+      removeFinish()
+    }
+  }, [descriptor.dataProp])
+  const [optimisticCells, setOptimisticCells] = useState<
+    Record<
+      string,
+      {
+        value: unknown
+        token: number
+        pending: boolean
+        settledSequence?: number
+        previous?: { value: unknown; settledSequence?: number }
+      }
+    >
+  >({})
+  const [cellDataSource, setCellDataSource] = useState({ data: tableData, refresh: landedRefresh })
+  if (cellDataSource.data !== tableData || cellDataSource.refresh !== landedRefresh) {
+    setCellDataSource({ data: tableData, refresh: landedRefresh })
+    // Props may render before success identifies the GET that produced them.
+    // Keep settled edits until that event; prop-only hosts remain authoritative.
+    const sequence =
+      cellDataSource.refresh !== landedRefresh
+        ? (landedRefresh ?? 0)
+        : refreshRequests.current.size > 0
+          ? 0
+          : ++refreshSequence.current
+    const incoming = new Map<string, unknown>()
+    for (const row of rows) {
+      for (const [name, cellValue] of Object.entries(row.cells)) {
+        const data =
+          cellValue && typeof cellValue === 'object' ? (cellValue as Record<string, unknown>) : {}
+        incoming.set(`${row.key}:${name}`, data.value ?? cellValue)
+      }
+    }
+    setOptimisticCells((current) =>
+      Object.fromEntries(
+        Object.entries(current)
+          .filter(
+            ([key, edit]) =>
+              edit.pending ||
+              (sequence <= (edit.settledSequence ?? 0) && !Object.is(incoming.get(key), edit.value))
+          )
+          .map(([key, edit]) => [
+            key,
+            {
+              ...edit,
+              previous:
+                edit.previous &&
+                sequence <= (edit.previous.settledSequence ?? 0) &&
+                !Object.is(incoming.get(key), edit.previous.value)
+                  ? edit.previous
+                  : undefined,
+            },
+          ])
+      )
+    )
   }
   const [filterDraft, setFilterDraft] = useState<Record<string, unknown>>({})
   useEffect(() => {
@@ -427,15 +506,23 @@ export function DataTable({
     }
   }, [descriptor.searchable, descriptor.searchDebounce, search, querySearch, searchTable])
 
-  const columns: ColumnDef<TableRow>[] = descriptor.columns.map((column) => ({
-    id: column.name,
-    accessorFn: (row) => row.cells[column.name],
-    header: column.label,
-    enableSorting: column.sortable,
-    enableHiding: Boolean(column.toggleable),
-  }))
+  const columnDescriptors = useMemo(
+    () => new Map(descriptor.columns.map((column) => [column.name, column])),
+    [descriptor.columns]
+  )
+  const columns = useMemo<ColumnDef<TableRow>[]>(
+    () =>
+      descriptor.columns.map((column) => ({
+        id: column.name,
+        accessorFn: (row) => row.cells[column.name],
+        header: column.label,
+        enableSorting: column.sortable,
+        enableHiding: Boolean(column.toggleable),
+      })),
+    [descriptor.columns]
+  )
   function renderCell(cell: Cell<TableRow, unknown>) {
-    const column = descriptor.columns.find((item) => item.name === cell.column.id)!
+    const column = columnDescriptors.get(cell.column.id)!
     const value = cell.getValue()
     if (!column.editable) return <DataTableCell value={value} column={column} />
     const data = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
@@ -444,10 +531,41 @@ export function DataTable({
       <DataTableEditableCell
         column={column}
         rowKey={cell.row.original.key}
-        value={optimisticCells[key] ?? data.value ?? value}
-        display={typeof data.display === 'string' ? data.display : undefined}
+        value={key in optimisticCells ? optimisticCells[key].value : (data.value ?? value)}
+        serverValue={data.value ?? value}
+        display={
+          key in optimisticCells
+            ? undefined
+            : typeof data.display === 'string'
+              ? data.display
+              : undefined
+        }
         disabled={data.disabled === true}
-        onChange={(next) => setOptimisticCells((current) => ({ ...current, [key]: next }))}
+        onChange={(next) => {
+          const token = ++editVersion.current
+          setOptimisticCells((current) => ({
+            ...current,
+            [key]: { value: next, token, pending: true, previous: current[key] },
+          }))
+          return token
+        }}
+        onSettled={(token, success) => {
+          setOptimisticCells((current) => {
+            if (current[key]?.token !== token) return current
+            const next = { ...current }
+            if (success)
+              next[key] = {
+                ...current[key],
+                pending: false,
+                settledSequence: refreshSequence.current,
+                previous: undefined,
+              }
+            else if (current[key].previous)
+              next[key] = { ...current[key].previous, token, pending: false }
+            else delete next[key]
+            return next
+          })
+        }}
         onEditingChange={(active) => {
           editing.current = active
         }}
@@ -570,7 +688,7 @@ export function DataTable({
   }
   function renderGridCard(row: Row<TableRow>) {
     const firstCell = row.getVisibleCells()[0]
-    const firstColumn = descriptor.columns.find((column) => column.name === firstCell?.column.id)
+    const firstColumn = firstCell ? columnDescriptors.get(firstCell.column.id) : undefined
     return (
       <article
         key={row.original.key}
@@ -618,6 +736,7 @@ export function DataTable({
         <div className="flex items-center justify-between gap-3">
           {descriptor.selectable && (
             <CheckboxControl
+              className="size-6"
               aria-label={`Select row ${row.original.key}`}
               disabled={!row.original.selectable}
               checked={selected.includes(row.original.key)}
@@ -647,7 +766,7 @@ export function DataTable({
           .map((cell) => (
             <div key={cell.id} className="flex justify-between gap-3 text-sm">
               <span className="text-muted-foreground">
-                {descriptor.columns.find((column) => column.name === cell.column.id)?.label}
+                {columnDescriptors.get(cell.column.id)?.label}
               </span>
               <span>{renderCell(cell)}</span>
             </div>
@@ -709,6 +828,7 @@ export function DataTable({
         {descriptor.selectable && (
           <td className="px-4 py-(--row-py)">
             <CheckboxControl
+              className="size-6 -my-1 align-middle"
               aria-label={`Select row ${item.key}`}
               disabled={!item.selectable}
               checked={selected.includes(item.key)}
@@ -717,7 +837,7 @@ export function DataTable({
           </td>
         )}
         {row.getVisibleCells().map((cell, index) => {
-          const column = descriptor.columns.find((candidate) => candidate.name === cell.column.id)
+          const column = columnDescriptors.get(cell.column.id)
           return (
             <td
               key={cell.id}
@@ -1133,8 +1253,7 @@ export function DataTable({
                                   checked={column.getIsVisible()}
                                   onCheckedChange={(checked) => column.toggleVisibility(checked)}
                                 />
-                                {descriptor.columns.find((item) => item.name === column.id)
-                                  ?.label ?? column.id}
+                                {columnDescriptors.get(column.id)?.label ?? column.id}
                               </label>
                             ))}
                         </div>
@@ -1182,6 +1301,7 @@ export function DataTable({
                   {descriptor.selectable && (
                     <th className="w-10 px-3 py-2">
                       <CheckboxControl
+                        className="size-6 -my-1 align-middle"
                         aria-label="Select all rows"
                         checked={allSelected}
                         indeterminate={selected.length > 0 && !allSelected}
@@ -1194,7 +1314,7 @@ export function DataTable({
                     </th>
                   )}
                   {table.getHeaderGroups()[0]?.headers.map((header) => {
-                    const column = descriptor.columns.find((item) => item.name === header.column.id)
+                    const column = columnDescriptors.get(header.column.id)
                     return (
                       <th
                         key={header.id}
@@ -1242,9 +1362,7 @@ export function DataTable({
                       {descriptor.reorderable && <th className="px-2" />}
                       {descriptor.selectable && <th className="px-3" />}
                       {table.getHeaderGroups()[0]?.headers.map((header) => {
-                        const column = descriptor.columns.find(
-                          (item) => item.name === header.column.id
-                        )
+                        const column = columnDescriptors.get(header.column.id)
                         if (!column?.individuallySearchable) return <th key={header.id} />
                         const queryKey = `columns[${column.name}][search]`
                         const searchValue =

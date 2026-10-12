@@ -8,9 +8,11 @@ type Props = {
   column: ColumnDescriptor
   rowKey: string | number
   value: unknown
+  serverValue: unknown
   display?: string
   disabled?: boolean
-  onChange: (value: unknown) => void
+  onChange: (value: unknown) => number
+  onSettled: (token: number, success: boolean) => void
   onEditingChange: (editing: boolean) => void
 }
 
@@ -18,15 +20,21 @@ export function DataTableEditableCell({
   column,
   rowKey,
   value,
+  serverValue,
   display,
   disabled = false,
   onChange,
+  onSettled,
   onEditingChange,
 }: Props) {
   const editableUrl = column.editable?.url.replace(':id', encodeURIComponent(String(rowKey)))
   const { toast } = useRuntime()
   const [pending, setPending] = useState(false)
   const pendingRef = useRef(false)
+  const serverValueRef = useRef(serverValue)
+  useEffect(() => {
+    serverValueRef.current = serverValue
+  }, [serverValue])
   const [draft, setDraft] = useState(value)
   const [editing, setEditing] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -51,17 +59,18 @@ export function DataTableEditableCell({
     pendingRef.current = true
     onEditingChange(true)
     setPending(true)
-    onChange(next)
+    const token = onChange(next)
     try {
       const response = await jsonFetch(editableUrl!, {
         method: 'PATCH',
         body: JSON.stringify({ value: next }),
       })
       if (!response.ok) throw new Error(t('Unable to save this value'))
+      onSettled(token, true)
       toast({ type: 'success', title: t('Saved') })
     } catch {
-      onChange(value)
-      setDraft(value)
+      onSettled(token, false)
+      setDraft(serverValueRef.current)
       toast({ type: 'error', title: t('Unable to save this value') })
     } finally {
       pendingRef.current = false
@@ -74,6 +83,7 @@ export function DataTableEditableCell({
   if (column.type === 'toggle') {
     return (
       <SwitchControl
+        className="-my-0.5 h-6 border-0 bg-transparent px-0.5 before:absolute before:inset-x-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:rounded-full before:bg-input-strong before:transition-colors before:duration-150 data-checked:bg-transparent data-checked:before:bg-primary [&>span]:relative"
         aria-label={`${column.label}, ${t('row')} ${rowKey}`}
         checked={value === true}
         disabled={disabled || pending}
@@ -84,6 +94,7 @@ export function DataTableEditableCell({
   if (column.type === 'checkbox') {
     return (
       <CheckboxControl
+        className="-my-1 size-6"
         aria-label={`${column.label}, ${t('row')} ${rowKey}`}
         checked={value === true}
         disabled={disabled || pending}
