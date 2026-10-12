@@ -92,6 +92,7 @@ export type {
   IconEntryBuilder,
   ImageEntryBuilder,
   RepeatableEntryBuilder,
+  BadgeEntryBuilder,
 } from './src/definition/schema.js'
 export { table } from './src/builder/table/table.js'
 export type {

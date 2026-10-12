@@ -240,6 +240,7 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
     'money',
     'limit',
     'markdown',
+    'options',
   ],
   iconEntry: ['label', 'boolean', 'icons', 'colors'],
   imageEntry: ['label', 'circular'],
@@ -247,7 +248,7 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
   keyValueEntry: ['label'],
   repeatableEntry: ['label', 'schema'],
   codeEntry: ['label', 'language'],
-  badgeEntry: ['label', 'colors'],
+  badgeEntry: ['label', 'colors', 'options'],
 }
 const validatorMethods: Record<string, true> = Object.fromEntries(
   [

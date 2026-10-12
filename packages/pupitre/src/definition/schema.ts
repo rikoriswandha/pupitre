@@ -587,6 +587,7 @@ export type TextEntryDefinition = EntryCommon & {
   money?: string
   limit?: number
   markdown?: boolean
+  options?: SelectOptions
 }
 export type IconEntryDefinition = EntryCommon & {
   kind: 'iconEntry'
@@ -605,6 +606,7 @@ export type CodeEntryDefinition = EntryCommon & { kind: 'codeEntry'; language?: 
 export type BadgeEntryDefinition = EntryCommon & {
   kind: 'badgeEntry'
   colors?: Record<string, string>
+  options?: SelectOptions
 }
 export type EntryDefinition =
   | TextEntryDefinition
@@ -907,6 +909,8 @@ export interface TextEntryBuilder extends ComponentBuilder<
   money(currency: string): this
   limit(value: number): this
   markdown(value?: boolean): this
+  /** Display labels for stored option values, e.g. `{ draft: 'Draft' }`. */
+  options(value: SelectOptions): this
 }
 export interface IconEntryBuilder extends ComponentBuilder<
   Extract<EntryDefinition, { kind: 'iconEntry' }>
@@ -925,6 +929,14 @@ export interface ImageEntryBuilder extends ComponentBuilder<
 export interface SimpleEntryBuilder<D extends EntryDefinition> extends ComponentBuilder<D> {
   label(value: string | null): this
 }
+export interface BadgeEntryBuilder extends SimpleEntryBuilder<
+  Extract<EntryDefinition, { kind: 'badgeEntry' }>
+> {
+  /** Badge colors keyed by the raw stored value. */
+  colors(value: Record<string, string>): this
+  /** Display labels for stored option values; `colors` stay keyed by the raw value. */
+  options(value: SelectOptions): this
+}
 export interface RepeatableEntryBuilder extends SimpleEntryBuilder<
   Extract<EntryDefinition, { kind: 'repeatableEntry' }>
 > {
@@ -938,7 +950,9 @@ export type EntryBuilder<D extends EntryDefinition> = D extends { kind: 'textEnt
       ? ImageEntryBuilder
       : D extends { kind: 'repeatableEntry' }
         ? RepeatableEntryBuilder
-        : SimpleEntryBuilder<D>
+        : D extends { kind: 'badgeEntry' }
+          ? BadgeEntryBuilder
+          : SimpleEntryBuilder<D>
 export type SchemaNodeBuilder =
   | FieldBuilderBase<FieldDefinitionUnion>
   | TextBuilder
@@ -1015,9 +1029,7 @@ export type FieldConstructors<M> = {
   ): SimpleEntryBuilder<Extract<EntryDefinition, { kind: 'keyValueEntry' }>>
   repeatableEntry(name: FieldName<M>): RepeatableEntryBuilder
   codeEntry(name: FieldName<M>): SimpleEntryBuilder<Extract<EntryDefinition, { kind: 'codeEntry' }>>
-  badgeEntry(
-    name: FieldName<M>
-  ): SimpleEntryBuilder<Extract<EntryDefinition, { kind: 'badgeEntry' }>>
+  badgeEntry(name: FieldName<M>): BadgeEntryBuilder
 }
 export type FormSchema<M = never> = Omit<
   SchemaNamespace,

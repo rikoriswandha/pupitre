@@ -184,3 +184,30 @@ export function truncate(value: unknown, limit: number) {
   const text = String(value)
   return text.length > limit ? `${text.slice(0, limit).trimEnd()}…` : text
 }
+
+/**
+ * Maps a stored option value (an enum such as `draft`) to its display label.
+ * Accepts the same shapes as select options: `{ draft: 'Draft' }`,
+ * `{ draft: { label: 'Draft' } }`, `[{ value: 'draft', label: 'Draft' }]` or
+ * `['draft']`. Arrays of values map element-wise; unknown values pass through.
+ */
+export function formatOption(
+  value: unknown,
+  options: Record<string, unknown> | readonly unknown[]
+): unknown {
+  if (Array.isArray(value)) return value.map((item) => formatOption(item, options))
+  if (value === null || value === undefined) return value
+  const key = String(value)
+  const option = Array.isArray(options)
+    ? options.find((candidate) =>
+        candidate && typeof candidate === 'object' && 'value' in candidate
+          ? String(candidate.value) === key
+          : String(candidate) === key
+      )
+    : Object.hasOwn(options, key)
+      ? (options as Record<string, unknown>)[key]
+      : undefined
+  if (option === undefined || option === null) return value
+  if (typeof option === 'object') return 'label' in option ? String(option.label) : value
+  return String(option)
+}

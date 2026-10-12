@@ -25,8 +25,8 @@ The callback argument to `.table((t) => ...)` configures the table. The exported
 
 | Factory | Use |
 | --- | --- |
-| `text(name)` | Search/sort, limit/wrap/description, badge, money/numeric, date/dateTime/since, copy, URL/timezone |
-| `badge(name)` | Labels/colors, search/sort |
+| `text(name)` | Search/sort, limit/wrap/description, badge, money/numeric, date/dateTime/since, copy, URL/timezone, option labels |
+| `badge(name)` | Option labels/colors, search/sort |
 | `icon(name)` | Boolean or mapped icons/colors |
 | `image(name)` | Circular/stacked images |
 | `color(name)` | Color preview |
@@ -37,6 +37,8 @@ The callback argument to `.table((t) => ...)` configures the table. The exported
 | `fragment(component)` | Host component without a named column |
 
 Shared methods vary by column: label, width, alignment and `.toggleable({ hiddenByDefault })` are defined where supported. `t.count('comments')` creates a relation-count column. Dot notation such as `author.name` supports relation display/search. Inline edit uses server PATCH validation and update authorization; client optimistic changes roll back on failure. Do not assume hiding a column secures its underlying value.
+
+`text` and `badge` columns show stored enum values as-is unless you pass `.options({ draft: 'Draft', published: 'Published' })`. They accept the same option shapes as select fields. Badge `colors` stay keyed by the stored value. When a table is grouped by a column that has options, the group headings use those labels too. Search, sort and filters still operate on stored values.
 
 ## Filters and tabs
 

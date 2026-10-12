@@ -1,6 +1,11 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ModelQueryBuilderContract, LucidModel } from '@adonisjs/lucid/types/model'
-import type { SchemaNodeBuilder, SchemaNodeDefinition, ValidationRules } from './schema.js'
+import type {
+  SchemaNodeBuilder,
+  SchemaNodeDefinition,
+  SelectOptions,
+  ValidationRules,
+} from './schema.js'
 import type { ActionBuilder, ActionDefinition } from './action.js'
 export type QueryCallback = (
   query: ModelQueryBuilderContract<LucidModel>,
@@ -45,6 +50,7 @@ export type TextColumnDefinition = TableColumnBase & {
   since?: boolean
   copyable?: boolean
   timezone?: string
+  options?: SelectOptions
   url?: (args: {
     record: unknown
     ctx?: HttpContext
@@ -53,6 +59,7 @@ export type TextColumnDefinition = TableColumnBase & {
 export type BadgeColumnDefinition = TableColumnBase & {
   kind: 'badge'
   colors?: Record<string, string>
+  options?: SelectOptions
 }
 export type IconColumnDefinition = TableColumnBase & {
   kind: 'icon'
@@ -202,6 +209,8 @@ export interface TextColumnBuilder extends TableColumnBuilder<TextColumnDefiniti
   since(value?: boolean): this
   timezone(value: string): this
   url(value: NonNullable<TextColumnDefinition['url']>): this
+  /** Display labels for stored option values, e.g. `{ draft: 'Draft' }`. */
+  options(value: SelectOptions): this
   label(value: string): this
   alignment(value: NonNullable<TableColumnBase['alignment']>): this
   width(value: string): this
@@ -215,6 +224,8 @@ export interface BadgeColumnBuilder extends TableColumnBuilder<BadgeColumnDefini
   width(value: string): this
   toggleable(value?: NonNullable<TableColumnBase['toggleable']>): this
   colors(value: Record<string, string>): this
+  /** Display labels for stored option values; `colors` stay keyed by the raw value. */
+  options(value: SelectOptions): this
 }
 export interface IconColumnBuilder extends TableColumnBuilder<IconColumnDefinition> {
   label(value: string): this

@@ -35,6 +35,7 @@
 - Initialize browser CSP jitless configuration before every catalog schema module and probe the built catalog in a fresh process during `verify:exports`; retain repeated-success login and version-derived scaffolder regressions.
 - Widgets: stats widgets span the full dashboard row by default (Filament `StatsOverviewWidget` parity); an explicit `.span()` before or after `.stats()` still wins.
 - Passkeys: deleting your own passkey from the profile no longer fails with "`limit` has no effect on a `delete` statement". The ownership lookup and the delete now use separate query builders.
+- Option labels: `table.text()`/`table.badge()` columns and `textEntry`/`badgeEntry` entries accept `.options(...)` (same shapes as select options) and display the label of the stored enum value instead of the raw value (`Published`, not `published`). Array values map item by item, badge colors stay keyed by the raw value, and table group headings use the options of the same-named column. `resource` scaffolding emits the options for enum columns. `BadgeEntryBuilder` is exported and types `colors()`.
 
 ## Unreleased (0.3.0-beta, milestone M3)
 

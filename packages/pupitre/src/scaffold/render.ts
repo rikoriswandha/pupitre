@@ -15,9 +15,12 @@ function title(value: string): string {
     .replace(/^./, (char) => char.toUpperCase())
 }
 
+function enumOptions(values: readonly string[]): string {
+  return JSON.stringify(Object.fromEntries(values.map((value) => [value, title(value)])))
+}
+
 function fieldKind(field: ResourceField): string {
-  if (field.enum)
-    return `schema.select('${field.name}').options(${JSON.stringify(Object.fromEntries(field.enum.map((value) => [value, title(value)])))})`
+  if (field.enum) return `schema.select('${field.name}').options(${enumOptions(field.enum)})`
   if (/email/i.test(field.name)) return `schema.email('${field.name}')`
   if (field.type === 'boolean') return `schema.toggle('${field.name}')`
   if (field.type === 'number') return `schema.number('${field.name}')`
@@ -29,7 +32,8 @@ function fieldKind(field: ResourceField): string {
 
 function tableKind(field: ResourceField): string {
   const searchable = field.type === 'string' && !field.enum ? '.searchable()' : ''
-  if (field.enum) return `table.badge('${field.name}').label('${title(field.name)}').sortable()`
+  if (field.enum)
+    return `table.badge('${field.name}').label('${title(field.name)}').options(${enumOptions(field.enum)}).sortable()`
   if (field.type === 'boolean')
     return `table.icon('${field.name}').boolean().label('${title(field.name)}')`
   const date = field.type === 'dateTime' ? '.dateTime()' : field.type === 'date' ? '.date()' : ''
@@ -39,7 +43,8 @@ function tableKind(field: ResourceField): string {
 }
 
 function infolistKind(field: ResourceField): string {
-  if (field.enum) return `schema.badgeEntry('${field.name}').label('${title(field.name)}')`
+  if (field.enum)
+    return `schema.badgeEntry('${field.name}').label('${title(field.name)}').options(${enumOptions(field.enum)})`
   if (field.type === 'boolean')
     return `schema.iconEntry('${field.name}').label('${title(field.name)}').boolean()`
   const date = field.type === 'dateTime' ? '.dateTime()' : field.type === 'date' ? '.date()' : ''

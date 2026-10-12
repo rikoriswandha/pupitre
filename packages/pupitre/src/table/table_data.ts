@@ -8,6 +8,7 @@ import {
   formatMoney,
   formatNumber,
   formatSince,
+  formatOption,
   resolveTimezone,
   truncate,
 } from '../format/index.js'
@@ -41,11 +42,8 @@ function stringValue(value: unknown): string {
 function editableDisplay(column: TableColumnDefinition, value: unknown): string {
   if ((column.kind === 'toggle' || column.kind === 'checkbox') && typeof value === 'boolean')
     return value ? 'On' : 'Off'
-  if (column.kind === 'select') {
-    const option = column.options?.[stringValue(value)]
-    if (option && typeof option === 'object' && 'label' in option) return stringValue(option.label)
-    if (option !== undefined) return stringValue(option)
-  }
+  if (column.kind === 'select' && column.options)
+    return stringValue(formatOption(value, column.options))
   return stringValue(value)
 }
 
@@ -62,7 +60,11 @@ async function formatCell(
         ? undefined
         : valueAt(serialized, column.name)
   if (column.kind === 'badge') {
-    return { value, color: column.colors?.[stringValue(value)] }
+    return {
+      value,
+      ...(column.options ? { label: formatOption(value, column.options) } : {}),
+      color: column.colors?.[stringValue(value)],
+    }
   }
   if (column.kind === 'icon') {
     return {
@@ -92,20 +94,24 @@ async function formatCell(
         ? resolveTimezone(column.timezone, options.timezone)
         : options.timezone,
   }
-  if (column.money)
-    return formatMoney(value as string | number | null, context, { currency: column.money })
-  if (column.numeric) return formatNumber(value as string | number | null, context)
-  if (column.dateTime) return formatDateTime(value as string | Date | null, context)
-  if (column.date) return formatDate(value as string | Date | null, context)
-  if (column.since) return formatSince(value as string | Date | null, context)
+  // Option labels replace number/date formatting but still get limit/description/url.
+  const display = column.options ? formatOption(value, column.options) : value
+  if (!column.options) {
+    if (column.money)
+      return formatMoney(value as string | number | null, context, { currency: column.money })
+    if (column.numeric) return formatNumber(value as string | number | null, context)
+    if (column.dateTime) return formatDateTime(value as string | Date | null, context)
+    if (column.date) return formatDate(value as string | Date | null, context)
+    if (column.since) return formatSince(value as string | Date | null, context)
+  }
   if (column.description || column.url || column.limit !== undefined) {
     return {
-      value: column.limit !== undefined ? truncate(value, column.limit) : value,
+      value: column.limit !== undefined ? truncate(display, column.limit) : display,
       ...(column.description ? { description: await column.description({ record }) } : {}),
       ...(column.url ? { url: await column.url({ record, ctx: options.ctx }) } : {}),
     }
   }
-  return value
+  return display
 }
 function safeClassName(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
@@ -254,14 +260,26 @@ export async function buildTableData(
   const summary = hasSummaries
     ? (options.summary ?? aggregateSummary(table, summaryRows, options))
     : undefined
+  // Group headers reuse the option labels of the same-named column (e.g. `status`).
+  const groupColumn = activeGroup
+    ? table.columns.find(
+        (column) =>
+          column.kind !== 'fragment' &&
+          column.name === activeGroup.key &&
+          'options' in column &&
+          column.options !== undefined
+      )
+    : undefined
+  const groupOptions = groupColumn && 'options' in groupColumn ? groupColumn.options : undefined
   const groups = activeGroup
     ? (() => {
         const grouped = new Map<string, { label: string; rows: TableRow[] }>()
         serializedRows.forEach(({ serialized }, index) => {
           const raw = valueAt(serialized, activeGroup.key)
           const key = raw === null || raw === undefined ? '' : String(raw)
+          const display = key && groupOptions ? String(formatOption(raw, groupOptions)) : key
           const item = grouped.get(key) ?? {
-            label: activeGroup.label ? `${activeGroup.label}: ${key || '—'}` : key || '—',
+            label: activeGroup.label ? `${activeGroup.label}: ${display || '—'}` : display || '—',
             rows: [],
           }
           item.rows.push(tableRows[index]!)

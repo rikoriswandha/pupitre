@@ -238,4 +238,51 @@ test.group('table data formatting', (group) => {
     assert.deepEqual(data.rows[0]?.cells.cover, ['https://cdn.test/one.png', 'external.png'])
     assert.equal(data.rows[0]?.url, `/custom/${record.id}`)
   })
+  test('shows option labels for enum values in cells and group headings', async ({ assert }) => {
+    const draft = await Post.create({ title: 'Draft', slug: 'draft', status: 'draft' })
+    const other = await Post.create({ title: 'Legacy', slug: 'legacy', status: 'archived' })
+    const data = await buildTableData(
+      {
+        ...table,
+        columns: [
+          {
+            kind: 'badge',
+            name: 'status',
+            colors: { draft: 'gray' },
+            options: { draft: 'Draft', published: 'Published' },
+          },
+          {
+            kind: 'text',
+            name: 'slug',
+            limit: 3,
+            options: [{ value: 'draft', label: 'Working copy' }],
+          },
+        ],
+        groups: [{ key: 'status', label: 'Status' }],
+      },
+      [draft, other],
+      undefined,
+      {
+        locale: 'en',
+        timezone: 'UTC',
+        normalized: { groupBy: 'status' },
+        rowActions: async () => [],
+        rowUrl: () => '/default',
+      }
+    )
+    assert.deepEqual(tableData.parse(data), data)
+    // Colors stay keyed by the stored value; unknown values pass through unchanged.
+    assert.deepEqual(data.rows[0]?.cells.status, { value: 'draft', label: 'Draft', color: 'gray' })
+    assert.deepEqual(data.rows[1]?.cells.status, {
+      value: 'archived',
+      label: 'archived',
+      color: undefined,
+    })
+    assert.deepEqual(data.rows[0]?.cells.slug, { value: 'Wor…' })
+    assert.deepEqual(data.rows[1]?.cells.slug, { value: 'leg…' })
+    assert.deepEqual(
+      data.groups?.map((row) => row.label),
+      ['Status: Draft', 'Status: archived']
+    )
+  })
 })

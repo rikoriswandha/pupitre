@@ -23,6 +23,7 @@ import {
   formatDate,
   formatDateTime,
   formatSince,
+  formatOption,
   formatMoney,
   formatNumber,
   truncate,
@@ -975,7 +976,7 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
   }
   for (const [key, prop] of Object.entries(entry))
     if (
-      !['kind', 'name', 'label', 'value', 'url', 'schema'].includes(key) &&
+      !['kind', 'name', 'label', 'value', 'url', 'schema', 'options'].includes(key) &&
       prop !== undefined &&
       typeof prop !== 'function'
     )
@@ -1009,6 +1010,10 @@ async function formatEntryValue(
   path: string
 ): Promise<unknown> {
   if (value === null || value === undefined) return value
+  if (entry.options && typeof entry.options === 'object') {
+    const label = formatOption(value, entry.options as Record<string, unknown> | readonly unknown[])
+    return entry.limit ? truncate(label, Number(entry.limit)) : label
+  }
   const context = { locale: options.locale, timezone: String(entry.timezone ?? options.timezone) }
   if (entry.dateTime) return formatDateTime(value as string, context, String(entry.dateTime))
   if (entry.date) return formatDate(value as string, context, String(entry.date))

@@ -545,6 +545,31 @@ test.group('schema compiler', () => {
     })
     assert.equal(compiled.spec.elements['f.publishedAt']?.props.value, '2024-10-27 02:30 GMT+1')
   })
+  test('shows option labels for enum entry values while colors use the raw value', async ({
+    assert,
+  }) => {
+    const compiled = await compileInfolist(
+      [
+        schema
+          .badgeEntry('status')
+          .options({ draft: { label: 'Draft' }, published: 'Published' })
+          .colors({ published: 'success' }),
+        schema.textEntry('markets').options([{ value: 'id', label: 'Indonesia' }, 'sg']),
+        schema.textEntry('legacy').options({ draft: 'Draft' }),
+      ].map(node),
+      {
+        locale: 'en',
+        timezone: 'UTC',
+        record: { status: 'published', markets: ['id', 'sg', 'jp'], legacy: 'archived' },
+      }
+    )
+    const elements = compiled.spec.elements
+    assert.equal(elements['f.status']?.props.value, 'Published')
+    assert.equal(elements['f.status']?.props.color, 'success')
+    assert.notProperty(elements['f.status']?.props ?? {}, 'options')
+    assert.deepEqual(elements['f.markets']?.props.value, ['Indonesia', 'sg', 'jp'])
+    assert.equal(elements['f.legacy']?.props.value, 'archived')
+  })
   test('snapshots every compiler-emitted catalog component and complete view entries', async ({
     assert,
   }) => {

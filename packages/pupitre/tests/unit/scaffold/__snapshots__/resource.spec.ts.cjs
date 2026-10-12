@@ -22,7 +22,7 @@ export default defineResource(Fixture)
       table.text('rank').label('Rank').numeric().sortable(),
       table.text('happenedAt').label('Happened At').sortable().dateTime(),
       table.text('birthday').label('Birthday').sortable().date(),
-      table.badge('state').label('State').sortable(),
+      table.badge('state').label('State').options({\\"draft\\":\\"Draft\\",\\"published\\":\\"Published\\"}).sortable(),
       table.text('metadata').label('Metadata'),
       table.text('author.name').label('Author').sortable(),
   ]))
@@ -32,7 +32,7 @@ export default defineResource(Fixture)
       schema.textEntry('rank').label('Rank'),
       schema.textEntry('happenedAt').label('Happened At').dateTime(),
       schema.textEntry('birthday').label('Birthday').date(),
-      schema.badgeEntry('state').label('State'),
+      schema.badgeEntry('state').label('State').options({\\"draft\\":\\"Draft\\",\\"published\\":\\"Published\\"}),
       schema.textEntry('metadata').label('Metadata'),
       schema.textEntry('authorId').label('Author Id'),
   ])
@@ -73,8 +73,8 @@ export default defineResource(Fixture)
       table.text('rank').label('Rank').numeric().sortable(),
       table.text('happenedAt').label('Happened At').sortable().dateTime(),
       table.text('birthday').label('Birthday').sortable().date(),
-      table.badge('state').label('State').sortable(),
-      table.badge('visibility').label('Visibility').sortable(),
+      table.badge('state').label('State').options({\\"draft\\":\\"Draft\\",\\"published\\":\\"Published\\"}).sortable(),
+      table.badge('visibility').label('Visibility').options({\\"private\\":\\"Private\\",\\"public\\":\\"Public\\"}).sortable(),
       table.text('metadata').label('Metadata'),
       table.text('author.name').label('Author').sortable(),
   ]))
@@ -84,8 +84,8 @@ export default defineResource(Fixture)
       schema.textEntry('rank').label('Rank'),
       schema.textEntry('happenedAt').label('Happened At').dateTime(),
       schema.textEntry('birthday').label('Birthday').date(),
-      schema.badgeEntry('state').label('State'),
-      schema.badgeEntry('visibility').label('Visibility'),
+      schema.badgeEntry('state').label('State').options({\\"draft\\":\\"Draft\\",\\"published\\":\\"Published\\"}),
+      schema.badgeEntry('visibility').label('Visibility').options({\\"private\\":\\"Private\\",\\"public\\":\\"Public\\"}),
       schema.textEntry('metadata').label('Metadata'),
       schema.textEntry('authorId').label('Author Id'),
   ])
