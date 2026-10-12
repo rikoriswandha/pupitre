@@ -13,8 +13,14 @@ import { WidgetsStory } from './stories/widgets.story.js'
 
 async function assertAccessible(page: Page) {
   // Check stable interactive states, not a transient foreground/background
-  // midpoint while a CSS color transition is still running.
+  // midpoint while a CSS color transition is still running. Base UI popups
+  // start their fade-in a frame after mounting, so let it begin first.
   await page.evaluate(async () => {
+    for (let frame = 0; frame < 2; frame++) {
+      const { promise, resolve } = Promise.withResolvers<number>()
+      requestAnimationFrame(resolve)
+      await promise
+    }
     await Promise.all(
       document
         .getAnimations()
