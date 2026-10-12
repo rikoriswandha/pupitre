@@ -35,6 +35,22 @@ Names must be unique kebab-case within a panel. `definePlugin` validates names, 
 
 Hooks are optional; `register` and `extendResource` are synchronous. Contributions accept arrays or records for resources/pages/widgets; navigation accepts definitions or builders. See the [exact plugin types](/reference/api-plugin/).
 
+## Catalog contributions
+
+A plugin can declare `catalog: [ratingCatalog]`, where each item is a Zod-only `CatalogExtension` created with `defineCatalogExtension` from `@rikology/pupitre/catalog`. The panel exposes extension names and component names as metadata. It does not send server validation callbacks or install React components automatically.
+
+```ts
+import { definePlugin } from '@rikology/pupitre'
+import { ratingCatalog } from '../../../admin/rating_catalog.js'
+
+export const ratingPlugin = definePlugin({
+  name: 'star-rating',
+  catalog: [ratingCatalog],
+})
+```
+
+The browser must also call `defineRegistry({ ...components, StarRating, StarRatingColumn, StarRatingEntry }, { extensions: [ratingCatalog] })`. Keep the shared catalog free of server and React imports, and export server builders separately using `defineField`, `defineColumn` and `defineEntry`. Component names cannot collide with built-ins or another registered extension. See [Custom fields, columns and entries](/guides/custom-components/) for typed methods, Vine validation, accessibility and the working Comments example.
+
 ## Navigation merge rules
 
 Equal group labels merge host and plugin items. In explicit mode, plugin entries append to the host tree. In derived mode, plugin entries follow derived groups, and resources/pages claimed by plugin navigation are not derived a second time. Declaration order matters when several plugins change the same resource field. Avoid duplicate slugs and use clear group labels rather than relying on accidental sorting.

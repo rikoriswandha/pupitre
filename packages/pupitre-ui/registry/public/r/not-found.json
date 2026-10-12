@@ -3,7 +3,9 @@
   "name": "not-found",
   "type": "registry:component",
   "title": "NotFound",
-  "dependencies": [],
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0"
+  ],
   "registryDependencies": [
     "https://pupitre.dev/r/primitives.json"
   ],
@@ -12,7 +14,7 @@
       "path": "../src/components/NotFound.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/NotFound.tsx",
-      "content": "import { buttonClasses } from '../primitives/index.js'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className=\"max-w-md\">\n        <p\n          aria-hidden=\"true\"\n          className=\"mb-5 text-8xl font-semibold tracking-tight tabular-nums text-subtle-foreground\"\n        >\n          404\n        </p>\n        <h1 className=\"text-2xl font-semibold tracking-tight\">{title}</h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a href=\"/\" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>\n          Return home\n        </a>\n      </div>\n    </main>\n  )\n}\n"
+      "content": "import { t } from '@rikology/pupitre-react'\nimport { buttonClasses } from '../primitives/index.js'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className=\"max-w-md\">\n        <p\n          aria-hidden=\"true\"\n          className=\"mb-5 text-8xl font-semibold tracking-tight tabular-nums text-subtle-foreground\"\n        >\n          404\n        </p>\n        <h1 className=\"text-2xl font-semibold tracking-tight\">{title}</h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a href=\"/\" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>\n          {t('Return home')}\n        </a>\n      </div>\n    </main>\n  )\n}\n"
     }
   ]
 }

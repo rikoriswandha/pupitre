@@ -6,6 +6,7 @@ import appTheme from '../themes/app.js'
 export default definePanel('app')
   .path('/app')
   .guard('web')
+  .locales(['en', 'id'])
   .middleware([middleware.auth({ guards: ['web'] })])
   .resources([
     userResource

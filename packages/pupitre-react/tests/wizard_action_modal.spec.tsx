@@ -28,6 +28,7 @@ function installDom() {
 }
 const registry = defineRegistry({
   Shell: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Form: ({ children }: { children: ReactNode }) => <>{children}</>,
   Toaster: () => null,
   Modal: ({ children, footer }: { children: ReactNode; footer?: ReactNode }) => (
     <section>

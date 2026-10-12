@@ -1,0 +1,23 @@
+{{{
+  exports({ to: app.makePath('database/migrations/1791800000023_add_pupitre_locale_to_users.ts') })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+/** Optional user language preference; nullable keeps the panel default effective. */
+export default class extends BaseSchema {
+  protected tableName = 'users'
+
+  async up() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    if (await this.schema.hasColumn(this.tableName, 'locale')) return
+    this.schema.alterTable(this.tableName, (table) => {
+      table.string('locale', 32).nullable()
+    })
+  }
+
+  async down() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    if (!(await this.schema.hasColumn(this.tableName, 'locale'))) return
+    this.schema.alterTable(this.tableName, (table) => table.dropColumn('locale'))
+  }
+}

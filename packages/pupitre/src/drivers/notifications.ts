@@ -2,6 +2,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { NotificationsAdapter, PupitreNotificationItem } from '../adapters/notifications.js'
 import { E_PUPITRE_MISSING_PEER } from '../errors.js'
+import { captureTranslation, restoreTranslation } from '../i18n.js'
+import type { StoredTranslation } from '../i18n.js'
 
 type NotificationRow = {
   id: string
@@ -28,6 +30,10 @@ function timestamp(value: Date | string | null): string | null {
 function item(row: NotificationRow): PupitreNotificationItem {
   const data =
     typeof row.data === 'string' ? (JSON.parse(row.data) as Record<string, unknown>) : row.data
+  const metadata = data._pupitreTranslations
+  const translations =
+    metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : undefined
+  const actionTranslations = translations ? Reflect.get(translations, 'actions') : undefined
   const type =
     data.type === 'success' ||
     data.type === 'error' ||
@@ -40,16 +46,31 @@ function item(row: NotificationRow): PupitreNotificationItem {
   return {
     id: row.id,
     type,
-    title: String(data.title ?? row.type),
-    ...(typeof data.body === 'string' ? { body: data.body } : {}),
+    title: restoreTranslation(
+      String(data.title ?? row.type),
+      translations ? Reflect.get(translations, 'title') : undefined
+    ),
+    ...(typeof data.body === 'string'
+      ? {
+          body: restoreTranslation(
+            data.body,
+            translations ? Reflect.get(translations, 'body') : undefined
+          ),
+        }
+      : {}),
     ...(Array.isArray(data.actions)
       ? {
-          actions: data.actions.flatMap((entry) => {
+          actions: data.actions.flatMap((entry, index) => {
             if (!entry || typeof entry !== 'object' || !('label' in entry)) return []
             const value = entry as Record<string, unknown>
             return [
               {
-                label: String(value.label),
+                label: restoreTranslation(
+                  String(value.label),
+                  actionTranslations && typeof actionTranslations === 'object'
+                    ? Reflect.get(actionTranslations, String(index))
+                    : undefined
+                ),
                 ...(typeof value.url === 'string' ? { url: value.url } : {}),
                 ...(value.method === 'get' || value.method === 'post'
                   ? { method: value.method }
@@ -105,12 +126,36 @@ export function notificationsAdapter(): NotificationsAdapter {
   return {
     async toInbox(user, message, _ctx?: HttpContext) {
       const peer = await loadPeer()
+      const translations: {
+        title?: StoredTranslation
+        body?: StoredTranslation
+        actions?: Record<number, StoredTranslation>
+      } = {}
+      const title = captureTranslation(message.title)
+      if (title.translation) translations.title = title.translation
+      const body = message.body === undefined ? undefined : captureTranslation(message.body)
+      if (body?.translation) translations.body = body.translation
+      const actions = message.actions?.map((action, index) => {
+        const label = captureTranslation(action.label)
+        if (label.translation) {
+          translations.actions ??= {}
+          translations.actions[index] = label.translation
+        }
+        return { ...action, label: label.text }
+      })
+      const stored = {
+        ...message,
+        title: title.text,
+        ...(body ? { body: body.text } : {}),
+        ...(actions ? { actions } : {}),
+        ...(Object.keys(translations).length ? { _pupitreTranslations: translations } : {}),
+      }
       class PupitreNotification extends peer.Notification {
         via() {
           return ['database']
         }
         toDatabase() {
-          return message
+          return stored
         }
       }
       const { default: notifications } =

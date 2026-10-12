@@ -73,6 +73,7 @@ function validSlug(value: string): boolean {
   return /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.test(value)
 }
 const RESERVED_PAGE_SLUGS: Record<string, true> = {
+  locale: true,
   dashboard: true,
   search: true,
   notifications: true,
@@ -88,6 +89,7 @@ const RESERVED_PAGE_SLUGS: Record<string, true> = {
   _pupitre: true,
 }
 const RESERVED_PAGE_PATHS: Record<string, true> = {
+  '/locale': true,
   '/': true,
   '/dashboard': true,
   '/search': true,
@@ -173,6 +175,8 @@ export default class PupitreManager {
         )
       if (!validSlug(declared.id)) throw new Error(`Invalid Pupitre panel id "${declared.id}"`)
       const definition = applyPlugins(declared)
+      if (definition.locales && !definition.locales.includes(definition.locale ?? 'en'))
+        throw new Error('Panel default locale must be included in locales')
       const resources = await this.resolveResources(definition)
       const pages = await this.resolvePages(definition)
       const duplicate = pages.find((page) =>
@@ -337,6 +341,10 @@ export default class PupitreManager {
       const definition = extendResource(panel, declared)
       if (!validSlug(definition.slug))
         throw new Error(`Invalid Pupitre resource slug "${definition.slug}"`)
+      if (definition.slug === 'locale')
+        throw new Error(
+          `Pupitre resource slug "${definition.slug}" is reserved for a built-in route in panel "${panel.id}"`
+        )
       const model = resolveModel(definition)
       if (result.some((item) => item.slug === definition.slug && item.parent)) continue
       const runtime: ResourceRuntime = {

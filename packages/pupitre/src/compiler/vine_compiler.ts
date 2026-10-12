@@ -1,5 +1,6 @@
 type SelectField = Extract<FieldDefinitionUnion, { kind: 'select' | 'multiSelect' }>
 import vine from '@vinejs/vine'
+import { extensionValueSchema } from '../builder/extensions.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { Database } from '@adonisjs/lucid/database'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
@@ -20,6 +21,8 @@ import { relatedScopedQuery } from '../tenancy/related.js'
 import { applyGroupedScope } from '../query/grouped_scope.js'
 import { authorizeModel, authorizeResource } from '../authz/bouncer.js'
 import { valuesAt } from '../definition/values_at.js'
+import { validationMessages } from '../i18n/validation.js'
+import { headline } from './schema_compiler.js'
 type ValidatorOptions = {
   record?: LucidRow | null
   /** Resource model: default table + attribute→column mapping for `unique` on create. */
@@ -308,6 +311,9 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
   const rules = field.rules ?? {}
   let schema: any
   switch (field.kind) {
+    case 'extensionField':
+      schema = extensionValueSchema(field)
+      break
     case 'text':
     case 'email':
     case 'password':
@@ -587,6 +593,7 @@ function vineObjectProperties(properties: ObjectProperties): Record<string, unkn
 }
 
 const fieldKinds: Record<string, true> = {
+  extensionField: true,
   text: true,
   email: true,
   password: true,
@@ -803,6 +810,20 @@ function buildValidator(
   pathPrefix: string
 ): FormValidator {
   const compiled = vine.compile(vine.object(schemaProperties(nodes, pathPrefix) as never))
+  const repeatPaths = fields
+    .filter(({ field }) => field.kind === 'repeater')
+    .map(({ path }) => path)
+    .reverse()
+  const labels = Object.fromEntries(
+    fields.map(({ path, field }) => {
+      let wildcardPath = path
+      for (const repeat of repeatPaths) {
+        if (wildcardPath.startsWith(`${repeat}.`))
+          wildcardPath = `${repeat}.*.${wildcardPath.slice(repeat.length + 1)}`
+      }
+      return [wildcardPath, typeof field.label === 'string' ? field.label : headline(field.name)]
+    })
+  )
   return {
     async validate(data, options) {
       const input =
@@ -812,6 +833,7 @@ function buildValidator(
       const filtered = filterHidden(input, fields, options)
       prepareDates(filtered, fields, options.timezone)
       const validated = await compiled.validate(filtered, {
+        messagesProvider: validationMessages(options.ctx, labels),
         meta: {
           record: options.record ?? null,
           model: options.model ?? null,

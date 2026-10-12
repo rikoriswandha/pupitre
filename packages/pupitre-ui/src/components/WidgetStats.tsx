@@ -1,5 +1,6 @@
 import { Icon } from '../icons.js'
 import type { WidgetData, WidgetDescriptor, WidgetStat } from '@rikology/pupitre/catalog'
+import { t } from '@rikology/pupitre-react'
 import { Panel, toneText, toTone } from '../primitives/index.js'
 
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
@@ -16,7 +17,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
     .join(' ')
   return (
     <svg
-      aria-label={`Trend: ${values.join(', ')}`}
+      aria-label={t('Trend: {values}', { values: values.join(', ') })}
       role="img"
       viewBox="0 0 100 34"
       className="h-12 w-full"
@@ -75,7 +76,7 @@ function StatCard({ stat }: { stat: WidgetStat }) {
 export function WidgetStats({ descriptor, data }: Props) {
   const stats = data?.kind === 'stats' ? data.stats : []
   return (
-    <section aria-label={descriptor.heading ?? 'Statistics'} className="space-y-3">
+    <section aria-label={descriptor.heading ?? t('Statistics')} className="space-y-3">
       {descriptor.heading && (
         <h2 className="text-[0.9375rem] font-semibold">{descriptor.heading}</h2>
       )}

@@ -16,6 +16,7 @@ const hostFiles = [
   'database/migrations/1791700000001_create_pupitre_password_resets_table.ts',
   'database/migrations/1791700000002_add_pupitre_columns_to_users.ts',
   'database/migrations/1791700000005_add_pupitre_social_columns_to_users.ts',
+  'database/migrations/1791800000023_add_pupitre_locale_to_users.ts',
 ]
 test.group('Pupitre configure', () => {
   test('creates host wiring and is idempotent with real codemods', async ({ assert }) => {

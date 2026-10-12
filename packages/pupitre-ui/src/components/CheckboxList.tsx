@@ -1,5 +1,5 @@
 import { useId, useState, type CSSProperties, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Field as BaseField } from '@base-ui/react/field'
@@ -90,8 +90,8 @@ export function CheckboxList({ props, bindings }: Runtime) {
               </InputSlot>
               <Input
                 bare
-                aria-label="Search options"
-                placeholder="Search options..."
+                aria-label={t('Search options')}
+                placeholder={t('Search options...')}
                 value={query}
                 onChange={(event) => setQuery(event.currentTarget.value)}
                 disabled={props.disabled}
@@ -122,7 +122,7 @@ export function CheckboxList({ props, bindings }: Runtime) {
                 )
               }
             >
-              {allSelected ? 'Deselect all' : 'Select all'}
+              {allSelected ? t('Deselect all') : t('Select all')}
             </Button>
           )}
           <div
@@ -179,7 +179,7 @@ export function CheckboxList({ props, bindings }: Runtime) {
             })}
           </div>
           {filteredOptions.length === 0 && (
-            <p className="text-[0.8125rem] text-muted-foreground">No matching options.</p>
+            <p className="text-[0.8125rem] text-muted-foreground">{t('No matching options.')}</p>
           )}
           {props.hint && (
             <p id={`${id}-hint`} className="text-sm text-muted-foreground">

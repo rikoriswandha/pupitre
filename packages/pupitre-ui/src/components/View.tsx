@@ -1,4 +1,5 @@
 import { createContext, createElement, useContext, type ComponentType, type ReactNode } from 'react'
+import { t } from '@rikology/pupitre-react'
 import { ProfileSecurity, type ProfileSecurityProps } from './ProfileSecurity.js'
 
 type ViewComponent = ComponentType<Record<string, unknown> & { children?: ReactNode }>
@@ -40,7 +41,7 @@ export function View({ props, children }: RuntimeProps) {
         className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground"
         data-view-component={name || undefined}
       >
-        View component unavailable
+        {t('View component unavailable')}
       </div>
     )
   const componentProps =

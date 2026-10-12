@@ -1,3 +1,11 @@
+import { storedJobError } from '../jobs/error.js'
+import {
+  getMessages,
+  resolveTranslations,
+  restoreTranslation,
+  t,
+  type StoredTranslation,
+} from '../i18n.js'
 import app from '@adonisjs/core/services/app'
 import type { Database } from '@adonisjs/lucid/database'
 import { DateTime } from 'luxon'
@@ -22,7 +30,7 @@ type ExportJobPayload = PupitreJobContextPayload & {
   progressUrl: string
   downloadUrl: string
   totalRows: number
-  columns: CsvColumn[]
+  columns: (CsvColumn & { translation?: StoredTranslation })[]
   queryOptions: ExportQuery
 }
 
@@ -34,7 +42,7 @@ async function notifyCompleted(config: PupitreConfig, payload: ExportJobPayload)
   if (!user) return
   await notifications.toInbox(
     user,
-    { type: 'success', title: 'Your export is ready', url: payload.downloadUrl },
+    { type: 'success', title: t('Your export is ready'), url: payload.downloadUrl },
     undefined
   )
   const manager = (await app.container.make('pupitre.manager')) as PupitreManager
@@ -60,17 +68,17 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         ...(resource.definition.actions?.bulk ?? []),
       ].find((item) => item.name === payload.action && item.builtin === 'export')
       const table = resource.definition.table
-      if (!action || !table) throw new Error('Queued export definition is unavailable')
+      if (!action || !table) throw new Error(t('Queued export definition is unavailable'))
       if (
         jobRow.resource !== resource.slug ||
         JSON.parse(jobRow.result ?? 'null')?.action !== action.name
       )
-        throw new Error('Queued export action changed')
+        throw new Error(t('Queued export action changed'))
       await authorizeNestedParent(ctx, resource)
       if (!(await authorizeResource(ctx, resource, 'viewAny')))
-        throw new Error('You are not authorized to export these records')
+        throw new Error(t('You are not authorized to export these records'))
       if (action.can && !(await authorizeResource(ctx, resource, action.can)))
-        throw new Error('You are not authorized to export these records')
+        throw new Error(t('You are not authorized to export these records'))
       await database
         .from('pupitre_exports')
         .where('id', payload.id)
@@ -78,6 +86,16 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
       const chunks: Uint8Array[] = []
       const config = (await app.container.make('pupitre.config')) as PupitreConfig
       const maxRows = config.exports?.maxAsyncRows ?? 100_000
+      const locale = payload.locale ?? ctx.pupitre.locale
+      const messages = getMessages(config, ctx.pupitre.panel, locale)
+      const columns = resolveTranslations(
+        payload.columns.map((column) => ({
+          ...column,
+          header: restoreTranslation(column.header, column.translation),
+        })),
+        locale,
+        messages
+      )
       let wroteHeader = false
       const result = await processExport(
         ctx,
@@ -87,9 +105,13 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         payload.columns,
         payload.queryOptions,
         async (rows, processed, total) => {
-          if (total > maxRows) throw new Error('The export exceeds the asynchronous row limit')
+          if (total > maxRows) throw new Error(t('The export exceeds the asynchronous row limit'))
           if (rows.length > 0) {
-            const stream = createCsvStream(rows, payload.columns, !wroteHeader)
+            const stream = createCsvStream(
+              resolveTranslations(rows, locale, messages),
+              columns,
+              !wroteHeader
+            )
             for await (const chunk of stream) chunks.push(Buffer.from(chunk))
             wroteHeader = true
           }
@@ -101,8 +123,7 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         }
       )
       if (!wroteHeader) {
-        for await (const chunk of createCsvStream([], payload.columns))
-          chunks.push(Buffer.from(chunk))
+        for await (const chunk of createCsvStream([], columns)) chunks.push(Buffer.from(chunk))
       }
       await createPupitreStorage().put(payload.fileKey, Buffer.concat(chunks), {
         contentType: 'text/csv; charset=utf-8',
@@ -121,7 +142,7 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         .where('id', payload.id)
         .update({
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Export failed',
+          ...storedJobError(error, t('Export failed'), jobRow.result),
           updated_at: DateTime.now().toSQL(),
         })
       throw error

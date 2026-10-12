@@ -1,5 +1,5 @@
 import type { ToasterProps, ToastMessage } from '@rikology/pupitre-react'
-import { useVisit } from '@rikology/pupitre-react'
+import { t, useVisit } from '@rikology/pupitre-react'
 import { useEffect, useState } from 'react'
 import { Icon } from '../icons.js'
 import { Button, cn } from '../primitives/index.js'
@@ -124,7 +124,7 @@ export function Toaster({ toasts, dismiss }: ToasterProps) {
                 </div>
                 <Button
                   type="button"
-                  aria-label={`Dismiss notification: ${toast.title}`}
+                  aria-label={t('Dismiss notification: {title}', { title: toast.title })}
                   variant="ghost"
                   square
                   size="xs"

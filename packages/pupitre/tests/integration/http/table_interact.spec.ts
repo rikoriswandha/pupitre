@@ -105,7 +105,7 @@ test.group('table inline editing and reorder HTTP endpoints', () => {
       const listedRecord = listingBody.props.data.rows.find(
         (row) => String(row.key) === String(record.id)
       )
-      assert.deepEqual(listedRecord?.cells.isFeatured, { value: true, display: 'On' })
+      assert.deepEqual(listedRecord?.cells.isFeatured, { value: true, display: 'Enabled' })
 
       const invalid = await request(
         fixture.baseUrl,

@@ -16,6 +16,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { ResourceRuntime } from '../manager.js'
 import { panelFeatures, themeVars } from './middleware/share_props.js'
 
+import { collectCatalogExtensions } from '../builder/extensions.js'
 import { t } from '../i18n.js'
 
 export type PupitrePageKind =
@@ -37,7 +38,7 @@ export function pageKey(
 /** Root breadcrumb pointing at the (request-bound) panel home. */
 export function panelBreadcrumb(ctx: HttpContext): Breadcrumb {
   return {
-    label: t(ctx.pupitre.panel.brand?.name ?? ctx.pupitre.panel.id),
+    label: ctx.pupitre.panel.brand?.name ?? ctx.pupitre.panel.id,
     url: ctx.pupitre.panel.path,
   }
 }
@@ -95,6 +96,7 @@ export function buildPanelPageProps(options: {
     ...(subNavigation ? { subNavigation } : {}),
     ...(deferred ? { deferred } : {}),
     catalogVersion,
+    catalogExtensions: collectCatalogExtensions({ spec, relations, widgets }),
     ...(component ? { component } : {}),
   }
   const props = { page, ...(data === undefined ? {} : { data }), ...extraProps }
@@ -153,8 +155,8 @@ export function buildPageProps(options: {
     breadcrumbs: [
       panelBreadcrumb(ctx),
       ...(options.parentBreadcrumb ? [options.parentBreadcrumb] : []),
-      { label: t(resource.pluralLabel), url: resource.urls.list },
-      ...(recordId === undefined ? [] : [{ label: t(recordLabel ?? String(recordId)) }]),
+      { label: resource.pluralLabel, url: resource.urls.list },
+      ...(recordId === undefined ? [] : [{ label: recordLabel ?? String(recordId) }]),
       ...(kind === 'create' ? [{ label: t('Create') }] : []),
       ...(kind === 'edit' ? [{ label: t('Edit') }] : []),
       ...(kind === 'view' ? [{ label: t('View') }] : []),

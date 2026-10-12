@@ -7,20 +7,26 @@ try {
   const { values, positionals } = parseArgs({
     allowPositionals: true,
     options: {
-      dir: { type: 'string' },
-      force: { type: 'boolean', default: false },
-      help: { type: 'boolean', short: 'h' },
+      'dir': { type: 'string' },
+      'force': { type: 'boolean', default: false },
+      'with-ui': { type: 'boolean', default: false },
+      'help': { type: 'boolean', short: 'h' },
     },
   })
   if (values.help) {
-    console.log('Usage: create-pupitre-plugin <name> [--dir <path>] [--force]')
+    console.log('Usage: create-pupitre-plugin <name> [--dir <path>] [--force] [--with-ui]')
   } else {
     if (positionals.length !== 1)
-      throw new Error('Usage: create-pupitre-plugin <name> [--dir <path>] [--force]')
+      throw new Error('Usage: create-pupitre-plugin <name> [--dir <path>] [--force] [--with-ui]')
     const name = positionals[0]!
-    const names = pluginNames(name)
+    const names = pluginNames(name, values['with-ui'])
     const directory = values.dir ?? `pupitre-${names.name}`
-    const written = await createPlugin({ name, directory, force: values.force })
+    const written = await createPlugin({
+      name,
+      directory,
+      force: values.force,
+      withUi: values['with-ui'],
+    })
     console.log(`Created ${names.packageName} in ${resolve(directory)}:`)
     for (const path of written) console.log(`  ${path}`)
     console.log(`Next: cd ${JSON.stringify(directory)} && npm install && npm test`)

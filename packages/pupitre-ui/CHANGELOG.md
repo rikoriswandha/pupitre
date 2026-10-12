@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (1.1.0)
+
+### Added
+- Localization: accessible, tenant-aware language switcher in the user menu and profile; built-in dialogs, forms, editors, uploads, widgets and accessibility text are translated.
+- Tables: QueryBuilder editor (typed values, negation, AND/OR groups, active summaries) in every filter layout, and keyboard-accessible multi-column sort controls with priority announcements.
+- Catalog extensions: DataTable and nested infolist entries render registered custom columns/entries with formatted values and row/record context.
+
+### Fixed
+- Dark theme primary (`oklch(0.545 0.1 163)`) raises primary-button text contrast above WCAG AA (4.53:1).
+
 ## Unreleased (1.0.0, milestone M4)
 
 ### Changed

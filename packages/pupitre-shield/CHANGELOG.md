@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Localize role and permission management labels and user-facing errors.
+
 ## 0.1.0 — Milestone M4
 
 - Add Lucid Role and Permission models, global role-management resource with resource-grouped permission checkboxes, and configurable host user relation/table integration.

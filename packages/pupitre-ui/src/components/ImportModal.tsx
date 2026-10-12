@@ -115,7 +115,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
     try {
       const payload = await uploadCsv(importUrl(action.url, '/preview'), file)
       const parsed = importPreviewResponse.safeParse(payload)
-      if (!parsed.success) throw new Error('The server returned an invalid CSV preview.')
+      if (!parsed.success) throw new Error(t('The server returned an invalid CSV preview.'))
       setPreview(parsed.data)
       setMapping(
         Object.fromEntries(
@@ -126,7 +126,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
         )
       )
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to read the CSV file.')
+      setError(cause instanceof Error ? cause.message : t('Unable to read the CSV file.'))
     } finally {
       setBusy(false)
     }
@@ -149,7 +149,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
         return
       }
       const job = importJobResponse.safeParse(payload)
-      if (!job.success) throw new Error('The server returned an invalid import response.')
+      if (!job.success) throw new Error(t('The server returned an invalid import response.'))
       setPolling(true)
       const completedProgress = await waitForExport(
         job.data,
@@ -168,12 +168,12 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
           ? { failedRowsUrl: completedProgress.failedRowsUrl }
           : {}),
       })
-      if (!result.success) throw new Error('The server returned an invalid import summary.')
+      if (!result.success) throw new Error(t('The server returned an invalid import summary.'))
       setSummary(result.data)
       onComplete(result.data)
     } catch (cause) {
       if (!controller.signal.aborted)
-        setError(cause instanceof Error ? cause.message : 'Unable to import CSV rows.')
+        setError(cause instanceof Error ? cause.message : t('Unable to import CSV rows.'))
     } finally {
       if (pollController.current === controller) pollController.current = null
       if (!controller.signal.aborted) {
@@ -282,8 +282,10 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
             {preview && (
               <>
                 <p className="text-[0.8125rem] leading-5 text-muted-foreground">
-                  {t('Previewing')} {preview.preview.length} {t('sample rows from')}{' '}
-                  {preview.headers.length} {t('columns')}.
+                  {t('Previewing {rows} sample rows from {columns} columns.', {
+                    rows: preview.preview.length,
+                    columns: preview.headers.length,
+                  })}
                 </p>
                 <div className="max-h-80 overflow-auto rounded-lg border border-border">
                   <div className="grid grid-cols-2 gap-4 bg-muted/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
@@ -301,7 +303,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
                         </label>
                         <SelectMenu
                           id={`pupitre-import-map-${header}`}
-                          aria-label={`${t('Map')} ${header}`}
+                          aria-label={t('Map {label}', { label: header })}
                           value={mapping[header] ?? ''}
                           disabled={busy}
                           onValueChange={(next) =>
@@ -329,8 +331,10 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <p className="text-[0.8125rem] text-muted-foreground">
-                    {t('Import progress')}: {progress?.processedRows ?? 0} /{' '}
-                    {progress?.totalRows ?? 0}
+                    {t('Import progress: {processed} / {total}', {
+                      processed: progress?.processedRows ?? 0,
+                      total: progress?.totalRows ?? 0,
+                    })}
                   </p>
                   <Badge color="info" icon="loader-circle">
                     {t('Importing…')}

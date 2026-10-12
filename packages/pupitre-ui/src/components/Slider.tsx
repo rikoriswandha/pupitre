@@ -62,7 +62,9 @@ export function Slider({ props, bindings }: Runtime) {
                 id={`${id}-${index}`}
                 aria-label={
                   props.range
-                    ? `${props.label ?? id} ${t(index === 0 ? 'minimum' : 'maximum')}`
+                    ? index === 0
+                      ? t('{label} minimum', { label: props.label ?? id })
+                      : t('{label} maximum', { label: props.label ?? id })
                     : (props.label ?? id)
                 }
                 aria-describedby={

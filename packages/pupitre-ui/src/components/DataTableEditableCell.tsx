@@ -84,7 +84,7 @@ export function DataTableEditableCell({
     return (
       <SwitchControl
         className="-my-0.5 h-6 border-0 bg-transparent px-0.5 before:absolute before:inset-x-0 before:top-1/2 before:h-5 before:-translate-y-1/2 before:rounded-full before:bg-input-strong before:transition-colors before:duration-150 data-checked:bg-transparent data-checked:before:bg-primary [&>span]:relative"
-        aria-label={`${column.label}, ${t('row')} ${rowKey}`}
+        aria-label={t('{column}, row {row}', { column: column.label, row: rowKey })}
         checked={value === true}
         disabled={disabled || pending}
         onCheckedChange={(checked) => void save(checked)}
@@ -95,7 +95,7 @@ export function DataTableEditableCell({
     return (
       <CheckboxControl
         className="-my-1 size-6"
-        aria-label={`${column.label}, ${t('row')} ${rowKey}`}
+        aria-label={t('{column}, row {row}', { column: column.label, row: rowKey })}
         checked={value === true}
         disabled={disabled || pending}
         onCheckedChange={(checked) => void save(checked)}
@@ -110,7 +110,7 @@ export function DataTableEditableCell({
       <SelectMenu
         size="sm"
         className="w-auto"
-        aria-label={`${column.label}, ${t('row')} ${rowKey}`}
+        aria-label={t('{column}, row {row}', { column: column.label, row: rowKey })}
         value={String(value ?? '')}
         disabled={disabled || pending}
         onValueChange={(next) => void save(next)}
@@ -121,7 +121,7 @@ export function DataTableEditableCell({
   const content: ReactNode = editing ? (
     <Input
       autoFocus
-      aria-label={`${column.label}, ${t('row')} ${rowKey}`}
+      aria-label={t('{column}, row {row}', { column: column.label, row: rowKey })}
       className="h-8 w-full px-2"
       value={String(draft ?? '')}
       disabled={disabled || pending}
@@ -157,7 +157,11 @@ export function DataTableEditableCell({
       type="button"
       disabled={disabled}
       className="min-h-8 rounded-md px-1 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
-      aria-label={`${t('Edit')} ${column.label}, ${String(value ?? '')}, ${t('row')} ${rowKey}`}
+      aria-label={t('Edit {column}, {value}, row {row}', {
+        column: column.label,
+        value: String(value ?? ''),
+        row: rowKey,
+      })}
       onClick={() => {
         canceling.current = false
         submittingWithEnter.current = false

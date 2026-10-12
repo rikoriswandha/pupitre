@@ -1,3 +1,4 @@
+import { isTranslationMarker } from '../i18n.js'
 import type {
   ActionDescriptor,
   ColumnDescriptor,
@@ -7,6 +8,8 @@ import type {
 } from '../../catalog/wire.js'
 import type { PageDefinition } from '../definition/page.js'
 import type { TableDefinition, TableColumnDefinition } from '../definition/table.js'
+import { queryOperators } from '../query/query_operators.js'
+import { validateExtensionProps } from '../builder/extensions.js'
 
 export type ListTabs = NonNullable<PageDefinition['tabs']>
 
@@ -24,6 +27,7 @@ type CompileOptions = {
 }
 
 function label(name: string) {
+  if (isTranslationMarker(name)) return name
   return name
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[._-]+/g, ' ')
@@ -31,6 +35,13 @@ function label(name: string) {
 }
 
 function columnProps(column: TableColumnDefinition): Record<string, unknown> {
+  if (column.kind === 'custom' && column.extension && column.extensionKind && column.extensionProps)
+    return validateExtensionProps({
+      ...column,
+      extension: column.extension,
+      extensionKind: column.extensionKind,
+      extensionProps: column.extensionProps,
+    })
   switch (column.kind) {
     case 'text':
       return {
@@ -120,6 +131,7 @@ export async function compileTable(
       name,
       label: column.kind === 'fragment' ? label(name) : (column.label ?? label(name)),
       type: descriptorType(column.kind),
+      ...(column.kind === 'custom' && column.extension ? { component: column.component } : {}),
       sortable: column.kind === 'fragment' ? false : (column.sortable ?? false),
       searchable: column.kind === 'fragment' ? false : (column.searchable ?? false),
       ...(column.kind !== 'fragment' && column.individuallySearchable
@@ -145,6 +157,21 @@ export async function compileTable(
       filter.kind === 'custom' && filter.form?.length
         ? { form: { spec: { $raw: await options.compileFilterForm(filter.form) } as never } }
         : {}
+    if (filter.kind === 'queryBuilder') {
+      filters.push({
+        type: 'queryBuilder',
+        name: filter.name,
+        label: filter.label ?? label(filter.name),
+        constraints: filter.constraints.map((constraint) => ({
+          name: constraint.name,
+          type: constraint.type,
+          label: constraint.label ?? label(constraint.name),
+          ...(constraint.options ? { options: filterOptions(constraint.options) } : {}),
+          operators: queryOperators[constraint.type],
+        })),
+      })
+      continue
+    }
     if (filter.kind === 'select') {
       filters.push({
         type: 'select',
@@ -184,6 +211,10 @@ export async function compileTable(
     columns,
     filters,
     filtersLayout: table.filtersLayout,
+    ...(table.multiSort ? { multiSort: table.multiSort } : {}),
+    ...(table.defaultSorts && table.defaultSorts.length > 1
+      ? { defaultSorts: table.defaultSorts }
+      : {}),
     ...(table.groups
       ? {
           groups: table.groups.map((group) => ({
@@ -194,11 +225,7 @@ export async function compileTable(
         }
       : {}),
     ...(tabs ? { tabs } : {}),
-    ...(table.defaultSort
-      ? { defaultSort: table.defaultSort }
-      : table.reorderable
-        ? { defaultSort: { column: table.reorderable, direction: 'asc' as const } }
-        : {}),
+    ...(table.defaultSort ? { defaultSort: table.defaultSort } : {}),
     perPageOptions,
     searchable: table.columns.some((column) => column.kind !== 'fragment' && column.searchable),
     searchDebounce: table.searchDebounce,

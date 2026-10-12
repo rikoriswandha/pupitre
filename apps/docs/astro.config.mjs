@@ -17,7 +17,10 @@ export default defineConfig({
         { label: 'Start here', items: ['getting-started', 'migrating-from-filament'] },
         { label: 'Build your panel', items: [{ autogenerate: { directory: 'guides' } }] },
         { label: 'Extend Pupitre', items: ['customizing-ui', 'plugins'] },
-        { label: 'Official plugins', items: ['plugins/shield', 'plugins/audit', 'plugins/transmit'] },
+        {
+          label: 'Official plugins',
+          items: ['plugins/shield', 'plugins/audit', 'plugins/settings', 'plugins/transmit'],
+        },
         { label: 'Reference', items: [{ autogenerate: { directory: 'reference' } }] },
         { label: 'Changelog', slug: 'changelog' },
       ],

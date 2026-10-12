@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import { schema } from '../../../src/builder/schema/schema.js'
 import { compileForm } from '../../../src/compiler/schema_compiler.js'
 import type { SchemaNodeDefinition } from '../../../src/definition/schema.js'
+import { resolveTranslations, t } from '../../../src/i18n.js'
 
 const compileOptions = {
   locale: 'en',
@@ -78,5 +79,26 @@ test.group('Builder and Wizard schema compiler', () => {
       (first.state.ui as { wizard: Record<string, { step: number }> }).wizard['l.0']?.step,
       1
     )
+  })
+
+  test('preserves lazy markers through tab and wizard label normalization', async ({ assert }) => {
+    const account = t('Account')
+    const form = [
+      node(schema.tabs([schema.tab(account).components([schema.text('email')])])),
+      node(schema.wizard([schema.step(account).components([schema.text('name')])])),
+    ]
+    const compiled = await compileForm(form, compileOptions)
+    const labels = Object.values(compiled.spec.elements)
+      .filter((element) => element.type === 'Tab' || element.type === 'Step')
+      .map((element) => element.props.label)
+    assert.deepEqual(labels, [account, account])
+    const translated = resolveTranslations(compiled, 'id', { Account: 'Akun' })
+    assert.deepEqual(
+      Object.values(translated.spec.elements)
+        .filter((element) => element.type === 'Tab' || element.type === 'Step')
+        .map((element) => element.props.label),
+      ['Akun', 'Akun']
+    )
+    assert.deepEqual(Object.keys(translated.spec.elements), Object.keys(compiled.spec.elements))
   })
 })

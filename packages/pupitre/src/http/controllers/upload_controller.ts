@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js'
 import { randomUUID } from 'node:crypto'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser'
@@ -61,17 +62,17 @@ export default class UploadController {
     const resourceSlug = ctx.request.input('resource')
     const fieldName = ctx.request.input('field')
     if (typeof resourceSlug !== 'string' || typeof fieldName !== 'string') {
-      return ctx.response.status(422).json({ message: 'A resource and field are required' })
+      return ctx.response.status(422).json({ message: t('A resource and field are required') })
     }
 
     const owner = findFormOwner(ctx, resourceSlug)
-    if (!owner) return ctx.response.status(404).json({ message: 'Form owner not found' })
+    if (!owner) return ctx.response.status(404).json({ message: t('Form owner not found') })
     const resource =
       owner.kind === 'resource'
         ? context.pupitre.panel.resources.find((candidate) => candidate.slug === resourceSlug)
         : undefined
     const field = findUploadField(owner.form, fieldName)
-    if (!field) return ctx.response.status(404).json({ message: 'Upload field not found' })
+    if (!field) return ctx.response.status(404).json({ message: t('Upload field not found') })
 
     let record: LucidRow | undefined
     let ability: UploadedSessionFile['ability'] = 'create'
@@ -82,21 +83,21 @@ export default class UploadController {
       typeof recordId !== 'string' &&
       typeof recordId !== 'number'
     ) {
-      return ctx.response.status(422).json({ message: 'The record identifier is invalid' })
+      return ctx.response.status(422).json({ message: t('The record identifier is invalid') })
     }
     if (owner.kind === 'resource') {
-      if (!resource) return ctx.response.status(404).json({ message: 'Resource not found' })
+      if (!resource) return ctx.response.status(404).json({ message: t('Resource not found') })
       if (recordId !== undefined && recordId !== null && recordId !== '') {
         if (!(await authorizeResource(ctx, resource, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
         record = (await findRecord(ctx, resource, recordId)) ?? undefined
-        if (!record) return ctx.response.status(404).json({ message: 'Record not found' })
+        if (!record) return ctx.response.status(404).json({ message: t('Record not found') })
       }
       ability = record ? 'update' : 'create'
       if (!(await authorizeResource(ctx, resource, ability, record)))
         throw new E_PUPITRE_FORBIDDEN()
     } else {
       if (recordId !== undefined && recordId !== null && recordId !== '')
-        return ctx.response.status(422).json({ message: 'Page uploads do not accept a record' })
+        return ctx.response.status(422).json({ message: t('Page uploads do not accept a record') })
       await owner.authorize('create')
     }
 
@@ -123,8 +124,9 @@ export default class UploadController {
     const currentUploads = Array.isArray(sessionUploads) ? sessionUploads : []
     if (currentUploads.length >= 50)
       return ctx.response.status(429).json({
-        message:
-          'Upload session limit reached. Save the form or remove an uploaded file before uploading more.',
+        message: t(
+          'Upload session limit reached. Save the form or remove an uploaded file before uploading more.'
+        ),
       })
     const visibility = field.kind === 'fileUpload' ? (field.visibility ?? 'public') : 'public'
     const storage = createPupitreStorage(
@@ -183,7 +185,7 @@ export default class UploadController {
     const context = ctx as UploadRequestContext
     const key = ctx.request.input('key')
     if (typeof key !== 'string' || key.length === 0)
-      return ctx.response.status(422).json({ message: 'A file key is required' })
+      return ctx.response.status(422).json({ message: t('A file key is required') })
     const uploaded = context.session.get('pupitre.uploads')
     const uploads = Array.isArray(uploaded) ? (uploaded as UploadedSessionFile[]) : []
     const own = uploads.find((upload) => upload.key === key)

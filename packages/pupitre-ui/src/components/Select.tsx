@@ -216,7 +216,7 @@ export function Select({ props, bindings }: Runtime) {
                             size="xs"
                             square
                             className="size-6 rounded-sm"
-                            aria-label={`${t('Remove')} ${option.label}`}
+                            aria-label={t('Remove {label}', { label: option.label })}
                             disabled={props.disabled || props.readOnly}
                             onClick={() =>
                               Array.isArray(value) &&
@@ -267,7 +267,7 @@ export function Select({ props, bindings }: Runtime) {
                       <div className="p-1">
                         <input
                           className={`${controlClasses} h-(--control-h) px-3`}
-                          aria-label="Search options"
+                          aria-label={t('Search options')}
                           data-options-search
                           placeholder={t('Search options')}
                           value={query}
@@ -424,7 +424,7 @@ export function Select({ props, bindings }: Runtime) {
                   variant="ghost"
                   size="xs"
                   square
-                  aria-label={`Clear ${props.label ?? 'selection'}`}
+                  aria-label={t('Clear {label}', { label: props.label ?? t('selection') })}
                   disabled={props.disabled || props.readOnly}
                   onClick={() => setValue('')}
                 >

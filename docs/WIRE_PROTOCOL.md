@@ -21,6 +21,8 @@ type PupitrePageProps = {
     notifications?: { unread: number; url: string; readUrl: string; interval: number } // tray endpoint URLs + shared-prop polling interval
     realtime?: { driver: string; userChannel: string }
     locale: string
+    messages?: Record<string, string | { one: string; other: string; zero?: string }>
+    locales?: string[]                 // bahasa yang diizinkan panel
     timezone: string
   }
   page: {
@@ -37,6 +39,7 @@ type PupitrePageProps = {
     subNavigation?: { key: string; label: string; url: string; active?: boolean }[] // record pages
     deferred?: string[]                          // nama prop yang masih deferred
     catalogVersion: string
+    catalogExtensions?: { name: string; components: string[] }[] // metadata catalog kontribusi plugin
     component?: string                           // kind 'custom': page Inertia host
   }
   data?: TableData                     // default top-level table prop; partial reload `only: ['data']`
@@ -54,6 +57,10 @@ type NavGroup = { label: string; items: NavItem[]; icon?: string; sort?: number;
 `panel.brand.logoDark` adalah logo opsional untuk mode gelap. `panel.userMenu` berisi item yang sudah difilter oleh `visible` dan diurutkan di server; method `post` dikirim melalui Inertia visit, sedangkan `external` dibuka di tab baru.
 
 `pupitre.*` dibagikan lewat `ctx.inertia.share` oleh middleware `share_props`; `page.*` dan prop data tabel disusun controller. `@adonisjs/inertia` 5 hanya menyaring partial reload pada nama prop **top-level** (`inertia_manager` memilih `Object.keys(props)`), karena itu tabel biasa memakai prop top-level `data` dan `only: ['data']` (ADR-0011). Tabel relation manager/widget dapat memilih prop top-level lain melalui `dataProp`; `useTable` memakai `only: [dataProp ?? 'data']`. Flash Pupitre dibaca dari session key `pupitre` ke `pupitre.flash`; kanal `flash` Inertia v3 tetap milik middleware host.
+
+`pupitre.locale` adalah bahasa efektif request (preferensi user → session → kecocokan Accept-Language → default panel → `en`, dibatasi daftar panel). `messages` memuat kamus efektif termasuk kontribusi plugin/host serta fallback; kamus sumber `en` tanpa override boleh tidak dikirim. String `t()` server berupa marker lazy dan diselesaikan sebelum respons; string biasa/data record tidak diterjemahkan. Client `t(key, params?)` menyelesaikan lookup dan interpolasi `{name}` secara sinkron. Nilai plural `{ one, other, zero? }` memakai `Intl.PluralRules(locale)` pada `params.count`, dengan `zero` eksplisit dan fallback kategori ke `other`.
+
+Switcher mengirim `POST ${panel.path}/locale` dengan body `{ locale }`, melalui session-auth/CSRF normal, lalu redirect kembali. Locale harus terdaftar di `.locales([...])`. Pada tenancy URL, `panel.path` sudah mencakup tenant. Shared props baru memperbarui kamus client tanpa mengganti nilai `/data`; request berbeda tidak boleh berbagi locale mutable global.
 
 ## 2. State model
 
@@ -79,6 +86,10 @@ Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeate
   Pada `Repeater.relationship`, setiap item state juga memuat `_relationKey` (PK child internal) untuk round-trip edit. Nilai ini bukan otorisasi: server menolak PK yang tidak ditemukan lewat query hasMany milik parent. `orderColumn` hanya konfigurasi server dan tidak masuk ke wire descriptor. Text mask mengirim/menyimpan string raw; pola mask hanya prop presentasi. `Slider.value` berupa angka atau tuple dua angka, dengan `min`, `max`, `step`, `marks`, dan `range` tervalidasi di catalog.
 - Tabs: elemen `Tabs` dengan `props.tabs` dan `props.active: { $bindState: '/ui/tabs/<id>' }`, anak-anaknya elemen `Tab` (urutan sama dengan `props.tabs`); semua panel tetap ter-mount, yang tidak aktif disembunyikan. Named slots tidak dipakai karena nama slot harus statis di catalog (SPIKE Q4).
 - `watch` dipasang pada elemen field yang `.live()` dan punya `afterStateUpdated`: `{ '/data/<path>': [{ action: 'setState', params: { statePath, value: <ekspresi terangkat> } }] }`. Closure yang tidak bisa diangkat ke `setState` + `$state`/`$computed` ditolak saat compile (`E_PUPITRE_UNLIFTABLE_CLOSURE`) sampai `live({ server: true })` + `evaluate` tersedia di M3 (WP31).
+- Field/entry ekstensi memakai nama komponen catalog host (misalnya `StarRating`/`StarRatingEntry`) dengan props khusus yang lolos Zod serta binding/error yang sama dengan komponen inti. `page.catalogExtensions` hanya membawa identitas ekstensi dan nama komponen; callback validasi/dehidrasi, schema Zod dan implementasi React tidak dikirim. Host menyediakan catalog yang sama pada `defineRegistry(..., { extensions })`; metadata ini bukan instruksi untuk memuat kode dari server.
+- `element.type` adalah string nonkosong (nama komponen inti atau ekstensi), bukan enum tertutup. Registry client menolak nama yang belum diregistrasi dengan developer error yang menyebut nama komponen dan konfigurasi `defineRegistry` yang hilang; identitas ekstensi dari `page.catalogExtensions` memperjelas error pada kolom descriptor-only.
+- `RepeatableEntry.props.entries?` membawa `{ name, label?, component?, props? }[]` ketika schema item berisi entry ekstensi. Nilai item tetap berupa record pada `value`; child entry menerima nilai yang sudah diformat server serta record itemnya, bukan record parent. Schema Zod dan callback tidak ikut masuk wire.
+- `catalogExtensions` berasal dari komponen ekstensi yang benar-benar dipancarkan spec/descriptor halaman, bukan seluruh catalog plugin panel. Daftar ini juga mencakup factory host tanpa plugin, field repeater, entry infolist/RepeatableEntry, sub-spec, dan kolom custom. Client memeriksa kebutuhan ini sebelum masuk error boundary per-elemen json-render; konfigurasi yang hilang tidak boleh membuat field/tabel menghilang diam-diam.
 
 
 Input editor `MarkdownEditor` memakai string Markdown di `value`, toolbar/upload URL/preview sebagai props; attachment memakai upload endpoint field yang sama dengan `RichEditor`. `CodeEditor` mengirim string sumber dan hanya menerima bahasa dalam enum catalog. `FileUploadDescriptor` menambahkan `imageEditor?: boolean` serta `imageEditorAspectRatios?: (string | null)[]`; pemotongan, rotasi, flip, dan konversi Blob terjadi sebelum multipart upload, sementara server tetap memeriksa bytes MIME dan `maxSize`. `TextEntry` dengan `markdown: true` menerima nilai teks biasa; server mengubah Markdown menjadi HTML lalu menerapkan allowlist `sanitizeHtml`, bukan menerima HTML klien.
@@ -132,6 +143,8 @@ type ActionResult = {
 }
 ```
 
+`ActionFormResponse` juga membawa `catalogExtensions?: { name: string; components: string[] }[]` dengan kebutuhan komponen spec modal tersebut. Compiler selalu mengisi daftar ini (termasuk daftar kosong); schema wire membolehkan respons lama tanpa metadata, dan client tetap memeriksa nama komponen pada spec/descriptor. `ActionModal` menjalankan pre-check sebelum merender form dengan store modal terpisah.
+
 Respons action setelah submit:
 
 - **`200 ActionResult`**: flash → toast; `redirect` → `router.visit` (URL sama → `router.reload()`); modal ditutup. Default `{ flash, redirect: <URL saat ini> }`. `refresh.table()` menghasilkan `reload: true` tanpa `patch`, karena executor action tidak memegang query tabel aktif sehingga patch yang aman tidak bisa dihitung.
@@ -157,6 +170,11 @@ Param tidak dikenal diabaikan. Sort pada kolom yang tidak `sortable()` → 400 d
 Pencarian per kolom menggunakan `columns[<name>][search]`; hanya kolom `.searchable({ individually: true })` yang diproses. `groupBy` memilih grup terdaftar. `.softDeletes()` menambahkan mode `filters[trashed]=without|with|only`; tanpa parameter query mengecualikan record terhapus.
 Ringkasan `.summarize()` dihitung sebagai agregat SQL pada query yang sudah menerapkan scope resource/tenant, filter, pencarian, tab, dan soft-delete. Saat `groupBy` aktif, ringkasan dihitung per grup dengan `GROUP BY` (relasi memakai subquery relasi Lucid); hanya halaman baris yang dimuat untuk dirender.
 
+QueryBuilder mengirim `filters[<name>]` sebagai string JSON `{ groups: [[{ constraint, operator, value?, negated? }]] }`: rule AND, kelompok OR, negasi per rule. Nama/operator/nilai divalidasi ketat terhadap definition server. Batas: 8 kelompok, 16 rule per kelompok, 64 total, scalar string 500 karakter, 50 pilihan, JSON 8.192 byte UTF-8 sebelum encoding URL. Reset menghapus parameter. OR tetap dalam scope query luar, termasuk tenant/tab/soft-delete; ekspor dan ringkasan memakai query yang sama. Lihat ADR-0025 untuk timezone kalender dan batas trust.
+Envelope konservatif juga membatasi query JSON setelah encoding URL ke 8.192 byte. Zona constraint mengalahkan zona efektif request, dengan fallback UTC; batas hari kalender dikonversi UTC, bukan diasumsikan selalu 24 jam.
+
+Tabel opt-in `.multiSort(max = 3)` menerima `sort=title,-price` dengan prioritas kiri ke kanan. `sort=` menghapus default secara eksplisit; parameter tidak ada memakai default. URL sort tunggal tetap kompatibel dan tabel tanpa opt-in tetap sort tunggal.
+
 ### 5.2 Descriptor (di spec, statis per resource)
 
 ```ts
@@ -171,6 +189,8 @@ type TableDescriptor = {
   tabs?: { key: string; label: string; badge?: number }[]
   groups?: { key: string; label: string }[]
   defaultSort?: { column: string; direction: 'asc' | 'desc' }
+  defaultSorts?: { column: string; direction: 'asc' | 'desc' }[] // urutan prioritas; defaultSort tetap primer
+  multiSort?: number                 // batas kolom sort bila opt-in
   perPageOptions: (number | 'all')[]
   searchable: boolean
   searchDebounce: number
@@ -190,6 +210,7 @@ type ColumnDescriptor = {
   name: string                       // 'author.name'
   label: string
   type: 'text' | 'badge' | 'icon' | 'image' | 'color' | 'toggle' | 'select' | 'textInput' | 'checkbox' | 'custom' | 'fragment'
+  component?: string                 // nama komponen registry untuk column ekstensi
   sortable: boolean
   searchable: boolean
   individuallySearchable?: boolean  // UI input di header; query nested columns[<name>][search]
@@ -202,6 +223,11 @@ type ColumnDescriptor = {
   summarize?: ('sum' | 'avg' | 'count' | 'min' | 'max' | 'range')[]
 }
 ```
+
+Filter QueryBuilder memakai descriptor `{ type: 'queryBuilder', name, label, constraints }`. Setiap constraint berisi `{ name, type: 'text'|'number'|'date'|'boolean'|'select'|'relationship', label, options?: [{ value, label }], operators: [{ value, label }] }`. Operator adalah allowlist server, bukan nama SQL. Mapping atribut, relasi, dan timezone tidak dikirim ke browser. `DataTable` membaca descriptor untuk editor kelompok/rule; nilai query tetap berasal dari URL/top-level data, bukan spec statis.
+
+Column ekstensi memakai `component` untuk memilih implementasi registry host (misalnya `StarRatingColumn`), dengan konfigurasi khusus pada `props` dan nilai cell dari row. Kolom inti tanpa `component` tetap memakai renderer berdasarkan `type`; ekstensi tidak mengubah protokol sorting/query atau endpoint tabel.
+
 Relation managers pada `page.relations` memakai descriptor berikut; tiap manager memiliki top-level prop data sendiri dan namespace query yang diparse server sebelum parameter tabel diproses.
 
 ```ts

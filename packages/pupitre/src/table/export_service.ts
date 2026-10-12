@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { ActionDefinition } from '../definition/action.js'
@@ -84,7 +85,7 @@ export async function countExportRows(
   } | null
   const total = Number(countRow?.total ?? countRow?.$attributes?.total ?? 0)
   if (requireAllSelected && input.ids && total !== input.ids.length)
-    throw new Error('One or more selected records were not found in the current scope')
+    throw new Error(t('One or more selected records were not found in the current scope'))
   return total
 }
 
@@ -105,7 +106,7 @@ export async function processExport(
   const { queryResult } = exportQuery(ctx, resource, table, input)
   const total = await countExportRows(ctx, resource, table, input, false)
   // A unique final sort keeps non-unique/default sorts deterministic across batches.
-  queryResult.query.orderBy(resource.model.primaryKey, 'asc')
+  if (!table.multiSort) queryResult.query.orderBy(resource.model.primaryKey, 'asc')
   const formatters = new Map(
     (action.exportColumns ?? []).map((column) => [column.name, column.formatStateUsing])
   )

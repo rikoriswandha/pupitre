@@ -50,7 +50,7 @@ test.group('table interaction compiler', () => {
       ]
     )
     assert.deepEqual(descriptor.reorderable, { url: '/admin/posts/reorder' })
-    assert.deepEqual(descriptor.defaultSort, { column: 'sortOrder', direction: 'asc' })
+    assert.isUndefined(descriptor.defaultSort)
     assert.equal(descriptor.poll, 30_000)
 
     assert.isTrue(descriptor.deferFilters)

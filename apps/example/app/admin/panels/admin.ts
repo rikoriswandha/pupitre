@@ -1,11 +1,14 @@
 import { definePanel, nav } from '@rikology/pupitre'
 import { shield } from '@rikology/pupitre-shield'
 import { audit } from '@rikology/pupitre-audit'
+import { settings } from '@rikology/pupitre-settings'
+import { generalSettings, tenantSettings } from '../settings.js'
 import { resources, pages, widgets } from '#generated/admin'
 import Post from '#models/post'
 import type User from '#models/user'
 import Tenant from '#models/tenant'
 import adminTheme from '../themes/admin.js'
+import { ratingPlugin } from '../extensions/rating.js'
 
 const adminPanel = definePanel('admin')
   .guard('web')
@@ -26,6 +29,7 @@ const adminPanel = definePanel('admin')
   })
   .brand({ name: 'Pupitre Editorial' })
   .timezone('Asia/Jakarta')
+  .locales(['en', 'id'])
   .notifications({ interval: 30_000 })
   .pages(pages)
   .widgets([widgets['posts-by-status'], widgets['posts-per-month'], widgets['latest-posts']])
@@ -58,10 +62,6 @@ const adminPanel = definePanel('admin')
       ]),
     nav.group('Administration').sort(20).items(['users']),
     nav
-      .group('System')
-      .sort(30)
-      .items([nav.item().page('settings')]),
-    nav
       .group('Showcase')
       .sort(25)
       // Explicit item sorts keep the tour order; equal sorts fall back to label order.
@@ -77,12 +77,17 @@ const adminPanel = definePanel('admin')
   .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])
   .theme(adminTheme)
   .plugins([
+    ratingPlugin,
     shield({
       userModel: () => import('#models/user'),
       resources: ['roles'],
       navigationGroup: 'Administration',
     }),
     audit({ resources: ['posts'], authorize: (ctx) => Boolean(ctx.auth.user) }),
+    settings({
+      groups: [generalSettings, tenantSettings],
+      authorize: (ctx) => Boolean(ctx.auth.user),
+    }),
   ])
 
 const socialProviders = [

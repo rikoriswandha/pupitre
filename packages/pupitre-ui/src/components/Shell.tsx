@@ -43,6 +43,8 @@ const contentWidths: Record<string, string> = {
 export function Shell({
   panel,
   user,
+  locale,
+  locales,
   nav,
   breadcrumbs,
   title,
@@ -101,7 +103,7 @@ export function Shell({
   const tools = (
     <div className="flex shrink-0 items-center gap-1">
       <NotificationTray notifications={notifications} />
-      <UserMenu panel={panel} user={user} />
+      <UserMenu panel={panel} user={user} locale={locale} locales={locales} />
     </div>
   )
 

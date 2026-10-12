@@ -98,6 +98,8 @@ test('tarballs reject temporary declarations while preserving generator template
     'build/bin/create.js',
     'template/package.json',
     'template/tests/plugin.spec.ts',
+    'template-ui/package.json',
+    'template-ui/tests/plugin.spec.ts',
   ].map((path) => ({ path }))
   assert.deepEqual(checkPackedFiles('@rikology/create-pupitre-plugin', template), [])
 })

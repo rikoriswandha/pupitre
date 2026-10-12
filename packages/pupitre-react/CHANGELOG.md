@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (1.1.0)
+
+### Added
+- Localization: client `t(key, params?)` resolves synchronously from the compact `pupitre.messages` shared prop and follows locale changes across Inertia visits.
+- Catalog extensions: `defineRegistry(components, { extensions })` merges extension schemas, requires a component per extension, and reports unregistered or unknown spec types with an actionable developer error.
+- Tables: `useTable` supports JSON QueryBuilder filter state and ordered multi-column sort, including explicit default clearing.
+
 ## Unreleased (1.0.0, milestone M4)
 
 ### Added

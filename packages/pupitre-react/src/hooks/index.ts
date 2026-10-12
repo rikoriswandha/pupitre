@@ -186,7 +186,7 @@ export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
           ? `${queryPrefix}[${key.replaceAll(']', '').replaceAll('[', '][')}]`
           : key
         url.searchParams.delete(queryKey)
-        if (value !== null && value !== undefined && value !== '')
+        if (value !== null && value !== undefined && (value !== '' || key === 'sort'))
           url.searchParams.set(queryKey, String(value))
       }
       const search = url.searchParams.toString()
@@ -209,13 +209,17 @@ export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
         const inner = queryPrefix ? unprefixTableKey(key, queryPrefix) : key
         if (inner && (inner === filterKey || inner.startsWith(`${filterKey}[`))) updates[inner] = ''
       }
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      if (
+        descriptor.filters.some((filter) => filter.name === name && filter.type === 'queryBuilder')
+      ) {
+        updates[filterKey] = typeof value === 'string' ? value : value ? JSON.stringify(value) : ''
+      } else if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
         for (const [key, fieldValue] of Object.entries(value))
           updates[`${filterKey}[${key}]`] = fieldValue
       } else updates[filterKey] = value
       setQuery(updates)
     },
-    [queryPrefix, setQuery]
+    [descriptor.filters, queryPrefix, setQuery]
   )
   const resetFilters = useCallback(() => {
     const updates: Record<string, unknown> = { page: '' }
@@ -225,6 +229,12 @@ export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
     }
     setQuery(updates)
   }, [queryPrefix, setQuery])
+  const sorts =
+    query.sort !== undefined
+      ? query.sort.split(',').filter(Boolean)
+      : (descriptor.defaultSorts ?? (descriptor.defaultSort ? [descriptor.defaultSort] : [])).map(
+          (item) => `${item.direction === 'desc' ? '-' : ''}${item.column}`
+        )
   return {
     data:
       fallbackData ??
@@ -233,7 +243,18 @@ export function useTable(descriptor: TableDescriptor, fallbackData?: unknown) {
         : data),
     query,
     setQuery,
-    sort: (column: string) => setQuery({ sort: query.sort === column ? `-${column}` : column }),
+    sorts,
+    sort: (column: string, additive = false) => {
+      const index = sorts.findIndex((item) => item.replace(/^-/, '') === column)
+      const next = index >= 0 && sorts[index] === column ? `-${column}` : column
+      if (additive && descriptor.multiSort) {
+        const updated = [...sorts]
+        if (index >= 0) updated[index] = next
+        else if (updated.length < descriptor.multiSort) updated.push(next)
+        setQuery({ sort: updated.join(','), page: 1 })
+      } else setQuery({ sort: next, page: 1 })
+    },
+    clearSort: () => setQuery({ sort: '', page: 1 }),
     search: useCallback((q: string) => setQuery({ q, page: 1 }), [setQuery]),
     setPage: (page: number) => setQuery({ page }),
     setPerPage: (perPage: number | 'all') => setQuery({ perPage, page: 1 }),

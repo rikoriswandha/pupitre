@@ -10,6 +10,7 @@ import type {
 } from '../definition/table.js'
 import { applySearchColumns } from './like.js'
 import { applyGroupedScope } from './grouped_scope.js'
+import { applyQueryBuilder, E_PUPITRE_INVALID_QUERY } from './query_builder.js'
 
 type ListTabs = Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
 type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs; prefix?: string }
@@ -31,7 +32,7 @@ function getColumn(table: TableDefinition, name: string) {
 }
 
 function filterAttribute(filter: TableFilterDefinition) {
-  return filter.kind === 'custom' || filter.kind === 'trashed'
+  return filter.kind === 'custom' || filter.kind === 'trashed' || filter.kind === 'queryBuilder'
     ? undefined
     : (filter.attribute ?? filter.name)
 }
@@ -116,34 +117,66 @@ export function parseTableParams(
   return parsed
 }
 
+function queryBytes(params: Record<string, unknown>): number {
+  const encoded = new URLSearchParams()
+  const append = (name: string, value: unknown): void => {
+    if (value && typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) append(`${name}[${key}]`, child)
+    } else if (value !== undefined && value !== null) encoded.append(name, String(value))
+  }
+  for (const [name, value] of Object.entries(params)) append(name, value)
+  return Buffer.byteLength(encoded.toString())
+}
+
 export function applyTableQuery(
   query: ModelQueryBuilderContract<LucidModel, LucidRow>,
   table: TableDefinition,
   params: Record<string, unknown>,
   options: QueryOptions = {}
 ): QueryResult {
+  const originalParams = params
   params = parseTableParams(params, options.prefix)
+  if (
+    table.filters.some((filter) => filter.kind === 'queryBuilder') &&
+    queryBytes(originalParams) > 8192
+  )
+    throw new E_PUPITRE_INVALID_QUERY(['URL limit'])
   const normalized: Record<string, unknown> = {}
   if (table.query)
     applyGroupedScope(query, (builder) => table.query!(builder, options.ctx as HttpContext))
-  const sort = typeof params.sort === 'string' && params.sort.length ? params.sort : undefined
+  if (Array.isArray(params.sort) && params.sort.every((part) => typeof part === 'string'))
+    params.sort = params.sort.join(',')
+  if (params.sort !== undefined && typeof params.sort !== 'string')
+    throw new E_PUPITRE_INVALID_SORT(['encoding'])
+  const defaultSorts = table.defaultSorts ?? (table.defaultSort ? [table.defaultSort] : [])
   const requestedSort =
-    sort ??
-    (table.defaultSort
-      ? `${table.defaultSort.direction === 'desc' ? '-' : ''}${table.defaultSort.column}`
-      : undefined)
-  if (requestedSort) {
-    const direction = requestedSort.startsWith('-') ? 'desc' : 'asc'
-    const name = requestedSort.replace(/^-/, '')
+    typeof params.sort === 'string'
+      ? params.sort
+      : defaultSorts
+          .map((sort) => `${sort.direction === 'desc' ? '-' : ''}${sort.column}`)
+          .join(',')
+  const sorts = requestedSort ? requestedSort.split(',') : []
+  if (
+    sorts.length > (table.multiSort ?? 1) ||
+    new Set(sorts.map((sort) => sort.replace(/^-/, ''))).size !== sorts.length
+  )
+    throw new E_PUPITRE_INVALID_SORT(['sort limit or duplicate'])
+  for (const sort of sorts) {
+    const direction = sort.startsWith('-') ? 'desc' : 'asc'
+    const name = sort.replace(/^-/, '')
     const column = getColumn(table, name)
-    if (!column || column.kind === 'fragment' || !column.sortable) {
+    if (!column || column.kind === 'fragment' || !column.sortable)
       throw new E_PUPITRE_INVALID_SORT([name])
-    }
     if (name.includes('.')) applyRelationSort(query, name, direction)
     else query.orderBy(name, direction)
-    normalized.sort = requestedSort
   }
-  if (!requestedSort && table.reorderable) query.orderBy(table.reorderable, 'asc')
+  if (sorts.length || params.sort === '') normalized.sort = requestedSort
+  if (!sorts.length && table.reorderable) query.orderBy(table.reorderable, 'asc')
+  if (table.multiSort && !sorts.some((sort) => sort.replace(/^-/, '') === query.model.primaryKey))
+    query.orderBy(
+      `${query.model.table}.${query.model.$keys.attributesToColumns.get(query.model.primaryKey) ?? query.model.primaryKey}`,
+      'asc'
+    )
 
   if (table.columns.some((column) => column.kind !== 'fragment' && column.searchable)) {
     applySearch(query, table, params.q)
@@ -197,6 +230,14 @@ export function applyTableQuery(
   for (const filter of table.filters) {
     if (!Object.hasOwn(filters, filter.name)) continue
     const value = filters[filter.name]
+    if (filter.kind === 'queryBuilder') {
+      const encoded = applyQueryBuilder(query, filter, value, timezone(options.ctx))
+      normalized.filters = {
+        ...(normalized.filters as Record<string, unknown> | undefined),
+        [filter.name]: encoded,
+      }
+      continue
+    }
     if (filter.kind === 'trashed') {
       if (value === 'only' || value === 'with' || value === 'without')
         normalized.filters = {

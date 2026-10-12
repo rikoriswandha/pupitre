@@ -117,7 +117,7 @@ export class CategorySchema extends BaseModel {
 }
 
 export class CommentSchema extends BaseModel {
-  static $columns = ['body', 'createdAt', 'id', 'postId', 'tenantId', 'title', 'updatedAt'] as const
+  static $columns = ['body', 'createdAt', 'id', 'postId', 'rating', 'ratingDetails', 'tenantId', 'title', 'updatedAt'] as const
   $columns = CommentSchema.$columns
   @column()
   declare body: string
@@ -127,6 +127,10 @@ export class CommentSchema extends BaseModel {
   declare id: number
   @column()
   declare postId: number | null
+  @column()
+  declare rating: number
+  @column()
+  declare ratingDetails: any
   @column()
   declare tenantId: number | null
   @column()
@@ -512,6 +516,25 @@ export class PupitreRoleSchema extends BaseModel {
   declare name: string
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+}
+
+export class PupitreSettingSchema extends BaseModel {
+  static $columns = ['createdAt', 'group', 'id', 'key', 'scopeKey', 'updatedAt', 'value'] as const
+  $columns = PupitreSettingSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare group: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare key: string
+  @column()
+  declare scopeKey: string
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare value: any
 }
 
 export class PupitreUploadSchema extends BaseModel {

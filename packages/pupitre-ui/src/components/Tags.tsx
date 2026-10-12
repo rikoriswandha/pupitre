@@ -1,5 +1,5 @@
 import { useId, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import {
@@ -96,7 +96,7 @@ export function Tags({ props, bindings }: Runtime) {
                       size="xs"
                       square
                       type="button"
-                      aria-label={`Move ${tag} earlier`}
+                      aria-label={t('Move {label} earlier', { label: tag })}
                       disabled={props.disabled || props.readOnly || index === 0}
                       onClick={() => moveTag(index, -1)}
                       className="size-6 rounded-sm"
@@ -108,7 +108,7 @@ export function Tags({ props, bindings }: Runtime) {
                       size="xs"
                       square
                       type="button"
-                      aria-label={`Move ${tag} later`}
+                      aria-label={t('Move {label} later', { label: tag })}
                       disabled={props.disabled || props.readOnly || index === tags.length - 1}
                       onClick={() => moveTag(index, 1)}
                       className="size-6 rounded-sm"
@@ -122,7 +122,7 @@ export function Tags({ props, bindings }: Runtime) {
                   size="xs"
                   square
                   type="button"
-                  aria-label={`Remove ${tag}`}
+                  aria-label={t('Remove {label}', { label: tag })}
                   disabled={props.disabled || props.readOnly}
                   onClick={() => changeValue(tags.filter((item) => item !== tag))}
                   className="size-6 rounded-sm"
@@ -162,7 +162,7 @@ export function Tags({ props, bindings }: Runtime) {
               disabled={
                 props.disabled || props.readOnly || tags.length >= (props.maxTags ?? Infinity)
               }
-              placeholder="Add a tag"
+              placeholder={t('Add a tag')}
               readOnly={props.readOnly}
               aria-required={props.required}
               aria-describedby={describedBy}
@@ -178,7 +178,7 @@ export function Tags({ props, bindings }: Runtime) {
             ).length > 0 && (
               <div
                 role="listbox"
-                aria-label="Tag suggestions"
+                aria-label={t('Tag suggestions')}
                 className={`${popupClasses} absolute inset-x-0 top-full z-20 mt-1 max-h-48 overflow-auto`}
                 onKeyDown={(event) => {
                   const options = Array.from(

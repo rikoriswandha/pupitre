@@ -1,3 +1,4 @@
+import { getMessages, requestMessages, t } from '../i18n.js'
 import { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import { HttpContextFactory } from '@adonisjs/core/factories/http'
@@ -31,6 +32,7 @@ export type PupitreJobContextPayload = {
   resource: string
   userId: string | number
   tenantId: string | number | null
+  locale?: string
   params?: Record<string, string | number>
   query?: Record<string, unknown>
   headers?: Record<string, string>
@@ -93,11 +95,11 @@ export async function createJobContext(
   if (panel.tenancy && tenantAdapter && payload.tenantId !== null) {
     const memberships = await tenantAdapter.listForUser(tenantContext)
     const membership = memberships.find((item) => String(item.id) === String(payload.tenantId))
-    if (!membership) throw new Error('The queued job tenant is no longer available to its owner')
+    if (!membership) throw new Error(t('The queued job tenant is no longer available to its owner'))
     ctx.params.tenant = membership.slug ?? String(membership.id)
     tenant = await tenantAdapter.resolve(tenantContext)
     if (!tenant || String(tenant.id) !== String(payload.tenantId))
-      throw new Error('The queued job tenant could not be resolved')
+      throw new Error(t('The queued job tenant could not be resolved'))
   }
   const boundPanel: PanelRuntime =
     tenant && panel.tenancy?.mode === 'url'
@@ -106,7 +108,7 @@ export async function createJobContext(
   const pupitre: PupitreContext = {
     panel: boundPanel,
     basePath: panel.path,
-    locale: panel.locale ?? 'en',
+    locale: payload.locale ?? panel.locale ?? 'en',
     timezone: userSummary(authUser, config)?.timezone ?? panel.timezone ?? config.timezone ?? 'UTC',
     user: userSummary(authUser, config),
     authUser,
@@ -114,6 +116,7 @@ export async function createJobContext(
     tenancyAdapter: tenantAdapter ?? undefined,
   }
   Object.assign(ctx, { pupitre })
+  requestMessages.set(ctx, getMessages(config, boundPanel, pupitre.locale))
   let BouncerClass: typeof Bouncer
   try {
     // Keep the optional Bouncer peer lazy so jobs without policies do not require it.

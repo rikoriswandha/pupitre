@@ -24,7 +24,8 @@ export type PanelBuilder = {
   brand(value: NonNullable<PanelDefinition['brand']>): PanelBuilder
   theme(value: PanelThemeDefinition): PanelBuilder
   timezone(value: string): PanelBuilder
-  locale(value: 'en'): PanelBuilder
+  locale(value: string): PanelBuilder
+  locales(value: readonly string[]): PanelBuilder
   breadcrumbs(value: boolean): PanelBuilder
   /** Serve the panel login/logout pages; `false` keeps the host's own auth. */
   login(enabled?: boolean): PanelBuilder
@@ -113,8 +114,15 @@ class Panel implements PanelBuilder {
   timezone(value: string): PanelBuilder {
     return this.set({ timezone: value })
   }
-  locale(value: 'en'): PanelBuilder {
+  locale(value: string): PanelBuilder {
+    new Intl.PluralRules(value)
     return this.set({ locale: value })
+  }
+  locales(value: readonly string[]): PanelBuilder {
+    if (!value.length || new Set(value).size !== value.length)
+      throw new Error('Panel locales must be non-empty and unique')
+    for (const locale of value) new Intl.PluralRules(locale)
+    return this.set({ locales: [...value] })
   }
   breadcrumbs(value: boolean): PanelBuilder {
     return this.set({ breadcrumbs: value })

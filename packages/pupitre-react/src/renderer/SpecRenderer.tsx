@@ -8,6 +8,7 @@ import { RuntimeContext, useRuntime } from '../runtime.js'
 import type { RuntimeContextValue } from '../runtime.js'
 import { getRegistryHandlers } from '../registry/defineRegistry.js'
 import { createPupitreStore } from './store.js'
+import { MissingComponent } from './missing_component.js'
 
 export type SpecRendererProps = {
   spec: JsonRenderSpec
@@ -59,7 +60,11 @@ export function SpecRenderer({ spec, state, onStateChange, embeddedSubmit }: Spe
         functions={runtime.functions as Record<string, ComputedFunction>}
         directives={runtime.registry.directives}
       >
-        <Renderer spec={spec as never} registry={runtime.registry.registry} />
+        <Renderer
+          spec={spec as never}
+          registry={runtime.registry.registry}
+          fallback={MissingComponent}
+        />
       </JSONUIProvider>
     </RuntimeContextProvider>
   )

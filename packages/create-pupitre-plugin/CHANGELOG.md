@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add opt-in `--with-ui` (`createPlugin({ withUi: true })`) scaffolding: shared catalog extension, typed server field factory, accessible React component, published `.`/`./catalog`/`./react` subpaths and generated tests; generated factory names avoid collisions.
+
 ## 0.1.0
 
 - Added CLI and reusable createPlugin API with kebab-case/scoped names, safe directory handling and force overwrites.

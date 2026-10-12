@@ -10,6 +10,7 @@ import {
 } from '../../../src/compiler/action_compiler.js'
 import { E_PUPITRE_FORBIDDEN } from '../../../src/errors.js'
 import { actionDescriptor, actionFormResponse } from '../../../catalog/wire.js'
+import { resolveTranslations, t } from '../../../src/i18n.js'
 
 const ctx = {} as HttpContext
 const routes = {
@@ -121,15 +122,18 @@ test.group('action compiler', () => {
     assert.equal(remove.method, 'delete')
     assert.equal(remove.kind, 'confirm')
     assert.equal(remove.confirm?.destructive, true)
-    assert.equal(remove.confirm?.heading, 'Delete Post?')
-    assert.equal(remove.confirm?.description, 'This action cannot be undone.')
-    assert.equal(remove.confirm?.submitLabel, 'Delete')
+    assert.equal(resolveTranslations(remove.confirm?.heading, 'en'), 'Delete Post?')
+    assert.equal(
+      resolveTranslations(remove.confirm?.description, 'en'),
+      'This action cannot be undone.'
+    )
+    assert.equal(resolveTranslations(remove.confirm?.submitLabel, 'en'), 'Delete')
     assert.equal(header.url, '/posts/actions/export')
     assert.equal(bulk.url, '/posts/actions/archive')
     assert.equal(bulk.kind, 'direct')
     assert.equal(bulkDelete.kind, 'confirm')
-    assert.equal(bulkDelete.confirm?.heading, 'Delete Posts?')
-    assert.equal(bulkDelete.confirm?.submitLabel, 'Delete')
+    assert.equal(resolveTranslations(bulkDelete.confirm?.heading, 'en'), 'Delete Posts?')
+    assert.equal(resolveTranslations(bulkDelete.confirm?.submitLabel, 'en'), 'Delete')
     assert.equal(row.url, '/posts/42/actions/publish')
   })
 
@@ -139,8 +143,30 @@ test.group('action compiler', () => {
       record: undefined,
       recordKey: undefined,
     })
-    assert.equal(bulkForceDelete.label, 'Force Delete')
-    assert.equal(bulkForceDelete.confirm?.submitLabel, 'Force Delete')
+    assert.equal(resolveTranslations(bulkForceDelete.label, 'en'), 'Force Delete')
+    assert.equal(resolveTranslations(bulkForceDelete.confirm?.submitLabel, 'en'), 'Force Delete')
+  })
+
+  test('resolves action confirmation interpolation while preserving unmarked record labels', async ({
+    assert,
+  }) => {
+    const messages = {
+      'Delete': 'Hapus',
+      'Delete {label}?': 'Hapus {label}?',
+      'Post': 'Artikel',
+    }
+    const marked = await compileActionDescriptor(actions.delete().definition, {
+      ...descriptor(),
+      resourceLabel: t('Post'),
+    })
+    const raw = await compileActionDescriptor(actions.delete().definition, {
+      ...descriptor(),
+      resourceLabel: 'Post',
+    })
+    assert.equal(resolveTranslations(marked, 'id', messages).confirm?.heading, 'Hapus Artikel?')
+    assert.equal(resolveTranslations(raw, 'id', messages).confirm?.heading, 'Hapus Post?')
+    assert.equal(resolveTranslations(marked, 'id', messages).confirm?.submitLabel, 'Hapus')
+    assert.deepEqual(resolveTranslations(marked, 'id', messages).url, marked.url)
   })
 
   test('combines visibility and authorization in enabled', async ({ assert }) => {

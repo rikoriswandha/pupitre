@@ -16,6 +16,8 @@ type SharedPupitre = PupitrePageProps['pupitre']
 export type ShellProps = {
   panel: SharedPupitre['panel']
   user: SharedPupitre['user']
+  locale?: string
+  locales?: string[]
   nav: NavGroup[]
   breadcrumbs: Breadcrumb[]
   title: string

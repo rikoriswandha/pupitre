@@ -13,10 +13,13 @@ const required = {
     'build/commands/commands.json',
     'build/stubs/database/migrations/shield.stub',
   ],
+  '@rikology/pupitre-settings': ['build/stubs/database/migrations/settings.stub'],
   '@rikology/create-pupitre-plugin': [
     'build/bin/create.js',
     'template/package.json',
     'template/tests/plugin.spec.ts',
+    'template-ui/package.json',
+    'template-ui/tests/plugin.spec.ts',
   ],
 }
 
@@ -25,7 +28,11 @@ export function checkPackedFiles(name, files) {
   const errors = []
   for (const path of paths) {
     // Template tests are a deliberate part of the generated plugin, not our tests.
-    if (name === '@rikology/create-pupitre-plugin' && path.startsWith('template/')) continue
+    if (
+      name === '@rikology/create-pupitre-plugin' &&
+      (path.startsWith('template/') || path.startsWith('template-ui/'))
+    )
+      continue
     if (/(^|\/)(tests?|tmp|coverage|node_modules)\//.test(path))
       errors.push(`${name}: unwanted packed file ${path}`)
     if (

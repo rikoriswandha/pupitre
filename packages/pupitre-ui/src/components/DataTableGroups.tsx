@@ -60,7 +60,7 @@ export function DataTableGroups({
                       {group.label}
                     </span>
                     <span className="text-muted-foreground">
-                      {group.rows.length} {t('rows')}
+                      {t('{count} rows', { count: group.rows.length })}
                     </span>
                   </button>
                 ) : (
@@ -93,7 +93,7 @@ export function DataTableGroups({
                       {group.label}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {group.rows.length} {t('rows')}
+                      {t('{count} rows', { count: group.rows.length })}
                     </span>
                   </button>
                 ) : (

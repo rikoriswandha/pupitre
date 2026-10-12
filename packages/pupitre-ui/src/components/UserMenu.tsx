@@ -11,9 +11,14 @@ import {
   positionerClasses,
 } from '../primitives/index.js'
 
-export type UserMenuProps = { panel: ShellProps['panel']; user: ShellProps['user'] }
+export type UserMenuProps = {
+  panel: ShellProps['panel']
+  user: ShellProps['user']
+  locale?: string
+  locales?: string[]
+}
 
-export function UserMenu({ panel, user }: UserMenuProps) {
+export function UserMenu({ panel, user, locale, locales = [] }: UserMenuProps) {
   const visit = useVisit()
   if (!user) return null
   const userName = user.name ?? ''
@@ -67,6 +72,39 @@ export function UserMenu({ panel, user }: UserMenuProps) {
                 {item.external && <Icon name="arrow-up-right" className="!size-3.5" />}
               </Menu.Item>
             ))}
+            {locales.length > 1 && (
+              <>
+                <Menu.Separator className={menuSeparatorClasses} />
+                <Menu.Group>
+                  <Menu.GroupLabel className="px-2.5 py-1.5 text-xs text-muted-foreground">
+                    {t('Language')}
+                  </Menu.GroupLabel>
+                  <Menu.RadioGroup
+                    value={locale}
+                    onValueChange={(language) => {
+                      if (language !== locale)
+                        visit(`${panel.path}/locale`, {
+                          method: 'post',
+                          data: { locale: language },
+                          preserveScroll: true,
+                        })
+                    }}
+                  >
+                    {locales.map((language) => (
+                      <Menu.RadioItem key={language} value={language} className={menuItemClasses}>
+                        <span aria-hidden="true" className="size-4">
+                          {language === locale && <Icon name="check" />}
+                        </span>
+                        <span lang={language}>
+                          {new Intl.DisplayNames([language], { type: 'language' }).of(language) ??
+                            language}
+                        </span>
+                      </Menu.RadioItem>
+                    ))}
+                  </Menu.RadioGroup>
+                </Menu.Group>
+              </>
+            )}
             {panel.logoutUrl && (
               <>
                 <Menu.Separator className={menuSeparatorClasses} />

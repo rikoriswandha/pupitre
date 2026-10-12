@@ -1,0 +1,22 @@
+{{{ exports({ to: app.makePath('database/migrations/1791700000043_create_pupitre_settings_table.ts') }) }}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  async up() {
+    if (await this.schema.hasTable('pupitre_settings')) return
+    this.schema.createTable('pupitre_settings', (table) => {
+      table.increments('id')
+      table.string('group', 120).notNullable()
+      table.string('scope_key', 254).notNullable()
+      table.string('key', 120).notNullable()
+      table.json('value').notNullable()
+      table.timestamp('created_at', { useTz: true }).notNullable()
+      table.timestamp('updated_at', { useTz: true }).notNullable()
+      table.unique(['group', 'scope_key', 'key'], { indexName: 'pupitre_settings_identity_unique' })
+    })
+  }
+
+  async down() {
+    if (await this.schema.hasTable('pupitre_settings')) this.schema.dropTable('pupitre_settings')
+  }
+}

@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode, useEffect, useId, useMemo, useRef } from 'react'
-import { useBoundValue, useEmbedded, useStateValue } from '@rikology/pupitre-react'
+import { t, useBoundValue, useEmbedded, useStateValue } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { Button, Panel, cn } from '../primitives/index.js'
 import { PanelNestingContext } from './Section.js'
@@ -93,7 +93,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
         className="min-w-0"
         data-wizard={typeof props.id === 'string' ? props.id : undefined}
       >
-        <ol aria-label="Form steps" className="flex overflow-x-auto px-5 py-5 sm:px-6">
+        <ol aria-label={t('Form steps')} className="flex overflow-x-auto px-5 py-5 sm:px-6">
           {steps.map((step, index) => (
             <li key={step.key} className="flex min-w-0 flex-1 items-center">
               <button
@@ -102,7 +102,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
                 className="flex min-w-0 items-center gap-3 rounded-lg p-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:cursor-not-allowed"
                 aria-current={active === index ? 'step' : undefined}
                 // Name is "<n> <label>"; the description is announced, not part of the name.
-                aria-label={`${index + 1} ${step.label}`}
+                aria-label={t('Step {number}: {label}', { number: index + 1, label: step.label })}
                 aria-describedby={step.description ? `${stepsId}-${index}` : undefined}
                 disabled={!skippable && index > active}
                 onClick={() => {
@@ -172,7 +172,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
               onClick={() => select(active - 1)}
               disabled={active === 0}
             >
-              Back
+              {t('Back')}
             </Button>
             {/* Distinct keys: reusing one <button> would flip its type to submit mid-click
                 on the last step and submit the form instead of advancing. */}
@@ -188,7 +188,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
                 onClick={() => select(active + 1)}
                 disabled={active >= steps.length - 1}
               >
-                Next
+                {t('Next')}
               </Button>
             )}
           </div>

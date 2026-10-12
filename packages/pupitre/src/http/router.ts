@@ -26,6 +26,7 @@ import { registerOptionsRoutes } from '../options/routes.js'
 import { panelGuard } from '../auth/guard.js'
 import RelationController from './controllers/relation_controller.js'
 import { flattenRelationManagers } from '../definition/relation_manager.js'
+import LocaleController from '../i18n/locale_controller.js'
 
 function constrainPrimaryKey(
   route: { where(parameter: string, matcher: RegExp): unknown },
@@ -97,6 +98,8 @@ export function registerPanelRoutes(
   registerAuthRoutes(router, panel, groups, manager)
   registerTenancyRoutes(router, panel, groups, manager)
   groups.tenant(() => {
+    if ((panel.locales?.length ?? 0) > 1)
+      router.post('/locale', [LocaleController, 'update']).as('locale')
     router
       .get('/', async (ctx) => {
         if (ctx.pupitre.panel.widgets.length > 0) return new WidgetController().dashboard(ctx)

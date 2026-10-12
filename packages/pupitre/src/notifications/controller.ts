@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { PupitreNotificationItem } from '../adapters/notifications.js'
 import { resolveAdapter } from '../define_config.js'
@@ -45,7 +46,7 @@ export default class NotificationController {
     if (!adapter || !ctx.pupitre.authUser) return ctx.response.notFound()
     const parsed = notificationsReadRequest.safeParse(ctx.request.all())
     if (!parsed.success)
-      return ctx.response.badRequest({ message: 'Invalid notification read request' })
+      return ctx.response.badRequest({ message: t('Invalid notification read request') })
     await adapter.markRead(ctx.pupitre.authUser, parsed.data.ids, ctx)
     return ctx.response.noContent()
   }

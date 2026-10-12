@@ -1,5 +1,5 @@
 import { Children, createContext, type ReactNode } from 'react'
-import { useSetState, useStateValue } from '@rikology/pupitre-react'
+import { t, useSetState, useStateValue } from '@rikology/pupitre-react'
 import { Button } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 import { CollectionField } from './CollectionField.js'
@@ -136,13 +136,13 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
           {children}
           {itemCount === 0 && (
             <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
-              No items yet. Add an item to get started.
+              {t('No items yet. Add an item to get started.')}
             </div>
           )}
           <div className="flex items-center gap-3">
             <Button type="button" size="sm" onClick={add} disabled={loading || itemCount >= max}>
               <Icon name="plus" />
-              {descriptor?.addLabel ?? 'Add item'}
+              {descriptor?.addLabel ?? t('Add item')}
             </Button>
             {Number.isFinite(max) && (
               <span className="text-xs tabular-nums text-muted-foreground">

@@ -3,6 +3,7 @@ import { E_PUPITRE_FORBIDDEN } from '../../errors.js'
 import type PupitreManager from '../../manager.js'
 import { bindPanel } from '../../manager.js'
 import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
+import { requestMessages, resolveTranslations, t } from '../../i18n.js'
 
 export default class TenancyResolverMiddleware {
   async handle(ctx: HttpContext, next: () => Promise<void>) {
@@ -21,7 +22,14 @@ export default class TenancyResolverMiddleware {
         throw new E_PUPITRE_FORBIDDEN()
       tenant = await adapter.resolve(ctx)
     }
-    if (!tenant) return ctx.response.notFound('Tenant not found')
+    if (!tenant)
+      return ctx.response.notFound(
+        resolveTranslations(
+          t('Tenant not found'),
+          ctx.pupitre.locale,
+          requestMessages.get(ctx) ?? {}
+        )
+      )
 
     ctx.pupitre.tenant = tenant
     if (tenancy.mode === 'url') {

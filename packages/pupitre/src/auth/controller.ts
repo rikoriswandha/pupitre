@@ -19,7 +19,9 @@ import { clearLoginLimit, consumeLoginLimit } from '../drivers/limiter.js'
 import { authLimitResponse, authRateLimited } from './rate_limit.js'
 import { panelGuard } from './guard.js'
 import { E_PUPITRE_FORBIDDEN, E_PUPITRE_MAIL_ADAPTER_REQUIRED } from '../errors.js'
-import { t } from '../i18n.js'
+import { requestMessages, resolveTranslations, t } from '../i18n.js'
+import { persistLocale } from '../i18n/locale_controller.js'
+import { validationMessages } from '../i18n/validation.js'
 import { completeLogin } from './login_flow.js'
 import { consumeMfaLimit, clearMfaLimit } from './mfa_limit.js'
 import { consumeRecoveryCode } from './recovery_code.js'
@@ -145,8 +147,8 @@ function authSchemaDefinition(node: AuthSchemaInput): SchemaNodeDefinition {
 }
 function loginForm(): AuthSchemaInput[] {
   return [
-    schema.email('email').required().label('Email'),
-    schema.password('password').required().label('Password'),
+    schema.email('email').required().label(t('Email')),
+    schema.password('password').required().label(t('Password')),
   ]
 }
 function formDescriptor(
@@ -158,9 +160,9 @@ function formDescriptor(
 }
 /** Submit button label per auth page title (defaults to the title). */
 const submitLabels: Record<string, string> = {
-  'Forgot password': 'Send reset link',
-  'Verify your email address': 'Resend verification email',
-  'Profile': 'Save',
+  [t('Forgot password')]: t('Send reset link'),
+  [t('Verify your email address')]: t('Resend verification email'),
+  [t('Profile')]: t('Save'),
 }
 async function renderAuth(
   ctx: AuthContext,
@@ -177,7 +179,7 @@ async function renderAuth(
     locale: ctx.pupitre.locale,
     timezone: ctx.pupitre.timezone,
     ctx,
-    form: formDescriptor(action, t(submitLabels[title] ?? title), method),
+    form: formDescriptor(action, submitLabels[title] ?? title, method),
     data,
     ...(uploadUrls ? { uploadUrls } : {}),
   })
@@ -252,12 +254,18 @@ async function sendVerification(ctx: AuthContext, user: LucidRow, cfg: PupitreCo
   )
   const url = new URL(signedUrl, ctx.request.completeUrl()).toString()
   const adapter = await resolveAdapter(cfg.mail)
-  await adapter?.send({
-    to: email,
-    subject: 'Verify your email address',
-    text: `Verify your email address: ${url}`,
-    html: `<p>Verify your email address: <a href="${url}">Continue</a></p>`,
-  })
+  await adapter?.send(
+    resolveTranslations(
+      {
+        to: email,
+        subject: t('Verify your email address'),
+        text: t('Verify your email address: {url}', { url }),
+        html: t('<p>Verify your email address: <a href="{url}">Continue</a></p>', { url }),
+      },
+      ctx.pupitre.locale,
+      requestMessages.get(ctx) ?? {}
+    )
+  )
 }
 export default class AuthController {
   async loginPage(ctx: AuthContext) {
@@ -271,7 +279,7 @@ export default class AuthController {
     const target = safeRedirect(ctx, ctx.request.input('redirect'))
     return renderAuth(
       ctx,
-      'Sign in',
+      t('Sign in'),
       [...loginForm(), schema.hidden('redirect').default(target)],
       `${panelPath(ctx)}/login`
     )
@@ -285,9 +293,9 @@ export default class AuthController {
     const input = ctx.request.all()
     let data: { email: string; password: string }
     try {
-      data = await loginValidator.validate(input)
+      data = await loginValidator.validate(input, { messagesProvider: validationMessages(ctx) })
     } catch {
-      return flashErrors(ctx, { email: 'Enter a valid email address' })
+      return flashErrors(ctx, { email: t('Enter a valid email address') })
     }
     const key = createHash('sha256')
       .update(`login:${data.email.toLowerCase()}:${ctx.request.ip()}`)
@@ -296,14 +304,14 @@ export default class AuthController {
       return authLimitResponse(
         ctx,
         'email',
-        'Too many login attempts. Please try again in one minute.'
+        t('Too many login attempts. Please try again in one minute.')
       )
     }
     let user: LucidRow
     try {
       user = await Model.verifyCredentials(data.email, data.password)
     } catch {
-      return flashErrors(ctx, { email: 'These credentials do not match our records' })
+      return flashErrors(ctx, { email: t('These credentials do not match our records') })
     }
     await clearLoginLimit(key)
     return completeLogin(ctx, ctx.pupitre.panel, user, {
@@ -323,8 +331,8 @@ export default class AuthController {
     }
     return renderAuth(
       ctx,
-      'Multi-factor authentication',
-      [schema.text('code').required().label('Authenticator code or recovery code')],
+      t('Multi-factor authentication'),
+      [schema.text('code').required().label(t('Authenticator code or recovery code'))],
       `${panelPath(ctx)}/mfa/challenge`
     )
   }
@@ -358,13 +366,15 @@ export default class AuthController {
     }
     let input: { code?: string; recovery_code?: string }
     try {
-      input = await mfaChallengeValidator.validate(ctx.request.all())
+      input = await mfaChallengeValidator.validate(ctx.request.all(), {
+        messagesProvider: validationMessages(ctx),
+      })
     } catch {
       if (limit.exhausted) {
         ctx.session?.forget('pupitre.pendingLogin')
         return ctx.response.redirect(`${panelPath(ctx)}/login`)
       }
-      return flashErrors(ctx, { code: 'Enter an authenticator or recovery code' })
+      return flashErrors(ctx, { code: t('Enter an authenticator or recovery code') })
     }
     const Model = await userModel(cfg)
     const user = await Model.find(pending.userId)
@@ -393,7 +403,7 @@ export default class AuthController {
         ctx.session?.forget('pupitre.pendingLogin')
         return ctx.response.redirect(`${panelPath(ctx)}/login`)
       }
-      return flashErrors(ctx, { code: 'The code is invalid or expired' })
+      return flashErrors(ctx, { code: t('The code is invalid or expired') })
     }
     ctx.session?.forget('pupitre.pendingLogin')
     await clearMfaLimit(key)
@@ -410,7 +420,7 @@ export default class AuthController {
     const user = ctx.pupitre.authUser as MutableUser
     const attributes = user.$attributes
     if (attributes[cfg.auth.columns.mfaEnabledAt]) {
-      return ctx.response.status(409).json({ message: 'MFA is already enabled' })
+      return ctx.response.status(409).json({ message: t('MFA is already enabled') })
     }
     const email = String(attributes[cfg.auth.columns.email])
     const enrollment = await createTotpEnrollment(
@@ -441,7 +451,7 @@ export default class AuthController {
     ) {
       return ctx.response
         .status(422)
-        .json({ message: 'The authenticator code is invalid or expired' })
+        .json({ message: t('The authenticator code is invalid or expired') })
     }
     const { codes, hashes } = makeRecoveryCodes()
     const user = ctx.pupitre.authUser as MutableUser
@@ -461,7 +471,7 @@ export default class AuthController {
     const key = createHash('sha256').update(`mfa:${user.$primaryKeyValue}`).digest('hex')
     const limit = await consumeMfaLimit(key)
     if (limit.limited)
-      return ctx.response.status(429).json({ message: 'Too many attempts. Try again later.' })
+      return ctx.response.status(429).json({ message: t('Too many attempts. Try again later.') })
     const secretValue = attributes[cfg.auth.columns.mfaSecret]
     const code = ctx.request.input('code')
     if (
@@ -470,7 +480,7 @@ export default class AuthController {
       typeof code !== 'string' ||
       !(await verifyTotp(await decryptMfaSecret(secretValue), code))
     ) {
-      return ctx.response.status(422).json({ message: 'The authenticator code is invalid' })
+      return ctx.response.status(422).json({ message: t('The authenticator code is invalid') })
     }
     const { codes, hashes } = makeRecoveryCodes()
     user.merge({ [cfg.auth.columns.mfaRecoveryCodes]: JSON.stringify(hashes) })
@@ -485,7 +495,7 @@ export default class AuthController {
     const key = createHash('sha256').update(`mfa:${user.$primaryKeyValue}`).digest('hex')
     const limit = await consumeMfaLimit(key)
     if (limit.limited)
-      return ctx.response.status(429).json({ message: 'Too many attempts. Try again later.' })
+      return ctx.response.status(429).json({ message: t('Too many attempts. Try again later.') })
     const code = ctx.request.input('code')
     const password = ctx.request.input('current_password')
     let verified = false
@@ -509,7 +519,7 @@ export default class AuthController {
     if (!verified) {
       return ctx.response
         .status(422)
-        .json({ message: 'Current password or authenticator code required' })
+        .json({ message: t('Current password or authenticator code required') })
     }
     user.merge({
       [cfg.auth.columns.mfaSecret]: null,
@@ -532,12 +542,12 @@ export default class AuthController {
     if (!result) {
       return ctx.response
         .status(422)
-        .json({ message: 'The passkey assertion is invalid or expired' })
+        .json({ message: t('The passkey assertion is invalid or expired') })
     }
     const Model = await userModel(cfg)
     const user = await Model.find(result.userId)
     if (!user) {
-      return ctx.response.status(422).json({ message: 'The passkey account no longer exists' })
+      return ctx.response.status(422).json({ message: t('The passkey account no longer exists') })
     }
     return completeLogin(ctx, ctx.pupitre.panel, user, {
       redirect: panelPath(ctx),
@@ -559,7 +569,9 @@ export default class AuthController {
   }
   async passkeyRegisterVerify(ctx: AuthContext) {
     if (await authRateLimited(ctx, 'passkey-register-verify')) return authLimitResponse(ctx)
-    const validated = await passkeyNameValidator.validate(ctx.request.all())
+    const validated = await passkeyNameValidator.validate(ctx.request.all(), {
+      messagesProvider: validationMessages(ctx),
+    })
     const result = await verifyRegistration(
       ctx,
       await config(ctx),
@@ -569,7 +581,7 @@ export default class AuthController {
     if (!result) {
       return ctx.response
         .status(422)
-        .json({ message: 'Passkey registration was invalid or expired' })
+        .json({ message: t('Passkey registration was invalid or expired') })
     }
     return ctx.response.status(201).json(result)
   }
@@ -580,7 +592,9 @@ export default class AuthController {
     })
   }
   async renamePasskey(ctx: AuthContext) {
-    const validated = await passkeyNameValidator.validate(ctx.request.all())
+    const validated = await passkeyNameValidator.validate(ctx.request.all(), {
+      messagesProvider: validationMessages(ctx),
+    })
     const user = ctx.pupitre.authUser as LucidRow & { $attributes: Record<string, unknown> }
     const updated = await renamePasskey(
       ctx,
@@ -615,8 +629,8 @@ export default class AuthController {
       return ctx.response.redirect(panelPath(ctx))
     return renderAuth(
       ctx,
-      'Forgot password',
-      [schema.email('email').required().label('Email')],
+      t('Forgot password'),
+      [schema.email('email').required().label(t('Email'))],
       `${panelPath(ctx)}/password/email`
     )
   }
@@ -625,10 +639,12 @@ export default class AuthController {
     const cfg = await config(ctx)
     let email: string
     try {
-      const validated = await emailValidator.validate(ctx.request.all())
+      const validated = await emailValidator.validate(ctx.request.all(), {
+        messagesProvider: validationMessages(ctx),
+      })
       email = validated.email
     } catch {
-      return flashErrors(ctx, { email: 'Enter a valid email address' })
+      return flashErrors(ctx, { email: t('Enter a valid email address') })
     }
     if (ctx.pupitre.panel.auth.passwordReset && !cfg.mail)
       throw new E_PUPITRE_MAIL_ADAPTER_REQUIRED()
@@ -639,7 +655,7 @@ export default class AuthController {
       return authLimitResponse(
         ctx,
         'email',
-        'Too many reset attempts. Please try again in one minute.'
+        t('Too many reset attempts. Please try again in one minute.')
       )
     }
     if (cfg.auth.model && cfg.mail) {
@@ -664,16 +680,22 @@ export default class AuthController {
           ctx.request.completeUrl()
         ).toString()
         const to = String(user.$attributes[cfg.auth.columns.email])
-        await adapter?.send({
-          to,
-          subject: 'Reset your password',
-          text: `Reset your password: ${url}`,
-          html: `<p>Reset your password: <a href="${url}">Continue</a></p>`,
-        })
+        await adapter?.send(
+          resolveTranslations(
+            {
+              to,
+              subject: t('Reset your password'),
+              text: t('Reset your password: {url}', { url }),
+              html: t('<p>Reset your password: <a href="{url}">Continue</a></p>', { url }),
+            },
+            ctx.pupitre.locale,
+            requestMessages.get(ctx) ?? {}
+          )
+        )
       }
     }
     ctx.session?.flash('pupitre', [
-      { type: 'success', title: 'If that email exists, a reset link has been sent.' },
+      { type: 'success', title: t('If that email exists, a reset link has been sent.') },
     ])
     return ctx.response.redirect().back()
   }
@@ -688,10 +710,10 @@ export default class AuthController {
     const token = String(ctx.params.token)
     return renderAuth(
       ctx,
-      'Reset password',
+      t('Reset password'),
       [
-        schema.password('password').required().label('Password'),
-        schema.password('password_confirmation').required().label('Confirm password'),
+        schema.password('password').required().label(t('Password')),
+        schema.password('password_confirmation').required().label(t('Confirm password')),
       ],
       `${panelPath(ctx)}/password/reset/${token}`
     )
@@ -702,9 +724,11 @@ export default class AuthController {
     const cfg = await config(ctx)
     const Model = await userModel(cfg)
     try {
-      const data = await resetValidator.validate(ctx.request.all())
+      const data = await resetValidator.validate(ctx.request.all(), {
+        messagesProvider: validationMessages(ctx),
+      })
       if (data.password !== data.password_confirmation)
-        return flashErrors(ctx, { password_confirmation: 'The passwords do not match' })
+        return flashErrors(ctx, { password_confirmation: t('The passwords do not match') })
       const db = (await app.container.make('lucid.db')) as unknown as ResetDb
       const tokenHash = createHash('sha256').update(String(ctx.params.token)).digest('hex')
       const guard = panelGuard(ctx.pupitre.panel) ?? 'web'
@@ -716,17 +740,17 @@ export default class AuthController {
         .first()
       if (!reset) {
         await db.from('pupitre_password_resets').where('token_hash', tokenHash).delete()
-        return flashErrors(ctx, { email: 'This password reset link is invalid or expired' })
+        return flashErrors(ctx, { email: t('This password reset link is invalid or expired') })
       }
       const user = (await Model.findBy('id', reset.user_id)) as MutableUser | null
       if (!user)
-        return flashErrors(ctx, { email: 'This password reset link is invalid or expired' })
+        return flashErrors(ctx, { email: t('This password reset link is invalid or expired') })
       user.merge({ [cfg.auth.columns.password]: data.password })
       await user.save()
       await db.from('pupitre_password_resets').where('token_hash', tokenHash).delete()
       return ctx.response.redirect(`${panelPath(ctx)}/login`)
     } catch {
-      return flashErrors(ctx, { password: 'Enter a valid password' })
+      return flashErrors(ctx, { password: t('Enter a valid password') })
     }
   }
   async registerPage(ctx: AuthContext) {
@@ -739,11 +763,11 @@ export default class AuthController {
       return ctx.response.redirect(panelPath(ctx))
     return renderAuth(
       ctx,
-      'Create account',
+      t('Create account'),
       [
-        schema.text('name').required().label('Name'),
-        schema.email('email').required().label('Email'),
-        schema.password('password').required().label('Password'),
+        schema.text('name').required().label(t('Name')),
+        schema.email('email').required().label(t('Email')),
+        schema.password('password').required().label(t('Password')),
       ],
       `${panelPath(ctx)}/register`
     )
@@ -755,7 +779,9 @@ export default class AuthController {
     if (ctx.pupitre.panel.auth.emailVerification && !cfg.mail)
       throw new E_PUPITRE_MAIL_ADAPTER_REQUIRED()
     try {
-      const data = await registrationValidator.validate(ctx.request.all())
+      const data = await registrationValidator.validate(ctx.request.all(), {
+        messagesProvider: validationMessages(ctx),
+      })
       const user = await Model.create({
         [cfg.auth.columns.name]: data.name,
         [cfg.auth.columns.email]: data.email,
@@ -768,7 +794,7 @@ export default class AuthController {
           : panelPath(ctx),
       })
     } catch {
-      return flashErrors(ctx, { email: 'Unable to create an account with those details' })
+      return flashErrors(ctx, { email: t('Unable to create an account with those details') })
     }
   }
   async verificationNotice(ctx: AuthContext) {
@@ -779,7 +805,7 @@ export default class AuthController {
     if (verified) return ctx.response.redirect(panelPath(ctx))
     return renderAuth(
       ctx,
-      'Verify your email address',
+      t('Verify your email address'),
       [schema.hidden('verification').default('resend')],
       `${panelPath(ctx)}/email/verification-notification`
     )
@@ -809,13 +835,28 @@ export default class AuthController {
     const cfg = await config(ctx)
     const user = ctx.pupitre.authUser as MutableUser | null
     if (!user) throw new E_PUPITRE_FORBIDDEN()
+    const locales = ctx.pupitre.panel.locales ?? [ctx.pupitre.panel.locale ?? 'en']
     const nodes: AuthSchemaInput[] = [
-      schema.text('name').required().label('Name'),
-      schema.email('email').required().label('Email'),
-      schema.password('current_password').label('Current password'),
-      schema.password('password').label('New password'),
-      schema.password('password_confirmation').label('Confirm new password'),
+      schema.text('name').required().label(t('Name')),
+      schema.email('email').required().label(t('Email')),
+      schema.password('current_password').label(t('Current password')),
+      schema.password('password').label(t('New password')),
+      schema.password('password_confirmation').label(t('Confirm new password')),
     ]
+    if (locales.length > 1) {
+      nodes.push(
+        schema
+          .select('locale')
+          .required()
+          .label(t('Language'))
+          .options(
+            locales.map((locale) => ({
+              value: locale,
+              label: new Intl.DisplayNames([locale], { type: 'language' }).of(locale) ?? locale,
+            }))
+          )
+      )
+    }
     if (ctx.pupitre.panel.auth.mfa || ctx.pupitre.panel.auth.passkeys?.enabled) {
       nodes.push(
         schema.view('PupitreProfileSecurity', {
@@ -826,10 +867,10 @@ export default class AuthController {
       )
     }
     if (ctx.pupitre.panel.auth.profile?.avatar)
-      nodes.push(schema.fileUpload('avatar').image().maxSize('5mb').label('Avatar'))
+      nodes.push(schema.fileUpload('avatar').image().maxSize('5mb').label(t('Avatar')))
     return renderAuth(
       ctx,
-      'Profile',
+      t('Profile'),
       nodes,
       `${panelPath(ctx)}/profile`,
       'put',
@@ -837,6 +878,7 @@ export default class AuthController {
       {
         name: user.$attributes[cfg.auth.columns.name],
         email: user.$attributes[cfg.auth.columns.email],
+        ...(locales.length > 1 ? { locale: ctx.pupitre.locale } : {}),
       },
       {
         upload: `${panelPath(ctx)}/profile/avatar`,
@@ -852,15 +894,15 @@ export default class AuthController {
       ctx.request.input('field') !== 'avatar' ||
       String(ctx.request.input('record')) !== String(user.$attributes.id)
     )
-      return ctx.response.status(422).json({ message: 'Invalid profile avatar upload' })
+      return ctx.response.status(422).json({ message: t('Invalid profile avatar upload') })
 
     const file = ctx.request.file('file') as MultipartFile | null
     if (!file || !file.tmpPath || file.errors.length > 0 || file.size > 5 * 1024 * 1024)
-      return ctx.response.status(422).json({ message: 'Choose an image no larger than 5 MB' })
+      return ctx.response.status(422).json({ message: t('Choose an image no larger than 5 MB') })
     const bytes = await readUploadBytes(file.tmpPath, 5 * 1024 * 1024)
     const type = await fileTypeFromBuffer(bytes)
     if (!type || !isPassiveImageMime(type.mime))
-      return ctx.response.status(422).json({ message: 'The avatar must be an image' })
+      return ctx.response.status(422).json({ message: t('The avatar must be an image') })
 
     const key = `avatars/${String(user.$attributes.id)}/${randomUUID()}.${type.ext}`
     const storage = createPupitreStorage()
@@ -888,7 +930,7 @@ export default class AuthController {
     )
       return ctx.response
         .status(403)
-        .json({ message: 'This upload is not owned by the current session' })
+        .json({ message: t('This upload is not owned by the current session') })
     ctx.session?.put(
       'pupitre.profileAvatarUploads',
       uploads.filter((upload) => upload.key !== key)
@@ -900,6 +942,13 @@ export default class AuthController {
     const cfg = await config(ctx)
     const user = ctx.pupitre.authUser as MutableUser
     const input = ctx.request.all()
+    const locale = input.locale
+    const locales = ctx.pupitre.panel.locales ?? [ctx.pupitre.panel.locale ?? 'en']
+    if (
+      locale !== undefined &&
+      (typeof locale !== 'string' || locales.length <= 1 || !locales.includes(locale))
+    )
+      return flashErrors(ctx, { locale: t('Choose a valid language') })
     for (const field of ['password', 'password_confirmation', 'current_password']) {
       if (input[field] === '') delete input[field]
     }
@@ -911,24 +960,26 @@ export default class AuthController {
       current_password?: string
     }
     try {
-      validated = await profileValidator.validate(input)
+      validated = await profileValidator.validate(input, {
+        messagesProvider: validationMessages(ctx),
+      })
     } catch {
-      return flashErrors(ctx, { email: 'Enter valid profile details' })
+      return flashErrors(ctx, { email: t('Enter valid profile details') })
     }
     const emailChanged =
       validated.email !== undefined && validated.email !== user.$attributes[cfg.auth.columns.email]
     const passwordChanged = Boolean(validated.password)
     if (passwordChanged && validated.password !== validated.password_confirmation)
-      return flashErrors(ctx, { password_confirmation: 'The passwords do not match' })
+      return flashErrors(ctx, { password_confirmation: t('The passwords do not match') })
     if (emailChanged && validated.email) {
       const Model = await userModel(cfg)
       const existing = await Model.findBy(cfg.auth.columns.email, validated.email)
       if (existing && String(existing.$attributes.id) !== String(user.$attributes.id))
-        return flashErrors(ctx, { email: 'This email address is already in use' })
+        return flashErrors(ctx, { email: t('This email address is already in use') })
     }
     if (emailChanged || passwordChanged) {
       if (typeof validated.current_password !== 'string')
-        return flashErrors(ctx, { current_password: 'Current password is required' })
+        return flashErrors(ctx, { current_password: t('Current password is required') })
       try {
         const Model = await userModel(cfg)
         await Model.verifyCredentials(
@@ -936,7 +987,7 @@ export default class AuthController {
           validated.current_password
         )
       } catch {
-        return flashErrors(ctx, { current_password: 'The current password is incorrect' })
+        return flashErrors(ctx, { current_password: t('The current password is incorrect') })
       }
     }
     const changes: Record<string, unknown> = {}
@@ -950,11 +1001,11 @@ export default class AuthController {
       const file = ctx.request.file('avatar') as MultipartFile | null
       if (file) {
         if (!file.tmpPath || file.errors.length > 0 || file.size > 5 * 1024 * 1024)
-          return flashErrors(ctx, { avatar: 'Choose an image no larger than 5 MB' })
+          return flashErrors(ctx, { avatar: t('Choose an image no larger than 5 MB') })
         const bytes = await readUploadBytes(file.tmpPath, 5 * 1024 * 1024)
         const type = await fileTypeFromBuffer(bytes)
         if (!type || !isPassiveImageMime(type.mime))
-          return flashErrors(ctx, { avatar: 'The avatar must be an image' })
+          return flashErrors(ctx, { avatar: t('The avatar must be an image') })
         storedAvatar = `avatars/${String(user.$attributes.id)}/${randomUUID()}.${type.ext}`
         await createPupitreStorage().put(storedAvatar, bytes, {
           contentType: type.mime,
@@ -967,7 +1018,7 @@ export default class AuthController {
           (upload) => upload.key === input.avatar && upload.userId === userId
         )
         if (!ownsUpload)
-          return flashErrors(ctx, { avatar: 'Upload a new avatar before saving the profile' })
+          return flashErrors(ctx, { avatar: t('Upload a new avatar before saving the profile') })
         storedAvatar = input.avatar
         changes[cfg.auth.columns.avatar] = storedAvatar
       }
@@ -989,9 +1040,10 @@ export default class AuthController {
       if (typeof oldAvatar === 'string' && oldAvatar !== storedAvatar)
         await createPupitreStorage().delete(oldAvatar)
     }
+    if (typeof locale === 'string') await persistLocale(ctx, locale)
     if (emailChanged && ctx.pupitre.panel.auth.emailVerification)
       await sendVerification(ctx, user, cfg)
-    ctx.session?.flash('pupitre', [{ type: 'success', title: 'Profile updated' }])
+    ctx.session?.flash('pupitre', [{ type: 'success', title: t('Profile updated') }])
     return ctx.response.redirect(`${panelPath(ctx)}/profile`)
   }
 }

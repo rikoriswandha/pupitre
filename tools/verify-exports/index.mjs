@@ -20,6 +20,7 @@ const packages = [
   'packages/pupitre-ui',
   'packages/pupitre-shield',
   'packages/pupitre-audit',
+  'packages/pupitre-settings',
   'packages/pupitre-transmit',
   'packages/create-pupitre-plugin',
 ]
@@ -68,6 +69,10 @@ const shapeChecks = {
   },
   '@rikology/pupitre-audit': (mod) => {
     assert.equal(typeof mod.audit, 'function')
+  },
+  '@rikology/pupitre-settings': (mod) => {
+    assert.equal(typeof mod.settings, 'function')
+    assert.equal(typeof mod.settingsFor, 'function')
   },
   '@rikology/pupitre-transmit': (mod) => {
     assert.equal(typeof mod.transmitRealtime, 'function')

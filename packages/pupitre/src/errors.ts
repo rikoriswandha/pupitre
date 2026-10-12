@@ -1,3 +1,4 @@
+import { getMessages, requestMessages, resolveTranslations, t } from './i18n.js'
 import { createError } from '@adonisjs/core/exceptions'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -18,44 +19,47 @@ function handledError(message: string, status: number, code: string) {
       ?.split(',')
       .some((mediaType) => mediaType.split(';', 1)[0]?.trim() === 'application/json')
     const json = ctx.request.header('x-pupitre-action') === '1' || acceptsJson
-    if (json) return ctx.response.status(status).json({ message: error.message })
+    const locale = ctx.pupitre?.locale ?? 'en'
+    const messages = requestMessages.get(ctx) ?? getMessages({}, undefined, locale)
+    const translated = resolveTranslations(error.message, locale, messages)
+    if (json) return ctx.response.status(status).json({ message: translated })
     if (status === 403) {
       if (ctx.pupitre?.panel.tenancy && !ctx.pupitre.tenant)
-        return ctx.response.status(status).send(error.message)
+        return ctx.response.status(status).send(translated)
       const referer = ctx.request.header('referer')
       const panelPath = ctx.pupitre?.panel.path
       if (referer && panelPath) {
         try {
           const path = new URL(referer).pathname.replace(/\/$/, '')
           if (path === panelPath || path === `${panelPath}/login`)
-            return ctx.response.status(status).send(error.message)
+            return ctx.response.status(status).send(translated)
         } catch {}
       }
-      ctx.session?.flash('pupitre', [{ type: 'error', title: 'Forbidden', body: error.message }])
+      ctx.session?.flash('pupitre', [{ type: 'error', title: t('Forbidden'), body: error.message }])
       return ctx.response.redirect().back()
     }
     if (ctx.request.header('x-inertia') && ctx.session) {
       ctx.session.flash('pupitre', [
         {
           type: 'error',
-          title: 'Request failed',
+          title: t('Request failed'),
           body: error.message,
         },
       ])
       return ctx.response.redirect().back()
     }
-    return ctx.response.status(status).send(error.message)
+    return ctx.response.status(status).send(translated)
   }
   return ErrorClass
 }
 
 export const E_PUPITRE_FORBIDDEN = handledError(
-  'You are not authorized to perform this action',
+  t('You are not authorized to perform this action'),
   403,
   'E_PUPITRE_FORBIDDEN'
 )
 export const E_PUPITRE_NOT_FOUND = createError(
-  'The requested record was not found',
+  t('The requested record was not found'),
   'E_PUPITRE_NOT_FOUND',
   404
 )
@@ -81,17 +85,17 @@ export const E_PUPITRE_BOUNCER_NOT_INITIALIZED = createError(
   500
 )
 export const E_PUPITRE_INVALID_UPLOAD = handledError(
-  'The uploaded file is invalid',
+  t('The uploaded file is invalid'),
   422,
   'E_PUPITRE_INVALID_UPLOAD'
 )
 export const E_PUPITRE_UPLOAD_NOT_OWNED = handledError(
-  'The uploaded file does not belong to this session',
+  t('The uploaded file does not belong to this session'),
   403,
   'E_PUPITRE_UPLOAD_NOT_OWNED'
 )
 export const E_PUPITRE_UPLOAD_TOO_LARGE = handledError(
-  'The uploaded file exceeds the maximum size',
+  t('The uploaded file exceeds the maximum size'),
   413,
   'E_PUPITRE_UPLOAD_TOO_LARGE'
 )

@@ -73,7 +73,14 @@ export type ImageColumnDefinition = TableColumnBase & {
   stacked?: boolean
 }
 export type ColorColumnDefinition = TableColumnBase & { kind: 'color' }
-export type CustomColumnDefinition = TableColumnBase & { kind: 'custom'; component: string }
+export type CustomColumnDefinition = TableColumnBase & {
+  kind: 'custom'
+  component: string
+  extension?: string
+  extensionKind?: string
+  extensionProps?: Record<string, unknown>
+  format?: (value: unknown, record: Record<string, unknown>) => unknown
+}
 export type FragmentColumnDefinition = { kind: 'fragment'; component: string }
 export type TableColumnDefinition =
   | TextColumnDefinition
@@ -115,12 +122,44 @@ export type CustomFilterDefinition = {
   form?: readonly SchemaNodeDefinition[]
   query?: (query: ModelQueryBuilderContract<LucidModel>, data: Record<string, unknown>) => unknown
 }
+export type QueryConstraintType = 'text' | 'number' | 'date' | 'boolean' | 'select' | 'relationship'
+export type QueryConstraintDefinition = {
+  type: QueryConstraintType
+  name: string
+  label?: string
+  attribute?: string
+  relatedAttribute?: string
+  options?: Record<string, unknown>
+  timezone?: string
+  integer?: boolean
+}
+export interface QueryConstraintBuilder {
+  readonly definition: QueryConstraintDefinition
+  toDefinition(): QueryConstraintDefinition
+  label(value: string): QueryConstraintBuilder
+  attribute(value: string): QueryConstraintBuilder
+  options(value: Record<string, unknown>): QueryConstraintBuilder
+  timezone(value: string): QueryConstraintBuilder
+  /** Signed 32-bit integer constraint, matching PostgreSQL integer columns. */
+  integer(): QueryConstraintBuilder
+}
+export type QueryBuilderFilterDefinition = {
+  kind: 'queryBuilder'
+  name: string
+  label?: string
+  constraints: QueryConstraintDefinition[]
+}
+export interface QueryBuilderFilterBuilder extends TableFilterBuilder<QueryBuilderFilterDefinition> {
+  constraints(value: readonly QueryConstraintBuilder[]): QueryBuilderFilterBuilder
+  label(value: string): QueryBuilderFilterBuilder
+}
 export type TableFilterDefinition =
   | SelectFilterDefinition
   | TernaryFilterDefinition
   | DateRangeFilterDefinition
   | CustomFilterDefinition
   | TrashedFilterDefinition
+  | QueryBuilderFilterDefinition
 export type TableEmptyStateDefinition = {
   heading: string
   description?: string
@@ -144,6 +183,8 @@ export interface TableGroupBuilder {
 export type TableDefinition = {
   query?: QueryCallback
   defaultSort?: { column: string; direction: 'asc' | 'desc' }
+  defaultSorts?: { column: string; direction: 'asc' | 'desc' }[]
+  multiSort?: number
   columns: TableColumnDefinition[]
   filters: TableFilterDefinition[]
   filtersLayout: 'dropdown' | 'above' | 'slideover'
@@ -166,6 +207,8 @@ export interface TableSchema {
   filters(value: readonly TableFilterBuilderUnion[]): this
   query(value: QueryCallback): this
   defaultSort(column: string, direction: 'asc' | 'desc'): this
+  defaultSort(columns: readonly { column: string; direction: 'asc' | 'desc' }[]): this
+  multiSort(max?: number): this
   filtersLayout(value: TableDefinition['filtersLayout']): this
   searchDebounce(value: number): this
   paginated(value: TableDefinition['paginated']): this
@@ -337,3 +380,4 @@ export type TableFilterBuilderUnion =
   | DateRangeFilterBuilder
   | CustomFilterBuilder
   | TrashedFilterBuilder
+  | QueryBuilderFilterBuilder

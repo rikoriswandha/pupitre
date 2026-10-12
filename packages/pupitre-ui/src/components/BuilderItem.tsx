@@ -1,4 +1,5 @@
 import { useContext, type ReactNode } from 'react'
+import { t } from '@rikology/pupitre-react'
 import { BuilderContext } from './Builder.js'
 import { Button, cn, Collapse } from '../primitives/index.js'
 import { Icon } from '../icons.js'
@@ -37,7 +38,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
                 variant="ghost"
                 size="sm"
                 square
-                aria-label={`Move block ${index + 1} up`}
+                aria-label={t('Move block {number} up', { number: index + 1 })}
                 disabled={index === 0 || busy}
                 onClick={() => builder.move(index, -1)}
               >
@@ -48,7 +49,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
                 variant="ghost"
                 size="sm"
                 square
-                aria-label={`Move block ${index + 1} down`}
+                aria-label={t('Move block {number} down', { number: index + 1 })}
                 disabled={index === builder.items.length - 1 || busy}
                 onClick={() => builder.move(index, 1)}
               >
@@ -62,7 +63,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
               variant="ghost"
               size="sm"
               square
-              aria-label={`Clone block ${index + 1}`}
+              aria-label={t('Clone block {number}', { number: index + 1 })}
               disabled={
                 busy ||
                 builder.items.length >= (builder.descriptor.maxItems ?? Number.POSITIVE_INFINITY)
@@ -78,7 +79,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
               variant="ghost"
               size="sm"
               square
-              aria-label={`Toggle block ${index + 1}`}
+              aria-label={t('Toggle block {number}', { number: index + 1 })}
               aria-expanded={!collapsed}
               onClick={() => builder.toggleCollapsed(item._key)}
             >
@@ -97,7 +98,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
             size="sm"
             square
             color="danger"
-            aria-label={`Remove block ${index + 1}`}
+            aria-label={t('Remove block {number}', { number: index + 1 })}
             disabled={busy || builder.items.length <= (builder.descriptor.minItems ?? 0)}
             onClick={() => builder.remove(index)}
           >

@@ -1,3 +1,5 @@
+import { storedJobError } from '../../jobs/error.js'
+import { requestMessages, resolveTranslations, t } from '../../i18n.js'
 import { publishResourceChange } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { MultipartFile } from '@adonisjs/bodyparser'
@@ -82,8 +84,9 @@ async function uploadedCsv(
   maxRows = 100_000
 ): Promise<{ headers: string[]; rows: CsvRow[] }> {
   const file = ctx.request.file('file') as MultipartFile | null
-  if (!file || !file.tmpPath || file.errors.length > 0) throw new Error('Upload a valid CSV file.')
-  if (file.size > CSV_MAX_BYTES) throw new Error('CSV files must be 10 MiB or smaller.')
+  if (!file || !file.tmpPath || file.errors.length > 0)
+    throw new Error(t('Upload a valid CSV file.'))
+  if (file.size > CSV_MAX_BYTES) throw new Error(t('CSV files must be 10 MiB or smaller.'))
   const bytes = await readUploadBytes(file.tmpPath, CSV_MAX_BYTES)
   const parsed = parseCsv(bytes, {
     bom: true,
@@ -93,9 +96,13 @@ async function uploadedCsv(
     trim: true,
   }) as CsvRow[]
   const headers = parsed.length > 0 ? Object.keys(parsed[0]!) : []
-  if (headers.length === 0) throw new Error('The CSV file must include a header row.')
+  if (headers.length === 0) throw new Error(t('The CSV file must include a header row.'))
   if (parsed.length > maxRows)
-    throw new Error(`CSV files cannot contain more than ${maxRows} rows on the synchronous path.`)
+    throw new Error(
+      t('CSV files cannot contain more than {count} rows on the synchronous path.', {
+        count: maxRows,
+      })
+    )
   return { headers, rows: parsed }
 }
 
@@ -113,8 +120,8 @@ function primaryKey(model: LucidModel): string {
 function vineMessages(error: unknown): string[] {
   const messages = (error as { messages?: { message?: string }[] })?.messages
   return Array.isArray(messages)
-    ? messages.map((message) => message.message ?? 'Invalid value')
-    : [error instanceof Error ? error.message : 'Import failed']
+    ? messages.map((message) => message.message ?? t('Invalid value'))
+    : [error instanceof Error ? error.message : t('Import failed')]
 }
 async function persistFailedRows(
   ctx: HttpContext,
@@ -124,14 +131,21 @@ async function persistFailedRows(
 ): Promise<string> {
   const userId = ctx.pupitre.user?.id
   if (userId === undefined)
-    throw new Error('Authentication is required to save failed import rows.')
+    throw new Error(t('Authentication is required to save failed import rows.'))
   const id = randomUUID()
   const fileKey = `imports/${id}-failed.csv`
   const columns: CsvColumn[] = [
     ...headers.map((header) => ({ key: header, header })),
-    { key: '_errors', header: 'Errors' },
+    { key: '_errors', header: t('Errors') },
   ]
-  const stream = createCsvStream(rows, columns)
+  const messages = requestMessages.get(ctx) ?? {}
+  const stream = createCsvStream(
+    rows.map((row) => ({
+      ...row,
+      _errors: resolveTranslations(row._errors, ctx.pupitre.locale, messages),
+    })),
+    resolveTranslations(columns, ctx.pupitre.locale, messages)
+  )
   const chunks: Uint8Array[] = []
   for await (const chunk of stream) chunks.push(Buffer.from(chunk))
   const bytes = Buffer.concat(chunks)
@@ -141,10 +155,8 @@ async function persistFailedRows(
   })
   const now = DateTime.now()
   const tenantId = ctx.pupitre.tenant?.id ?? null
-  const config = (await app.container.make('pupitre.config')) as {
-    exports?: { retentionMinutes?: number }
-  }
   const database = (await app.container.make('lucid.db')) as Database
+  const config = (await app.container.make('pupitre.config')) as PupitreConfig
   await database.table('pupitre_exports').insert({
     id,
     user_id: userId,
@@ -189,15 +201,15 @@ export async function processImportRows(
       if (record) {
         const recordId = record.$primaryKeyValue
         if (recordId === undefined || recordId === null)
-          throw new Error('The resolved update record has no primary key.')
+          throw new Error(t('The resolved update record has no primary key.'))
         record = await scopedQuery(ctx, resource)
           .where(primaryKey(resource.model), recordId)
           .first()
-        if (!record) throw new Error('The resolved update record is outside the current scope.')
+        if (!record) throw new Error(t('The resolved update record is outside the current scope.'))
         if (!(await authorizeResource(ctx, resource, 'update', record)))
-          throw new Error('You are not authorized to update this record.')
+          throw new Error(t('You are not authorized to update this record.'))
       } else if (!(await authorizeResource(ctx, resource, 'create'))) {
-        throw new Error('You are not authorized to create records.')
+        throw new Error(t('You are not authorized to create records.'))
       }
       const validated = await validate.validate(data, {
         record,
@@ -268,15 +280,15 @@ export async function processImportRows(
 export default class ImportController {
   async preview(ctx: HttpContext) {
     const { resource, action } = actionAndResource(ctx)
-    if (!resource) return errorJson(ctx, 'Resource not found', 404)
+    if (!resource) return errorJson(ctx, t('Resource not found'), 404)
     if (!action || action.builtin !== 'import')
-      return errorJson(ctx, 'Import action not found', 404)
+      return errorJson(ctx, t('Import action not found'), 404)
     await authorizeNestedParent(ctx, resource)
     if (
       !(await authorizeResource(ctx, resource, 'create')) ||
       (action.can && !(await authorizeResource(ctx, resource, action.can)))
     )
-      return errorJson(ctx, 'You are not authorized to import records', 403)
+      return errorJson(ctx, t('You are not authorized to import records'), 403)
     try {
       const csv = await uploadedCsv(ctx)
       return ctx.response.json({
@@ -285,23 +297,23 @@ export default class ImportController {
         fields: importFields(resource.definition.form ?? []),
       })
     } catch (error) {
-      return errorJson(ctx, error instanceof Error ? error.message : 'Invalid CSV upload', 422)
+      return errorJson(ctx, error instanceof Error ? error.message : t('Invalid CSV upload'), 422)
     }
   }
 
   async store(ctx: HttpContext) {
     const { resource, action } = actionAndResource(ctx)
-    if (!resource) return errorJson(ctx, 'Resource not found', 404)
+    if (!resource) return errorJson(ctx, t('Resource not found'), 404)
     if (!action || action.builtin !== 'import')
-      return errorJson(ctx, 'Import action not found', 404)
+      return errorJson(ctx, t('Import action not found'), 404)
     if (!resource.definition.form)
-      return errorJson(ctx, 'This resource does not define a form', 404)
+      return errorJson(ctx, t('This resource does not define a form'), 404)
     await authorizeNestedParent(ctx, resource, true)
     if (
       !(await authorizeResource(ctx, resource, 'create')) ||
       (action.can && !(await authorizeResource(ctx, resource, action.can)))
     )
-      return errorJson(ctx, 'You are not authorized to import records', 403)
+      return errorJson(ctx, t('You are not authorized to import records'), 403)
     let csv: { headers: string[]; rows: CsvRow[] }
     const config = (await app.container.make('pupitre.config')) as PupitreConfig
     const fields = importFields(resource.definition.form)
@@ -323,12 +335,16 @@ export default class ImportController {
       ) as Record<string, string>
       for (const [header, field] of Object.entries(mapping)) {
         if (!csv.headers.includes(header) || !allowed.includes(field))
-          return errorJson(ctx, `Invalid CSV mapping for column "${header}"`, 422)
+          return errorJson(ctx, t('Invalid CSV mapping for column "{header}"', { header }), 422)
       }
       if (Object.keys(mapping).length === 0)
-        return errorJson(ctx, 'Map at least one CSV header to a form field', 422)
+        return errorJson(ctx, t('Map at least one CSV header to a form field'), 422)
     } catch (error) {
-      return errorJson(ctx, error instanceof Error ? error.message : 'Invalid import mapping', 422)
+      return errorJson(
+        ctx,
+        error instanceof Error ? error.message : t('Invalid import mapping'),
+        422
+      )
     }
 
     if (!jobs) {
@@ -338,7 +354,7 @@ export default class ImportController {
 
     const userId = ctx.pupitre.user?.id
     if (userId === undefined)
-      return errorJson(ctx, 'Authentication is required for queued imports', 401)
+      return errorJson(ctx, t('Authentication is required for queued imports'), 401)
     const tenantId = ctx.pupitre.tenant?.id ?? null
     const importId = randomUUID()
     const progressUrl = `${ctx.pupitre.panel.path}/_pupitre/exports/${importId}`
@@ -361,7 +377,7 @@ export default class ImportController {
     })
     const jobName = 'pupitre.import'
     const file = ctx.request.file('file') as MultipartFile | null
-    if (!file?.tmpPath) return errorJson(ctx, 'Upload a valid CSV file.', 422)
+    if (!file?.tmpPath) return errorJson(ctx, t('Upload a valid CSV file.'), 422)
     const fileKey = `imports/${importId}.csv`
     try {
       await createPupitreStorage().put(
@@ -375,6 +391,7 @@ export default class ImportController {
       await jobs.dispatch(jobName, {
         importId,
         panelId: ctx.pupitre.panel.id,
+        locale: ctx.pupitre.locale,
         resource: resource.slug,
         action: action.name,
         userId,
@@ -391,7 +408,7 @@ export default class ImportController {
         .where('id', importId)
         .update({
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Unable to dispatch import',
+          ...storedJobError(error, t('Unable to dispatch import')),
           updated_at: DateTime.now().toSQL(),
         })
       throw error

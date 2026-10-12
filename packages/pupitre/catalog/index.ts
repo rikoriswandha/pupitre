@@ -1,6 +1,8 @@
 import './csp.js'
 
 export { catalogVersion } from './version.js'
+export { defineCatalogExtension, mergeCatalogExtensions } from './extensions.js'
+export type { CatalogExtension, CatalogExtensionComponent } from './extensions.js'
 export {
   dynamic,
   raw,

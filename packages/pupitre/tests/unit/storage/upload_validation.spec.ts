@@ -11,6 +11,7 @@ import {
   readUploadBytes,
   isPassiveImageMime,
 } from '../../../src/storage/upload_validation.js'
+import { E_PUPITRE_UPLOAD_TOO_LARGE } from '../../../src/errors.js'
 
 test.group('upload validation helpers', () => {
   test('parses bytes and binary kilobyte and megabyte sizes', ({ assert }) => {
@@ -83,7 +84,7 @@ test.group('upload validation helpers', () => {
       await writeFile(path, Buffer.from('safe'))
       const bytes = await readUploadBytes(path, 4)
       assert.equal(bytes.toString(), 'safe')
-      await assert.rejects(() => readUploadBytes(path, 3), /exceeds the maximum size/)
+      await assert.rejects(() => readUploadBytes(path, 3), E_PUPITRE_UPLOAD_TOO_LARGE)
       const sparse = await open(path, 'w')
       try {
         await sparse.truncate(1024 * 1024 * 1024)
@@ -92,7 +93,7 @@ test.group('upload validation helpers', () => {
       }
       await assert.rejects(
         () => readUploadBytes(path, 10 * 1024 * 1024),
-        /exceeds the maximum size/
+        E_PUPITRE_UPLOAD_TOO_LARGE
       )
     } finally {
       await rm(directory, { recursive: true, force: true })

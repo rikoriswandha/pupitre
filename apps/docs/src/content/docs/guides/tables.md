@@ -42,9 +42,62 @@ Shared methods vary by column: label, width, alignment and `.toggleable({ hidden
 
 ## Filters and tabs
 
-Factories are `table.filter.select(name)`, `.ternary(name)`, `.dateRange(name)`, `.custom(name)` and `.trashed()`. Select supports options/multiple/attribute; ternary supports true/false labels and attribute; date range supports attribute/timezone; custom filters supply `.form([...]).query(callback)`.
+Factories are `table.filter.select(name)`, `.ternary(name)`, `.dateRange(name)`, `.custom(name)`, `.queryBuilder(name)` and `.trashed()`. Select supports options/multiple/attribute; ternary supports true/false labels and attribute; date range supports attribute/timezone; custom filters supply `.form([...]).query(callback)`.
 
 `.filtersLayout('dropdown' | 'above' | 'slideover')` changes placement. `.deferFilters()` sends changes on Apply. List-page `.tabs({...})` adds named query scopes, separate from filters. Search, sort, pagination, tabs, filters and grouping use URL state, so copying a URL shares the current table view rather than a server session snapshot.
+
+### Query builder
+
+Import `qb` and `t` from `@rikology/pupitre`. Register only constraints users should be allowed to query:
+
+```ts
+table.filter.queryBuilder('query').label(t('Advanced query')).constraints([
+  qb.text('title').label(t('Title')),
+  qb.number('price').label(t('Price')),
+  qb.date('publishedAt').label(t('Published at')).timezone('Asia/Jakarta'),
+  qb.boolean('isFeatured').label(t('Featured')),
+  qb.select('status').options({ draft: t('Draft'), published: t('Published') }),
+  qb.relationship('comments', 'body').label(t('Comments')),
+])
+```
+
+Rules in a group are ANDed; groups are ORed. Negating a rule uses `negated: true`. Text supports contains/startsWith/endsWith/equals/blank; numbers support comparisons and inclusive between; dates support before/after/on/between/blank; booleans support true/false; selects support anyOf/noneOf; relationships support has/hasNone/minCount and text operators on the registered related attribute. `.attribute(...)` maps a public constraint name to a server-only attribute. Relationship paths and attributes never come from URL input.
+
+Number constraints accept finite values within JavaScript's safe integer range. Use `qb.number('stock').integer()` for signed 32-bit integer database columns: fractional values and values outside −2,147,483,648…2,147,483,647 return HTTP 400 before SQL. Decimal columns should keep the plain `.number()` constraint. Relationship counts must be nonnegative safe integers.
+
+The URL stores JSON under `filters[query]`, for example:
+
+```json
+{"groups":[[{"constraint":"status","operator":"anyOf","value":["published"]},{"constraint":"price","operator":"lessThan","value":100}],[{"constraint":"title","operator":"contains","value":"Guide"}]]}
+```
+
+An empty builder removes its URL filter. Limits are 8 groups, 16 rules per group, 64 rules total, 500 characters per scalar string, 50 selected values, and 8,192 UTF-8 bytes of serialized JSON; URL-encoded query JSON is also limited to 8,192 bytes. Malformed or unsupported rules are rejected, not silently ignored. Calendar dates use the constraint timezone (otherwise the effective request timezone, falling back to UTC); date comparisons are converted to UTC boundaries. The entire OR expression stays inside the existing resource, tenant, authorization, tab and soft-delete scopes. Exports and summaries use the same filtered query.
+
+Lucid `@column.date()` attributes remain calendar dates without UTC shifting. Datetime comparisons use half-open UTC ranges from the local day's start to the next local day's start, preserving midnight values and DST days without precision-dependent end-of-day rounding.
+
+Dates with year zero, or local-day bounds that convert to UTC year zero, are rejected before SQL. With `.deferFilters()`, query-builder edits are staged immediately and the table's **Apply** button commits them together with the other filters; no second “Apply query” step is required. Incomplete rules or a query exceeding the URL size limit disable **Apply** and show an accessible explanation, rather than committing an older query. Non-deferred builders retain their own **Apply query** control. The editor loads separately only for tables using a query-builder filter.
+
+### Multiple sort columns
+
+Opt in with `.multiSort(3)` (the default maximum is three). A normal header activation replaces the current sort; Shift-click adds or cycles a sort column. Keyboard users can focus the “Add to sort” button next to a sortable header and press Enter or Space to add/cycle that column without replacing the others. Sort priorities are numbered; “Clear sorting” removes the whole sort, including configured defaults. Only the primary sorted header has `aria-sort`.
+
+```ts
+.table((tableConfig) => tableConfig
+  .columns([table.text('title').sortable(), table.text('price').sortable()])
+  .multiSort(3)
+  .defaultSort([
+    { column: 'title', direction: 'asc' },
+    { column: 'price', direction: 'desc' },
+  ])
+)
+```
+
+Sort priority is encoded left-to-right as `sort=title,-price`. Existing single-column URLs and `.defaultSort('title', 'asc')` remain valid. `sort=` explicitly clears even a configured default. Tables without `.multiSort()` retain single-column sorting.
+
+Ordered defaults must fit the configured `multiSort` limit and cannot repeat a column; invalid builder definitions are rejected before a request runs. Clearing user sorting on a reorderable table still preserves its natural reorder-column order.
+
+Implicit reorder-column ordering is not advertised as a user sort token. The clear-sort toolbar is available only on multi-sort tables; existing single-sort tables do not gain a clear control. Hand-written comma-separated sort URLs and query JSON work with Adonis' comma-enabled query parser.
+
 
 ## Grouping and summaries
 
@@ -63,7 +116,7 @@ Summaries support `sum`, `avg`, `count`, `min`, `max`, `range`. They aggregate t
 
 `.query(callback)` customizes the query. `.searchDebounce(milliseconds)` controls search; `.recordUrl(callback | false)` controls row navigation and `.rowClass(callback)` applies safe class tokens. `.emptyState({ heading, ... })` customizes empty feedback (see exact shape in the reference). `.layout.grid({ default, md, xl })` switches to card/grid layout.
 
-`.reorderable('position')` enables drag and keyboard ordering with the reorder ability checked server-side. `.poll('30s')` requests reloads while respecting background tabs, active dialogs and edits. `.deferLoading()` loads table data through deferred Inertia props. Column toggles persist per table in local storage. Single default sort is supported; multi-sort is intentionally not exposed.
+`.reorderable('position')` enables drag and keyboard ordering with the reorder ability checked server-side. `.poll('30s')` requests reloads while respecting background tabs, active dialogs and edits. `.deferLoading()` loads table data through deferred Inertia props. Column toggles persist per table in local storage. Default sorting supports a single column or an ordered array; `.multiSort()` enables user-controlled sort priority.
 
 ## Export and import
 

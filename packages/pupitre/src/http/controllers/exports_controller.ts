@@ -1,3 +1,5 @@
+import { restoreTranslation } from '../../i18n.js'
+import { t } from '../../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { Database } from '@adonisjs/lucid/database'
 import app from '@adonisjs/core/services/app'
@@ -73,18 +75,26 @@ function importResult(row: ExportRow) {
 export default class ExportsController {
   async progress(ctx: HttpContext) {
     const row = await ownedExport(ctx)
-    if (!row) return errorJson(ctx, 'Export not found', 404)
+    if (!row) return errorJson(ctx, t('Export not found'), 404)
     const resource = await authorizedResource(ctx, row.resource)
-    if (!resource) return errorJson(ctx, 'Export not found', 404)
+    if (!resource) return errorJson(ctx, t('Export not found'), 404)
     if (!(await authorizedExportAction(ctx, row)))
-      return errorJson(ctx, 'You are not authorized to export these records', 403)
+      return errorJson(ctx, t('You are not authorized to export these records'), 403)
     const result = importResult(row)
+    let error = row.error
+    if (error && row.result) {
+      try {
+        const metadata: unknown = JSON.parse(row.result)
+        if (metadata && typeof metadata === 'object' && '_pupitreError' in metadata)
+          error = restoreTranslation(error, metadata._pupitreError)
+      } catch {}
+    }
     return ctx.response.json({
       id: row.id,
       status: row.status,
       totalRows: row.total_rows,
       processedRows: row.processed_rows,
-      ...(row.error ? { error: row.error } : {}),
+      ...(error ? { error } : {}),
       ...(result
         ? {
             createdRows: result.created,
@@ -101,15 +111,15 @@ export default class ExportsController {
 
   async download(ctx: HttpContext) {
     const row = await ownedExport(ctx)
-    if (!row) return errorJson(ctx, 'Export not found', 404)
+    if (!row) return errorJson(ctx, t('Export not found'), 404)
     const resource = await authorizedResource(ctx, row.resource)
-    if (!resource) return errorJson(ctx, 'Export not found', 404)
+    if (!resource) return errorJson(ctx, t('Export not found'), 404)
     if (!(await authorizedExportAction(ctx, row)))
-      return errorJson(ctx, 'You are not authorized to export these records', 403)
+      return errorJson(ctx, t('You are not authorized to export these records'), 403)
     if (row.status !== 'done' || !row.file_key)
-      return errorJson(ctx, 'Export file is not ready', 409)
+      return errorJson(ctx, t('Export file is not ready'), 409)
     if (!(await createPupitreStorage().exists(row.file_key)))
-      return errorJson(ctx, 'Export file is no longer available', 404)
+      return errorJson(ctx, t('Export file is no longer available'), 404)
     ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
     ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(

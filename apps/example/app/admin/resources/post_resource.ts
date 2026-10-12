@@ -5,8 +5,10 @@ import {
   exportColumn,
   notificationAction,
   pages,
+  qb,
   schema,
   table,
+  t as translate,
 } from '@rikology/pupitre'
 import { DateTime } from 'luxon'
 import Post, { POST_STATUS_COLORS, POST_STATUS_OPTIONS } from '#models/post'
@@ -324,12 +326,24 @@ export default defineResource(Post)
         t.count('comments'),
       ])
       .filters([
+        table.filter
+          .queryBuilder('query')
+          .label(translate('Advanced query'))
+          .constraints([
+            qb.text('title').label(translate('Title')),
+            qb.number('views').integer().attribute('viewsCount').label(translate('Views')),
+            qb.date('publishedAt').label(translate('Published at')).timezone('Asia/Jakarta'),
+            qb.boolean('isFeatured').label(translate('Featured')),
+            qb.select('status').label(translate('Status')).options(POST_STATUS_OPTIONS),
+            qb.relationship('comments', 'body').label(translate('Comments')),
+          ]),
         table.filter.select('status').options(POST_STATUS_OPTIONS),
         table.filter.ternary('isFeatured').trueLabel('Featured').falseLabel('Not featured'),
         table.filter.dateRange('publishedAt'),
         table.filter.trashed(),
       ])
       .defaultSort('title', 'asc')
+      .multiSort(3)
       .groups([t.group('status').label('Post status').collapsible()])
       .poll('30s')
       .deferFilters()

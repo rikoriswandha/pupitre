@@ -64,6 +64,8 @@ const textMethods = [
   'exists',
 ]
 const methodMap: Record<SchemaKind, readonly string[]> = {
+  extensionField: fieldBase,
+  extensionEntry: ['label', 'visible', 'hidden', 'columnSpan'],
   slider: [...fieldBase, 'min', 'max', 'step', 'marks', 'range'],
   text: [...fieldBase, ...textMethods],
   email: [...fieldBase, ...textMethods],
@@ -317,6 +319,7 @@ const booleanDefaultMethods: Record<string, true> = Object.fromEntries(
 )
 const fieldKinds: Record<string, true> = Object.fromEntries(
   [
+    'extensionField',
     'slider',
     'text',
     'email',
@@ -363,7 +366,7 @@ function setOption(
   }
   return { ...definition, [key]: value } as SchemaNodeDefinition
 }
-function createNode<D extends SchemaNodeDefinition>(definition: D): SchemaNodeBuilder {
+export function createNode<D extends SchemaNodeDefinition>(definition: D): SchemaNodeBuilder {
   return new Proxy(
     {},
     {

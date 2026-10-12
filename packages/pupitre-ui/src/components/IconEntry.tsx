@@ -1,3 +1,4 @@
+import { t } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { toneText, toTone } from '../primitives/index.js'
 import {
@@ -22,7 +23,7 @@ export function IconEntry({ props = {} }: { props?: EntryDisplayProps }) {
           <span className="text-subtle-foreground">{props.placeholder ?? '—'}</span>
         )}
         {props.copyable && name && (
-          <EntryCopyButton value={name} label={props.label ?? 'icon name'} />
+          <EntryCopyButton value={name} label={props.label ?? t('icon name')} />
         )}
       </span>
     </EntryShell>

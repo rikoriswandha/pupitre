@@ -1,3 +1,4 @@
+import { t } from '@rikology/pupitre-react'
 import { buttonClasses } from '../primitives/index.js'
 
 export type NotFoundProps = { title: string; message: string }
@@ -15,7 +16,7 @@ export function NotFound({ title, message }: NotFoundProps) {
         <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         <p className="mt-2 text-muted-foreground">{message}</p>
         <a href="/" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>
-          Return home
+          {t('Return home')}
         </a>
       </div>
     </main>

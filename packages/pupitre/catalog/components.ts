@@ -464,6 +464,16 @@ export const components = {
   'RepeatableEntry': container({
     label: nullableStr.optional(),
     value: z.unknown().optional(),
+    entries: z
+      .array(
+        z.object({
+          name: z.string(),
+          label: z.string().nullable().optional(),
+          component: z.string().optional(),
+          props: z.record(z.string(), z.unknown()).optional(),
+        })
+      )
+      .optional(),
     copyable: bool.optional(),
     url: str.optional(),
     color: str.optional(),

@@ -71,3 +71,47 @@ test('import modal traps focus, closes on Escape, and restores focus to its trig
   await expect(dialog).not.toBeVisible()
   await expect(trigger).toBeFocused()
 })
+
+test('CSV read failures and complete preview/progress messages honor Indonesian translations', async ({
+  mount,
+  page,
+}) => {
+  await mount(<ImportModalStory locale="id" />)
+  await page.evaluate(() => {
+    window.fetch = async () => {
+      throw 'offline'
+    }
+  })
+  await page.locator('#pupitre-import-file').setInputFiles({
+    name: 'posts.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('Title,Slug\nPost,post\n'),
+  })
+  await page.getByRole('button', { name: 'Lanjutkan', exact: true }).click()
+  await expect(page.getByText('Gagal membaca file CSV.')).toBeVisible()
+  await page.evaluate(() => {
+    window.fetch = async (input) => {
+      const url = String(input)
+      const response = url.includes('/preview')
+        ? {
+            headers: ['Title', 'Slug'],
+            preview: [{ Title: 'Post', Slug: 'post' }],
+            fields: [
+              { name: 'title', label: 'Title', required: true },
+              { name: 'slug', label: 'Slug', required: true },
+            ],
+          }
+        : url.includes('/progress')
+          ? { id: 'job1', status: 'processing', totalRows: 1, processedRows: 0 }
+          : { jobId: 'job1', progressUrl: '/progress' }
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+  })
+  await page.getByRole('button', { name: 'Lanjutkan', exact: true }).click()
+  await expect(page.getByText('Kolom 2, baris 1')).toBeVisible()
+  await page.getByRole('button', { name: 'Impor CSV', exact: true }).click()
+  await expect(page.getByText('Progres impor: 0 / 1', { exact: true })).toBeVisible()
+})

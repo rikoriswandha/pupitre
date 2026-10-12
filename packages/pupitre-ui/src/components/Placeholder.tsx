@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { t } from '@rikology/pupitre-react'
 
 type RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }
 export function Placeholder({ props, children }: RuntimeProps) {
@@ -12,7 +13,9 @@ export function Placeholder({ props, children }: RuntimeProps) {
           ? ''
           : String(value)
   const output =
-    content === null || content === undefined || content === '' ? 'No content available' : content
+    content === null || content === undefined || content === ''
+      ? t('No content available')
+      : content
   return (
     <div className="min-w-0 space-y-1.5 text-sm text-muted-foreground" aria-live="polite">
       {typeof props.label === 'string' && (

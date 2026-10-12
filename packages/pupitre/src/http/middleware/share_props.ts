@@ -9,6 +9,9 @@ import { notificationProps } from '../../notifications/props.js'
 import { searchProps } from '../../search/props.js'
 import type PupitreManager from '../../manager.js'
 import { realtimeChannels } from '../../adapters/realtime.js'
+import { requestMessages, resolveTranslations } from '../../i18n.js'
+import type { PupitreConfig } from '../../define_config.js'
+import clientKeys from '../../locales/client_keys.js'
 
 type SharedPupitre = PupitrePageProps['pupitre']
 
@@ -76,6 +79,24 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
   const search = tenantUnbound ? undefined : searchProps(ctx)
   const notifications = tenantUnbound ? undefined : await notificationProps(ctx)
   const manager = (await ctx.containerResolver.make('pupitre.manager')) as PupitreManager
+  const config = (await ctx.containerResolver.make('pupitre.config')) as PupitreConfig
+  const messages = requestMessages.get(ctx) ?? {}
+  const clientMessages = Object.fromEntries(
+    clientKeys.filter((key) => messages[key] !== undefined).map((key) => [key, messages[key]])
+  )
+  const fallback = config.i18n?.fallbackLocale ?? 'en'
+  for (const contributions of [
+    ...(panel.plugins ?? []).map((plugin) => plugin.messages),
+    config.i18n?.messages,
+  ]) {
+    for (const locale of ctx.pupitre.locale === 'en' ? ['en'] : [fallback, ctx.pupitre.locale]) {
+      for (const key of Object.keys(contributions?.[locale] ?? {}))
+        clientMessages[key] = messages[key]
+    }
+  }
+  for (const key of Object.keys(clientMessages)) {
+    if (clientMessages[key] === key) delete clientMessages[key]
+  }
   const realtime =
     manager.realtime && ctx.pupitre.user
       ? {
@@ -101,13 +122,21 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
     ...(notifications ? { notifications } : {}),
     ...(realtime ? { realtime } : {}),
     locale: ctx.pupitre.locale,
+    locales: [...(panel.locales ?? [panel.locale ?? 'en'])],
+    ...(Object.keys(clientMessages).length ? { messages: clientMessages } : {}),
     timezone: ctx.pupitre.timezone,
   }
 }
 
 export default class SharePropsMiddleware {
   async handle(ctx: HttpContext, next: () => Promise<void>) {
-    ctx.inertia.share({ pupitre: await buildSharedProps(ctx) })
+    ctx.inertia.share({
+      pupitre: resolveTranslations(
+        await buildSharedProps(ctx),
+        ctx.pupitre.locale,
+        requestMessages.get(ctx) ?? {}
+      ),
+    })
     await next()
   }
 }

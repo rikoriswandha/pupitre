@@ -1,4 +1,5 @@
 import type { ApplicationService } from '@adonisjs/core/types'
+import { mergeCatalogExtensions } from '../../catalog/extensions.js'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import { panelBuilder } from '../builder/panel.js'
 import type { NavEntryDefinition } from '../definition/navigation.js'
@@ -37,6 +38,7 @@ function navEntry(value: unknown): NavEntryDefinition {
  */
 export function applyPlugins(input: PanelDefinition): PanelDefinition {
   const plugins = input.plugins ?? []
+  mergeCatalogExtensions(plugins.flatMap((plugin) => plugin.catalog ?? []))
   let definition = input
   for (const plugin of plugins) {
     if (plugin.register) {

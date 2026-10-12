@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { SwitchControl, Field, FieldDescription, FieldError, Label } from '../primitives/index.js'
@@ -67,7 +67,7 @@ export function Toggle({ props, bindings }: Runtime) {
               </Label>
             )}
             <span className="sr-only">
-              {checked ? (props.onIcon ?? 'On') : (props.offIcon ?? 'Off')}
+              {checked ? (props.onIcon ?? t('On')) : (props.offIcon ?? t('Off'))}
             </span>
             {props.hint && <FieldDescription id={`${id}-hint`}>{props.hint}</FieldDescription>}
             {props.helperText && (

@@ -81,6 +81,7 @@
     "@rikology/adonisjs-notifications": "^1.5.2",
     "@rikology/pupitre": "^1.0.0",
     "@rikology/pupitre-audit": "^1.0.0",
+    "@rikology/pupitre-settings": "^1.0.0",
     "@rikology/pupitre-react": "^1.0.0",
     "@rikology/pupitre-shield": "^1.0.0",
     "@rikology/pupitre-transmit": "^1.0.0",
@@ -97,7 +98,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "reflect-metadata": "^0.2.2",
-    "sonner": "^2.0.8"
+    "sonner": "^2.0.8",
+    "zod": "^4.3.6"
   },
   "hotHook": {
     "boundaries": [

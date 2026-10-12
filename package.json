@@ -13,13 +13,14 @@
     "packages/pupitre-ui",
     "packages/pupitre-shield",
     "packages/pupitre-audit",
+    "packages/pupitre-settings",
     "packages/pupitre-transmit",
     "packages/create-pupitre-plugin",
     "apps/example",
     "apps/docs"
   ],
   "scripts": {
-    "build": "npm run build -w packages/pupitre -w packages/pupitre-react -w packages/pupitre-ui -w packages/pupitre-shield -w packages/pupitre-audit -w packages/pupitre-transmit -w packages/create-pupitre-plugin",
+    "build": "npm run build -w packages/pupitre -w packages/pupitre-react -w packages/pupitre-ui -w packages/pupitre-shield -w packages/pupitre-audit -w packages/pupitre-settings -w packages/pupitre-transmit -w packages/create-pupitre-plugin",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -29,6 +30,7 @@
     "registry:build": "node tools/registry-build/index.mjs",
     "registry:check": "node tools/registry-build/index.mjs --check && node --test tools/registry-build/index.test.mjs",
     "bundle:budget": "node --test tools/bundle-budget/index.test.mjs && node tools/bundle-budget/index.mjs",
+    "i18n:check": "node --test tools/i18n-check/index.test.mjs && node tools/i18n-check/index.mjs",
     "e2e": "npm run e2e -w apps/example"
   },
   "devDependencies": {

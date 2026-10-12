@@ -1,7 +1,7 @@
 import { lazy, Suspense, useId } from 'react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
 import type { FileUploadDescriptor, UploadResponse } from '@rikology/pupitre/catalog'
 import { Button, buttonClasses, FieldDescription } from '../primitives/index.js'
 import { Icon } from '../icons.js'
@@ -79,8 +79,8 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     if (chosen.length > capacity) {
       setLocalError(
         descriptor.maxFiles === undefined
-          ? 'Only one file can be uploaded.'
-          : `You can upload at most ${descriptor.maxFiles} file(s).`
+          ? t('Only one file can be uploaded.')
+          : t('You can upload at most {count} file(s).', { count: descriptor.maxFiles })
       )
       return
     }
@@ -97,7 +97,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
       chosen.some((file) => file.type.startsWith('image/'))
     ) {
       if (chosen.length !== 1) {
-        setLocalError('Choose one image at a time when image editing is enabled.')
+        setLocalError(t('Choose one image at a time when image editing is enabled.'))
         return
       }
       setCropFile(chosen[0]!)
@@ -123,7 +123,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
       }
     } catch (cause) {
       setLocalError(
-        `${activeFile ? `${activeFile}: ` : ''}${cause instanceof Error ? cause.message : 'File upload failed.'}`
+        `${activeFile ? `${activeFile}: ` : ''}${cause instanceof Error ? cause.message : t('File upload failed.')}`
       )
     } finally {
       setWorking(false)
@@ -161,7 +161,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
       setValue(next)
       emit('change', next)
     } catch (cause) {
-      setLocalError(cause instanceof Error ? cause.message : 'Could not remove file.')
+      setLocalError(cause instanceof Error ? cause.message : t('Could not remove file.'))
     } finally {
       setWorking(false)
     }
@@ -171,16 +171,16 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
     setWorking(true)
     try {
       const response = await fetch(uploadedFiles[key]?.url ?? key)
-      if (!response.ok) throw new Error('Could not load image.')
+      if (!response.ok) throw new Error(t('Could not load image.'))
       const blob = await response.blob()
       setCropKey(key)
       setCropFile(
-        new File([blob], uploadedFiles[key]?.name ?? key.split('/').pop() ?? 'image', {
+        new File([blob], uploadedFiles[key]?.name ?? key.split('/').pop() ?? t('image'), {
           type: blob.type,
         })
       )
     } catch (cause) {
-      setLocalError(cause instanceof Error ? cause.message : 'Could not load image.')
+      setLocalError(cause instanceof Error ? cause.message : t('Could not load image.'))
     } finally {
       setWorking(false)
     }
@@ -244,7 +244,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                   href={file?.url ?? key}
                   download
                 >
-                  Download
+                  {t('Download')}
                 </a>
               )}
               {descriptor.previewable && (
@@ -258,7 +258,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Preview
+                  {t('Preview')}
                 </a>
               )}
               {descriptor.imageEditor && descriptor.image && (
@@ -267,7 +267,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                   variant="ghost"
                   size="sm"
                   square
-                  aria-label={`Edit ${file?.name ?? key}`}
+                  aria-label={t('Edit {label}', { label: file?.name ?? key })}
                   disabled={props.disabled || props.readOnly || loading || working}
                   onClick={() => void editImage(key)}
                 >
@@ -281,7 +281,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                     size="xs"
                     square
                     type="button"
-                    aria-label={`Move ${key} earlier`}
+                    aria-label={t('Move {label} earlier', { label: key })}
                     disabled={index === 0 || props.disabled || props.readOnly || working}
                     onClick={() => moveFile(index, -1)}
                   >
@@ -292,7 +292,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                     size="xs"
                     square
                     type="button"
-                    aria-label={`Move ${key} later`}
+                    aria-label={t('Move {label} later', { label: key })}
                     disabled={
                       index === keys.length - 1 || props.disabled || props.readOnly || working
                     }
@@ -308,7 +308,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
                 size="sm"
                 square
                 type="button"
-                aria-label={`Remove ${key}`}
+                aria-label={t('Remove {label}', { label: key })}
                 disabled={props.disabled || props.readOnly || loading || working}
                 onClick={() => void removeFile(key)}
               >
@@ -326,28 +326,26 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
           </span>
           <span className="text-sm text-foreground">
             {working ? (
-              'Uploading…'
+              t('Uploading…')
             ) : (
-              <>
-                Drag and drop or{' '}
-                <span className="font-medium text-primary-ink underline-offset-4 hover:underline">
-                  browse
-                </span>
-              </>
+              <span className="font-medium text-primary-ink underline-offset-4 hover:underline">
+                {t('Drag and drop files or browse')}
+              </span>
             )}
           </span>
           <span className="text-xs text-muted-foreground">
             {descriptor.accept?.length
               ? descriptor.accept.join(', ')
               : descriptor.image
-                ? 'Image files'
-                : 'All file types'}
-            {descriptor.maxSize !== undefined && ` · Max ${formatSize(descriptor.maxSize)}`}
+                ? t('Image files')
+                : t('All file types')}
+            {descriptor.maxSize !== undefined &&
+              ` · ${t('Max {size}', { size: formatSize(descriptor.maxSize) })}`}
           </span>
           <input
             className="sr-only"
             id={id}
-            aria-label={props.label ?? 'Choose file'}
+            aria-label={props.label ?? t('Choose file')}
             aria-invalid={!!(error || localError)}
             aria-required={props.required}
             aria-describedby={
@@ -367,10 +365,10 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         </label>
         {working && (
           <div className="w-full space-y-1 text-sm text-muted-foreground" role="status">
-            <span>Uploading {workingFile ?? 'file'}…</span>
+            <span>{t('Uploading {name}…', { name: workingFile ?? t('file') })}</span>
             <div
               role="progressbar"
-              aria-label="Upload progress"
+              aria-label={t('Upload progress')}
               className="h-1.5 overflow-hidden rounded-full bg-muted"
             >
               <div className="h-full w-1/2 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />
@@ -384,7 +382,7 @@ export function FileUpload({ props, children, emit, bindings, loading = false }:
         </p>
       )}
       {cropFile && (
-        <Suspense fallback={<div role="status">Loading image editor…</div>}>
+        <Suspense fallback={<div role="status">{t('Loading image editor…')}</div>}>
           <ImageCropper
             file={cropFile}
             ratios={descriptor.imageEditorAspectRatios}

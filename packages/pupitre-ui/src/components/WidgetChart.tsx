@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
+import { t } from '@rikology/pupitre-react'
 import { Panel, PanelHeader, Skeleton } from '../primitives/index.js'
 const ChartBody = lazy(() =>
   import('./WidgetChartBody.js').then((module) => ({ default: module.WidgetChartBody }))
@@ -7,7 +8,7 @@ const ChartBody = lazy(() =>
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
 export function WidgetChart({ descriptor, data }: Props) {
   return (
-    <Panel role="region" aria-label={descriptor.heading ?? 'Chart'} className="overflow-hidden">
+    <Panel role="region" aria-label={descriptor.heading ?? t('Chart')} className="overflow-hidden">
       {(descriptor.heading || descriptor.description) && (
         <PanelHeader heading={descriptor.heading} description={descriptor.description} />
       )}
@@ -19,10 +20,10 @@ export function WidgetChart({ descriptor, data }: Props) {
       {data?.kind === 'chart' && (
         <div className="sr-only">
           <table>
-            <caption>{descriptor.heading ?? 'Chart'} data</caption>
+            <caption>{t('{label} data', { label: descriptor.heading ?? t('Chart') })}</caption>
             <thead>
               <tr>
-                <th scope="col">Period</th>
+                <th scope="col">{t('Period')}</th>
                 {data.datasets.map((dataset, index) => (
                   <th scope="col" key={index}>
                     {dataset.label}

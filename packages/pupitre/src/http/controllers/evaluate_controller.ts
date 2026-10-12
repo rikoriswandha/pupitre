@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js'
 import vine from '@vinejs/vine'
 import type { HttpContext } from '@adonisjs/core/http'
 import type {
@@ -70,6 +71,7 @@ function collectFields(
         'name' in node &&
         node.name &&
         [
+          'extensionField',
           'text',
           'email',
           'password',
@@ -165,31 +167,31 @@ export default class EvaluateController {
   async evaluate(ctx: HttpContext) {
     const input = await evaluationRequest.validate(ctx.request.all())
     const owner = findFormOwner(ctx, input.resource)
-    if (!owner) return ctx.response.notFound({ message: 'Unknown Pupitre form.' })
+    if (!owner) return ctx.response.notFound({ message: t('Unknown Pupitre form.') })
     const resource = ctx.pupitre.panel.resources.find(
       (candidate: ResourceRuntime) => candidate.slug === input.resource
     )
     let record: LucidRow | null = null
     if (owner.kind === 'resource') {
-      if (!resource) return ctx.response.notFound({ message: 'Unknown Pupitre resource.' })
+      if (!resource) return ctx.response.notFound({ message: t('Unknown Pupitre resource.') })
       if (input.page !== 'create' && input.page !== 'edit')
-        return ctx.response.notFound({ message: 'Unknown Pupitre form page.' })
+        return ctx.response.notFound({ message: t('Unknown Pupitre form page.') })
       if (input.page === 'create' && !(await authorizeResource(ctx, resource, 'create')))
         throw new E_PUPITRE_FORBIDDEN()
       if (input.page === 'edit') {
         if (input.record === undefined)
-          return ctx.response.notFound({ message: 'Record not found.' })
+          return ctx.response.notFound({ message: t('Record not found.') })
         record =
           (await scopedQuery(ctx, resource)
             .where(resource.model.primaryKey, input.record)
             .first()) ?? null
-        if (!record) return ctx.response.notFound({ message: 'Record not found.' })
+        if (!record) return ctx.response.notFound({ message: t('Record not found.') })
         if (!(await authorizeResource(ctx, resource, 'update', record)))
           throw new E_PUPITRE_FORBIDDEN()
       }
     } else {
       if (input.page !== 'page' || input.record !== undefined)
-        return ctx.response.notFound({ message: 'Unknown custom-page form.' })
+        return ctx.response.notFound({ message: t('Unknown custom-page form.') })
       await owner.authorize('create')
     }
     const match = matchField(owner.form, input.field)
@@ -198,7 +200,7 @@ export default class EvaluateController {
       typeof match.field.afterStateUpdated !== 'function' ||
       !(typeof match.field.live === 'object' && match.field.live.server === true)
     )
-      return ctx.response.notFound({ message: 'Unknown server-evaluated field.' })
+      return ctx.response.notFound({ message: t('Unknown server-evaluated field.') })
     const fieldParts = match.actual.split('.')
     const templateParts = match.pattern.split('.')
     const repeaterOffset = templateParts.lastIndexOf('*')

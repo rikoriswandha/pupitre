@@ -1,3 +1,4 @@
+import { requestMessages, resolveTranslations, t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import { authorizeResource } from '../authz/bouncer.js'
 import type { NavGroup, NavItem } from '../../catalog/wire.js'
@@ -58,7 +59,7 @@ async function renderItem(
     string | number | null | undefined
   if (typeof definition.badge === 'function') badge = await definition.badge(ctx)
   return {
-    label: label || url || 'Navigation',
+    label: label || url || t('Navigation'),
     ...(url ? { url } : {}),
     ...(icon ? { icon } : {}),
     ...(typeof badge === 'string' || typeof badge === 'number' ? { badge } : {}),
@@ -67,7 +68,7 @@ async function renderItem(
   }
 }
 
-type RenderedEntry = { group: NavGroup; sort: number }
+type RenderedEntry = { group: NavGroup; sort: number; sortLabel: string }
 
 async function renderEntries(
   ctx: HttpContext,
@@ -75,14 +76,21 @@ async function renderEntries(
   currentUrl: string
 ): Promise<RenderedEntry[]> {
   const result: RenderedEntry[] = []
+  const locale = ctx.pupitre.locale
+  const messages = requestMessages.get(ctx) ?? {}
   for (const entry of entries.map(definitionOf)) {
     if (entry.type === 'group') {
-      const items: { item: NavItem; sort: number }[] = []
+      const items: { item: NavItem; sort: number; sortLabel: string }[] = []
       for (const definition of entry.items) {
         const item = await renderItem(ctx, definition, currentUrl)
-        if (item) items.push({ item, sort: definition.sort ?? 0 })
+        if (item)
+          items.push({
+            item,
+            sort: definition.sort ?? 0,
+            sortLabel: resolveTranslations(item.label, locale, messages),
+          })
       }
-      items.sort((a, b) => a.sort - b.sort || a.item.label.localeCompare(b.item.label))
+      items.sort((a, b) => a.sort - b.sort || a.sortLabel.localeCompare(b.sortLabel, locale))
       if (items.length)
         result.push({
           group: {
@@ -93,13 +101,15 @@ async function renderEntries(
             collapsed: entry.collapsed,
           },
           sort: entry.sort ?? 0,
+          sortLabel: resolveTranslations(entry.label, locale, messages),
         })
     } else {
       const item = await renderItem(ctx, entry, currentUrl)
-      if (item) result.push({ group: { label: '', items: [item] }, sort: entry.sort ?? 0 })
+      if (item)
+        result.push({ group: { label: '', items: [item] }, sort: entry.sort ?? 0, sortLabel: '' })
     }
   }
-  result.sort((a, b) => a.sort - b.sort || a.group.label.localeCompare(b.group.label))
+  result.sort((a, b) => a.sort - b.sort || a.sortLabel.localeCompare(b.sortLabel, locale))
   return result
 }
 
@@ -108,13 +118,14 @@ function mergeGroups(groups: NavGroup[]): NavGroup[] {
   const merged: NavGroup[] = []
   const byLabel = new Map<string, NavGroup>()
   for (const group of groups) {
-    const existing = group.label ? byLabel.get(group.label) : undefined
+    const key = group.label ? resolveTranslations(group.label, 'en') : undefined
+    const existing = key ? byLabel.get(key) : undefined
     if (existing) {
       existing.items = [...existing.items, ...group.items]
       continue
     }
     const copy = { ...group, items: [...group.items] }
-    if (group.label) byLabel.set(group.label, copy)
+    if (key) byLabel.set(key, copy)
     merged.push(copy)
   }
   return merged
@@ -148,7 +159,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
   for (const resource of panel.resources) {
     if (resource.parent || claimed.has(resource.slug)) continue
     if (!(await authorizeResource(ctx, resource, 'viewAny'))) continue
-    const group = resource.definition.navigation?.group ?? 'Resources'
+    const group = resource.definition.navigation?.group ?? t('Resources')
     const items = groups.get(group) ?? []
     const badge = resource.definition.navigation?.badge
       ? await resource.definition.navigation.badge(ctx)
@@ -168,7 +179,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
   for (const page of panel.pages) {
     if (claimed.has(page.slug)) continue
     if (page.definition.canAccess && !(await page.definition.canAccess(ctx))) continue
-    const group = page.definition.navigation?.group ?? 'Pages'
+    const group = page.definition.navigation?.group ?? t('Pages')
     const items = groups.get(group) ?? []
     const badge = page.definition.navigation?.badge
     const renderedBadge = typeof badge === 'function' ? await badge(ctx) : badge
@@ -186,15 +197,30 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
     })
     groups.set(group, items)
   }
-  const derived = [...groups]
-    .map(([label, items]) => ({
+  const messages = requestMessages.get(ctx) ?? {}
+  const localized = [...groups].map(([label, items]) => ({
+    label,
+    sortLabel: resolveTranslations(label, ctx.pupitre.locale, messages),
+    items: resolveTranslations(items, ctx.pupitre.locale, messages),
+  }))
+  const derived = localized
+    .map(({ label, sortLabel, items }) => ({
       label,
+      sortLabel,
       items: items
-        .sort((a, b) => a.sort - b.sort || a.item.label.localeCompare(b.item.label))
+        .sort(
+          (a, b) => a.sort - b.sort || a.item.label.localeCompare(b.item.label, ctx.pupitre.locale)
+        )
         .map(({ item }) => item),
     }))
-    .sort((a, b) => a.label.localeCompare(b.label))
-  if (!pluginNavigation.length) return derived
+    .sort((a, b) => a.sortLabel.localeCompare(b.sortLabel, ctx.pupitre.locale))
+    .map(({ label, items }) => ({ label, items }))
+  if (!pluginNavigation.length)
+    return resolveTranslations(mergeGroups(derived), ctx.pupitre.locale, messages)
   const contributed = await renderEntries(ctx, pluginNavigation, currentUrl)
-  return mergeGroups([...derived, ...contributed.map(({ group }) => group)])
+  return resolveTranslations(
+    mergeGroups([...derived, ...contributed.map(({ group }) => group)]),
+    ctx.pupitre.locale,
+    requestMessages.get(ctx) ?? {}
+  )
 }

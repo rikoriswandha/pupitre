@@ -1,4 +1,10 @@
+import { isTranslationMarker, requestMessages, resolveTranslations } from '../i18n.js'
 import { marked } from 'marked'
+import {
+  collectCatalogExtensions,
+  extensionRenderProps,
+  isRegisteredExtensionComponent,
+} from '../builder/extensions.js'
 import { validateSpec } from '@json-render/core'
 import type { HttpContext } from '@adonisjs/core/http'
 import {
@@ -63,7 +69,12 @@ export type CompileContext = {
   resolveFileUrl?: (key: string, field: FieldDefinitionUnion) => Promise<string | null>
   cache?: { key: string; store: SpecCache } | null
 }
-export type CompiledSchema = { spec: JsonRenderSpec; state: StateModel; catalogVersion: string }
+export type CompiledSchema = {
+  spec: JsonRenderSpec
+  state: StateModel
+  catalogVersion: string
+  catalogExtensions: { name: string; components: string[] }[]
+}
 type SlotRequest = { options: CompileContext; form?: FormDescriptor }
 type BuildContext = {
   elements: Record<string, Element>
@@ -90,6 +101,7 @@ function repeaterChildren(value: RepeaterFieldDefinition['schema']): SchemaNodeD
   })
 }
 const fieldType: Record<string, string> = {
+  extensionField: '',
   text: 'Text',
   email: 'Text',
   password: 'Text',
@@ -130,7 +142,8 @@ const infolistType: Record<string, string> = {
 const fieldKinds: Record<string, true> = Object.fromEntries(
   Object.keys(fieldType).map((kind) => [kind, true])
 )
-function headline(name: string): string {
+export function headline(name: string): string {
+  if (isTranslationMarker(name)) return name
   return name
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
     .replace(/[._-]+/g, ' ')
@@ -494,7 +507,7 @@ async function addField(
     applyVisibility(node as unknown as Record<string, unknown>, id, build, inRepeater)
     return id
   }
-  const type = fieldType[node.kind]
+  const type = node.kind === 'extensionField' ? node.component : fieldType[node.kind]
   const props: Record<string, unknown> = {
     name: path,
     label: typeof node.label === 'string' || node.label === null ? node.label : headline(node.name),
@@ -517,6 +530,7 @@ async function addField(
   if (node.readOnly !== undefined) props.readOnly = node.readOnly
   if (node.columnSpan !== undefined) props.columnSpan = node.columnSpan
   if (node.extraAttributes !== undefined) props.extraAttributes = node.extraAttributes
+  if (node.kind === 'extensionField') Object.assign(props, extensionRenderProps(node))
   if (node.kind === 'date' || node.kind === 'dateTime' || node.kind === 'time')
     addValueSlot(
       build,
@@ -525,6 +539,10 @@ async function addField(
       (_data, _record, _ctx, request) => node.timezone ?? (request as SlotRequest).options.timezone
     )
   const excluded = new Set([
+    'extension',
+    'extensionKind',
+    'component',
+    'extensionProps',
     'kind',
     'name',
     'label',
@@ -628,7 +646,12 @@ async function addField(
           const owner = ctx.pupitre.panel.resources.find(
             (resource) => resource.slug === (request as SlotRequest).options.resourceSlug
           )
-          return owner ? { url: optionsUrl(context, request) } : undefined
+          return owner
+            ? {
+                url: optionsUrl(context, request),
+                catalogExtensions: collectCatalogExtensions(node.createOptionForm),
+              }
+            : undefined
         })
       const visibilityClosure = typeof node.hidden === 'function' ? node.hidden : node.visible
       const serverVisibility =
@@ -1009,12 +1032,43 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
   }
   for (const [key, prop] of Object.entries(entry))
     if (
-      !['kind', 'name', 'label', 'value', 'url', 'schema', 'options'].includes(key) &&
+      ![
+        'kind',
+        'name',
+        'label',
+        'value',
+        'url',
+        'schema',
+        'options',
+        'extension',
+        'extensionKind',
+        'component',
+        'extensionProps',
+        'visible',
+        'hidden',
+        'format',
+      ].includes(key) &&
       prop !== undefined &&
       typeof prop !== 'function'
     )
       props[key] = prop
   if (entry.markdown === true) props.html = true
+  if (node.kind === 'extensionEntry') {
+    Object.assign(props, extensionRenderProps(node))
+    addValueSlot(build, id, 'record', (_data, record) => record)
+  }
+  if (
+    node.kind === 'repeatableEntry' &&
+    node.schema?.some((child) => child.kind === 'extensionEntry')
+  ) {
+    props.entries = node.schema.map((child) => ({
+      name: child.name,
+      label: child.label ?? headline(child.name),
+      ...(child.kind === 'extensionEntry'
+        ? { component: child.component, props: extensionRenderProps(child) }
+        : {}),
+    }))
+  }
   addValueSlot(build, id, 'value', async (_data, record, _ctx, request) => {
     const current = request as SlotRequest
     return formatEntryValue(entry, getPath(record ?? {}, path), current.options, path)
@@ -1028,7 +1082,11 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
         (entry.colors as Record<string, unknown>)[String(getPath(record ?? {}, path))]
     )
   if (typeof entry.url === 'function') addStatic(build, id, 'url', entry.url as Function)
-  build.elements[id] = { type: infolistType[String(entry.kind)], props }
+  build.elements[id] = {
+    type: node.kind === 'extensionEntry' ? node.component : infolistType[String(entry.kind)],
+    props,
+  }
+  applyVisibility(entry, id, build, false)
   return id
 }
 async function formatEntryValue(
@@ -1037,10 +1095,16 @@ async function formatEntryValue(
   options: CompileContext,
   path: string
 ): Promise<unknown> {
+  if (typeof entry.format === 'function') return entry.format(value, options.record ?? {})
   if (value === null || value === undefined) return value
   if (entry.options && typeof entry.options === 'object') {
     const label = formatOption(value, entry.options as Record<string, unknown> | readonly unknown[])
-    return entry.limit ? truncate(label, Number(entry.limit)) : label
+    const localizedLabel = resolveTranslations(
+      label,
+      options.locale,
+      options.ctx ? (requestMessages.get(options.ctx) ?? {}) : {}
+    )
+    return entry.limit ? truncate(localizedLabel, Number(entry.limit)) : localizedLabel
   }
   const context = { locale: options.locale, timezone: String(entry.timezone ?? options.timezone) }
   if (entry.dateTime) return formatDateTime(value as string, context, String(entry.dateTime))
@@ -1048,6 +1112,11 @@ async function formatEntryValue(
   if (entry.since) return formatSince(value as string, context)
   if (entry.money)
     return formatMoney(value as number | string, context, { currency: String(entry.money) })
+  value = resolveTranslations(
+    value,
+    options.locale,
+    options.ctx ? (requestMessages.get(options.ctx) ?? {}) : {}
+  )
   if (entry.limit) return truncate(value, Number(entry.limit))
   if (entry.markdown === true && typeof value === 'string')
     return sanitizeHtml(marked.parse(value, { async: false }) as string)
@@ -1072,7 +1141,7 @@ async function formatEntryValue(
                   await formatEntryValue(
                     child,
                     getPath(record, String(child.name)),
-                    options,
+                    { ...options, record },
                     `${path}.${String(child.name)}`
                   ),
                 ] as const
@@ -1172,7 +1241,7 @@ async function compile(
       else spec.elements[slot.elementId]!.props[slot.prop] = value
     }
     validateOutput(spec)
-    return { spec, state, catalogVersion }
+    return { spec, state, catalogVersion, catalogExtensions: collectCatalogExtensions(spec) }
   }
   const numericFields: Record<string, true> = {}
   const pending = [...nodes]
@@ -1235,19 +1304,35 @@ async function compile(
     else spec.elements[slot.elementId]!.props[slot.prop] = value
   }
   validateOutput(spec)
-  return { spec, state, catalogVersion }
+  return { spec, state, catalogVersion, catalogExtensions: collectCatalogExtensions(spec) }
 }
 function validateOutput(spec: JsonRenderSpec): void {
   if (process.env.NODE_ENV === 'production') return
   const catalogResult = jsonRenderSpec.safeParse(spec)
   const issues = validateSpec(spec as never)
-  const componentIssues = Object.entries(spec.elements).flatMap(([id, element]) => {
-    const definition =
-      pupitreCatalog.components[element.type as keyof typeof pupitreCatalog.components]
-    if (!definition) return []
-    const result = definition.props.safeParse(element.props)
-    return result.success ? [] : [{ id, issues: result.error.issues }]
-  })
+  const componentIssues = Object.entries(spec.elements).flatMap(
+    ([id, element]): { id: string; issues: unknown[] }[] => {
+      const definition =
+        pupitreCatalog.components[element.type as keyof typeof pupitreCatalog.components]
+      if (!definition)
+        return isRegisteredExtensionComponent(element.type)
+          ? []
+          : [
+              {
+                id,
+                issues: [
+                  {
+                    code: 'custom',
+                    path: ['type'],
+                    message: `Unknown Pupitre component "${element.type}"; register its catalog extension on the server.`,
+                  },
+                ],
+              },
+            ]
+      const result = definition.props.safeParse(element.props)
+      return result.success ? [] : [{ id, issues: result.error.issues }]
+    }
+  )
   if (!catalogResult.success || !issues.valid || componentIssues.length) {
     const details = [
       !catalogResult.success ? JSON.stringify(catalogResult.error.issues, null, 2) : '',

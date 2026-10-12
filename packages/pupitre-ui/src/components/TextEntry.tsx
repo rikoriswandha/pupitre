@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '@rikology/pupitre-react'
 import { Badge, Button, cn, toneText, toTone } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 import {
@@ -100,7 +101,7 @@ export function TextEntry({ props = {} }: { props?: EntryDisplayProps }) {
               aria-expanded={expanded}
               onClick={() => setExpanded(!expanded)}
             >
-              {expanded ? 'Show less' : 'Show more'}
+              {expanded ? t('Show less') : t('Show more')}
             </Button>
           )}
         </div>

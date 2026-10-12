@@ -1,4 +1,5 @@
 import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
+import { t } from '@rikology/pupitre-react'
 import { RepeaterContext } from './Repeater.js'
 import { Button, cn, Collapse } from '../primitives/index.js'
 import { Icon } from '../icons.js'
@@ -13,7 +14,10 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
   const context = useContext(RepeaterContext)
   const [collapsed, setCollapsed] = useState(props.collapsed === true)
   const index = typeof props.index === 'number' ? props.index : 0
-  const label = typeof props.itemLabel === 'string' ? props.itemLabel : `Item ${index + 1}`
+  const label =
+    typeof props.itemLabel === 'string'
+      ? props.itemLabel
+      : t('Item {number}', { number: index + 1 })
   const gridStyle = (
     typeof context.grid === 'number'
       ? { gridTemplateColumns: `repeat(${Math.max(1, context.grid)}, minmax(0, 1fr))` }
@@ -41,7 +45,7 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
                 variant="ghost"
                 size="sm"
                 square
-                aria-label={`Move ${label} up`}
+                aria-label={t('Move {label} up', { label })}
                 onClick={() => context.move(index, 'up')}
                 disabled={loading || index === 0}
               >
@@ -52,7 +56,7 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
                 variant="ghost"
                 size="sm"
                 square
-                aria-label={`Move ${label} down`}
+                aria-label={t('Move {label} down', { label })}
                 onClick={() => context.move(index, 'down')}
                 disabled={loading || index >= context.itemCount - 1}
               >
@@ -66,7 +70,7 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
               variant="ghost"
               size="sm"
               square
-              aria-label={collapsed ? 'Expand' : 'Collapse'}
+              aria-label={collapsed ? t('Expand') : t('Collapse')}
               onClick={() => setCollapsed((value) => !value)}
               aria-expanded={!collapsed}
             >
@@ -85,7 +89,7 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
               variant="ghost"
               size="sm"
               square
-              aria-label="Clone"
+              aria-label={t('Clone')}
               onClick={() => context.clone(index)}
               disabled={loading || context.itemCount >= context.maxItems}
             >
@@ -98,7 +102,7 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
             size="sm"
             square
             color="danger"
-            aria-label="Remove"
+            aria-label={t('Remove')}
             onClick={() => context.remove(index)}
             disabled={loading || context.itemCount <= context.minItems}
           >

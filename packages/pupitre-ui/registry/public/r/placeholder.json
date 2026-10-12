@@ -4,6 +4,7 @@
   "type": "registry:component",
   "title": "Placeholder",
   "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
     "react@^19.2.3"
   ],
   "registryDependencies": [],
@@ -12,7 +13,7 @@
       "path": "../src/components/Placeholder.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Placeholder.tsx",
-      "content": "import type { ReactNode } from 'react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Placeholder({ props, children }: RuntimeProps) {\n  const value = props.content\n  const content =\n    value === null || value === undefined\n      ? children\n      : typeof value === 'boolean'\n        ? String(value)\n        : typeof value === 'object'\n          ? ''\n          : String(value)\n  const output =\n    content === null || content === undefined || content === '' ? 'No content available' : content\n  return (\n    <div className=\"min-w-0 space-y-1.5 text-sm text-muted-foreground\" aria-live=\"polite\">\n      {typeof props.label === 'string' && (\n        <p className=\"font-medium text-foreground\">{props.label}</p>\n      )}\n      {output}\n    </div>\n  )\n}\nexport default Placeholder\n"
+      "content": "import type { ReactNode } from 'react'\nimport { t } from '@rikology/pupitre-react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Placeholder({ props, children }: RuntimeProps) {\n  const value = props.content\n  const content =\n    value === null || value === undefined\n      ? children\n      : typeof value === 'boolean'\n        ? String(value)\n        : typeof value === 'object'\n          ? ''\n          : String(value)\n  const output =\n    content === null || content === undefined || content === ''\n      ? t('No content available')\n      : content\n  return (\n    <div className=\"min-w-0 space-y-1.5 text-sm text-muted-foreground\" aria-live=\"polite\">\n      {typeof props.label === 'string' && (\n        <p className=\"font-medium text-foreground\">{props.label}</p>\n      )}\n      {output}\n    </div>\n  )\n}\nexport default Placeholder\n"
     }
   ]
 }

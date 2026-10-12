@@ -53,6 +53,7 @@ Challenges WebAuthn disimpan di session (bukan DB), berumur lima menit, dan diko
 Tabel dipublikasikan oleh stub migrasi `1791700000006_create_pupitre_exports_table` dan boleh tetap kosong bila host tidak memakai `jobs`; ekspor sinkron tidak membuat row. `user_id` memakai FK `users.id` (integer), `tenant_id` menyimpan ID tenant aktif tanpa FK karena model tenant milik host. Retensi default 1.440 menit dapat diubah lewat `config/pupitre.ts` → `exports.retentionMinutes`; `pupitre:prune` menghapus file dari disk storage sebelum menghapus row kedaluwarsa.
 
 Progress dan download ekspor memeriksa ulang `viewAny` dan grant `.can()` dari action saat ini, selain kepemilikan user/tenant. Action yang dihapus atau metadata yang tidak tersedia ditolak. Tidak ada perubahan skema; ekspor lama tanpa identitas action harus dibuat ulang setelah upgrade.
+Error progress menyimpan teks sumber terbaca pada `error`, serta intent terjemahan opsional pada `result._pupitreError`. Metadata ini digabung dengan identitas `action` yang sudah ada, bukan menggantikannya; saat dibaca Pupitre menyelesaikannya memakai locale pembaca.
 
 ### `pupitre_uploads` — pelacakan upload yang belum dipakai
 
@@ -106,6 +107,7 @@ Migrasi `add_pupitre_columns_to_users` memakai `hasColumn` sebelum setiap `alter
 | `email_verified_at` | timestamptz nullable | email verification | kalau `.emailVerification()` |
 | `avatar` | string nullable | key storage adapter | kalau profile avatar aktif |
 | `timezone` | string(64) nullable | override timezone panel | opsional; dibaca kalau ada |
+| `locale` | string(32) nullable | preferensi bahasa user; dibatasi `.locales([...])` panel | opsional; session dipakai bila kolom tidak ada |
 | `current_tenant_id` | integer nullable | tenancy mode `implicit` | kalau tenancy implicit tanpa `adonisjs-tenant` |
 | `provider` | string nullable | Ally provider key; optional social identity lookup | migration WP32b |
 | `provider_id` | string nullable | provider's stable account id; paired with `provider` | migration WP32b |
@@ -118,6 +120,8 @@ Untuk `.login()` host harus menyediakan kolom email dan password pada model, ser
 Social login memakai kolom identitas hanya bila keduanya tersedia; selain itu akun dicocokkan melalui email terverifikasi dari provider. Stub migrasi kolom sosial `1791700000005_add_pupitre_social_columns_to_users` dipublikasikan saat configure. Callback hanya memakai target relatif yang sebelumnya disimpan di session; parameter query callback tidak diteruskan ke redirect setelah login. Ally melaporkan status verified untuk GitHub saat provider mengembalikan email publik/terverifikasi dan untuk Google pada alamat yang telah diverifikasi oleh Google; alamat kosong, unsupported, atau unverified tidak pernah dipakai untuk menghubungkan akun atau registrasi. `auth.columns.socialProvider` dan `socialProviderId` memetakan properti model Lucid (default `provider` dan `providerId`).
 
 Nama kolom bisa diubah di `config/pupitre.ts` → `auth.columns`. Properti `emailVerifiedAt`, `avatar`, `timezone`, dan lainnya dibaca melalui atribut model sesuai konfigurasi; migrasi hanya menambahkan kolom fisik standar di atas.
+
+Lokalisasi menerbitkan migrasi terpisah `1791800000023_add_pupitre_locale_to_users` melalui configure/`pupitre:install`; jalankan `node ace migration:run` untuk host lama. Guard `hasTable`/`hasColumn` membuat up/down idempotent pada SQLite dan PostgreSQL; DDL diantrekan tanpa `await`. Model host mendeklarasikan atribut locale, dan `auth.columns.locale` memetakan nama properti Lucid (default `locale`). Nilai null tidak memaksa bahasa Inggris; resolusi tetap mengikuti session, Accept-Language, lalu default panel. Tanpa kolom opsional, pilihan bahasa tetap tersimpan di session.
 
 Panel tenancy dikonfigurasi lewat `.tenancy({ mode, model, ownership, tenantsForUser })`. Driver kolom default membutuhkan `model` tenant dan callback `tenantsForUser(user, ctx)` yang hanya mengembalikan tenant tempat user menjadi anggota; Pupitre menolak anggota yang tidak ada pada hasil callback. `ownership` default `tenant_id` harus berupa kolom nyata pada tiap tabel resource yang terscope. Mode `implicit` juga membutuhkan kolom user yang dapat ditulis pada `currentTenantAttribute` (default `currentTenantId`) untuk menyimpan pilihan aktif. `scope(false)` menandai resource global yang sengaja tidak memiliki tenancy.
 
@@ -147,6 +151,7 @@ Pupitre tidak membuat tabel tenant atau membership. Host menyediakan tenant mode
 | Sessions, remember-me | `@adonisjs/session`, `@adonisjs/auth` | milik host |
 
 Catatan: Pupitre tidak mengelola atau memigrasikan tabel `notifications`. Host harus mendaftarkan provider dan migrasi peer; adapter Pupitre hanya membaca/menulis inbox milik user saat ini. Tanpa `config.pupitre.notifications`, tray dan endpoint inbox tidak tersedia dan notifikasi aksi tetap menjadi flash saja.
+Adapter resmi menyimpan teks sumber pada `data.title`/`body`/label aksi, dan key/params terjemahan opsional pada `data._pupitreTranslations`. Marker HTTP bertanda `APP_KEY` tidak dipersistenkan; metadata memungkinkan locale pembaca dan rotasi key tanpa mengubah teks yang diterima pembaca inbox host lain.
 
 ## 5. Cross-dialect
 
@@ -165,3 +170,11 @@ Setiap migrasi `down()` menghapus tabel/kolom yang dibuatnya **saja**; tidak men
 `pupitre-audit` tidak membuat tabel log sendiri. Activity memakai model `Audit` dari `@rikology/adonisjs-audit-trail`; tabel `audits` menyimpan UUID `id`, event, pasangan `auditable_type/auditable_id`, `old_values/new_values` JSON, actor, `tenant_id`, tags, waktu, serta `stream/seq/hash/prev_hash`. Migrasi example mengikuti skema peer termasuk tabel checkpoint/archive dan guard maintenance SQLite. Semua builder DDL queued tanpa `await`.
 
 Post example memakai mixin `Auditable(PostSchema)`. Provider/config peer menangani capture dan delivery; `config.pupitre.audit` hanya adapter pembacaan. Activity tidak menyediakan operasi tulis; list dan detail dibatasi tenant aktif melalui `tenant_id` meskipun ownership column resource host berbeda.
+
+## 8. Settings plugin (post-1.0)
+
+`@rikology/pupitre-settings` menerbitkan migrasi idempotent `1791700000043_create_pupitre_settings_table.ts`. Tabel `pupitre_settings` berisi `id` increments, `group` string(120), `scope_key` string(254), `key` string(120), `value` JSON, serta `created_at`/`updated_at` timestamp dengan autoCreate/autoUpdate Lucid. Semua kolom wajib; indeks unik bernama `pupitre_settings_identity_unique` mencakup `(group, scope_key, key)`.
+
+`scope_key = global` untuk grup global atau `tenant:<id>` untuk grup tenant. Tidak memakai NULL sehingga keunikan global konsisten pada SQLite/PostgreSQL. Kolom JSON mengikuti §5, memakai envelope `{ value: ... }`; prepare selalu stringify envelope dan consume menerima JSON text SQLite maupun objek PostgreSQL. Ini menghindari ambiguitas scalar string hasil decoding PostgreSQL.
+
+Simpan patch memvalidasi gabungan default dan nilai lama lewat compiler Vine core, lalu upsert seluruh key berubah dalam satu transaksi. Key yang tidak ada di defaults/form ditolak; key tersimpan usang diabaikan saat membaca. Migrasi hanya mengantre DDL (tanpa await create/drop). Example backfill menyalin empat key umum, mengonversi maintenanceMode lama ke boolean, dan mempertahankan tabel `settings` karena playground masih memakainya.

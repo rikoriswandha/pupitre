@@ -1,4 +1,5 @@
 import type { ModalProps } from '@rikology/pupitre-react'
+import { t } from '@rikology/pupitre-react'
 import { Dialog } from '@base-ui/react/dialog'
 import { Icon } from '../icons.js'
 import {
@@ -11,7 +12,7 @@ import {
 export function Modal({
   open,
   onClose,
-  heading = 'Dialog',
+  heading = t('Dialog'),
   description,
   width = 'md',
   slideOver,
@@ -49,7 +50,7 @@ export function Modal({
               )}
             </div>
             <Dialog.Close
-              render={<Button variant="ghost" square size="sm" aria-label="Close dialog" />}
+              render={<Button variant="ghost" square size="sm" aria-label={t('Close dialog')} />}
             >
               <Icon name="x" className="size-4" />
             </Dialog.Close>

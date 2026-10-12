@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Localize Activity navigation, fields and timeline headings.
 - Keep historical audit entries visible without subject links when PostgreSQL cannot parse their IDs as the subject model's primary-key type.
 
 ## 0.1.0

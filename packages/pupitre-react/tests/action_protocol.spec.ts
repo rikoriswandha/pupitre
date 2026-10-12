@@ -14,6 +14,8 @@ import type { ActionDescriptor, ActionResult } from '@rikology/pupitre/catalog'
 import { ensureCatalogVersion, isSafeNewTabUrl } from '../src/page/Pupitre.js'
 import { defineRegistry, getRegistryHandlers } from '../src/registry/defineRegistry.js'
 import { exposePupitreDevContext } from '../src/renderer/PupitreRenderer.js'
+import { act, createElement } from 'react'
+import { createRoot } from 'react-dom/client'
 function fakeRouter(calls: Array<{ method: string; args: unknown[] }>): RouterLike {
   const record =
     (method: string) =>
@@ -34,6 +36,10 @@ test('confirm cancellation sends no request and confirmation submits ids', async
   let submittedBody = ''
   let confirmed = false
   let closed = false
+  const container = document.createElement('div')
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
+  const root = createRoot(container)
+  let dialog: ConfirmDialogProps | undefined
   const restoreFetch = setFetch(async (_url, init) => {
     submissions++
     submittedBody = String(init?.body)
@@ -49,7 +55,12 @@ test('confirm cancellation sends no request and confirmation submits ids', async
       enabled: true,
     } as ActionDescriptor,
     ids: [8, 9],
-    registry: { ConfirmDialog: () => null } as unknown as ShellRegistry,
+    registry: {
+      ConfirmDialog: (next: ConfirmDialogProps) => {
+        dialog = next
+        return null
+      },
+    } as unknown as ShellRegistry,
     onResult: () => {
       confirmed = true
     },
@@ -59,16 +70,19 @@ test('confirm cancellation sends no request and confirmation submits ids', async
     toast: () => {},
   }
   try {
-    const cancelDialog = ActionConfirm(props).props as ConfirmDialogProps
-    cancelDialog.onCancel()
+    await act(async () => root.render(createElement(ActionConfirm, props)))
+    if (!dialog) throw new Error('Missing confirmation')
+    await act(async () => dialog?.onCancel())
     assert.equal(submissions, 0)
-    const confirmDialog = ActionConfirm(props).props as ConfirmDialogProps
-    await confirmDialog.onConfirm()
+    await act(async () => {
+      await dialog?.onConfirm()
+    })
     assert.equal(submissions, 1)
     assert.deepEqual(JSON.parse(submittedBody), { ids: [8, 9] })
     assert.isTrue(confirmed)
     assert.isTrue(closed)
   } finally {
+    await act(async () => root.unmount())
     restoreFetch()
   }
 })

@@ -58,18 +58,30 @@ function getAbility(action: ActionDefinition): string | undefined {
       return undefined
   }
 }
+const builtinLabels: Partial<Record<NonNullable<ActionDefinition['builtin']>, string>> = {
+  create: t('Create'),
+  edit: t('Edit'),
+  view: t('View'),
+  delete: t('Delete'),
+  restore: t('Restore'),
+  forceDelete: t('Force Delete'),
+  export: t('Export'),
+  import: t('Import'),
+  replicate: t('Replicate'),
+  attach: t('Attach'),
+  detach: t('Detach'),
+  associate: t('Associate'),
+  dissociate: t('Dissociate'),
+}
 function defaultLabel(action: ActionDefinition): string {
   if (action.label) return action.label
   if (isBulkDelete(action)) return t('Delete')
-  if (action.builtin && action.builtin !== 'bulk') {
-    const words = action.builtin.replace(/([a-z])([A-Z])/g, '$1 $2')
-    return t(words[0]!.toUpperCase() + words.slice(1))
-  }
+  if (action.builtin && builtinLabels[action.builtin]) return builtinLabels[action.builtin]!
   return action.name
 }
 
 function recordLabel(record?: LucidRow): string {
-  if (!record) return 'record'
+  if (!record) return t('record')
   const constructorName = record.constructor.name
   return constructorName.replace(/([a-z])([A-Z])/g, '$1 $2')
 }
@@ -185,7 +197,7 @@ export async function compileActionDescriptor(
           heading:
             action.confirmation?.heading ??
             (destructive
-              ? t(`Delete ${options.resourceLabel ?? recordLabel(record)}?`)
+              ? t('Delete {label}?', { label: options.resourceLabel ?? recordLabel(record) })
               : defaultLabel(action)),
           ...(confirmDescription ? { description: confirmDescription } : {}),
           ...(confirmSubmitLabel ? { submitLabel: confirmSubmitLabel } : {}),

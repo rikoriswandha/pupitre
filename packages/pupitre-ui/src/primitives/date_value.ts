@@ -41,9 +41,10 @@ export function timezoneHint(timeZone: string | null | undefined): string | null
   if (!timeZone) return null
   const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone
   if (!browserZone || browserZone === timeZone) return null
-  return t('Times shown in {timezone} (browser: {browser})')
-    .replace('{timezone}', timeZone)
-    .replace('{browser}', browserZone)
+  return t('Times shown in {timezone} (browser: {browser})', {
+    timezone: timeZone,
+    browser: browserZone,
+  })
 }
 
 /** Native datetime-local values are deliberately submitted without an offset. */

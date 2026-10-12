@@ -1,6 +1,6 @@
 import { createContext, useContext, type CSSProperties, type ReactNode } from 'react'
 import { Icon } from '../icons.js'
-import { useBoundValue, useEmbedded } from '@rikology/pupitre-react'
+import { t, useBoundValue, useEmbedded } from '@rikology/pupitre-react'
 import type { ActionDescriptor } from '@rikology/pupitre/catalog'
 import { Button, cn, Collapse, Panel, PanelHeader } from '../primitives/index.js'
 import { ActionList } from './ActionList.js'
@@ -51,7 +51,7 @@ export function Section({ props, children, bindings }: RuntimeProps) {
               variant="ghost"
               size="sm"
               square
-              aria-label={collapsed ? 'Show' : 'Hide'}
+              aria-label={collapsed ? t('Show') : t('Hide')}
               aria-expanded={!collapsed}
               onClick={() => setCollapsed(!collapsed)}
             >

@@ -5,6 +5,8 @@ import type { NotificationsAdapter } from './adapters/notifications.js'
 import type { JobsAdapter } from './adapters/jobs.js'
 import type { AuditAdapter } from './adapters/audit.js'
 import type { RealtimeAdapter } from './adapters/realtime.js'
+import { validateMessages } from './i18n.js'
+import type { LocaleMessages } from './i18n.js'
 
 type Lazy<T> = T | (() => Promise<T>)
 
@@ -16,6 +18,7 @@ export type AuthColumns = {
   avatar: string
   emailVerifiedAt: string
   timezone: string
+  locale: string
   currentTenantId: string
   mfaSecret: string
   mfaRecoveryCodes: string
@@ -27,6 +30,7 @@ export type AuthColumns = {
 export interface PupitreConfig {
   cache: { dev: boolean }
   timezone: string
+  i18n?: { fallbackLocale?: string; messages?: LocaleMessages }
   storage: { disk: string }
   policies?: () => Promise<Record<string, unknown>>
   auth: {
@@ -48,7 +52,7 @@ export interface PupitreConfig {
 export type PupitreConfigInput = Partial<
   Pick<
     PupitreConfig,
-    'timezone' | 'policies' | 'mail' | 'notifications' | 'jobs' | 'exports' | 'audit'
+    'timezone' | 'policies' | 'mail' | 'notifications' | 'jobs' | 'exports' | 'audit' | 'i18n'
   >
 > & {
   realtime?: PupitreConfig['realtime']
@@ -71,6 +75,7 @@ const defaults: PupitreConfig = {
       avatar: 'avatar',
       emailVerifiedAt: 'emailVerifiedAt',
       timezone: 'timezone',
+      locale: 'locale',
       currentTenantId: 'currentTenantId',
       mfaSecret: 'mfaSecret',
       mfaRecoveryCodes: 'mfaRecoveryCodes',
@@ -85,6 +90,8 @@ const defaults: PupitreConfig = {
 
 /** Resolves the configured config values, applying stable defaults. */
 export function resolveConfig(config: PupitreConfigInput = {}): PupitreConfig {
+  if (config.i18n?.messages) validateMessages(config.i18n.messages)
+  if (config.i18n?.fallbackLocale) new Intl.PluralRules(config.i18n.fallbackLocale)
   return {
     ...defaults,
     ...config,

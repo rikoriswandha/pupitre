@@ -1,3 +1,4 @@
+import type { CatalogExtension } from '../../catalog/extensions.js'
 import type { ApplicationService } from '@adonisjs/core/types'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { PanelBuilder } from '../builder/panel.js'
@@ -6,6 +7,7 @@ import type { NavEntryDefinition } from './navigation.js'
 import type { ResourceDefinition } from './resource.js'
 import type PupitreManager from '../manager.js'
 import type { PanelRuntime } from '../manager.js'
+import type { LocaleMessages } from '../i18n.js'
 
 type Definable<T> = T | { toDefinition(): T }
 
@@ -39,6 +41,8 @@ export type PluginResourceContext = {
 export type PupitrePlugin = {
   /** Unique kebab-case identifier, e.g. `shield` or `acme-audit`. */
   readonly name: string
+  catalog?: readonly CatalogExtension[]
+  messages?: LocaleMessages
   register?(panel: PanelBuilder): PanelBuilder | void
   resources?: readonly unknown[] | Record<string, unknown>
   pages?: readonly unknown[] | Record<string, unknown>

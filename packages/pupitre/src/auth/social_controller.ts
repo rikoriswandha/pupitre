@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import { DateTime } from 'luxon'
 import { randomBytes } from 'node:crypto'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -74,9 +75,9 @@ export default class SocialAuthController {
     if (!social?.providers.includes(provider)) return ctx.response.notFound()
     if (await authRateLimited(ctx, 'social-callback', 60)) return authLimitResponse(ctx)
     const ally = await allyFromContext(ctx, provider)
-    if (ally.accessDenied()) return fail(ctx, 'Social sign-in was denied')
-    if (ally.stateMisMatch()) return fail(ctx, 'Social sign-in state did not match; try again')
-    if (ally.hasError()) return fail(ctx, 'The social provider returned an error')
+    if (ally.accessDenied()) return fail(ctx, t('Social sign-in was denied'))
+    if (ally.stateMisMatch()) return fail(ctx, t('Social sign-in state did not match; try again'))
+    if (ally.hasError()) return fail(ctx, t('The social provider returned an error'))
 
     const identity = await ally.user()
     const cfg = await config(ctx)
@@ -100,9 +101,9 @@ export default class SocialAuthController {
       user = await User.findBy(columns.email, email)
     if (!user) {
       if (!social.registration && !ctx.pupitre.panel.auth.registration)
-        return fail(ctx, 'No account is linked to this social identity')
+        return fail(ctx, t('No account is linked to this social identity'))
       if (!email || identity.emailVerificationState !== 'verified')
-        return fail(ctx, 'A verified email address is required to create an account')
+        return fail(ctx, t('A verified email address is required to create an account'))
       const hasEmailVerifiedAt = await db
         .connection()
         .schema.hasColumn('users', 'email_verified_at')

@@ -1,6 +1,7 @@
 import { Dialog } from '@base-ui/react/dialog'
 import { Icon } from '../icons.js'
 import { Button, backdropClasses, dialogPopupClasses } from '../primitives/index.js'
+import { t } from '@rikology/pupitre-react'
 
 export type ConfirmDialogProps = {
   open: boolean
@@ -19,8 +20,8 @@ export function ConfirmDialog({
   open,
   heading,
   description,
-  submitLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  submitLabel = t('Confirm'),
+  cancelLabel = t('Cancel'),
   destructive,
   icon,
   loading,
@@ -66,7 +67,7 @@ export function ConfirmDialog({
               loading={loading}
               onClick={onConfirm}
             >
-              {loading ? 'Working…' : submitLabel}
+              {loading ? t('Working…') : submitLabel}
             </Button>
           </div>
         </Dialog.Popup>

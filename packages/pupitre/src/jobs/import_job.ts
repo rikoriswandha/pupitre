@@ -1,3 +1,5 @@
+import { storedJobError } from './error.js'
+import { t } from '../i18n.js'
 import app from '@adonisjs/core/services/app'
 import type { Database } from '@adonisjs/lucid/database'
 import { parse as parseCsv } from 'csv-parse/sync'
@@ -17,6 +19,7 @@ type ImportJobPayload = {
   action: string
   userId: string | number
   tenantId: string | number | null
+  locale?: string
   fileKey: string
   mapping: Record<string, string>
   params?: Record<string, string | number>
@@ -39,12 +42,12 @@ export function registerImportJob(jobs: JobsAdapter, manager: PupitreManager) {
       const { ctx, resource } = await createJobContext(manager, payload)
       const action = actionDefinition(resource, payload.action)
       if (!action || action.builtin !== 'import')
-        throw new Error('Queued import action is unavailable')
+        throw new Error(t('Queued import action is unavailable'))
       await authorizeNestedParent(ctx, resource, true)
       if (!(await authorizeResource(ctx, resource, 'create')))
-        throw new Error('You are not authorized to import records')
+        throw new Error(t('You are not authorized to import records'))
       if (action.can && !(await authorizeResource(ctx, resource, action.can)))
-        throw new Error('You are not authorized to import records')
+        throw new Error(t('You are not authorized to import records'))
       const stream = await createPupitreStorage().getStream(payload.fileKey)
       const chunks: Uint8Array[] = []
       for await (const chunk of stream) chunks.push(Buffer.from(chunk))
@@ -56,7 +59,7 @@ export function registerImportJob(jobs: JobsAdapter, manager: PupitreManager) {
         trim: true,
       }) as Record<string, string>[]
       const headers = parsed.length > 0 ? Object.keys(parsed[0]!) : []
-      if (headers.length === 0) throw new Error('The queued CSV file has no header row')
+      if (headers.length === 0) throw new Error(t('The queued CSV file has no header row'))
       await database.from('pupitre_exports').where('id', payload.importId).update({
         status: 'processing',
         total_rows: parsed.length,
@@ -92,7 +95,7 @@ export function registerImportJob(jobs: JobsAdapter, manager: PupitreManager) {
         .where('id', payload.importId)
         .update({
           status: 'failed',
-          error: error instanceof Error ? error.message : 'Import failed',
+          ...storedJobError(error, t('Import failed')),
           updated_at: DateTime.now().toSQL(),
         })
       throw error

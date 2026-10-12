@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js'
 import app from '@adonisjs/core/services/app'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -145,7 +146,7 @@ function resourceSubNavigation(
   if (target.definition.pages.edit) {
     items.push({
       key: 'edit',
-      label: 'Edit',
+      label: t('Edit'),
       url: target.urls.edit(recordId),
       active: kind === 'edit' && !ctx.request.qs().relation,
     })
@@ -153,7 +154,7 @@ function resourceSubNavigation(
   if (target.definition.pages.view) {
     items.push({
       key: 'view',
-      label: 'View',
+      label: t('View'),
       url: target.urls.view(recordId),
       active: kind === 'view' && !ctx.request.qs().relation,
     })
@@ -161,7 +162,7 @@ function resourceSubNavigation(
   if (relations.length) {
     items.push({
       key: 'relations',
-      label: 'Relations',
+      label: t('Relations'),
       url: '#resource-relations',
       active: false,
     })
@@ -269,7 +270,7 @@ function handleActionValidation(ctx: HttpContext, error: unknown): boolean {
   if (messages.length === 0 && 'message' in error && typeof error.message === 'string') {
     errors._form = [error.message]
   }
-  errorJson(ctx, 'The submitted data is invalid', 422, errors)
+  errorJson(ctx, t('The submitted data is invalid'), 422, errors)
   return true
 }
 async function schemaContext(
@@ -440,7 +441,7 @@ function withRelationTabs(
       id: 'resource-relations',
       tabs: relations.map(({ key, label, group, icon, badge }) => ({
         key,
-        label: group ? `${group} / ${label}` : label,
+        label: group ? t('{group} / {label}', { group, label }) : label,
         ...(icon ? { icon } : {}),
         ...(badge !== undefined ? { badge } : {}),
       })),
@@ -501,7 +502,12 @@ export default class ResourceController {
       compileFilterForm: async (nodes) => {
         const compiled = await compileForm([...nodes], {
           ...(await schemaContext(ctx, target, 'filters')),
-          form: { method: 'get', url: target.urls.list, submitLabel: 'Apply', dirtyGuard: false },
+          form: {
+            method: 'get',
+            url: target.urls.list,
+            submitLabel: t('Apply'),
+            dirtyGuard: false,
+          },
         })
         return compiled.spec
       },
@@ -662,7 +668,7 @@ export default class ResourceController {
       form: {
         method: 'post',
         url: target.urls.list,
-        submitLabel: `Create ${target.label}`,
+        submitLabel: t('Create {label}', { label: target.label }),
         cancelUrl: target.urls.list,
         dirtyGuard: true,
       },
@@ -678,7 +684,7 @@ export default class ResourceController {
         kind: 'create',
         spec: compiled.spec,
         state: compiled.state,
-        title: `Create ${target.label}`,
+        title: t('Create {label}', { label: target.label }),
         headerActions: actions,
         widgets: widgetProps.widgets,
         deferred: widgetProps.deferred,
@@ -704,7 +710,7 @@ export default class ResourceController {
       form: {
         method: 'put',
         url: target.urls.update(recordValue(record, keyName(target.model)) as string | number),
-        submitLabel: 'Save',
+        submitLabel: t('Save'),
         cancelUrl: target.urls.list,
         dirtyGuard: true,
       },
@@ -853,7 +859,7 @@ export default class ResourceController {
         : redirectTo === 'view'
           ? target.urls.view(savedId)
           : target.urls.edit(savedId)
-    const flash = [{ type: 'success' as const, title: 'Created' }]
+    const flash = [{ type: 'success' as const, title: t('Created') }]
     setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx)) return actionJson(ctx, { flash, redirect })
     return ctx.response.redirect(redirect)
@@ -925,7 +931,7 @@ export default class ResourceController {
         serializedValue(savedRecord, field.name)
       )
     }
-    const flash = [{ type: 'success' as const, title: 'Saved' }]
+    const flash = [{ type: 'success' as const, title: t('Saved') }]
     setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx))
       return actionJson(ctx, { flash, redirect: target.urls.edit(ctx.params.id) })
@@ -952,12 +958,12 @@ export default class ResourceController {
     const value = body.value
     const invalid =
       (column.kind === 'toggle' || column.kind === 'checkbox') && typeof value !== 'boolean'
-        ? 'Value must be a boolean'
+        ? t('Value must be a boolean')
         : column.kind === 'select' &&
             (!Object.hasOwn(column.options ?? {}, String(value)) || typeof value !== 'string')
-          ? 'Value is not an available option'
+          ? t('Value is not an available option')
           : column.kind === 'textInput' && typeof value !== 'string'
-            ? 'Value must be text'
+            ? t('Value must be text')
             : undefined
     if (invalid) return ctx.response.unprocessableEntity({ errors: { value: [invalid] } })
     if (column.kind === 'textInput' && column.validation) {
@@ -966,7 +972,7 @@ export default class ResourceController {
           { kind: 'text', name: 'value', rules: column.validation } as FieldDefinitionUnion,
         ]).validate({ value }, { record, model: target.model, ctx, timezone: ctx.pupitre.timezone })
       } catch (error) {
-        const validationErrors: Record<string, string[]> = { value: ['Invalid value'] }
+        const validationErrors: Record<string, string[]> = { value: [t('Invalid value')] }
         if (
           error &&
           typeof error === 'object' &&
@@ -988,7 +994,7 @@ export default class ResourceController {
         await record.merge({ [column.name]: value }).save()
       })
     } catch (error) {
-      const errors: Record<string, string[]> = { value: ['Unable to save this value'] }
+      const errors: Record<string, string[]> = { value: [t('Unable to save this value')] }
       if (
         error &&
         typeof error === 'object' &&
@@ -1054,7 +1060,7 @@ export default class ResourceController {
     await ensureAuthorized(ctx, target, 'delete', record)
     await executeBuiltinDelete(target.definition, [record], ctx)
     await publishResourceChange(ctx, target.slug)
-    const flash = [{ type: 'success' as const, title: 'Deleted' }]
+    const flash = [{ type: 'success' as const, title: t('Deleted') }]
     setRedirectFlash(ctx, flash)
     if (isPupitreActionRequest(ctx))
       return actionJson(ctx, { flash, redirect: target.urls.list, deselect: true })

@@ -1,3 +1,5 @@
+import { captureTranslation, requestMessages, resolveTranslations, t } from '../../i18n.js'
+import { storedJobError } from '../../jobs/error.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import { QsParserFactory } from '@adonisjs/core/factories/http'
 import type { Database } from '@adonisjs/lucid/database'
@@ -38,18 +40,18 @@ function currentQuery(ctx: HttpContext): Record<string, unknown> {
 export default class ExportController {
   async run(ctx: HttpContext) {
     const resource = await requestResource(ctx, ctx.params.slug)
-    if (!resource) return errorJson(ctx, 'Resource not found', 404)
+    if (!resource) return errorJson(ctx, t('Resource not found'), 404)
     const action = actionDefinition(resource, String(ctx.request.qs().action ?? 'export'))
     if (!action || action.builtin !== 'export')
-      return errorJson(ctx, 'Export action not found', 404)
+      return errorJson(ctx, t('Export action not found'), 404)
     const table = resource.definition.table
-    if (!table) return errorJson(ctx, 'This resource does not define a table', 404)
+    if (!table) return errorJson(ctx, t('This resource does not define a table'), 404)
     await authorizeNestedParent(ctx, resource)
     if (
       !(await authorizeResource(ctx, resource, 'viewAny')) ||
       (action.can && !(await authorizeResource(ctx, resource, action.can)))
     )
-      return errorJson(ctx, 'You are not authorized to export these records', 403)
+      return errorJson(ctx, t('You are not authorized to export these records'), 403)
 
     const requestedIds = ctx.request.input('ids')
     if (
@@ -58,7 +60,7 @@ export default class ExportController {
         requestedIds.length === 0 ||
         requestedIds.some((id) => typeof id !== 'string' && typeof id !== 'number'))
     )
-      return errorJson(ctx, 'Select at least one record to export', 422)
+      return errorJson(ctx, t('Select at least one record to export'), 422)
     const selectedColumns = action.exportColumns?.length
       ? action.exportColumns
       : table.columns
@@ -72,7 +74,7 @@ export default class ExportController {
       Array.isArray(requestedColumns) && requestedColumns.every((name) => typeof name === 'string')
         ? selectedColumns.filter((column) => requestedColumns.includes(column.name))
         : selectedColumns
-    if (columns.length === 0) return errorJson(ctx, 'No exportable columns were selected', 422)
+    if (columns.length === 0) return errorJson(ctx, t('No exportable columns were selected'), 422)
 
     const prefixValue = ctx.request.input('prefix')
     const prefix = typeof prefixValue === 'string' ? prefixValue : undefined
@@ -90,13 +92,18 @@ export default class ExportController {
     if (count > maxAsyncRows && jobs)
       return errorJson(
         ctx,
-        `This export exceeds the configured asynchronous limit of ${maxAsyncRows} rows.`,
+        t('This export exceeds the configured asynchronous limit of {count} rows.', {
+          count: maxAsyncRows,
+        }),
         413
       )
     if (count > maxSyncRows && !jobs)
       return errorJson(
         ctx,
-        `This export exceeds the synchronous limit of ${maxSyncRows} rows. Configure a jobs adapter for larger exports.`,
+        t(
+          'This export exceeds the synchronous limit of {count} rows. Configure a jobs adapter for larger exports.',
+          { count: maxSyncRows }
+        ),
         413
       )
 
@@ -106,7 +113,8 @@ export default class ExportController {
     }))
     if (jobs && count > maxSyncRows) {
       const userId = ctx.pupitre.user?.id
-      if (userId === undefined) return errorJson(ctx, 'Authentication is required for exports', 401)
+      if (userId === undefined)
+        return errorJson(ctx, t('Authentication is required for exports'), 401)
       const exportId = randomUUID()
       const fileKey = `exports/${exportId}.csv`
       const progressUrl = `${ctx.pupitre.panel.path}/_pupitre/exports/${exportId}`
@@ -133,6 +141,7 @@ export default class ExportController {
         await jobs.dispatch('pupitre.export', {
           id: exportId,
           panelId: ctx.pupitre.panel.id,
+          locale: ctx.pupitre.locale,
           resource: resource.slug,
           action: action.name,
           userId,
@@ -144,7 +153,10 @@ export default class ExportController {
           progressUrl,
           downloadUrl,
           totalRows: count,
-          columns: csvColumns,
+          columns: csvColumns.map((column) => {
+            const captured = captureTranslation(column.header)
+            return { ...column, header: captured.text, translation: captured.translation }
+          }),
           queryOptions: input,
         })
       } catch (error) {
@@ -153,7 +165,11 @@ export default class ExportController {
           .where('id', exportId)
           .update({
             status: 'failed',
-            error: error instanceof Error ? error.message : 'Unable to dispatch export',
+            ...storedJobError(
+              error,
+              t('Unable to dispatch export'),
+              JSON.stringify({ action: action.name })
+            ),
             updated_at: DateTime.now().toSQL(),
           })
         throw error
@@ -162,7 +178,12 @@ export default class ExportController {
     }
     const result = await processExport(ctx, resource, action, table, csvColumns, input)
     if (result.total !== count) throw new Error('The export result set changed during processing')
-    const stream = createCsvStream(result.rows, csvColumns)
+    const messages = requestMessages.get(ctx) ?? {}
+    const localizedColumns = resolveTranslations(csvColumns, ctx.pupitre.locale, messages)
+    const stream = createCsvStream(
+      resolveTranslations(result.rows, ctx.pupitre.locale, messages),
+      localizedColumns
+    )
     ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
     ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(

@@ -45,6 +45,7 @@ Register the resource in your panel, configure the host auth model, then start `
 | [@rikology/pupitre-ui](packages/pupitre-ui) | Default Base UI components and copyable shadcn registry |
 | [@rikology/pupitre-shield](packages/pupitre-shield) | Database-backed roles, permissions and Bouncer integration |
 | [@rikology/pupitre-audit](packages/pupitre-audit) | Read-only activity and record history backed by audit-trail |
+| [@rikology/pupitre-settings](packages/pupitre-settings) | Typed grouped settings, transactional saves and tenant-isolated pages |
 | [@rikology/pupitre-transmit](packages/pupitre-transmit) | Authenticated AdonisJS Transmit realtime integration |
 | [@rikology/create-pupitre-plugin](packages/create-pupitre-plugin) | Publishable plugin scaffolder |
 

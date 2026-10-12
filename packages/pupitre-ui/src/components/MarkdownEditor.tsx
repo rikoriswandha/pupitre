@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useId, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
 import { Icon } from '../icons.js'
 import {
@@ -115,7 +115,7 @@ function MarkdownInput({
       const uploaded = await uploadImage(file)
       insert(`![${uploaded.name}](${uploaded.url}`, ')')
     } catch (error) {
-      setImageError(error instanceof Error ? error.message : 'Could not upload image.')
+      setImageError(error instanceof Error ? error.message : t('Could not upload image.'))
     }
   }
   const actions: Record<string, () => void> = {
@@ -130,16 +130,16 @@ function MarkdownInput({
     codeBlock: () => insert('```\n', '\n```'),
   }
   const formatting: Record<string, { icon: string; label: string }> = {
-    bold: { icon: 'bold', label: 'Bold' },
-    italic: { icon: 'italic', label: 'Italic' },
-    link: { icon: 'link', label: 'Link' },
-    heading: { icon: 'heading', label: 'Heading' },
-    h2: { icon: 'heading', label: 'Heading 2' },
-    bulletList: { icon: 'list', label: 'Bulleted list' },
-    orderedList: { icon: 'list-ordered', label: 'Numbered list' },
-    code: { icon: 'code', label: 'Inline code' },
-    codeBlock: { icon: 'code', label: 'Code block' },
-    image: { icon: 'image', label: 'Insert image' },
+    bold: { icon: 'bold', label: t('Bold') },
+    italic: { icon: 'italic', label: t('Italic') },
+    link: { icon: 'link', label: t('Link') },
+    heading: { icon: 'heading', label: t('Heading') },
+    h2: { icon: 'heading', label: t('Heading 2') },
+    bulletList: { icon: 'list', label: t('Bulleted list') },
+    orderedList: { icon: 'list-ordered', label: t('Numbered list') },
+    code: { icon: 'code', label: t('Inline code') },
+    codeBlock: { icon: 'code', label: t('Code block') },
+    image: { icon: 'image', label: t('Insert image') },
   }
   return (
     <div className={cn(controlGroupClasses, 'flex-col', disabled && 'bg-muted shadow-none')}>
@@ -147,7 +147,7 @@ function MarkdownInput({
         <div
           className="flex flex-wrap items-center gap-0.5"
           role="toolbar"
-          aria-label="Markdown formatting"
+          aria-label={t('Markdown formatting')}
         >
           {toolbar
             .filter((item) => item === 'image' || supportedToolbar[item] === true)
@@ -158,7 +158,7 @@ function MarkdownInput({
                   variant="ghost"
                   size="xs"
                   square
-                  aria-label={item === 'image' ? 'Image' : item}
+                  aria-label={formatting[item]!.label}
                   disabled={
                     disabled || readOnly || mode === 'preview' || (item === 'image' && !uploadUrl)
                   }
@@ -174,7 +174,7 @@ function MarkdownInput({
           ref={imageInput}
           className="sr-only"
           type="file"
-          aria-label="Choose an image to upload"
+          aria-label={t('Choose an image to upload')}
           disabled={!uploadUrl || disabled || readOnly}
           accept="image/*"
           onChange={(event) => {
@@ -186,7 +186,7 @@ function MarkdownInput({
           <div
             className={cn(segmentedListClasses, 'ml-auto')}
             role="group"
-            aria-label="Markdown editor mode"
+            aria-label={t('Markdown editor mode')}
           >
             <button
               type="button"
@@ -194,7 +194,7 @@ function MarkdownInput({
               onClick={() => setMode('write')}
               aria-pressed={mode === 'write'}
             >
-              Write
+              {t('Write')}
             </button>
             <button
               type="button"
@@ -202,7 +202,7 @@ function MarkdownInput({
               onClick={() => setMode('preview')}
               aria-pressed={mode === 'preview'}
             >
-              Preview
+              {t('Preview')}
             </button>
           </div>
         )}
@@ -212,7 +212,7 @@ function MarkdownInput({
           ref={editorInput}
           id={id}
           data-markdown-editor
-          aria-label={label ?? 'Markdown editor'}
+          aria-label={label ?? t('Markdown editor')}
           aria-describedby={
             [helperText && `${id}-helper`, errorId].filter(Boolean).join(' ') || undefined
           }
@@ -228,7 +228,7 @@ function MarkdownInput({
         <Suspense
           fallback={
             <div className="p-3" role="status">
-              Loading preview…
+              {t('Loading preview…')}
             </div>
           }
         >
@@ -277,7 +277,7 @@ export function MarkdownEditor({ props, emit, bindings, children, loading = fals
         fallback={
           <div
             className="h-64 rounded-lg border border-input bg-card shadow-control"
-            aria-label="Loading Markdown editor"
+            aria-label={t('Loading Markdown editor')}
             role="status"
           />
         }

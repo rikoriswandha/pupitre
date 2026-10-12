@@ -7,6 +7,13 @@ import { handleUnauthenticated } from '../../auth/unauthenticated.js'
 import { panelGuard } from '../../auth/guard.js'
 import { bindPanel } from '../../manager.js'
 import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
+import {
+  getMessages,
+  requestMessages,
+  resolveLocale,
+  resolveTranslations,
+  stripTranslationMarkers,
+} from '../../i18n.js'
 
 type AuthContext = {
   auth?: {
@@ -82,11 +89,39 @@ export default class PupitreContextMiddleware {
     ctx.pupitre = {
       panel,
       basePath: panel.path,
-      locale: panel.locale ?? 'en',
+      locale: resolveLocale({
+        user:
+          authUser && (authUser as unknown as Record<string, unknown>)[config.auth.columns.locale],
+        session: ctx.session?.get(`pupitre.locale.${panel.id}`),
+        acceptLanguage: ctx.request.header('accept-language'),
+        locales: panel.locales,
+        defaultLocale: panel.locale,
+      }),
       timezone: user?.timezone ?? panel.timezone ?? config.timezone ?? 'UTC',
       user,
       authUser,
       tenant: null,
+    }
+    const messages = getMessages(config, panel, ctx.pupitre.locale)
+    requestMessages.set(ctx, messages)
+    const send = ctx.response.send.bind(ctx.response)
+    const resolvedPages = new WeakSet<object>()
+    ctx.response.send = (body, ...args) =>
+      send(
+        typeof body === 'string'
+          ? stripTranslationMarkers(body)
+          : body && typeof body === 'object' && resolvedPages.has(body)
+            ? body
+            : resolveTranslations(body, ctx.pupitre.locale, messages),
+        ...args
+      )
+    if (ctx.inertia) {
+      const page = ctx.inertia.page.bind(ctx.inertia)
+      ctx.inertia.page = async (...args) => {
+        const resolved = resolveTranslations(await page(...args), ctx.pupitre.locale, messages)
+        resolvedPages.add(resolved)
+        return resolved
+      }
     }
     if (
       this.options.requireUser &&
@@ -123,6 +158,25 @@ export default class PupitreContextMiddleware {
         return ctx.response.redirect(`${ctx.pupitre.basePath}/profile`)
       }
     }
-    await next()
+    try {
+      await next()
+    } catch (error) {
+      if (error instanceof Error) {
+        const translated = resolveTranslations(error.message, ctx.pupitre.locale, messages)
+        const descriptor = Object.getOwnPropertyDescriptor(error, 'message')
+        if (
+          translated !== error.message &&
+          (descriptor?.writable ||
+            descriptor?.configurable ||
+            (!descriptor && Object.isExtensible(error)))
+        )
+          Object.defineProperty(error, 'message', {
+            value: translated,
+            writable: true,
+            configurable: true,
+          })
+      }
+      throw error
+    }
   }
 }

@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js'
 import { publishResourceChange } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
@@ -85,7 +86,7 @@ function simpleResourceModalAction(
     builtin: kind,
     context: kind === 'create' ? 'header' : 'record',
     form,
-    modal: { submitLabel: kind === 'create' ? 'Create' : 'Save' },
+    modal: { submitLabel: kind === 'create' ? t('Create') : t('Save') },
     after: ({ refresh }: { refresh: { table(): void } }) => refresh.table(),
   }
   if (kind === 'create') {
@@ -222,13 +223,13 @@ function fileCompileContext(ctx: HttpContext, record?: LucidRow) {
 export default class ActionController {
   async show(ctx: HttpContext) {
     const resource = await getResource(ctx)
-    if (!resource) return errorJson(ctx, 'Resource not found', 404)
+    if (!resource) return errorJson(ctx, t('Resource not found'), 404)
     const row = ctx.params.id !== undefined
     const recordId = ctx.params.id ?? ctx.request.input('record')
     const resolved =
       findAction(resource, ctx.params.action, row) ??
       (!row && recordId !== undefined ? findAction(resource, ctx.params.action, true) : undefined)
-    if (!resolved) return errorJson(ctx, 'Action not found', 404)
+    if (!resolved) return errorJson(ctx, t('Action not found'), 404)
     const { action, field: fieldAction } = resolved
     if (resource.parent && action.builtin !== 'view') await ensureNestedParentUpdate(ctx, resource)
     let record: LucidRow | undefined
@@ -239,7 +240,7 @@ export default class ActionController {
     )
     if (recordId !== undefined) {
       record = (await scopedRecord(ctx, resource, false, recordId)) ?? undefined
-      if (!record) return errorJson(ctx, 'Record not found', 404)
+      if (!record) return errorJson(ctx, t('Record not found'), 404)
       const recordAbility = action.builtin === 'edit' ? 'update' : 'view'
       if (!(await authorizeResource(ctx, resource, recordAbility, record)))
         throw new E_PUPITRE_FORBIDDEN()
@@ -268,8 +269,8 @@ export default class ActionController {
       routes,
     })
     if (!descriptor.enabled)
-      return errorJson(ctx, 'You are not authorized to perform this action', 403)
-    if (!action.form) return errorJson(ctx, 'This action does not define a form', 404)
+      return errorJson(ctx, t('You are not authorized to perform this action'), 403)
+    if (!action.form) return errorJson(ctx, t('This action does not define a form'), 404)
     const response = await compileActionForm(action, {
       ...fileCompileContext(ctx, record),
       url: descriptor.url,
@@ -279,13 +280,13 @@ export default class ActionController {
 
   async run(ctx: HttpContext) {
     const resource = await getResource(ctx)
-    if (!resource) return errorJson(ctx, 'Resource not found', 404)
+    if (!resource) return errorJson(ctx, t('Resource not found'), 404)
     const row = ctx.params.id !== undefined
     const recordId = ctx.params.id ?? ctx.request.input('record')
     const resolved =
       findAction(resource, ctx.params.action, row) ??
       (!row && recordId !== undefined ? findAction(resource, ctx.params.action, true) : undefined)
-    if (!resolved) return errorJson(ctx, 'Action not found', 404)
+    if (!resolved) return errorJson(ctx, t('Action not found'), 404)
     const { action, field: fieldAction } = resolved
     if (resource.parent && action.builtin !== 'view') await ensureNestedParentUpdate(ctx, resource)
     let record: LucidRow | undefined
@@ -294,7 +295,7 @@ export default class ActionController {
     if (recordId !== undefined) {
       await ensureAuthorized(ctx, resource, 'viewAny')
       record = (await scopedRecord(ctx, resource, trashedAction, recordId)) ?? undefined
-      if (!record) return errorJson(ctx, 'Record not found', 404)
+      if (!record) return errorJson(ctx, t('Record not found'), 404)
       const recordAbility =
         action.builtin === 'edit'
           ? 'update'
@@ -321,7 +322,7 @@ export default class ActionController {
     ) {
       records =
         (await scopedRecords(ctx, resource, ctx.request.input('ids'), trashedAction)) ?? undefined
-      if (!records) return errorJson(ctx, 'One or more records were not found', 404)
+      if (!records) return errorJson(ctx, t('One or more records were not found'), 404)
       await ensureAuthorized(ctx, resource, 'viewAny')
     } else {
       await ensureAuthorized(ctx, resource, fieldAction ? 'create' : 'viewAny')
@@ -337,7 +338,7 @@ export default class ActionController {
       const key = `pupitre:action:${pupitre?.panel?.id ?? 'panel'}:${action.name}:${subject}`
       const limit = await consumeActionLimit(key, action.rateLimit)
       if (limit.limited) {
-        const message = 'Too many attempts. Please try again later.'
+        const message = t('Too many attempts. Please try again later.')
         if (!isJsonRequest(ctx)) setPupitreFlash(ctx, [{ type: 'error', title: message }])
         return ctx.response.status(429).json({
           message,
@@ -397,7 +398,7 @@ export default class ActionController {
           const field = message.field ?? '_form'
           ;(errors[field] ??= []).push(message.message)
         }
-        return errorJson(ctx, 'The submitted data is invalid', 422, errors)
+        return errorJson(ctx, t('The submitted data is invalid'), 422, errors)
       }
       throw error
     }
@@ -411,7 +412,7 @@ export default class ActionController {
   ) {
     const userId = ctx.pupitre.user?.id
     if (userId === undefined)
-      return errorJson(ctx, 'Authentication is required for queued actions', 401)
+      return errorJson(ctx, t('Authentication is required for queued actions'), 401)
     const tenantId = ctx.pupitre.tenant?.id ?? null
     const bulkDelete =
       action.builtin === 'delete' ||
@@ -438,6 +439,7 @@ export default class ActionController {
     const ids = records.map((record) => record.$primaryKeyValue as string | number)
     await jobs.dispatch('pupitre.bulk', {
       panelId: ctx.pupitre.panel.id,
+      locale: ctx.pupitre.locale,
       resource: resource.slug,
       action: action.name,
       ids,
@@ -454,7 +456,12 @@ export default class ActionController {
       currentUrl: currentPageUrl(ctx, resource.urls.list),
     })
     const result = {
-      flash: [{ type: 'success' as const, title: `Queued ${action.label ?? action.name}` }],
+      flash: [
+        {
+          type: 'success' as const,
+          title: t('Queued {label}', { label: action.label ?? action.name }),
+        },
+      ],
       redirect: currentPageUrl(ctx, resource.urls.list),
       ...(action.deselectAfter ? { deselect: true } : {}),
     }
@@ -505,12 +512,19 @@ export default class ActionController {
       const copy = await model.create(attributes)
       const id = copy.$attributes[modelKey(resource.model)] as string | number
       return {
-        flash: [{ type: 'success' as const, title: `Replicated ${resource.label}` }],
+        flash: [
+          { type: 'success' as const, title: t('Replicated {label}', { label: resource.label }) },
+        ],
         redirect: resource.urls.edit(id),
       }
     }
     return {
-      flash: [{ type: 'success' as const, title: `${action.label ?? action.name} completed` }],
+      flash: [
+        {
+          type: 'success' as const,
+          title: t('{label} completed', { label: action.label ?? action.name }),
+        },
+      ],
       redirect: resource.urls.list,
       deselect: action.context === 'bulk',
     }
@@ -532,7 +546,13 @@ export default class ActionController {
     await executeBuiltinDelete(resource.definition, records, ctx)
     return {
       flash: [
-        { type: 'success' as const, title: `Deleted ${records.length} ${resource.pluralLabel}` },
+        {
+          type: 'success' as const,
+          title: t('Deleted {count} {label}', {
+            count: records.length,
+            label: resource.pluralLabel,
+          }),
+        },
       ],
       redirect: resource.urls.list,
       deselect: true,

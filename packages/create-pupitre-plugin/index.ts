@@ -52,14 +52,21 @@ const reserved: Record<string, true> = {
   eval: true,
   arguments: true,
 }
+// These bindings belong to the UI template's server entry, not its plugin factory.
+const uiReserved: Record<string, true> = {
+  defineField: true,
+  definePlugin: true,
+  vine: true,
+}
 
 export interface CreatePluginOptions {
   name: string
   directory: string
   force?: boolean
+  withUi?: boolean
 }
 
-export function pluginNames(input: string) {
+export function pluginNames(input: string, withUi = false) {
   const match =
     /^(?:@([a-z][a-z0-9]*(?:-[a-z0-9]+)*)\/)?(pupitre-)?([a-z][a-z0-9]*(?:-[a-z0-9]+)*)$/.exec(
       input
@@ -68,16 +75,26 @@ export function pluginNames(input: string) {
     throw new Error('Plugin name must be kebab-case, optionally prefixed with pupitre- or @scope/')
   const name = match[3]!
   const camel = name.replace(/-([a-z0-9])/g, (_, letter: string) => letter.toUpperCase())
-  const camelName = Object.hasOwn(reserved, camel) ? `${camel}Plugin` : camel
-  return { name, camelName, packageName: `${match[1] ? `@${match[1]}/` : ''}pupitre-${name}` }
+  let camelName = Object.hasOwn(reserved, camel) ? `${camel}Plugin` : camel
+  if (withUi && Object.hasOwn(uiReserved, camelName)) camelName += 'Plugin'
+  const fieldName = `${camel}Field`
+  return {
+    name,
+    camelName,
+    fieldName: withUi && Object.hasOwn(uiReserved, fieldName) ? `${camel}PluginField` : fieldName,
+    catalogName: `${camel}Catalog`,
+    componentName: `${camel[0]!.toUpperCase()}${camel.slice(1)}Input`,
+    packageName: `${match[1] ? `@${match[1]}/` : ''}pupitre-${name}`,
+  }
 }
 
 export async function createPlugin({
   name: input,
   directory,
   force = false,
+  withUi = false,
 }: CreatePluginOptions): Promise<string[]> {
-  const names = pluginNames(input)
+  const names = pluginNames(input, withUi)
   if (!directory || directory.split(/[\\/]/).includes('..'))
     throw new Error('Target directory must not contain parent traversal')
   const target = resolve(directory)
@@ -100,25 +117,37 @@ export async function createPlugin({
   const source = fileURLToPath(
     new URL(import.meta.url.endsWith('.ts') ? './template/' : '../template/', import.meta.url)
   )
-  const written: string[] = []
-  async function copy(relative = ''): Promise<void> {
-    for (const entry of await readdir(join(source, relative), { withFileTypes: true })) {
+  const templates = new Map<string, string>()
+  async function collect(root: string, relative = ''): Promise<void> {
+    for (const entry of await readdir(join(root, relative), { withFileTypes: true })) {
       const path = join(relative, entry.name)
-      await rejectSymlink(join(target, path === 'gitignore.stub' ? '.gitignore' : path))
-      if (entry.isDirectory()) {
-        await mkdir(join(target, path), { recursive: true })
-        await copy(path)
-      } else if (entry.isFile()) {
-        let content = await readFile(join(source, path), 'utf8')
-        for (const [token, value] of Object.entries(names))
-          content = content.replaceAll(`{{${token}}}`, value).replaceAll(`__${token}__`, value)
-        // npm excludes .gitignore from tarballs; ship it under a template-only name.
-        const output = join(target, path === 'gitignore.stub' ? '.gitignore' : path)
-        await writeFile(output, content, { flag: force ? 'w' : 'wx' })
-        written.push(output)
-      }
+      if (entry.isDirectory()) await collect(root, path)
+      else if (entry.isFile()) templates.set(path, join(root, path))
     }
   }
-  await copy()
+  await collect(source)
+  if (withUi) await collect(join(source, '../template-ui'))
+
+  const written: string[] = []
+  for (const [path, template] of templates) {
+    const parts = path.split(/[\\/]/)
+    let parent = target
+    for (const part of parts.slice(0, -1)) {
+      parent = join(parent, part)
+      await rejectSymlink(parent)
+      await mkdir(parent, { recursive: true })
+    }
+    let content = await readFile(template, 'utf8')
+    for (const [token, value] of Object.entries(names))
+      content = content
+        .replaceAll(`{{${token}}}`, value)
+        .replaceAll(`__${token}__`, value)
+        .replaceAll(`${token}Placeholder`, value)
+    // npm excludes .gitignore from tarballs; ship it under a template-only name.
+    const output = join(target, path === 'gitignore.stub' ? '.gitignore' : path)
+    await rejectSymlink(output)
+    await writeFile(output, content, { flag: force ? 'w' : 'wx' })
+    written.push(output)
+  }
   return written
 }

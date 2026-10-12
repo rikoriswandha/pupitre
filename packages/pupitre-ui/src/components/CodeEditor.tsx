@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { FieldDescription, cn, controlGroupClasses } from '../primitives/index.js'
 
@@ -129,7 +129,7 @@ const Editor = lazy(async () => {
         EditorView.contentAttributes.of({
           'id': id,
           'tabindex': '0',
-          'aria-label': label ?? 'Code editor',
+          'aria-label': label ?? t('Code editor'),
           'aria-readonly': String(readOnly),
           'aria-disabled': String(disabled),
           'aria-describedby': describedBy ?? '',
@@ -239,7 +239,7 @@ const Editor = lazy(async () => {
       <div
         className={cn(controlGroupClasses, 'flex-col', disabled && 'bg-muted shadow-none')}
         role="group"
-        aria-label={label ?? 'Code editor'}
+        aria-label={label ?? t('Code editor')}
       >
         <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
           <Icon name="code" className="size-3.5" />
@@ -250,7 +250,7 @@ const Editor = lazy(async () => {
                 ? 'TypeScript'
                 : language.toUpperCase()}
           </span>
-          {(readOnly || disabled) && <span className="ml-auto">Read only</span>}
+          {(readOnly || disabled) && <span className="ml-auto">{t('Read only')}</span>}
         </div>
         <div
           ref={host}
@@ -288,7 +288,7 @@ export function CodeEditor({ props, emit, bindings, children, loading = false }:
           <div
             className="rounded-lg border border-input bg-card shadow-control"
             style={{ minHeight: props.minHeight ?? 180 }}
-            aria-label="Loading code editor"
+            aria-label={t('Loading code editor')}
             role="status"
           />
         }

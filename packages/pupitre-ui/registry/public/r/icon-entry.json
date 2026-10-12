@@ -3,7 +3,9 @@
   "name": "icon-entry",
   "type": "registry:component",
   "title": "IconEntry",
-  "dependencies": [],
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0"
+  ],
   "registryDependencies": [
     "https://pupitre.dev/r/entry-shell.json",
     "https://pupitre.dev/r/icons.json",
@@ -14,7 +16,7 @@
       "path": "../src/components/IconEntry.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/IconEntry.tsx",
-      "content": "import { Icon } from '../icons.js'\nimport { toneText, toTone } from '../primitives/index.js'\nimport {\n  EntryCopyButton,\n  EntryShell,\n  entryColorStyle,\n  type EntryDisplayProps,\n} from './EntryShell.js'\n\nexport function IconEntry({ props = {} }: { props?: EntryDisplayProps }) {\n  const name = typeof props.value === 'string' ? props.value : props.icon\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>\n      <span className=\"inline-flex items-center gap-1.5\">\n        {name ? (\n          <Icon\n            name={name}\n            className={`size-5 ${toneText[toTone(props.color)]}`}\n            style={entryColorStyle(props.color)}\n          />\n        ) : (\n          <span className=\"text-subtle-foreground\">{props.placeholder ?? '—'}</span>\n        )}\n        {props.copyable && name && (\n          <EntryCopyButton value={name} label={props.label ?? 'icon name'} />\n        )}\n      </span>\n    </EntryShell>\n  )\n}\n"
+      "content": "import { t } from '@rikology/pupitre-react'\nimport { Icon } from '../icons.js'\nimport { toneText, toTone } from '../primitives/index.js'\nimport {\n  EntryCopyButton,\n  EntryShell,\n  entryColorStyle,\n  type EntryDisplayProps,\n} from './EntryShell.js'\n\nexport function IconEntry({ props = {} }: { props?: EntryDisplayProps }) {\n  const name = typeof props.value === 'string' ? props.value : props.icon\n  return (\n    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>\n      <span className=\"inline-flex items-center gap-1.5\">\n        {name ? (\n          <Icon\n            name={name}\n            className={`size-5 ${toneText[toTone(props.color)]}`}\n            style={entryColorStyle(props.color)}\n          />\n        ) : (\n          <span className=\"text-subtle-foreground\">{props.placeholder ?? '—'}</span>\n        )}\n        {props.copyable && name && (\n          <EntryCopyButton value={name} label={props.label ?? t('icon name')} />\n        )}\n      </span>\n    </EntryShell>\n  )\n}\n"
     }
   ]
 }

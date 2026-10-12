@@ -148,6 +148,7 @@
       "type": "registry:component",
       "title": "BuilderItem",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -246,6 +247,7 @@
       "type": "registry:component",
       "title": "CodeEntry",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -322,7 +324,8 @@
       "type": "registry:component",
       "title": "ConfirmDialog",
       "dependencies": [
-        "@base-ui/react@^1.9.0"
+        "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
         "https://pupitre.dev/r/icons.json",
@@ -352,6 +355,7 @@
         "https://pupitre.dev/r/data-table-editable-cell.json",
         "https://pupitre.dev/r/data-table-grid.json",
         "https://pupitre.dev/r/data-table-groups.json",
+        "https://pupitre.dev/r/data-table-query-builder.json",
         "https://pupitre.dev/r/data-table-summary.json",
         "https://pupitre.dev/r/icons.json",
         "https://pupitre.dev/r/primitives.json",
@@ -418,6 +422,25 @@
           "path": "../src/components/DataTableGroups.tsx",
           "type": "registry:file",
           "target": "~/inertia/components/pupitre/components/DataTableGroups.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table-query-builder",
+      "type": "registry:component",
+      "title": "DataTableQueryBuilder",
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
+        "react@^19.2.3"
+      ],
+      "registryDependencies": [
+        "https://pupitre.dev/r/primitives.json"
+      ],
+      "files": [
+        {
+          "path": "../src/components/DataTableQueryBuilder.tsx",
+          "type": "registry:file",
+          "target": "~/inertia/components/pupitre/components/DataTableQueryBuilder.tsx"
         }
       ]
     },
@@ -503,6 +526,7 @@
       "type": "registry:component",
       "title": "EntryShell",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -689,7 +713,9 @@
       "name": "icon-entry",
       "type": "registry:component",
       "title": "IconEntry",
-      "dependencies": [],
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0"
+      ],
       "registryDependencies": [
         "https://pupitre.dev/r/entry-shell.json",
         "https://pupitre.dev/r/icons.json",
@@ -726,6 +752,7 @@
       "title": "ImageCropper",
       "dependencies": [
         "@base-ui/react@^1.9.0",
+        "@rikology/pupitre-react@^1.0.0",
         "react-easy-crop@^6.2.4",
         "react@^19.2.3"
       ],
@@ -889,7 +916,9 @@
       "name": "not-found",
       "type": "registry:component",
       "title": "NotFound",
-      "dependencies": [],
+      "dependencies": [
+        "@rikology/pupitre-react@^1.0.0"
+      ],
       "registryDependencies": [
         "https://pupitre.dev/r/primitives.json"
       ],
@@ -974,6 +1003,7 @@
       "type": "registry:component",
       "title": "Placeholder",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [],
@@ -1085,6 +1115,7 @@
       "type": "registry:component",
       "title": "RepeatableEntry",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1124,6 +1155,7 @@
       "type": "registry:component",
       "title": "RepeaterItem",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1442,6 +1474,7 @@
       "type": "registry:component",
       "title": "TextEntry",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1625,6 +1658,7 @@
       "type": "registry:component",
       "title": "View",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1665,6 +1699,7 @@
       "type": "registry:component",
       "title": "WidgetChart",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3"
       ],
@@ -1719,6 +1754,7 @@
       "type": "registry:component",
       "title": "WidgetGrid",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0",
         "react@^19.2.3"
       ],
@@ -1742,6 +1778,7 @@
       "type": "registry:component",
       "title": "WidgetStats",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
@@ -1761,6 +1798,7 @@
       "type": "registry:component",
       "title": "WidgetTable",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
@@ -1780,6 +1818,7 @@
       "type": "registry:component",
       "title": "WidgetTimeline",
       "dependencies": [
+        "@rikology/pupitre-react@^1.0.0",
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [

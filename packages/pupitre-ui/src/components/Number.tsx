@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { NumberField as BaseNumberField } from '@base-ui/react/number-field'
@@ -82,14 +82,14 @@ export function Number({ props, bindings }: Runtime) {
             <InputSlot>
               <BaseNumberField.Decrement
                 aria-controls={id}
-                aria-label="Decrease value"
+                aria-label={t('Decrease value')}
                 className={buttonClasses({ variant: 'ghost', size: 'xs', square: true })}
               >
                 <Icon name="minus" className="size-4" />
               </BaseNumberField.Decrement>
               <BaseNumberField.Increment
                 aria-controls={id}
-                aria-label="Increase value"
+                aria-label={t('Increase value')}
                 className={buttonClasses({ variant: 'ghost', size: 'xs', square: true })}
               >
                 <Icon name="plus" className="size-4" />

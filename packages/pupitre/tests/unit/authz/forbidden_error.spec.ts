@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import type { HttpContext } from '@adonisjs/core/http'
 import { E_PUPITRE_FORBIDDEN } from '../../../src/errors.js'
+import { resolveTranslations } from '../../../src/i18n.js'
 
 type HandledError = Error & { handle(error: Error, ctx: HttpContext): unknown }
 
@@ -56,7 +57,7 @@ test.group('E_PUPITRE_FORBIDDEN response handling', () => {
     const handler = (error as unknown as HandledError).handle
     assert.equal(handler.call(error, error, ctx), 'redirected')
     assert.isTrue(redirected)
-    assert.deepEqual(flashes, [
+    assert.deepEqual(resolveTranslations(flashes, 'en'), [
       {
         key: 'pupitre',
         value: [

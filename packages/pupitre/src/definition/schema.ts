@@ -1,8 +1,11 @@
+import type { ExtensionFieldDefinition, ExtensionEntryDefinition } from './extensions.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionBuilder, ActionDefinition } from './action.js'
 import type { ModelQueryBuilderContract, LucidModel } from '@adonisjs/lucid/types/model'
 
 export type SchemaKind =
+  | 'extensionField'
+  | 'extensionEntry'
   | 'text'
   | 'email'
   | 'password'
@@ -430,6 +433,7 @@ export interface StepBuilder extends LayoutBase<WizardStepDefinition> {
 }
 export type HiddenFieldDefinition = FieldDefinition<'hidden'>
 export type FieldDefinitionUnion =
+  | ExtensionFieldDefinition
   | TextFieldDefinition
   | NumberFieldDefinition
   | SliderFieldDefinition
@@ -609,6 +613,7 @@ export type BadgeEntryDefinition = EntryCommon & {
   options?: SelectOptions
 }
 export type EntryDefinition =
+  | ExtensionEntryDefinition
   | TextEntryDefinition
   | IconEntryDefinition
   | ImageEntryDefinition

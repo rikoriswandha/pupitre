@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import { Button, Field, FieldError, Input, FieldDescription } from '../primitives/index.js'
@@ -88,9 +88,9 @@ export function KeyValue({ props, bindings }: Runtime) {
         <InputFieldLabel id={id} props={props} />
         <div className="overflow-hidden rounded-lg border border-input bg-card">
           <div className="grid grid-cols-[1fr_1fr_6rem] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
-            <span>{props.keyLabel ?? 'Key'}</span>
-            <span>{props.valueLabel ?? 'Value'}</span>
-            <span className="sr-only">Actions</span>
+            <span>{props.keyLabel ?? t('Key')}</span>
+            <span>{props.valueLabel ?? t('Value')}</span>
+            <span className="sr-only">{t('Actions')}</span>
           </div>
           {entries.map((entry, index) => (
             <div
@@ -100,7 +100,7 @@ export function KeyValue({ props, bindings }: Runtime) {
               <Input
                 bare
                 {...props.extraAttributes}
-                aria-label={props.keyLabel ?? 'Key'}
+                aria-label={props.keyLabel ?? t('Key')}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -114,7 +114,7 @@ export function KeyValue({ props, bindings }: Runtime) {
               <Input
                 bare
                 {...props.extraAttributes}
-                aria-label={props.valueLabel ?? 'Value'}
+                aria-label={props.valueLabel ?? t('Value')}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -133,7 +133,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                       variant="ghost"
                       size="xs"
                       square
-                      aria-label={`Move ${entry.key} up`}
+                      aria-label={t('Move {label} up', { label: entry.key })}
                       disabled={props.disabled || props.readOnly || index === 0}
                       onClick={() => moveEntry(index, -1)}
                     >
@@ -144,7 +144,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                       variant="ghost"
                       size="xs"
                       square
-                      aria-label={`Move ${entry.key} down`}
+                      aria-label={t('Move {label} down', { label: entry.key })}
                       disabled={props.disabled || props.readOnly || index === entries.length - 1}
                       onClick={() => moveEntry(index, 1)}
                     >
@@ -159,7 +159,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                     size="xs"
                     square
                     disabled={props.disabled || props.readOnly}
-                    aria-label={`Remove ${entry.key}`}
+                    aria-label={t('Remove {label}', { label: entry.key })}
                     onClick={() => {
                       const nextEntries = entries.filter((_, i) => i !== index)
                       const keys = nextEntries.map((row) => row.key.trim())
@@ -181,7 +181,7 @@ export function KeyValue({ props, bindings }: Runtime) {
               <Input
                 bare
                 {...props.extraAttributes}
-                aria-label={props.keyLabel ?? 'Key'}
+                aria-label={props.keyLabel ?? t('Key')}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -194,7 +194,7 @@ export function KeyValue({ props, bindings }: Runtime) {
               <Input
                 bare
                 {...props.extraAttributes}
-                aria-label={props.valueLabel ?? 'Value'}
+                aria-label={props.valueLabel ?? t('Value')}
                 aria-required={props.required}
                 aria-describedby={describedBy}
                 aria-invalid={!!error}
@@ -211,7 +211,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                 disabled={props.disabled || props.readOnly || !newEntry.key.trim()}
                 onClick={addEntry}
               >
-                Add
+                {t('Add')}
               </Button>
             </div>
           )}

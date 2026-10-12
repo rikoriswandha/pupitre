@@ -1,4 +1,13 @@
-import { createElement, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  createElement,
+  lazy,
+  Suspense,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { HTMLAttributes, ReactNode } from 'react'
 import { matchesKeyBinding } from '@rikology/pupitre-react'
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table'
@@ -12,6 +21,7 @@ import type {
 } from '@rikology/pupitre/catalog'
 import { getRouter, jsonFetch, t, useRunAction, useTable } from '@rikology/pupitre-react'
 import { useTableRealtime } from '@rikology/pupitre-react'
+import { useRuntime } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { NavLink } from '../primitives/nav_link.js'
 import { SpecRenderer } from '@rikology/pupitre-react'
@@ -46,6 +56,10 @@ import { PanelNestingContext } from './Section.js'
 
 import { DataTableGroups } from './DataTableGroups.js'
 import { DataTableSummary } from './DataTableSummary.js'
+
+const DataTableQueryBuilder = lazy(() =>
+  import('./DataTableQueryBuilder.js').then((module) => ({ default: module.DataTableQueryBuilder }))
+)
 export type DataTableProps = {
   props: { descriptor: TableDescriptor; label?: string | null; disabled?: boolean }
   children?: ReactNode
@@ -58,7 +72,7 @@ export type DataTableProps = {
 
 function displayValue(value: unknown): string {
   if (value === null || value === undefined) return ''
-  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'boolean') return value ? t('Yes') : t('No')
   if (typeof value === 'string' || typeof value === 'number') return String(value)
   try {
     return JSON.stringify(value) ?? ''
@@ -77,6 +91,32 @@ function isSubSpec(value: unknown): value is JsonRenderSpec {
     value.elements !== null &&
     typeof value.elements === 'object'
   )
+}
+
+function CustomColumnCell({
+  column,
+  value,
+  row,
+}: {
+  column: ColumnDescriptor
+  value: unknown
+  row: TableRow
+}) {
+  const { registry } = useRuntime()
+  const name = column.component!
+  const Component = registry.registry[name]
+  if (!Component)
+    throw new Error(
+      `Pupitre column component "${name}" is not registered. Add it to defineRegistry() with its catalog extension.`
+    )
+  return createElement(Component, {
+    element: {
+      type: name,
+      props: { ...column.props, descriptor: column, value, row },
+    },
+    emit: () => {},
+    on: () => ({ emit: () => {}, bound: false, shouldPreventDefault: false }),
+  })
 }
 
 function DataTableCell({ value, column }: { value: unknown; column: ColumnDescriptor }) {
@@ -154,7 +194,7 @@ function CustomFilterForm({
         onStateChange: (state) => setDraft({ seedKey, data: state.data }),
       })}
       <button type="button" className="rounded border px-3 py-1 text-sm" onClick={apply}>
-        Apply
+        {t('Apply')}
       </button>
     </div>
   )
@@ -232,10 +272,10 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
     return (
       <span
         role="img"
-        aria-label={raw ? 'Enabled' : 'Disabled'}
+        aria-label={raw ? t('Enabled') : t('Disabled')}
         className={raw ? 'text-primary' : 'text-muted-foreground'}
       >
-        {raw ? 'On' : 'Off'}
+        {raw ? t('On') : t('Off')}
       </span>
     )
   if (column.type === 'icon') {
@@ -281,7 +321,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
   if (column.type === 'custom' || column.type === 'fragment')
     return (
       <span data-custom-component={String(column.props.component ?? '')}>
-        {text || 'Custom column content'}
+        {text || t('Custom column content')}
       </span>
     )
   return (
@@ -298,7 +338,7 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
             if (typeof navigator !== 'undefined') void navigator.clipboard?.writeText(text)
           }}
         >
-          Copy
+          {t('Copy')}
         </button>
       )}
     </span>
@@ -434,6 +474,10 @@ export function DataTable({
     )
   }
   const [filterDraft, setFilterDraft] = useState<Record<string, unknown>>({})
+  const [queryFilterValidity, setQueryFilterValidity] = useState<Record<string, boolean>>({})
+  const queryFiltersValid = descriptor.filters.every(
+    (filter) => filter.type !== 'queryBuilder' || queryFilterValidity[filter.name] === true
+  )
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
@@ -524,6 +568,8 @@ export function DataTable({
   function renderCell(cell: Cell<TableRow, unknown>) {
     const column = columnDescriptors.get(cell.column.id)!
     const value = cell.getValue()
+    if (column.type === 'custom' && column.component)
+      return <CustomColumnCell column={column} value={value} row={cell.row.original} />
     if (!column.editable) return <DataTableCell value={value} column={column} />
     const data = value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
     const key = `${cell.row.original.key}:${column.name}`
@@ -635,9 +681,9 @@ export function DataTable({
       checked ? [...new Set([...selected, key])] : selected.filter((existing) => existing !== key)
     )
   }
-  function changeSort(column: string) {
+  function changeSort(column: string, additive = false) {
     if (reorderMode) return
-    tableState.sort(column)
+    tableState.sort(column, additive)
     emit('column', { column })
   }
   async function reorderRow(target: TableRow) {
@@ -653,7 +699,7 @@ export function DataTable({
         method: 'POST',
         body: JSON.stringify({ ids: order, offset: (page - 1) * pageSize }),
       })
-      if (!response.ok) throw new Error('Unable to reorder records')
+      if (!response.ok) throw new Error(t('Unable to reorder records'))
       getRouter().reload({ only: [descriptor.dataProp ?? 'data'] })
       emit('reorder', { ids: order, url: descriptor.reorderable.url })
     } finally {
@@ -708,7 +754,7 @@ export function DataTable({
               size="xs"
               square
               draggable
-              aria-label={`Drag ${row.original.key}`}
+              aria-label={t('Drag {key}', { key: row.original.key })}
               onDragStart={() => setDraggedKey(row.original.key)}
             >
               <Icon name="grip-vertical" />
@@ -717,7 +763,7 @@ export function DataTable({
               variant="ghost"
               size="xs"
               square
-              aria-label={`Move ${row.original.key} up`}
+              aria-label={t('Move {key} up', { key: row.original.key })}
               onClick={() => void moveRow(row.original.key, -1)}
             >
               <Icon name="chevron-up" />
@@ -726,7 +772,7 @@ export function DataTable({
               variant="ghost"
               size="xs"
               square
-              aria-label={`Move ${row.original.key} down`}
+              aria-label={t('Move {key} down', { key: row.original.key })}
               onClick={() => void moveRow(row.original.key, 1)}
             >
               <Icon name="chevron-down" />
@@ -737,27 +783,39 @@ export function DataTable({
           {descriptor.selectable && (
             <CheckboxControl
               className="size-6"
-              aria-label={`Select row ${row.original.key}`}
+              aria-label={t('Select row {key}', { key: row.original.key })}
               disabled={!row.original.selectable}
               checked={selected.includes(row.original.key)}
               onCheckedChange={(checked) => selectRow(row.original.key, checked)}
             />
           )}
-          {firstColumn?.editable && firstCell ? (
-            renderCell(firstCell)
-          ) : row.original.url ? (
-            <NavLink
-              className="font-medium text-foreground hover:underline"
-              href={row.original.url}
-            >
-              {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
-                String(row.original.key)}
-            </NavLink>
+          {firstColumn?.component && firstColumn.type === 'custom' && firstCell ? (
+            row.original.url && !firstColumn.editable ? (
+              <NavLink className="text-foreground hover:underline" href={row.original.url}>
+                {renderCell(firstCell)}
+              </NavLink>
+            ) : (
+              renderCell(firstCell)
+            )
           ) : (
-            <strong>
-              {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
-                String(row.original.key)}
-            </strong>
+            <>
+              {firstColumn?.editable && firstCell ? (
+                renderCell(firstCell)
+              ) : row.original.url ? (
+                <NavLink
+                  className="font-medium text-foreground hover:underline"
+                  href={row.original.url}
+                >
+                  {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                    String(row.original.key)}
+                </NavLink>
+              ) : (
+                <strong>
+                  {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                    String(row.original.key)}
+                </strong>
+              )}
+            </>
           )}
         </div>
         {row
@@ -798,7 +856,7 @@ export function DataTable({
                   size="xs"
                   square
                   draggable
-                  aria-label={`${t('Drag')} ${item.key}`}
+                  aria-label={t('Drag {key}', { key: item.key })}
                   onDragStart={() => setDraggedKey(item.key)}
                 >
                   <Icon name="grip-vertical" />
@@ -807,7 +865,7 @@ export function DataTable({
                   variant="ghost"
                   size="xs"
                   square
-                  aria-label={`${t('Move')} ${item.key} ${t('up')}`}
+                  aria-label={t('Move {key} up', { key: item.key })}
                   onClick={() => void moveRow(item.key, -1)}
                 >
                   <Icon name="chevron-up" />
@@ -816,7 +874,7 @@ export function DataTable({
                   variant="ghost"
                   size="xs"
                   square
-                  aria-label={`${t('Move')} ${item.key} ${t('down')}`}
+                  aria-label={t('Move {key} down', { key: item.key })}
                   onClick={() => void moveRow(item.key, 1)}
                 >
                   <Icon name="chevron-down" />
@@ -829,7 +887,7 @@ export function DataTable({
           <td className="px-4 py-(--row-py)">
             <CheckboxControl
               className="size-6 -my-1 align-middle"
-              aria-label={`Select row ${item.key}`}
+              aria-label={t('Select row {key}', { key: item.key })}
               disabled={!item.selectable}
               checked={selected.includes(item.key)}
               onCheckedChange={(checked) => selectRow(item.key, checked)}
@@ -879,6 +937,7 @@ export function DataTable({
     )
   }
   function applyFilterDraft() {
+    if (!queryFiltersValid) return
     const patch: Record<string, unknown> = { page: 1 }
     for (const name of Object.keys(filterDraft)) {
       const prefix = `filters[${name}]`
@@ -894,6 +953,32 @@ export function DataTable({
   function renderFilter(filter: TableDescriptor['filters'][number]) {
     if (reorderMode) return null
     const current = filterDraft[filter.name] ?? tableState.query[`filters[${filter.name}]`] ?? ''
+    if (filter.type === 'queryBuilder')
+      return (
+        <Suspense
+          key={filter.name}
+          fallback={
+            <div className="min-h-32 space-y-3" aria-busy="true" aria-label={filter.label}>
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-8 w-48" />
+            </div>
+          }
+        >
+          <DataTableQueryBuilder
+            filter={filter}
+            value={String(current)}
+            queryPrefix={descriptor.queryPrefix}
+            deferred={descriptor.deferFilters}
+            onApply={(value) => setFilterValue(filter.name, value)}
+            onValidityChange={(valid) =>
+              setQueryFilterValidity((previous) =>
+                previous[filter.name] === valid ? previous : { ...previous, [filter.name]: valid }
+              )
+            }
+          />
+        </Suspense>
+      )
     if (filter.type === 'custom') {
       const spec = filter.form?.spec
       return spec ? (
@@ -910,11 +995,11 @@ export function DataTable({
         <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <SelectMenu
-            aria-label={`${t('Filter')} ${filter.label}`}
+            aria-label={t('Filter {label}', { label: filter.label })}
             value={String(current)}
             onValueChange={(next) => setFilterValue(filter.name, next)}
             options={[
-              { value: '', label: 'All' },
+              { value: '', label: t('All') },
               ...(filter.options ?? []).map((option) => ({
                 value: String(option.value),
                 label: option.label,
@@ -928,13 +1013,13 @@ export function DataTable({
         <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <SelectMenu
-            aria-label={`${t('Filter')} ${filter.label}`}
+            aria-label={t('Filter {label}', { label: filter.label })}
             value={String(current)}
             onValueChange={(next) => setFilterValue(filter.name, next)}
             options={[
-              { value: '', label: 'Any' },
-              { value: '1', label: 'Yes' },
-              { value: '0', label: 'No' },
+              { value: '', label: t('Any') },
+              { value: '1', label: t('Yes') },
+              { value: '0', label: t('No') },
             ]}
           />
         </div>
@@ -949,7 +1034,7 @@ export function DataTable({
           <span>{filter.label}</span>
           <div className="grid grid-cols-2 gap-2">
             <input
-              aria-label={`${filter.label} from`}
+              aria-label={t('{label} from', { label: filter.label })}
               type="date"
               className={cn(controlClasses, 'h-9 px-3 tabular-nums')}
               value={String(range.from ?? tableState.query[`filters[${filter.name}][from]`] ?? '')}
@@ -963,7 +1048,7 @@ export function DataTable({
               }
             />
             <input
-              aria-label={`${filter.label} to`}
+              aria-label={t('{label} to', { label: filter.label })}
               type="date"
               className={cn(controlClasses, 'h-9 px-3 tabular-nums')}
               value={String(range.to ?? tableState.query[`filters[${filter.name}][to]`] ?? '')}
@@ -985,7 +1070,7 @@ export function DataTable({
         <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
           <SelectMenu
-            aria-label={`${t('Filter')} ${filter.label}`}
+            aria-label={t('Filter {label}', { label: filter.label })}
             value={String(current || 'without')}
             onValueChange={(next) => setFilterValue(filter.name, next)}
             options={[
@@ -1021,7 +1106,12 @@ export function DataTable({
           {t('Reset filters')}
         </Button>
         {descriptor.deferFilters && (
-          <Button color="primary" size="sm" onClick={applyFilterDraft}>
+          <Button
+            color="primary"
+            size="sm"
+            disabled={!queryFiltersValid}
+            onClick={applyFilterDraft}
+          >
             {t('Apply')}
           </Button>
         )}
@@ -1070,7 +1160,7 @@ export function DataTable({
     <section className="space-y-3" aria-busy={loading || tableState.isLoading}>
       {props.label && <h2 className="text-base font-medium">{props.label}</h2>}
       {!reorderMode && descriptor.tabs && descriptor.tabs.length > 0 && (
-        <nav className={segmentedListClasses} aria-label="Table tabs">
+        <nav className={segmentedListClasses} aria-label={t('Table tabs')}>
           {descriptor.tabs.map((tab) => (
             <button
               key={tab.key}
@@ -1090,18 +1180,19 @@ export function DataTable({
           selected.length > 0 ||
           Boolean(descriptor.reorderable) ||
           descriptor.searchable ||
+          (Boolean(descriptor.multiSort) && tableState.sorts.length > 0) ||
           (descriptor.filters.length > 0 && descriptor.filtersLayout !== 'above') ||
           columnsVisible) && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
             <div className="flex flex-wrap items-center gap-3">
               {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
                 <SelectMenu
-                  aria-label="Group"
+                  aria-label={t('Group')}
                   className="w-auto max-w-48"
                   value={String(tableState.query.groupBy ?? '')}
                   onValueChange={(next) => tableState.setQuery({ groupBy: next, page: 1 })}
                   options={[
-                    { value: '', label: 'All groups' },
+                    { value: '', label: t('All groups') },
                     ...descriptor.groups.map((group) => ({ value: group.key, label: group.label })),
                   ]}
                 />
@@ -1109,11 +1200,11 @@ export function DataTable({
               {selected.length > 0 && (
                 <div className="flex items-center gap-3 transition-opacity duration-150 ease-ui starting:opacity-0">
                   <span className="text-sm font-medium tabular-nums">
-                    {selected.length} selected
+                    {t('{count} selected', { count: selected.length })}
                   </span>
                   {bulkActions.length > 0 && (
                     <ActionMenu
-                      label="Bulk actions"
+                      label={t('Bulk actions')}
                       actions={bulkActions}
                       ids={selected}
                       size="sm"
@@ -1122,7 +1213,7 @@ export function DataTable({
                     />
                   )}
                   <Button variant="ghost" size="sm" onClick={() => tableState.setSelected([])}>
-                    Deselect all
+                    {t('Deselect all')}
                   </Button>
                 </div>
               )}
@@ -1153,8 +1244,8 @@ export function DataTable({
                   <Input
                     bare
                     type="search"
-                    aria-label="Search"
-                    placeholder="Search"
+                    aria-label={t('Search')}
+                    placeholder={t('Search')}
                     value={search}
                     disabled={reorderMode}
                     onChange={(event) => setSearch(event.currentTarget.value)}
@@ -1170,13 +1261,18 @@ export function DataTable({
                   />
                 </InputGroup>
               )}
+              {!reorderMode && descriptor.multiSort && tableState.sorts.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={tableState.clearSort}>
+                  {t('Clear sorting')}
+                </Button>
+              )}
               {!reorderMode &&
                 descriptor.filters.length > 0 &&
                 descriptor.filtersLayout !== 'above' &&
                 (descriptor.filtersLayout === 'slideover' ? (
                   <Dialog.Root>
                     <Dialog.Trigger
-                      aria-label="Filters"
+                      aria-label={t('Filters')}
                       className={buttonClasses({ variant: 'ghost', square: true })}
                     >
                       {filterIcon}
@@ -1186,10 +1282,10 @@ export function DataTable({
                       <Dialog.Popup data-pupitre-popup="" className={sheetPopupClasses('md')}>
                         <div className="flex items-center justify-between border-b border-border px-5 py-4">
                           <Dialog.Title className="text-[0.9375rem] font-semibold">
-                            Filters
+                            {t('Filters')}
                           </Dialog.Title>
                           <Dialog.Close
-                            aria-label="Close filters"
+                            aria-label={t('Close filters')}
                             className={buttonClasses({
                               variant: 'ghost',
                               square: true,
@@ -1206,7 +1302,7 @@ export function DataTable({
                 ) : (
                   <Popover.Root>
                     <Popover.Trigger
-                      aria-label="Filters"
+                      aria-label={t('Filters')}
                       className={buttonClasses({ variant: 'ghost', square: true })}
                     >
                       {filterIcon}
@@ -1215,10 +1311,13 @@ export function DataTable({
                       <Popover.Positioner align="end" sideOffset={8} className={positionerClasses}>
                         <Popover.Popup
                           data-pupitre-popup=""
-                          className={cn(popupClasses, 'w-80 max-w-[calc(100vw-2rem)] p-4')}
+                          className={cn(
+                            popupClasses,
+                            'w-80 max-h-[80vh] max-w-[calc(100vw-2rem)] overflow-y-auto p-4'
+                          )}
                         >
                           <Popover.Title className="mb-4 text-sm font-semibold">
-                            Filters
+                            {t('Filters')}
                           </Popover.Title>
                           {filterForm}
                         </Popover.Popup>
@@ -1229,7 +1328,7 @@ export function DataTable({
               {columnsVisible && (
                 <Popover.Root>
                   <Popover.Trigger
-                    aria-label="Columns"
+                    aria-label={t('Columns')}
                     className={buttonClasses({ variant: 'ghost', square: true })}
                   >
                     <Icon name="columns-3" className="size-4" />
@@ -1241,7 +1340,7 @@ export function DataTable({
                         className={cn(popupClasses, 'min-w-52 p-3')}
                       >
                         <Popover.Title className="mb-3 text-sm font-semibold">
-                          Columns
+                          {t('Columns')}
                         </Popover.Title>
                         <div className="grid gap-3">
                           {table
@@ -1297,12 +1396,12 @@ export function DataTable({
             <table className="w-full border-collapse text-sm">
               <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
                 <tr>
-                  {descriptor.reorderable && <th className="w-8 px-2" aria-label="Reorder" />}
+                  {descriptor.reorderable && <th className="w-8 px-2" aria-label={t('Reorder')} />}
                   {descriptor.selectable && (
                     <th className="w-10 px-3 py-2">
                       <CheckboxControl
                         className="size-6 -my-1 align-middle"
-                        aria-label="Select all rows"
+                        aria-label={t('Select all rows')}
                         checked={allSelected}
                         indeterminate={selected.length > 0 && !allSelected}
                         onCheckedChange={(checked) =>
@@ -1315,46 +1414,82 @@ export function DataTable({
                   )}
                   {table.getHeaderGroups()[0]?.headers.map((header) => {
                     const column = columnDescriptors.get(header.column.id)
+                    const sortIndex = tableState.sorts.findIndex(
+                      (item) => item.replace(/^-/, '') === header.column.id
+                    )
+                    const descending = tableState.sorts[sortIndex]?.startsWith('-')
                     return (
                       <th
                         key={header.id}
                         aria-sort={
-                          tableState.query.sort === header.column.id
-                            ? 'ascending'
-                            : tableState.query.sort === `-${header.column.id}`
+                          sortIndex === 0
+                            ? descending
                               ? 'descending'
-                              : header.column.getCanSort()
-                                ? 'none'
-                                : undefined
+                              : 'ascending'
+                            : sortIndex < 0 && header.column.getCanSort()
+                              ? 'none'
+                              : undefined
                         }
                         className={`px-4 py-3 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
                         style={{ width: column?.width }}
                       >
                         {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1.5 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
-                            onClick={() => changeSort(header.column.id)}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            <Icon
-                              className="size-3.5 text-subtle-foreground"
-                              name={
-                                tableState.query.sort === header.column.id
-                                  ? 'arrow-up'
-                                  : tableState.query.sort === `-${header.column.id}`
-                                    ? 'arrow-down'
+                          <span className="inline-flex flex-wrap items-center gap-2">
+                            <button
+                              type="button"
+                              className="inline-flex items-center gap-1.5 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
+                              onClick={(event) => changeSort(header.column.id, event.shiftKey)}
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              <Icon
+                                className="size-3.5 text-subtle-foreground"
+                                name={
+                                  sortIndex >= 0
+                                    ? descending
+                                      ? 'arrow-down'
+                                      : 'arrow-up'
                                     : 'chevrons-up-down'
-                              }
-                            />
-                          </button>
+                                }
+                              />
+                              {descriptor.multiSort && sortIndex >= 0 && (
+                                <span aria-hidden="true">{sortIndex + 1}</span>
+                              )}
+                            </button>
+                            {descriptor.multiSort && sortIndex >= 0 && (
+                              <span className="sr-only">
+                                {t('Sort priority {number}, {direction}', {
+                                  number: sortIndex + 1,
+                                  direction: descending ? t('descending') : t('ascending'),
+                                })}
+                              </span>
+                            )}
+                            {descriptor.multiSort && (
+                              <Button
+                                size="xs"
+                                variant="ghost"
+                                square
+                                aria-label={t('Add {column} to sort', {
+                                  column: column?.label ?? header.column.id,
+                                })}
+                                title={t('Add {column} to sort', {
+                                  column: column?.label ?? header.column.id,
+                                })}
+                                disabled={
+                                  sortIndex < 0 && tableState.sorts.length >= descriptor.multiSort
+                                }
+                                onClick={() => changeSort(header.column.id, true)}
+                              >
+                                <Icon name="plus" className="size-3.5" />
+                              </Button>
+                            )}
+                          </span>
                         ) : (
                           flexRender(header.column.columnDef.header, header.getContext())
                         )}
                       </th>
                     )
                   })}
-                  <th className="px-3 py-2 text-right font-medium">Actions</th>
+                  <th className="px-3 py-2 text-right font-medium">{t('Actions')}</th>
                 </tr>
                 {!reorderMode &&
                   descriptor.columns.some((column) => column.individuallySearchable) && (
@@ -1371,7 +1506,7 @@ export function DataTable({
                           <th key={header.id} className="px-3 pb-2">
                             <input
                               type="search"
-                              aria-label={`Search ${column.label}`}
+                              aria-label={t('Search {label}', { label: column.label })}
                               className={`${controlClasses} h-8 px-2 font-normal`}
                               value={searchValue}
                               onChange={(event) =>
@@ -1443,15 +1578,19 @@ export function DataTable({
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
           <span className="tabular-nums">
             {meta
-              ? `Showing ${meta.from} to ${meta.to} of ${meta.total} results`
-              : `${rows.length} results`}
+              ? t('Showing {from} to {to} of {total} results', {
+                  from: meta.from ?? 0,
+                  to: meta.to ?? 0,
+                  total: meta.total,
+                })
+              : t('{count} results', { count: rows.length })}
           </span>
           <div className="flex items-center gap-2">
             {descriptor.perPageOptions.length > 0 && (
               <SelectMenu
                 size="sm"
                 className="w-auto"
-                aria-label="Rows per page"
+                aria-label={t('Rows per page')}
                 value={String(
                   tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
                 )}
@@ -1460,13 +1599,13 @@ export function DataTable({
                 }
                 options={descriptor.perPageOptions.map((option) => ({
                   value: String(option),
-                  label: `${option} per page`,
+                  label: option === 'all' ? t('All') : t('{count} per page', { count: option }),
                 }))}
               />
             )}
             <button
               type="button"
-              aria-label="Previous"
+              aria-label={t('Previous')}
               className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
               disabled={page <= 1 || loading || props.disabled}
               onClick={() => {
@@ -1481,7 +1620,7 @@ export function DataTable({
             </span>
             <button
               type="button"
-              aria-label="Next"
+              aria-label={t('Next')}
               className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
               disabled={page >= lastPage || loading || props.disabled}
               onClick={() => {

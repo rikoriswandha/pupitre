@@ -84,7 +84,7 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
                   className={buttonClasses({ color: 'gray', className: 'w-full' })}
                 >
                   <Icon name="globe" className="size-4" />
-                  {t('Continue with')} {provider}
+                  {t('Continue with {provider}', { provider })}
                 </a>
               ))}
             </div>

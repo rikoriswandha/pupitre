@@ -135,7 +135,7 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
         value={
           onlyWizard
             ? {
-                label: typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit',
+                label: typeof props.submitLabel === 'string' ? props.submitLabel : t('Submit'),
                 submitting: loading || submitting,
               }
             : null
@@ -148,12 +148,12 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
         <div className="flex flex-wrap items-center gap-3">
           {!onlyWizard && (
             <Button type="submit" color="primary" loading={loading || submitting}>
-              {typeof props.submitLabel === 'string' ? props.submitLabel : 'Submit'}
+              {typeof props.submitLabel === 'string' ? props.submitLabel : t('Submit')}
             </Button>
           )}
           {typeof props.cancelUrl === 'string' && (
             <Button type="button" color="gray" onClick={cancel} disabled={loading}>
-              Cancel
+              {t('Cancel')}
             </Button>
           )}
         </div>

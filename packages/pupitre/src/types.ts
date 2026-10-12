@@ -22,7 +22,7 @@ export type PupitreContext = {
   panel: PanelRuntime
   /** Panel path as declared (`/admin`), without tenant segment. */
   basePath: string
-  locale: 'en'
+  locale: string
   timezone: string
   user: PupitreUser
   /** Authenticated host user model instance (guard user), when any. */

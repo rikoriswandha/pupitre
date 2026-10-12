@@ -23,6 +23,9 @@ import type {
   TableSchema,
   QueryCallback,
   TableGroupBuilder,
+  QueryBuilderFilterBuilder,
+  QueryConstraintBuilder,
+  QueryConstraintDefinition,
 } from '../../definition/table.js'
 import type { TableEmptyStateInput } from '../../definition/table.js'
 import type { SchemaNodeBuilder } from '../../definition/schema.js'
@@ -115,6 +118,7 @@ const filterMethods: Record<TableFilterDefinition['kind'], readonly string[]> = 
   dateRange: ['attribute', 'timezone'],
   trashed: [],
   custom: ['form', 'query'],
+  queryBuilder: ['constraints', 'label'],
 }
 function immutableFluent(definition: FluentDefinition, allowed: readonly string[]): object {
   const target = { definition, toDefinition: () => definition }
@@ -162,6 +166,15 @@ function immutableFluent(definition: FluentDefinition, allowed: readonly string[
           ].includes(property)
             ? true
             : input
+        if (property === 'constraints' && Array.isArray(value)) {
+          return immutableFluent(
+            {
+              ...current.definition,
+              constraints: value.map((item: QueryConstraintBuilder) => item.toDefinition()),
+            } as FluentDefinition,
+            allowed
+          )
+        }
         if (property === 'form' && Array.isArray(value)) {
           const form = (value as readonly SchemaNodeBuilder[]).map((field) => field.toDefinition())
           return immutableFluent({ ...current.definition, form } as FluentDefinition, allowed)
@@ -219,8 +232,13 @@ function makeFilter(kind: 'ternary', name: string): TernaryFilterBuilder
 function makeFilter(kind: 'dateRange', name: string): DateRangeFilterBuilder
 function makeFilter(kind: 'trashed', name: 'trashed'): TrashedFilterBuilder
 function makeFilter(kind: 'custom', name: string): CustomFilterBuilder
+function makeFilter(kind: 'queryBuilder', name: string): QueryBuilderFilterBuilder
 function makeFilter(kind: TableFilterDefinition['kind'], name: string): TableFilterBuilderUnion {
-  const definition = { kind, name } as TableFilterDefinition
+  const definition = {
+    kind,
+    name,
+    ...(kind === 'queryBuilder' ? { constraints: [] } : {}),
+  } as TableFilterDefinition
   return immutableFluent(definition, filterMethods[kind]) as TableFilterBuilderUnion
 }
 class Table implements TableSchema {
@@ -237,8 +255,22 @@ class Table implements TableSchema {
   query(value: QueryCallback): this {
     return this.update({ query: value })
   }
-  defaultSort(column: string, direction: 'asc' | 'desc'): this {
-    return this.update({ defaultSort: { column, direction } })
+  defaultSort(column: string, direction: 'asc' | 'desc'): this
+  defaultSort(columns: readonly { column: string; direction: 'asc' | 'desc' }[]): this
+  defaultSort(
+    column: string | readonly { column: string; direction: 'asc' | 'desc' }[],
+    direction: 'asc' | 'desc' = 'asc'
+  ): this {
+    const sorts = typeof column === 'string' ? [{ column, direction }] : [...column]
+    return this.update({
+      defaultSort: sorts[0],
+      defaultSorts: typeof column === 'string' ? undefined : sorts,
+    })
+  }
+  multiSort(max = 3): this {
+    if (!Number.isInteger(max) || max < 1 || max > 10)
+      throw new Error('multiSort max must be between 1 and 10')
+    return this.update({ multiSort: max })
   }
   filtersLayout(value: TableDefinition['filtersLayout']): this {
     return this.update({ filtersLayout: value })
@@ -305,6 +337,11 @@ class Table implements TableSchema {
     grid: (columns) => this.update({ layout: { type: 'grid', columns } }),
   }
   toDefinition(): TableDefinition {
+    const defaults = this.value.defaultSorts ?? []
+    if (defaults.length > (this.value.multiSort ?? 1))
+      throw new Error('Default sorting exceeds the table multiSort limit')
+    if (new Set(defaults.map((sort) => sort.column)).size !== defaults.length)
+      throw new Error('Default sorting cannot repeat a column')
     return this.value
   }
   group(key: string): TableGroupBuilder {
@@ -328,7 +365,29 @@ export const table = {
     ternary: (name: string) => makeFilter('ternary', name),
     dateRange: (name: string) => makeFilter('dateRange', name),
     custom: (name: string) => makeFilter('custom', name),
+    queryBuilder: (name = 'query') => makeFilter('queryBuilder', name),
     trashed: () => makeFilter('trashed', 'trashed'),
   },
+}
+
+function constraint(definition: QueryConstraintDefinition): QueryConstraintBuilder {
+  return {
+    definition,
+    toDefinition: () => definition,
+    label: (value) => constraint({ ...definition, label: value }),
+    attribute: (value) => constraint({ ...definition, attribute: value }),
+    options: (value) => constraint({ ...definition, options: { ...value } }),
+    timezone: (value) => constraint({ ...definition, timezone: value }),
+    integer: () => constraint({ ...definition, integer: true }),
+  }
+}
+export const qb = {
+  text: (name: string) => constraint({ type: 'text', name }),
+  number: (name: string) => constraint({ type: 'number', name }),
+  date: (name: string) => constraint({ type: 'date', name }),
+  boolean: (name: string) => constraint({ type: 'boolean', name }),
+  select: (name: string) => constraint({ type: 'select', name }),
+  relationship: (name: string, relatedAttribute: string) =>
+    constraint({ type: 'relationship', name, relatedAttribute }),
 }
 export { Table }

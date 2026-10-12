@@ -13,6 +13,8 @@ import type { RuntimeContextValue } from '../runtime.js'
 import { getRegistryHandlers } from '../registry/defineRegistry.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
 import { jsonFetch } from '../bridge/actions.js'
+import { assertCatalogComponents, MissingComponent } from './missing_component.js'
+import { t } from '../i18n.js'
 export function exposePupitreDevContext(
   target: Window,
   enabled: boolean,
@@ -119,6 +121,7 @@ function PupitreRendererInstance({
   onStore,
   embedded,
 }: PupitreRendererProps) {
+  assertCatalogComponents(page, registry)
   const [runtime] = useState(() => {
     const initial = structuredClone((page.state ?? {}) as Record<string, unknown>)
     const state = createPupitreStore(initial)
@@ -219,7 +222,7 @@ function PupitreRendererInstance({
       runAction(
         {
           name: 'runAction',
-          label: 'Action',
+          label: t('Action'),
           kind: 'direct',
           enabled: true,
           url: String(params.url ?? ''),
@@ -296,7 +299,11 @@ function PupitreRendererInstance({
         functions={registry.functions}
         directives={registry.directives}
       >
-        <Renderer spec={page.spec as never} registry={registry.registry} />
+        <Renderer
+          spec={page.spec as never}
+          registry={registry.registry}
+          fallback={MissingComponent}
+        />
       </JSONUIProvider>
     </RuntimeContext.Provider>
   )

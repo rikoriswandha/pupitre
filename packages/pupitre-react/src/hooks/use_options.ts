@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { fetchOptions } from '../bridge/actions.js'
 import type { Option } from '../bridge/actions.js'
+import { t } from '../i18n.js'
 
 export function useOptions(args: {
   url?: string
@@ -68,7 +69,7 @@ export function useOptions(args: {
           request.current === controller &&
           !(failure instanceof DOMException && failure.name === 'AbortError')
         )
-          setError(failure instanceof Error ? failure.message : 'Unable to load options')
+          setError(failure instanceof Error ? failure.message : t('Unable to load options'))
       } finally {
         if (request.current === controller) setLoading(false)
       }

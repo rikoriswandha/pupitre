@@ -1,7 +1,10 @@
 import type { PupitrePlugin } from '../definition/plugin.js'
+import { validateMessages } from '../i18n.js'
+import { mergeCatalogExtensions } from '../../catalog/extensions.js'
 
 const PLUGIN_KEYS: Record<string, true> = {
   name: true,
+  catalog: true,
   register: true,
   resources: true,
   pages: true,
@@ -10,6 +13,7 @@ const PLUGIN_KEYS: Record<string, true> = {
   navigation: true,
   extendResource: true,
   boot: true,
+  messages: true,
 }
 
 const HOOKS = ['register', 'extendResource', 'boot'] as const
@@ -30,9 +34,15 @@ export function definePlugin<Plugin extends PupitrePlugin>(plugin: Plugin): Plug
     if (plugin[hook] !== undefined && typeof plugin[hook] !== 'function')
       throw new Error(`Pupitre plugin "${plugin.name}" hook "${hook}" must be a function`)
   }
+  if (plugin.catalog !== undefined) {
+    if (!Array.isArray(plugin.catalog))
+      throw new Error(`Pupitre plugin "${plugin.name}" catalog must be an array`)
+    mergeCatalogExtensions(plugin.catalog)
+  }
   if (plugin.middleware !== undefined && !Array.isArray(plugin.middleware))
     throw new Error(`Pupitre plugin "${plugin.name}" middleware must be an array`)
   if (plugin.navigation !== undefined && !Array.isArray(plugin.navigation))
     throw new Error(`Pupitre plugin "${plugin.name}" navigation must be an array`)
+  if (plugin.messages !== undefined) validateMessages(plugin.messages)
   return plugin
 }

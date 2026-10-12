@@ -5,8 +5,10 @@ import {
   defineResource,
   exportColumn,
   pages,
+  qb,
   schema,
   table,
+  t as translate,
 } from '@rikology/pupitre'
 import Product from '#models/product'
 import ProductPolicy from '#policies/product_policy'
@@ -430,6 +432,18 @@ export default defineResource(Product)
         t.count('variants'),
       ])
       .filters([
+        table.filter
+          .queryBuilder('query')
+          .label(translate('Advanced query'))
+          .constraints([
+            qb.text('name').label(translate('Name')),
+            qb.number('price').integer().label(translate('Price')),
+            qb.number('stock').integer().label(translate('Stock')),
+            qb.boolean('isActive').label(translate('Live')),
+            qb.select('status').label(translate('Status')).options(STATUS_OPTIONS),
+            qb.date('launchAt').label(translate('Launch date')).timezone('Asia/Jakarta'),
+            qb.relationship('variants', 'name').label(translate('Variants')),
+          ]),
         table.filter.select('status').options(STATUS_OPTIONS).multiple(),
         table.filter.select('shippingClass').options(SHIPPING_OPTIONS),
         table.filter.ternary('isActive').trueLabel('Live').falseLabel('Hidden'),
@@ -450,6 +464,7 @@ export default defineResource(Product)
       .filtersLayout('slideover')
       .groups([t.group('shippingClass').label('Shipping class').collapsible()])
       .defaultSort('name', 'asc')
+      .multiSort(3)
       .paginated([10, 25, 'all'])
       .searchDebounce(200)
       // Row classes are filtered to plain [A-Za-z0-9_-] tokens: no `/opacity` modifiers.

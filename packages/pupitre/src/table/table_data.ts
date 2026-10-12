@@ -1,3 +1,4 @@
+import { requestMessages, resolveTranslations, t } from '../i18n.js'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, TableData, TableMeta, TableRow } from '../../catalog/wire.js'
@@ -41,7 +42,7 @@ function stringValue(value: unknown): string {
 }
 function editableDisplay(column: TableColumnDefinition, value: unknown): string {
   if ((column.kind === 'toggle' || column.kind === 'checkbox') && typeof value === 'boolean')
-    return value ? 'On' : 'Off'
+    return value ? t('Enabled') : t('Disabled')
   if (column.kind === 'select' && column.options)
     return stringValue(formatOption(value, column.options))
   return stringValue(value)
@@ -59,6 +60,7 @@ async function formatCell(
       : column.kind === 'fragment'
         ? undefined
         : valueAt(serialized, column.name)
+  if (column.kind === 'custom' && column.format) return column.format(value, serialized)
   if (column.kind === 'badge') {
     return {
       value,
@@ -95,7 +97,11 @@ async function formatCell(
         : options.timezone,
   }
   // Option labels replace number/date formatting but still get limit/description/url.
-  const display = column.options ? formatOption(value, column.options) : value
+  const display = resolveTranslations(
+    column.options ? formatOption(value, column.options) : value,
+    options.locale,
+    options.ctx ? (requestMessages.get(options.ctx) ?? {}) : {}
+  )
   if (!column.options) {
     if (column.money)
       return formatMoney(value as string | number | null, context, { currency: column.money })

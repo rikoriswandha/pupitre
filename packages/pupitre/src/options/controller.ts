@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { ResourceRuntime } from '../manager.js'
@@ -100,7 +101,7 @@ export default class OptionsController {
       locale: ctx.pupitre.locale,
       timezone: ctx.pupitre.timezone,
       resourceSlug: owner.slug,
-      form: { method: 'post', url: ctx.request.url(), submitLabel: 'Create', dirtyGuard: false },
+      form: { method: 'post', url: ctx.request.url(), submitLabel: t('Create'), dirtyGuard: false },
     })
     return ctx.response.ok({
       spec: compiled.spec,
@@ -152,7 +153,7 @@ export default class OptionsController {
         const field = message.field ?? '_form'
         ;(errors[field] ??= []).push(message.message)
       }
-      if (messages.length === 0) errors._form = ['The submitted data is invalid']
+      if (messages.length === 0) errors._form = [t('The submitted data is invalid')]
       return ctx.response.status(422).json({ errors })
     }
     let created: unknown
@@ -163,7 +164,9 @@ export default class OptionsController {
       created = await model.create(createData)
     }
     if (!created || typeof created !== 'object') {
-      return ctx.response.status(500).json({ message: 'The related record could not be created' })
+      return ctx.response
+        .status(500)
+        .json({ message: t('The related record could not be created') })
     }
     const record = created as LucidRow
     const key = model.primaryKey
@@ -171,7 +174,7 @@ export default class OptionsController {
     if (typeof value !== 'string' && typeof value !== 'number') {
       return ctx.response
         .status(500)
-        .json({ message: 'The related record has no supported identifier' })
+        .json({ message: t('The related record has no supported identifier') })
     }
     const label = entry.field.getOptionLabelUsing
       ? await entry.field.getOptionLabelUsing(value, ctx)

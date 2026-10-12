@@ -107,9 +107,9 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `ToggleColumn`, `SelectColumn`, `TextInputColumn`, `CheckboxColumn` (inline edit) | `t.toggle/select/textInput/checkbox` + `PATCH column` | M3 | ✅ |
 | `ViewColumn` / custom | `t.custom()`, `t.fragment()` | M1 | ✅ |
 | Relasi dot notation, `counts`, `sum` | `t.text('author.name')`, `t.count('comments')` | M1/M3 | ✅ | dot notation dan relation count; summary aggregate ada di baris tabel |
-| `SelectFilter`, `TernaryFilter`, `Filter` custom form, `QueryBuilder` | `t.filter.select/ternary/dateRange/custom` | M1; QueryBuilder — | ✅ (QueryBuilder tidak di v1) |
+| `SelectFilter`, `TernaryFilter`, `Filter` custom form, `QueryBuilder` | `t.filter.select/ternary/dateRange/custom`; `t.filter.queryBuilder(name).constraints([...])` + `qb` | M1; QueryBuilder post-1.0 | ✅ | QueryBuilder: constraint text/number/date/boolean/select/relationship, negasi, grup OR berisi rule AND, URL JSON tervalidasi (400), ekspor dan summary scope-safe (ADR-0025) |
 | Filters layout dropdown/above/slideover; `persistFiltersInSession` | `.filtersLayout()`; persist di URL | M1 | ✅ |
-| Sort default, multi-sort | `.defaultSort()`; multi-sort — | M1 | ✅ |
+| Sort default, multi-sort | `.defaultSort()`; `.multiSort(max = 3)` + `.defaultSort([...])` | M1; multi-sort post-1.0 | ✅ | `sort=title,-price`, link sort tunggal lama tetap valid, `sort=` menghapus default, kontrol keyboard "Add to sort" |
 | Search global + per kolom | `q`, `columns[x][search]` | M1 / M3 | ✅ | pencarian individu mendukung kolom relasi melalui `whereHas` |
 | Pagination opsi, `simple`, `all` | `.paginated([...])` | M1 | ✅ |
 | Grouping + collapsible groups + summaries per grup | `.groups()`, `summarize()` | M3 | ✅ | groupBy URL dan summary dihitung untuk seluruh query terfilter |
@@ -179,9 +179,10 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Tenancy: `HasTenants`, scoping, `ownershipRelationship`, billing | `TenancyAdapter` + column / `@rikology/adonisjs-tenant` drivers; billing — | M2 | ✅ | |
 | Shield plugin (roles/permissions) | `pupitre-shield` | M4 | ✅ | WP37: role CRUD, checkbox permission per resource, policy Bouncer cached per request, super-admin, sync idempotent, assignment User relation, helper custom page |
 | Activity log plugin | `pupitre-audit` | M4 | ✅ | WP38: timeline view/edit, Activity read-only, filter event/subject/date, old/new detail, fail-closed policy dan subject links authorized |
-| Multi-language (`->locales()`) | — | post-1.0 | — |
+| Settings plugin (spatie-settings) | `pupitre-settings` | post-1.0 | ✅ | Grup bertipe, form custom page, JSON, transaksi atomik, global/tenant, akses fail-closed |
+| Multi-language (`->locales()`) | `.locale('en').locales(['en', 'id'])`, `t()`, kamus host/plugin | post-1.0 | ✅ | Inggris/Indonesia, preferensi user/session/Accept-Language, marker server lazy (ADR-0023), plural/interpolasi, pesan VineJS, CI coverage key literal |
 | Theming custom CSS | theme file + CSS vars | M3 | ✅ | stylesheet host via `<link>` same-origin/HTTPS; tidak membuat inline `<style>` |
 | Testing helpers (`livewire()` assertions) | `@rikology/pupitre/testing` + `@rikology/pupitre-ui/testing` | M3 | ✅ | `visitResource`/`submitForm`/`runAction`/`visitPage` lewat controller asli (authz, tenancy, hooks) + `assertSpecHas`/`assertVisible`; fixture Playwright dipakai e2e example |
 | `make:*` commands | `make:panel <name>`; `make:resource`; `make:page`; `make:widget`; `make:relation-manager <Post> <comments>` | M2–M3 | ✅ | WP27/WP28 generator tests cover idempotent output |
 | `make:plugin` | `make:plugin` + `create-pupitre-plugin` | M4 | ✅ | Modul lokal idempotent (`--force`); `--package [--dir]` menjalankan `npx @rikology/create-pupitre-plugin@<major>` untuk package plugin |
-| Plugin ecosystem | `definePlugin`, `create-pupitre-plugin` | M4 | ✅ | Kontrak plugin publik dan template package dengan kontribusi navigasi serta test manager Japa |
+| Plugin ecosystem | `definePlugin`, `create-pupitre-plugin`, `defineCatalogExtension` + `defineField/Column/Entry` | M4; UI extension post-1.0 | ✅ | Kontrak plugin publik dan template package dengan kontribusi navigasi serta test manager Japa; plugin dapat mengirim field/kolom/entry React lewat catalog extension (`--with-ui`, ADR-0024) |

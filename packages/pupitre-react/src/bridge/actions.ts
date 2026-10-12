@@ -21,6 +21,7 @@ import { mapErrors } from './errors.js'
 import { currentUrl, getRouter } from './inertia.js'
 import type { ToastMessage } from '../shell/types.js'
 import type { JsonPatchOp } from '@rikology/pupitre/catalog'
+import { t } from '../i18n.js'
 type FetchLike = typeof fetch
 let activeFetch: FetchLike = (...args) => globalThis.fetch(...args)
 export function setFetch(fetcher: FetchLike): () => void {
@@ -82,9 +83,10 @@ async function saveCsvResponse(response: Response): Promise<void> {
 }
 export async function downloadExportFile(url: string): Promise<void> {
   const response = await jsonFetch(url, { headers: { Accept: 'text/csv' } })
-  if (!response.ok) throw new Error(`Export download failed (${response.status})`)
+  if (!response.ok)
+    throw new Error(t('Export download failed ({status})', { status: response.status }))
   if (!response.headers.get('content-type')?.includes('text/csv'))
-    throw new Error('Export download did not return CSV.')
+    throw new Error(t('Export download did not return CSV.'))
   await saveCsvResponse(response)
 }
 export async function submitAction(
@@ -137,7 +139,7 @@ export async function submitAction(
       ? { status: response.status, result: parsed.data, ...(option ? { option } : {}) }
       : option
         ? { status: response.status, option }
-        : { status: response.status, message: 'Invalid action response.' }
+        : { status: response.status, message: t('Invalid action response.') }
   }
   if (response.status === 422 && payload && typeof payload === 'object' && 'errors' in payload) {
     const errors = payload.errors
@@ -162,7 +164,10 @@ export async function submitAction(
     const message = payload.message
     if (typeof message === 'string') return { status: response.status, message }
   }
-  return { status: response.status, message: `Unable to perform action (${response.status}).` }
+  return {
+    status: response.status,
+    message: t('Unable to perform action ({status}).', { status: response.status }),
+  }
 }
 export async function waitForExport(
   job: { progressUrl: string },
@@ -175,17 +180,19 @@ export async function waitForExport(
     if (signal?.aborted)
       throw signal.reason ?? new DOMException('Export polling was cancelled.', 'AbortError')
     if (Date.now() >= deadline)
-      throw new Error('Export did not finish before the polling deadline.')
+      throw new Error(t('Export did not finish before the polling deadline.'))
     const response = await jsonFetch(job.progressUrl, {
       headers: { Accept: 'application/json' },
       signal,
     })
-    if (!response.ok) throw new Error(`Export progress request failed (${response.status})`)
+    if (!response.ok)
+      throw new Error(t('Export progress request failed ({status})', { status: response.status }))
     const progress = exportProgressResponse.safeParse(await response.json())
-    if (!progress.success) throw new Error('Invalid export progress response.')
+    if (!progress.success) throw new Error(t('Invalid export progress response.'))
     onProgress?.(progress.data)
     if (progress.data.status === 'done') return progress.data
-    if (progress.data.status === 'failed') throw new Error(progress.data.error ?? 'Export failed.')
+    if (progress.data.status === 'failed')
+      throw new Error(progress.data.error ?? t('Export failed.'))
     const delay = Math.min(1500, Math.max(0, deadline - Date.now()))
     await new Promise<void>((resolve, reject) => {
       const finish = () => {
@@ -311,7 +318,8 @@ export async function fetchOptions(
     credentials: 'same-origin',
     signal: params.signal,
   })
-  if (!response.ok) throw new Error(`Options request failed (${response.status})`)
+  if (!response.ok)
+    throw new Error(t('Options request failed ({status})', { status: response.status }))
   const result = (await response.json()) as { options?: Option[]; hasMore?: boolean }
   return {
     options: Array.isArray(result.options) ? result.options : [],
@@ -410,7 +418,7 @@ export async function fetchActionForm(
       typeof payload.message === 'string'
     )
       throw new Error(payload.message)
-    throw new Error(`Unable to load action form (${response.status}).`)
+    throw new Error(t('Unable to load action form ({status}).', { status: response.status }))
   }
   return (await response.json()) as ActionModalState['response']
 }
@@ -468,7 +476,7 @@ export async function uploadFile(
     const message =
       payload && typeof payload === 'object' && 'message' in payload
         ? String(payload.message)
-        : `Upload failed (${response.status}).`
+        : t('Upload failed ({status}).', { status: response.status })
     throw new Error(message)
   }
   return payload as UploadResponse
@@ -490,7 +498,8 @@ export async function deleteUpload(
     },
     body: JSON.stringify({ key, field: descriptor.name, resource }),
   })
-  if (!response.ok) throw new Error(`Upload removal failed (${response.status}).`)
+  if (!response.ok)
+    throw new Error(t('Upload removal failed ({status}).', { status: response.status }))
 }
 export async function uploadFiles(
   descriptor: FileUploadDescriptor,

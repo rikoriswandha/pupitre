@@ -1,3 +1,4 @@
+import { t } from '../../i18n.js'
 import { publishResourceChange, resourceRealtime } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
@@ -298,7 +299,7 @@ export async function compileRelationDescriptor(
           ctx,
           locale: ctx.pupitre.locale,
           timezone: ctx.pupitre.timezone,
-          form: { method: 'get', url: baseUrl, submitLabel: 'Apply', dirtyGuard: false },
+          form: { method: 'get', url: baseUrl, submitLabel: t('Apply'), dirtyGuard: false },
         })
         return compiled.spec
       },
@@ -393,11 +394,11 @@ export async function loadRelationTableData(
 export default class RelationController {
   async list(ctx: HttpContext) {
     const target = await resource(ctx)
-    if (!target) return errorJson(ctx, 'Resource not found', 404)
+    if (!target) return errorJson(ctx, t('Resource not found'), 404)
     const manager = relationDefinition(target, ctx.params.relation)
-    if (!manager) return errorJson(ctx, 'Relation not found', 404)
+    if (!manager) return errorJson(ctx, t('Relation not found'), 404)
     const parent = await parentRecord(ctx, target)
-    if (!parent) return errorJson(ctx, 'Record not found', 404)
+    if (!parent) return errorJson(ctx, t('Record not found'), 404)
     await ensureModelAbility(ctx, target.model, 'view', parent)
     const readOnly =
       manager.readOnly || !(await authorizeModel(ctx, target.model, 'update', parent))
@@ -407,11 +408,11 @@ export default class RelationController {
 
   async showAction(ctx: HttpContext) {
     const target = await resource(ctx)
-    if (!target) return errorJson(ctx, 'Resource not found', 404)
+    if (!target) return errorJson(ctx, t('Resource not found'), 404)
     const manager = relationDefinition(target, ctx.params.relation)
-    if (!manager) return errorJson(ctx, 'Relation not found', 404)
+    if (!manager) return errorJson(ctx, t('Relation not found'), 404)
     const parent = await parentRecord(ctx, target)
-    if (!parent) return errorJson(ctx, 'Record not found', 404)
+    if (!parent) return errorJson(ctx, t('Record not found'), 404)
     await ensureNestedParentUpdate(ctx, target)
     await ensureModelAbility(ctx, target.model, 'update', parent)
     const related = relatedModel(target, manager)
@@ -420,20 +421,20 @@ export default class RelationController {
     const action = [...actionGroups.header, ...actionGroups.row, ...actionGroups.bulk].find(
       (item) => item.name === ctx.params.action
     )
-    if (!action) return errorJson(ctx, 'Action not found', 404)
+    if (!action) return errorJson(ctx, t('Action not found'), 404)
     const baseUrl = relationUrl(target, manager, parent)
     const { query } = await relatedQuery(ctx, target, parent, manager)
     const record =
       ctx.params.rid === undefined
         ? undefined
         : await lookupOrNull(() => query.where(keyName(related), ctx.params.rid).first())
-    if (ctx.params.rid !== undefined && !record) return errorJson(ctx, 'Record not found', 404)
+    if (ctx.params.rid !== undefined && !record) return errorJson(ctx, t('Record not found'), 404)
     if ((!action.builtin || action.builtin === 'bulk') && record)
       await ensureModelAbility(ctx, related, 'view', record)
     if (action.visible && !(await action.visible({ record: record ?? null, ctx })))
       throw new E_PUPITRE_FORBIDDEN()
     const nodes = relationActionForm(ctx, manager, action, related)
-    if (!nodes) return errorJson(ctx, 'Action form not found', 404)
+    if (!nodes) return errorJson(ctx, t('Action form not found'), 404)
     const ability =
       action.can ??
       (action.builtin === 'attach'
@@ -458,7 +459,7 @@ export default class RelationController {
       (record || action.builtin === 'attach' || action.builtin === 'associate') &&
       !(await authorizeModel(ctx, related, ability, record ?? undefined))
     )
-      return errorJson(ctx, 'You are not authorized to perform this action', 403)
+      return errorJson(ctx, t('You are not authorized to perform this action'), 403)
     const response = await compileActionForm(
       { ...action, form: nodes },
       {
@@ -486,11 +487,11 @@ export default class RelationController {
   }
   async options(ctx: HttpContext) {
     const target = await resource(ctx)
-    if (!target) return errorJson(ctx, 'Resource not found', 404)
+    if (!target) return errorJson(ctx, t('Resource not found'), 404)
     const manager = relationDefinition(target, ctx.params.relation)
-    if (!manager) return errorJson(ctx, 'Relation not found', 404)
+    if (!manager) return errorJson(ctx, t('Relation not found'), 404)
     const parent = await parentRecord(ctx, target)
-    if (!parent) return errorJson(ctx, 'Record not found', 404)
+    if (!parent) return errorJson(ctx, t('Record not found'), 404)
     await ensureNestedParentUpdate(ctx, target)
     await ensureModelAbility(ctx, target.model, 'update', parent)
     const related = relatedModel(target, manager)
@@ -508,7 +509,7 @@ export default class RelationController {
       const attachedIds = attached.map((row) => row.$getAttribute(keyName(related)))
       if (attachedIds.length) query = query.whereNotIn(keyName(related), attachedIds as never[])
     } else {
-      return errorJson(ctx, 'Options are available only for attach/associate actions', 404)
+      return errorJson(ctx, t('Options are available only for attach/associate actions'), 404)
     }
     const title = manager.recordTitle ?? relatedResource?.definition.recordTitle ?? 'name'
     const rawSelected = ctx.request.qs().selected ?? ctx.request.qs()['selected[]']
@@ -547,14 +548,14 @@ export default class RelationController {
 
   async runAction(ctx: HttpContext) {
     const target = await resource(ctx)
-    if (!target) return errorJson(ctx, 'Resource not found', 404)
+    if (!target) return errorJson(ctx, t('Resource not found'), 404)
     const manager = relationDefinition(target, ctx.params.relation)
-    if (!manager) return errorJson(ctx, 'Relation not found', 404)
+    if (!manager) return errorJson(ctx, t('Relation not found'), 404)
     const parent = await parentRecord(ctx, target)
-    if (!parent) return errorJson(ctx, 'Record not found', 404)
+    if (!parent) return errorJson(ctx, t('Record not found'), 404)
     await ensureNestedParentUpdate(ctx, target)
     await ensureModelAbility(ctx, target.model, 'update', parent)
-    if (manager.readOnly) return errorJson(ctx, 'Relation manager is read-only', 403)
+    if (manager.readOnly) return errorJson(ctx, t('Relation manager is read-only'), 403)
     const relation = target.model.$getRelation(manager.relation)
     const related = relation.relatedModel() as LucidModel
     const { query, relatedResource } = await relatedQuery(ctx, target, parent, manager)
@@ -563,13 +564,13 @@ export default class RelationController {
     const action = [...defs.header, ...defs.row, ...defs.bulk].find(
       (item) => item.name === actionName
     )
-    if (!action) return errorJson(ctx, 'Action not found', 404)
+    if (!action) return errorJson(ctx, t('Action not found'), 404)
     const id = ctx.params.rid
     let record =
       id === undefined
         ? undefined
         : await lookupOrNull(() => query.clone().where(keyName(related), id).first())
-    if (id !== undefined && !record) return errorJson(ctx, 'Record not found', 404)
+    if (id !== undefined && !record) return errorJson(ctx, t('Record not found'), 404)
     const data = ctx.request.input('data', ctx.request.all()) as Record<string, unknown>
     let records: LucidRow[] | undefined
     if ((!action.builtin || action.builtin === 'bulk') && defs.bulk.includes(action)) {
@@ -578,12 +579,12 @@ export default class RelationController {
         !data.ids.length ||
         data.ids.some((value) => typeof value !== 'string' && typeof value !== 'number')
       )
-        return errorJson(ctx, 'Invalid related record selection', 422)
+        return errorJson(ctx, t('Invalid related record selection'), 422)
       const ids = [...new Set(data.ids as (string | number)[])]
       records =
         (await lookupOrNull(() => query.clone().whereIn(keyName(related), ids))) ?? undefined
       if (!records || records.length !== ids.length)
-        return errorJson(ctx, 'Related record not found', 404)
+        return errorJson(ctx, t('Related record not found'), 404)
     }
     if (!action.builtin || action.builtin === 'bulk') {
       for (const row of records ?? (record ? [record] : []))
@@ -618,7 +619,7 @@ export default class RelationController {
       throw new E_PUPITRE_FORBIDDEN()
     if (action.builtin === 'create') {
       const nodes = manager.form ?? relatedResource?.definition.form
-      if (!nodes) return errorJson(ctx, 'Relation form is missing', 422)
+      if (!nodes) return errorJson(ctx, t('Relation form is missing'), 422)
       const validated = await validateResourceData(ctx, related, nodes, data)
       await target.model.transaction(async (trx) => {
         parent.useTransaction(trx)
@@ -638,13 +639,13 @@ export default class RelationController {
         !ids.length ||
         ids.some((value) => typeof value !== 'string' && typeof value !== 'number')
       )
-        return errorJson(ctx, 'Invalid related record selection', 422)
+        return errorJson(ctx, t('Invalid related record selection'), 422)
       const keys = ids as (string | number)[]
       const attachableQuery = related.query()
       await applyRelatedScope(ctx, related, attachableQuery, relatedResource)
       const attachable = await lookupOrNull(() => attachableQuery.whereIn(keyName(related), keys))
       if (!attachable || attachable.length !== keys.length)
-        return errorJson(ctx, 'Related record not found', 404)
+        return errorJson(ctx, t('Related record not found'), 404)
       for (const row of attachable) {
         if (!(await authorizeModel(ctx, related, 'attach', row))) throw new E_PUPITRE_FORBIDDEN()
       }
@@ -667,11 +668,11 @@ export default class RelationController {
         !ids.length ||
         ids.some((value) => typeof value !== 'string' && typeof value !== 'number')
       )
-        return errorJson(ctx, 'Invalid related record selection', 422)
+        return errorJson(ctx, t('Invalid related record selection'), 422)
       const keys = ids as (string | number)[]
       const rows = await lookupOrNull(() => query.clone().whereIn(keyName(related), keys))
       if (!rows || rows.length !== keys.length)
-        return errorJson(ctx, 'Related record not found', 404)
+        return errorJson(ctx, t('Related record not found'), 404)
       const rowAbility = action.builtin === 'detach' ? 'detach' : 'delete'
       for (const row of rows) {
         if (!(await authorizeModel(ctx, related, rowAbility, row))) throw new E_PUPITRE_FORBIDDEN()
@@ -688,13 +689,13 @@ export default class RelationController {
           }
         })
         await cleanupRecordFiles(manager.form, rows, ctx)
-      } else return errorJson(ctx, 'Detach requires a manyToMany relation', 400)
+      } else return errorJson(ctx, t('Detach requires a manyToMany relation'), 400)
       await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
     if (action.builtin === 'associate' || action.builtin === 'dissociate') {
       if (relation.type !== 'hasMany')
-        return errorJson(ctx, 'Association requires a hasMany relation', 400)
+        return errorJson(ctx, t('Association requires a hasMany relation'), 400)
       relation.boot()
       const foreignKey = (relation as { foreignKey: string }).foreignKey
       const ids = id === undefined ? (Array.isArray(data.ids) ? data.ids : []) : [id]
@@ -702,7 +703,7 @@ export default class RelationController {
         !ids.length ||
         ids.some((value) => typeof value !== 'string' && typeof value !== 'number')
       )
-        return errorJson(ctx, 'Invalid related record selection', 422)
+        return errorJson(ctx, t('Invalid related record selection'), 422)
       const keys = ids as (string | number)[]
       let candidates = query.clone()
       if (action.builtin === 'associate') {
@@ -712,7 +713,7 @@ export default class RelationController {
       }
       const rows = await lookupOrNull(() => candidates.whereIn(keyName(related), keys))
       if (!rows || rows.length !== keys.length)
-        return errorJson(ctx, 'Related record not found', 404)
+        return errorJson(ctx, t('Related record not found'), 404)
       const associationAbility = action.builtin === 'associate' ? 'associate' : 'dissociate'
       for (const row of rows) {
         if (!(await authorizeModel(ctx, related, associationAbility, row)))
@@ -731,7 +732,7 @@ export default class RelationController {
     }
     if (action.builtin === 'edit' && record) {
       const nodes = manager.form ?? relatedResource?.definition.form
-      if (!nodes) return errorJson(ctx, 'Relation form is missing', 422)
+      if (!nodes) return errorJson(ctx, t('Relation form is missing'), 422)
       const validated = await validateResourceData(ctx, related, nodes, data, record)
       record.merge(validated as never)
       await record.save()
@@ -754,6 +755,6 @@ export default class RelationController {
       await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, result)
     }
-    return errorJson(ctx, 'Unsupported relation action', 400)
+    return errorJson(ctx, t('Unsupported relation action'), 400)
   }
 }

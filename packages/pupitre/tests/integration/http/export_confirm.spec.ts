@@ -1,3 +1,5 @@
+import { stripTranslationMarkers, t as translate } from '../../../src/i18n.js'
+import { exportJobResponse } from '../../../catalog/wire.js'
 import { test } from '@japa/runner'
 import { actions, exportColumn, table } from '../../../index.js'
 import type { JobsAdapter } from '../../../src/adapters/jobs.js'
@@ -15,13 +17,19 @@ import {
 import type { TestApplication } from '../../helpers/app.js'
 import { teardown } from '../../helpers/db.js'
 
-async function request(fixture: TestApplication, cookie: string, body: unknown = {}) {
+async function request(
+  fixture: TestApplication,
+  cookie: string,
+  body: unknown = {},
+  locale = 'en'
+) {
   return fetch(`${fixture.baseUrl}/admin/posts/export?action=export`, {
     method: 'POST',
     headers: {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
       'Cookie': cookie,
+      'Accept-Language': locale,
       'Connection': 'close',
     },
     body: JSON.stringify(body),
@@ -248,6 +256,53 @@ test.group('confirm export query and lifecycle regressions', (group) => {
       }
     } finally {
       allowPolicyAbilities()
+      await closeTestApp(fixture)
+    }
+  })
+  test('queued CSV headers store readable translation intent and worker renders captured locale', async ({
+    assert,
+  }) => {
+    const jobs = deferredJobs()
+    const resource = posts().actions({
+      header: [actions.export().columns([exportColumn('title').label(translate('Post title'))])],
+      row: [],
+      bulk: [],
+    })
+    const fixture = await createTestApp({
+      panels: {
+        admin: async () => ({
+          default: fixturePanel.locale('id').locales(['en', 'id']).resources({ posts: resource }),
+        }),
+      },
+      pupitre: {
+        jobs: jobs.adapter,
+        exports: { maxSyncRows: 0 },
+        auth: { model: async () => ({ default: User }) },
+        i18n: { messages: { id: { 'Post title': 'Judul postingan' } } },
+      },
+    })
+    try {
+      await Post.query().delete()
+      await Post.create({ title: 'Raw title', slug: 'stored-header', status: 'draft', tenantId: 1 })
+      const cookie = await actor(fixture)
+      const response = await request(fixture, cookie, {}, 'id')
+      assert.equal(response.status, 200)
+      const job = exportJobResponse.parse(await response.json())
+      const payload = jobs.queued[0]
+      const persisted = JSON.stringify(payload)
+      assert.equal(stripTranslationMarkers(persisted), persisted)
+      assert.include(persisted, '"header":"Post title"')
+      assert.include(persisted, '"key":"Post title"')
+      await jobs.handlers.get('pupitre.export')!(payload)
+      const download = await fetch(`${fixture.baseUrl}${job.downloadUrl}`, {
+        headers: { Cookie: cookie },
+      })
+      assert.equal(download.status, 200)
+      const csv = await download.text()
+      assert.include(csv, 'Judul postingan')
+      assert.include(csv, 'Raw title')
+      assert.equal(stripTranslationMarkers(csv), csv)
+    } finally {
       await closeTestApp(fixture)
     }
   })

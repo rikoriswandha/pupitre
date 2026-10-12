@@ -1,5 +1,8 @@
 import { test } from '@japa/runner'
-import { definePage, defineResource, schema } from '../../../index.js'
+import { definePage, defineResource, defineField, schema } from '../../../index.js'
+import { defineCatalogExtension } from '../../../catalog/index.js'
+import { z } from 'zod'
+import vine from '@vinejs/vine'
 import {
   closeTestApp,
   createTestApp,
@@ -10,12 +13,34 @@ import {
   allowPolicyAbilities,
 } from '../../helpers/app.js'
 
+const scoreCatalog = defineCatalogExtension({
+  name: 'server-eval-score',
+  components: {
+    ServerEvalScore: {
+      kind: 'field',
+      props: z.object({}),
+      description: 'Server evaluated extension score',
+    },
+  },
+})
+const score = defineField('serverEvalScore', {
+  extension: scoreCatalog,
+  component: 'ServerEvalScore',
+  validate: () => vine.number(),
+})
 const resource = defineResource(Post)
   .slug('posts')
   .policy(PostPolicy)
   .scope((query) => query.where('tenant_id', 1))
   .form((form) =>
     form.components([
+      score('customScore')
+        .live({ server: true })
+        .afterStateUpdated(({ get, set }) => set('slug', String(get('customScore')))),
+      schema
+        .text('scoreSource')
+        .live({ server: true })
+        .afterStateUpdated(({ get, set }) => set('customScore', Number(get('scoreSource')))),
       schema
         .text('title')
         .live({ server: true })
@@ -88,6 +113,31 @@ async function request(baseUrl: string, payload: unknown) {
 }
 
 test.group('server evaluation HTTP', () => {
+  test('evaluates extension fields and allows live updates to their bound state', async ({
+    assert,
+  }) => {
+    const fixture = await createTestApp({ panels: { admin: async () => ({ default: panel }) } })
+    try {
+      const result = await request(fixture.baseUrl, {
+        resource: 'posts',
+        page: 'create',
+        field: 'customScore',
+        state: { customScore: 4, slug: '' },
+      })
+      assert.equal(result.response.status, 200)
+      assert.deepEqual(result.body.set, { '/data/slug': '4' })
+      const target = await request(fixture.baseUrl, {
+        resource: 'posts',
+        page: 'create',
+        field: 'scoreSource',
+        state: { customScore: 0, scoreSource: '3' },
+      })
+      assert.equal(target.response.status, 200)
+      assert.deepEqual(target.body.set, { '/data/customScore': 3 })
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
   test('evaluates create, edit, and custom-page form closures with record and context', async ({
     assert,
   }) => {

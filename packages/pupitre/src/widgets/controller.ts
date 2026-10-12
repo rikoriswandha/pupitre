@@ -1,3 +1,4 @@
+import { t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import { tableData as tableDataSchema, widgetData as widgetDataSchema } from '../../catalog/wire.js'
 import type { WidgetData, WidgetDescriptor } from '../../catalog/wire.js'
@@ -302,7 +303,7 @@ export default class WidgetController {
       ctx,
       key: pageKey(ctx, 'dashboard', 'dashboard'),
       kind: 'dashboard',
-      title: 'Dashboard',
+      title: t('Dashboard'),
       breadcrumbs: [panelBreadcrumb(ctx)],
       spec: { root: 'dashboard', elements: { dashboard: { type: 'Fragment', props: {} } } },
       state: {},

@@ -12,6 +12,8 @@ Catalog diekspor dari `@rikology/pupitre/catalog` sebagai data biasa + Zod (`pup
 
 Ditambahkan oleh `defineRegistry` json-render, bukan dideklarasikan di props Zod: `element`, `children`, `emit`, `state`, `setState`, `loading`, `parentId`. Pupitre menambahkan lewat context (`usePanel()`): `locale`, `timezone`, `density`, `urlFor`.
 
+Lokalisasi menambahkan shared props opsional `pupitre.messages?: Record<string, string | { one: string; other: string; zero?: string }>` dan `pupitre.locales?: string[]`; `pupitre.locale` tetap bahasa efektif. Ini penambahan non-breaking, bukan tipe komponen baru. `t()` server hanya menandai copy UI; boundary response menerjemahkan marker sesuai request dan tidak menyentuh data record/string biasa. `t()` client memakai kamus shared secara sinkron; key literal Inggris, interpolasi `{name}`, plural melalui `params.count`. Host menambah/override kamus di `config.i18n.messages`; plugin mengisi `definePlugin({ messages: { id: { ... } } })`.
+
 Konvensi props lintas komponen:
 
 | Prop | Tipe | Catatan |
@@ -119,6 +121,11 @@ M4 menambahkan `TableDescriptor.realtime?: { channel }` dan `pupitre.realtime?: 
 Ekspor/impor menggunakan response schemas di wire: `exportJobResponse`/`exportProgressResponse` untuk job CSV, `importPreviewResponse` untuk header/sample row/field mapping, `importResultResponse` untuk ringkasan per-row, dan `importJobResponse` untuk async import. Bridge memvalidasi setiap respons sebelum memperbarui UI.
 
 `DataTable` descriptor filter dapat menyertakan sub-spec form. Bungkus spec itu sebagai `{ $raw: spec }` agar ekspresinya tetap utuh sampai `SpecRenderer` memprosesnya dengan store filter sendiri; jangan gunakan wrapper ini untuk prop elemen biasa.
+
+QueryBuilder menambahkan filter domain `{ type: 'queryBuilder', name, label, constraints }`; constraint membawa `name`, `type`, `label`, `options?` dan allowlist `operators: [{ value, label }]`. Tipe meliputi text/number/date/boolean/select/relationship. Atribut SQL, konfigurasi relasi dan timezone tetap server-only. Editor `DataTable` menyimpan JSON OR-of-AND di `filters[name]`, mendukung negasi, reset serta filter defer; batas dan validasi server ada di WIRE_PROTOCOL §5 dan ADR-0025. Ini bukan sub-spec form custom.
+
+`TableDescriptor.defaultSorts` menyatakan array prioritas; `defaultSort` lama tetap kolom primer. `multiSort` adalah batas kolom untuk tabel opt-in. URL memakai token sort berurutan dipisahkan koma; primary header saja memakai `aria-sort`, sementara tombol tambah/hapus/prioritas dapat dioperasikan lewat keyboard. `sort=` membersihkan default secara eksplisit.
+
 ## 4. Shell
 
 `Shell`, `Toaster`, `Modal`, `ConfirmDialog`, `NotFound`, `ImportModal`. Dirender dari `pupitre.nav`/`page.*`, bukan dari spec; prop-nya bertipe di `@rikology/pupitre-react` (`ShellProps`, `ModalProps`, ...) dan didaftarkan di map `components` yang sama dengan komponen catalog (`defineRegistry(components)`), sehingga host bisa mengganti satu per satu. `ImportModal` menangani upload CSV, preview header/mapping, hasil row, dan link CSV gagal. Sidebar, topbar, breadcrumb, user menu, page header, dan empty state adalah bagian dalam `Shell`/`DataTable` di `pupitre-ui`.
@@ -150,8 +157,33 @@ Didaftarkan di catalog dan diimplementasikan oleh bridge `pupitre-react`:
 
 `concat`, `add`, `sub`, `mul`, `div`, `sum(array)`, `count`, `formatNumber(value, { locale, decimals, currency })`, `formatDate(value, { format, timezone })`, `pluck(array, key)`, `join`, `upper`, `lower`, `truncate`, `coalesce`. `args` json-render berbentuk record (`{ $computed: 'mul', args: { a, b } }`), bukan array. Daftar nama diekspor sebagai `computedFunctionNames`; implementasinya `builtInFunctions` di `pupitre-react`. Host dapat menambah lewat `defineRegistry(components, { functions })`; compiler (closure lifter) hanya memakai nama di `computedFunctionNames`.
 
-## 7. Aturan evolusi
+## 7. Ekstensi catalog dan aturan evolusi
+
+Host dapat menambah field, column, dan entry tanpa mengubah catalog inti. `defineCatalogExtension({ name, components })` dari `@rikology/pupitre/catalog` menerima map nama PascalCase ke `{ kind: 'field' | 'column' | 'entry', props: z.object(...), description }`. Modul ini hanya bergantung pada Zod; jangan mengimpor Vine, Lucid, React, atau modul server ke file bersama tersebut.
+
+`props` mendeklarasikan konfigurasi khusus, misalnya `max: z.number().int().min(1).max(10).optional().default(5)`. Props umum (`label`, `value`, error, binding dan ekspresi) digabung berdasarkan kind. `CatalogExtension` merupakan tipe publik; `mergeCatalogExtensions(extensions)` menghasilkan bentuk catalog seperti `pupitreCatalog`, dengan metadata `kind` dihapus dari definition json-render.
+
+Factory server dibuat lewat `defineField`, `defineColumn`, dan `defineEntry` di entry utama `@rikology/pupitre`. Ketiganya menerima kind lokal serta `{ extension, component, methods }`; field menambahkan `validate`, dan dapat menambahkan `dehydrate`; column/entry dapat menambahkan `format`. `methods` adalah map fungsi bertipe yang mengembalikan patch props, bukan mutasi builder:
+
+```ts
+export const rating = defineField('rating', {
+  extension: ratingCatalog,
+  component: 'StarRating',
+  methods: { stars: (max: number) => ({ max }) },
+  validate: (props) => vine.number().withoutDecimals().min(0).max(props.max ?? 5),
+})
+
+rating('rating').label(t('Rating')).stars(5).required()
+```
+
+Factory dipanggil langsung, bukan `schema.rating(...)`. Method dasar field tetap tersedia dan immutable. Validasi Vine dijalankan dari definition server pada submit resource, form action, dan child repeater; schema Zod memvalidasi konfigurasi komponen, bukan otorisasi atau payload user.
+
+Daftarkan catalog pada plugin server `definePlugin({ name: 'star-rating', catalog: [ratingCatalog] })` agar metadata ekstensi tersedia pada panel, lalu tambahkan plugin ke `.plugins([...])`. Client tetap wajib menyediakan komponen: `defineRegistry({ ...components, StarRating, StarRatingColumn, StarRatingEntry }, { extensions: [ratingCatalog] })`. Field memakai `useBoundValue(props.value, bindings?.value)` dan `useFieldError(props.error, bindings?.value)` agar path repeater dan modal mengikuti store masing-masing.
+
+Contoh lokal ada di `apps/example/admin/rating_catalog.ts`, server builder `app/admin/extensions/rating.ts`, dan komponen `inertia/admin/extensions/StarRating.tsx`. Resource Comments menampilkan rating pada create/edit, tabel, view, action modal, dan repeater criteria. Radio native mendukung keyboard, target minimal 24px, status terpilih non-warna, token tema, serta semua teks melalui `t()`. E2E `43_catalog_extension.spec.ts` membuktikan round-trip dan penolakan payload rating di luar batas.
 
 - Menambah prop opsional / komponen baru → minor.
 - Mengubah tipe prop, menghapus prop, mengganti nama komponen → major; `pupitre-react` menolak spec major berbeda dan meminta reload.
 - Setiap komponen memiliki spec fixture di `packages/pupitre/catalog/fixtures.ts` (`catalogFixtures`), yang dipakai (a) test Zod di catalog, (b) Playwright component test di `pupitre-ui` (`tests/ct`), dan (c) test registry host memakai `assertRegistryComplete(pupitreCatalog, components)`.
+- Aturan di atas berlaku pada versi package inti. Komponen ekstensi mengikuti semver package host/plugin sendiri: prop opsional adalah minor, perubahan tipe/penghapusan prop/nama komponen adalah major. `catalogVersion` hanya mendeteksi ketidakcocokan core, bukan versi plugin; rilis builder server, catalog dan registry client ekstensi harus dideploy bersama.
+- Fixture ekstensi berada pada test host/plugin, bukan ditambahkan ke `catalogFixtures` inti. Nama komponen stabil dalam satu versi; bila dua major perlu hidup bersamaan, gunakan nama komponen yang berbeda agar registry tidak tertimpa.

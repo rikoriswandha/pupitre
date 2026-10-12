@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { test } from '@japa/runner'
 import { closeTestApp, createTestApp, User } from '../helpers/app.js'
 import { notificationsAdapter } from '../../src/drivers/notifications.js'
+import { getMessages, resolveTranslations, stripTranslationMarkers, t } from '../../src/i18n.js'
 
 const require = createRequire(import.meta.url)
 let hasPeer = true
@@ -69,6 +70,47 @@ test('official notifications driver persists, lists, counts, and marks peer inbo
     const hostInbox = await adapter.inbox(user, { page: 1, perPage: 10 }, adapterContext)
     assert.equal(hostInbox.items.find((item) => item.title === 'Host notice')?.type, 'info')
     assert.equal(await adapter.unreadCount(user, adapterContext), 1)
+  } finally {
+    await closeTestApp(fixture)
+  }
+}).skip(() => !hasPeer, 'Optional @rikology/adonisjs-notifications peer is not installed')
+
+test('official inbox stores readable text and translates structured intent when read', async ({
+  assert,
+}) => {
+  const { channels, defineConfig } = await import('@rikology/adonisjs-notifications')
+  const fixture = await createTestApp({
+    providers: [() => import('@rikology/adonisjs-notifications/notification_provider')],
+    config: {
+      notifications: defineConfig({
+        channels: { database: channels.database() },
+        delivery: { recordAttempts: false, failFast: true },
+      }),
+    },
+  })
+  try {
+    const user = await User.create({
+      name: 'Localized Inbox',
+      email: 'localized-inbox@example.test',
+    })
+    const adapter = notificationsAdapter()
+    await adapter.toInbox(user, {
+      type: 'success',
+      title: t('Your export is ready'),
+      body: t('Delete {label}?', { label: t('Save') }),
+      actions: [{ label: t('View'), url: '/admin/posts' }],
+    })
+    const row = await fixture.database.from('notifications').where('notifiable_id', user.id).first()
+    const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data
+    assert.equal(data.title, 'Your export is ready')
+    assert.equal(stripTranslationMarkers(JSON.stringify(data)), JSON.stringify(data))
+    const inbox = await adapter.inbox(user, { page: 1, perPage: 10 }, {
+      containerResolver: fixture.app.container,
+    } as never)
+    const localized = resolveTranslations(inbox, 'id', getMessages({}, undefined, 'id'))
+    assert.equal(localized.items[0].title, 'Hasil ekspor siap')
+    assert.equal(localized.items[0].body, 'Hapus Simpan?')
+    assert.equal(localized.items[0].actions?.[0].label, 'Lihat')
   } finally {
     await closeTestApp(fixture)
   }

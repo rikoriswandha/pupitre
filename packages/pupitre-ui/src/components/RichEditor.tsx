@@ -2,7 +2,7 @@ import { lazy, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Suspense } from 'react'
 import type { ReactNode } from 'react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
-import { useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { Button, FieldDescription, Tooltip, cn, controlGroupClasses } from '../primitives/index.js'
 
@@ -86,7 +86,7 @@ const TiptapEditor = lazy(async () => {
           'id': id,
           'class': 'min-h-[inherit] outline-none',
           'role': 'textbox',
-          'aria-label': label ?? 'Rich text editor',
+          'aria-label': label ?? t('Rich text editor'),
           'aria-multiline': 'true',
           'aria-invalid': String(invalid),
           'aria-describedby': describedBy ?? '',
@@ -107,7 +107,7 @@ const TiptapEditor = lazy(async () => {
         const response = await uploadFile(file)
         editor?.chain().focus().setImage({ src: response.url }).run()
       } catch (cause) {
-        setImageError(cause instanceof Error ? cause.message : 'Image upload failed.')
+        setImageError(cause instanceof Error ? cause.message : t('Image upload failed.'))
       } finally {
         setUploadingImage(false)
       }
@@ -121,96 +121,95 @@ const TiptapEditor = lazy(async () => {
         />
       )
 
-    const controls: Record<string, { label: string; run: () => void; active?: boolean }> = {
+    const controls: Record<string, { label: string; run?: () => void; active?: boolean }> = {
       bold: {
-        label: 'Bold',
+        label: t('Bold'),
         run: () => editor.chain().focus().toggleBold().run(),
         active: editor.isActive('bold'),
       },
       italic: {
-        label: 'Italic',
+        label: t('Italic'),
         run: () => editor.chain().focus().toggleItalic().run(),
         active: editor.isActive('italic'),
       },
       strike: {
-        label: 'Strike',
+        label: t('Strike'),
         run: () => editor.chain().focus().toggleStrike().run(),
         active: editor.isActive('strike'),
       },
       heading: {
-        label: 'Heading',
+        label: t('Heading'),
         run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
         active: editor.isActive('heading'),
       },
       h2: {
-        label: 'Heading 2',
+        label: t('Heading 2'),
         run: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
         active: editor.isActive('heading', { level: 2 }),
       },
       h3: {
-        label: 'Heading 3',
+        label: t('Heading 3'),
         run: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
         active: editor.isActive('heading', { level: 3 }),
       },
       codeBlock: {
-        label: 'Code block',
+        label: t('Code block'),
         run: () => editor.chain().focus().toggleCodeBlock().run(),
         active: editor.isActive('codeBlock'),
       },
       bulletList: {
-        label: 'Bulleted list',
+        label: t('Bulleted list'),
         run: () => editor.chain().focus().toggleBulletList().run(),
         active: editor.isActive('bulletList'),
       },
       orderedList: {
-        label: 'Numbered list',
+        label: t('Numbered list'),
         run: () => editor.chain().focus().toggleOrderedList().run(),
         active: editor.isActive('orderedList'),
       },
       blockquote: {
-        label: 'Quote',
+        label: t('Quote'),
         run: () => editor.chain().focus().toggleBlockquote().run(),
         active: editor.isActive('blockquote'),
       },
-      undo: { label: 'Undo', run: () => editor.chain().focus().undo() },
-      redo: { label: 'Redo', run: () => editor.chain().focus().redo() },
+      undo: { label: t('Undo'), run: () => editor.chain().focus().undo() },
+      redo: { label: t('Redo'), run: () => editor.chain().focus().redo() },
       link: {
-        label: 'Link',
+        label: t('Link'),
         run: () => {
-          const href = window.prompt('Link URL')
+          const href = window.prompt(t('Link URL'))
           if (href) editor.chain().focus().extendMarkRange('link').setLink({ href }).run()
         },
         active: editor.isActive('link'),
       },
-      image: { label: 'Insert image', run: () => imageInput.current?.click() },
+      image: { label: t('Insert image') },
     }
     const icons: Record<string, string> = {
-      'Bold': 'bold',
-      'Italic': 'italic',
-      'Strike': 'strikethrough',
-      'Heading': 'heading',
-      'Heading 2': 'heading',
-      'Heading 3': 'heading',
-      'Code block': 'code',
-      'Bulleted list': 'list',
-      'Numbered list': 'list-ordered',
-      'Quote': 'quote',
-      'Undo': 'undo-2',
-      'Redo': 'undo-2',
-      'Link': 'link',
-      'Insert image': 'image',
+      bold: 'bold',
+      italic: 'italic',
+      strike: 'strikethrough',
+      heading: 'heading',
+      h2: 'heading',
+      h3: 'heading',
+      codeBlock: 'code',
+      bulletList: 'list',
+      orderedList: 'list-ordered',
+      blockquote: 'quote',
+      undo: 'undo-2',
+      redo: 'undo-2',
+      link: 'link',
+      image: 'image',
     }
-    const actions = toolbar
-      .map((name) => controls[name])
-      .filter((_, index) => toolbar[index] !== 'image' || Boolean(uploadUrl))
-      .filter((control): control is NonNullable<typeof control> => Boolean(control))
+    const actions = toolbar.filter(
+      (name) => (name !== 'image' || Boolean(uploadUrl)) && Boolean(controls[name])
+    )
     return (
       <div className={cn(controlGroupClasses, 'flex-col', disabled && 'bg-muted shadow-none')}>
         {actions.length > 0 && (
           <div
             className="flex flex-wrap items-center gap-0.5 border-b border-border bg-muted/40 p-1.5"
             role="toolbar"
-            aria-label="Text formatting"
+            aria-label={t('Text formatting')}
             onKeyDown={(event) => {
               const buttons = Array.from(
                 event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
@@ -231,22 +230,24 @@ const TiptapEditor = lazy(async () => {
               next.focus()
             }}
           >
-            {actions.map((control) => (
-              <Tooltip key={control.label} label={control.label}>
+            {actions.map((name) => (
+              <Tooltip key={name} label={controls[name].label}>
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
                   square
                   disabled={disabled || readOnly}
-                  aria-label={control.label}
-                  aria-pressed={control.active}
+                  aria-label={controls[name].label}
+                  aria-pressed={controls[name].active}
                   className="aria-pressed:bg-primary-soft aria-pressed:text-primary-ink active:bg-accent"
-                  onClick={control.run}
+                  onClick={
+                    name === 'image' ? () => imageInput.current?.click() : controls[name].run
+                  }
                 >
                   <Icon
-                    name={icons[control.label]}
-                    className={control.label === 'Redo' ? '-scale-x-100' : undefined}
+                    name={icons[name]}
+                    className={name === 'redo' ? '-scale-x-100' : undefined}
                   />
                 </Button>
               </Tooltip>
@@ -261,7 +262,7 @@ const TiptapEditor = lazy(async () => {
               type="file"
               accept="image/*"
               disabled={disabled || readOnly || uploadingImage}
-              aria-label="Choose an image to upload"
+              aria-label={t('Choose an image to upload')}
               onChange={(event) => {
                 const file = event.currentTarget.files?.[0]
                 if (file) void uploadImage(file)
@@ -270,7 +271,7 @@ const TiptapEditor = lazy(async () => {
             />
             {uploadingImage && (
               <p className="text-sm text-muted-foreground" role="status">
-                Uploading image…
+                {t('Uploading image…')}
               </p>
             )}
             {imageError && (
@@ -345,7 +346,7 @@ export function RichEditor({ props, emit, bindings, children, loading = false }:
           <div
             className="rounded-lg border border-input bg-card shadow-control"
             style={{ minHeight: props.minHeight ?? 180 }}
-            aria-label="Loading editor"
+            aria-label={t('Loading editor')}
             role="status"
           />
         }

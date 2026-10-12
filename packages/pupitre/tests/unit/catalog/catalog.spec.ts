@@ -33,7 +33,7 @@ test.group('catalog component contracts', () => {
       assert.equal(element.type, name)
       for (const [elementId, child] of Object.entries(fixture.elements)) {
         assert.isTrue(
-          components[child.type].props.safeParse(child.props).success,
+          components[child.type as keyof typeof components].props.safeParse(child.props).success,
           `${name} fixture element ${elementId} props validate`
         )
       }
@@ -45,10 +45,10 @@ test.group('catalog component contracts', () => {
     )
   })
 
-  test('rejects invalid component props and unknown component types', ({ assert }) => {
+  test('rejects invalid built-in props and permits host extension type names', ({ assert }) => {
     assert.isFalse(components.Text.props.safeParse({ type: 'numeric' }).success)
     assert.isFalse(components.Text.props.safeParse({ value: 42 }).success)
-    assert.isFalse(
+    assert.isTrue(
       jsonRenderSpec.safeParse({ root: 'x', elements: { x: { type: 'Missing', props: {} } } })
         .success
     )

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Cropper from 'react-easy-crop'
 import { Dialog } from '@base-ui/react/dialog'
+import { t } from '@rikology/pupitre-react'
 import {
   Button,
   backdropClasses,
@@ -119,13 +120,15 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
         <Dialog.Backdrop className={backdropClasses} />
         <Dialog.Popup data-pupitre-popup="" className={dialogPopupClasses('2xl')}>
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <Dialog.Title className="text-[0.9375rem] font-semibold">Edit image</Dialog.Title>
+            <Dialog.Title className="text-[0.9375rem] font-semibold">
+              {t('Edit image')}
+            </Dialog.Title>
             <Button
               type="button"
               variant="ghost"
               square
               size="sm"
-              aria-label="Close image editor"
+              aria-label={t('Close image editor')}
               onClick={onCancel}
             >
               <Icon name="x" />
@@ -149,9 +152,9 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
             </div>
             <div className="relative flex flex-wrap items-center gap-3">
               <label className="flex flex-1 items-center gap-3 text-sm font-medium">
-                Zoom
+                {t('Zoom')}
                 <input
-                  aria-label="Zoom"
+                  aria-label={t('Zoom')}
                   type="range"
                   min={1}
                   max={3}
@@ -166,7 +169,7 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
                 size="sm"
                 onClick={() => setRotation((value) => (value + 90) % 360)}
               >
-                <Icon name="rotate-ccw" /> Rotate
+                <Icon name="rotate-ccw" /> {t('Rotate')}
               </Button>
               <Button
                 type="button"
@@ -174,12 +177,12 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
                 onClick={() => setFlipped((value) => !value)}
                 aria-pressed={flipped}
               >
-                Flip
+                {t('Flip')}
               </Button>
             </div>
             <div className="grid gap-2">
-              <p className="text-sm font-medium">Aspect ratio</p>
-              <div role="group" aria-label="Aspect ratio" className={segmentedListClasses}>
+              <p className="text-sm font-medium">{t('Aspect ratio')}</p>
+              <div role="group" aria-label={t('Aspect ratio')} className={segmentedListClasses}>
                 {aspectRatios.map((ratio, index) => (
                   <button
                     type="button"
@@ -188,7 +191,7 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
                     aria-pressed={selectedRatio === ratio}
                     onClick={() => setSelectedRatio(ratio)}
                   >
-                    {ratio ?? 'Original'}
+                    {ratio ?? t('Original')}
                   </button>
                 ))}
               </div>
@@ -196,10 +199,10 @@ export function ImageCropper({ file, ratios, onCancel, onComplete }: Props) {
           </div>
           <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-5 py-4">
             <Button type="button" color="gray" onClick={onCancel}>
-              Cancel
+              {t('Cancel')}
             </Button>
             <Button type="button" color="primary" disabled={!area} onClick={() => void save()}>
-              Apply crop
+              {t('Apply crop')}
             </Button>
           </div>
         </Dialog.Popup>

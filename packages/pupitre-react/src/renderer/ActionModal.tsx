@@ -7,6 +7,9 @@ import { getRouter } from '../bridge/inertia.js'
 import type { ShellRegistry } from '../shell/types.js'
 import { PupitreRenderer } from './PupitreRenderer.js'
 import type { PupitreRendererProps } from './PupitreRenderer.js'
+import { t } from '../i18n.js'
+import type { ActionFormResponse } from '@rikology/pupitre/catalog'
+import { assertCatalogComponents } from './missing_component.js'
 
 function wizardFor(spec: PupitrePageProps['page']['spec']) {
   return Object.entries(spec.elements).find(([, element]) => element.type === 'Wizard')
@@ -45,11 +48,7 @@ export function ActionModal({
   onResult,
   onOptionCreated,
 }: ActionModalController) {
-  const [formResponse, setFormResponse] = useState<{
-    spec: PupitrePageProps['page']['spec']
-    state: Record<string, unknown>
-    catalogVersion: string
-  } | null>(null)
+  const [formResponse, setFormResponse] = useState<ActionFormResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<Record<string, unknown>>({})
   const [modalStore, setModalStore] = useState<StateStore | null>(null)
@@ -77,7 +76,7 @@ export function ActionModal({
         if (active) {
           callbacks.current.toast({
             type: 'error',
-            title: error instanceof Error ? error.message : 'Unable to load action form.',
+            title: error instanceof Error ? error.message : t('Unable to load action form.'),
           })
           callbacks.current.close()
         }
@@ -89,6 +88,7 @@ export function ActionModal({
       active = false
     }
   }, [action])
+  if (formResponse) assertCatalogComponents(formResponse, runtimeRegistry)
   const Modal = registry.Modal
   if (!Modal) return null
   const wizardEntry = formResponse ? wizardFor(formResponse.spec) : undefined
@@ -148,10 +148,10 @@ export function ActionModal({
         })
         if (firstInvalidStep >= 0) selectWizardStep(firstInvalidStep)
       } else {
-        toast({ type: 'error', title: actionResponse.message ?? 'Unable to perform action.' })
+        toast({ type: 'error', title: actionResponse.message ?? t('Unable to perform action.') })
       }
     } catch {
-      toast({ type: 'error', title: 'Unable to perform action.' })
+      toast({ type: 'error', title: t('Unable to perform action.') })
     } finally {
       setLoading(false)
     }
@@ -178,10 +178,10 @@ export function ActionModal({
         onResult(response.result)
         close()
       } else {
-        toast({ type: 'error', title: response.message ?? 'Unable to perform action.' })
+        toast({ type: 'error', title: response.message ?? t('Unable to perform action.') })
       }
     } catch {
-      toast({ type: 'error', title: 'Unable to perform action.' })
+      toast({ type: 'error', title: t('Unable to perform action.') })
     } finally {
       setLoading(false)
     }
@@ -208,7 +208,7 @@ export function ActionModal({
                   onClick={close}
                   disabled={loading}
                 >
-                  {action.modal?.cancelLabel ?? 'Cancel'}
+                  {action.modal?.cancelLabel ?? t('Cancel')}
                 </button>
               )}
               {wizardEntry && wizardStep > 0 ? (
@@ -218,7 +218,7 @@ export function ActionModal({
                   onClick={() => selectWizardStep(wizardStep - 1)}
                   disabled={loading}
                 >
-                  Back
+                  {t('Back')}
                 </button>
               ) : null}
               {action.modal?.footerActions?.map((footerAction) => (
@@ -242,7 +242,7 @@ export function ActionModal({
                 disabled={loading || !formResponse}
               >
                 {wizardEntry && wizardStep < wizardSteps.length - 1
-                  ? 'Next'
+                  ? t('Next')
                   : (wizardProps?.submitLabel ?? action.modal?.submitLabel ?? action.label)}
               </button>
             ) : null}
@@ -261,6 +261,7 @@ export function ActionModal({
                 state: formResponse.state as never,
                 actions: { header: [] },
                 catalogVersion: formResponse.catalogVersion,
+                catalogExtensions: formResponse.catalogExtensions,
               } as PupitrePageProps['page']
             }
             pupitre={pupitre}
@@ -273,7 +274,7 @@ export function ActionModal({
             embedded={embedded}
           />
         )}
-        {loading && !formResponse ? <span role="status">Loading…</span> : null}
+        {loading && !formResponse ? <span role="status">{t('Loading…')}</span> : null}
       </Modal>
       {ConfirmDialog && pendingFooterAction && (
         <ConfirmDialog

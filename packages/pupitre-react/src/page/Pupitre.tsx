@@ -15,7 +15,7 @@ import {
   uploadFiles,
 } from '../bridge/actions.js'
 import { catalogVersion } from '@rikology/pupitre/catalog'
-import { t } from '../i18n.js'
+import { configureI18n, t } from '../i18n.js'
 import type { PupitreRegistry } from '../registry/defineRegistry.js'
 import type { ToastMessage } from '../shell/types.js'
 import type { WidgetGridProps } from '../shell/types.js'
@@ -78,7 +78,7 @@ export function ensureCatalogVersion(
     const key = `pupitre:catalog-reloaded:${version}`
     const session = typeof window === 'undefined' ? undefined : window.sessionStorage
     if (session?.getItem(key) || catalogReloaded[version]) {
-      reloadRequired?.('Reload required')
+      reloadRequired?.(t('Reload required'))
       return
     }
     catalogReloaded[version] = true
@@ -112,6 +112,10 @@ export function PupitreContent({
   realtime?: RealtimeClient
   props: InertiaPupitreProps
 }) {
+  configureI18n(props.pupitre.locale, props.pupitre.messages)
+  useEffect(() => {
+    document.documentElement.lang = props.pupitre.locale
+  }, [props.pupitre.locale])
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => emptyToasts)
   const initialDeepLinkHandled = useRef(false)
   const [optimisticData, setOptimisticData] = useState<{
@@ -239,7 +243,7 @@ export function PupitreContent({
               title: String(
                 Array.isArray(first)
                   ? first[0]
-                  : (first ?? response.message ?? 'Unable to perform action.')
+                  : (first ?? response.message ?? t('Unable to perform action.'))
               ),
             })
           }
@@ -247,7 +251,7 @@ export function PupitreContent({
           if (!pollingController?.signal.aborted)
             pushToast({
               type: 'error',
-              title: cause instanceof Error ? cause.message : 'Unable to perform action.',
+              title: cause instanceof Error ? cause.message : t('Unable to perform action.'),
             })
         } finally {
           if (exportPoll.current === pollingController) exportPoll.current = null
@@ -263,7 +267,11 @@ export function PupitreContent({
           {
             type: result.failed > 0 ? 'warning' : 'success',
             title: t('Import finished'),
-            body: `${result.created} created, ${result.updated} updated, ${result.failed} failed.`,
+            body: t('{created} created, {updated} updated, {failed} failed.', {
+              created: result.created,
+              updated: result.updated,
+              failed: result.failed,
+            }),
           },
         ],
         reload: true,
@@ -428,6 +436,8 @@ export function PupitreContent({
         tenant={panel.tenant}
         tenants={panel.tenants ?? []}
         notifications={panel.notifications}
+        locale={panel.locale}
+        locales={panel.locales}
       >
         {headerWidgetContent}
         {content}

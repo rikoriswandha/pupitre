@@ -3,7 +3,7 @@ import { test } from '@japa/runner'
 import { exportJobResponse, exportProgressResponse } from '../../../catalog/wire.js'
 import { setupSyncJobsAdapter } from '../../helpers/queue.js'
 import User from '../../fixtures/models/user.js'
-import { actions, exportColumn, table } from '../../../index.js'
+import { actions, exportColumn, table, t } from '../../../index.js'
 import {
   allowPolicyAbilities,
   closeTestApp,
@@ -43,7 +43,7 @@ test.group('Pupitre CSV exports', (group) => {
         actions.create(),
         actions.export().columns([
           exportColumn('title')
-            .label('Post title')
+            .label(t('Post title'))
             .formatStateUsing((value) => String(value ?? '').toUpperCase()),
         ]),
       ],
@@ -95,6 +95,42 @@ test.group('Pupitre CSV exports', (group) => {
     assert.include(csv, 'IGNORED')
   })
 
+  test('resolves marked CSV headers for the requesting locale without translating record data', async ({
+    assert,
+  }) => {
+    await createPost('Post title')
+    const panel = fixturePanel.locales(['en', 'id']).resources({
+      posts: fixturePostResource.actions({
+        header: [actions.export().columns([exportColumn('title').label(t('Post title'))])],
+        row: [],
+        bulk: [],
+      }),
+      categories: fixtureCategoryResource,
+    })
+    const localized = await createTestApp({
+      panels: { admin: async () => ({ default: panel }) },
+      pupitre: { i18n: { messages: { id: { 'Post title': 'Judul artikel' } } } },
+    })
+    try {
+      const response = await fetch(`${localized.baseUrl}/admin/posts/export?action=export`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'text/csv',
+          'Accept-Language': 'id',
+          'Content-Type': 'application/json',
+          'X-Pupitre-Action': '1',
+          'Connection': 'close',
+        },
+        body: JSON.stringify({}),
+      })
+      assert.equal(response.status, 200)
+      const csv = await response.text()
+      assert.include(csv, 'Judul artikel')
+      assert.include(csv, 'Post title')
+    } finally {
+      await closeTestApp(localized)
+    }
+  })
   test('denies unauthorized exports and enforces the synchronous row limit', async ({ assert }) => {
     await createPost('One')
     denyPolicyAbility('viewAny')
@@ -185,9 +221,9 @@ test.group('Pupitre CSV exports', (group) => {
     assert,
   }) => {
     const syncJobs = await setupSyncJobsAdapter()
-    const asyncPanel = fixturePanel.resources({
+    const asyncPanel = fixturePanel.locales(['en', 'id']).resources({
       posts: fixturePostResource.actions({
-        header: [actions.export()],
+        header: [actions.export().columns([exportColumn('title').label(t('Post title'))])],
         row: [],
         bulk: [actions.export()],
       }),
@@ -195,7 +231,11 @@ test.group('Pupitre CSV exports', (group) => {
     })
     const asyncFixture = await createTestApp({
       panels: { admin: async () => ({ default: asyncPanel }) },
-      pupitre: { jobs: syncJobs.adapter, exports: { maxSyncRows: 0 } },
+      pupitre: {
+        jobs: syncJobs.adapter,
+        exports: { maxSyncRows: 0 },
+        i18n: { messages: { id: { 'Post title': 'Judul artikel' } } },
+      },
     })
     try {
       const owner = await User.create({
@@ -213,6 +253,7 @@ test.group('Pupitre CSV exports', (group) => {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
+          'Accept-Language': 'id',
           'Content-Type': 'application/json',
           'X-Pupitre-Action': '1',
           'Cookie': ownerCookie,
@@ -232,7 +273,10 @@ test.group('Pupitre CSV exports', (group) => {
         headers: { Cookie: ownerCookie, Connection: 'close' },
       })
       assert.equal(download.status, 200)
-      assert.include(await download.text(), 'Queued export')
+      const csv = await download.text()
+      assert.include(csv, 'Queued export')
+      assert.include(csv, 'Judul artikel')
+      assert.notInclude(csv, 'Post title')
       const forbidden = await fetch(`${asyncFixture.baseUrl}${job.downloadUrl}`, {
         headers: { Cookie: otherCookie, Connection: 'close' },
       })

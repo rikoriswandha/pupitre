@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import {
@@ -71,7 +71,7 @@ export function Color({ props, bindings }: Runtime) {
             </InputSlot>
             <Input
               bare
-              aria-label={`${props.label ?? 'Color'} value`}
+              aria-label={t('{label} value', { label: props.label ?? t('Color') })}
               value={String(value ?? '')}
               disabled={props.disabled || props.readOnly}
               readOnly={props.readOnly}
@@ -86,7 +86,7 @@ export function Color({ props, bindings }: Runtime) {
                 variant="outline"
                 size="xs"
                 square
-                aria-label={`Choose ${color}`}
+                aria-label={t('Choose {label}', { label: color })}
                 title={color}
                 disabled={props.disabled || props.readOnly}
                 onClick={() => setValue(color)}

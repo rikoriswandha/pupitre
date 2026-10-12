@@ -40,7 +40,8 @@ export type PanelDefinition = {
   dashboardFilters?: readonly WidgetFilterDefinition[]
   theme?: PanelThemeDefinition
   timezone?: string
-  locale?: 'en'
+  locale?: string
+  locales?: readonly string[]
   breadcrumbs: boolean
   auth: PanelAuthDefinition
   social?: PanelSocialDefinition

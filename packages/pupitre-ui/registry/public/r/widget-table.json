@@ -4,6 +4,7 @@
   "type": "registry:component",
   "title": "WidgetTable",
   "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
     "@rikology/pupitre@^1.0.0"
   ],
   "registryDependencies": [
@@ -15,7 +16,7 @@
       "path": "../src/components/WidgetTable.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/WidgetTable.tsx",
-      "content": "import { tableData as tableDataSchema } from '@rikology/pupitre/catalog'\nimport type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { DataTable } from './DataTable.js'\nimport { Panel, PanelHeader } from '../primitives/index.js'\n\ntype Props = { descriptor: WidgetDescriptor; data?: WidgetData }\n\nexport function WidgetTable({ descriptor, data }: Props) {\n  if (!descriptor.table) return null\n  const parsed = data?.kind === 'table' ? tableDataSchema.safeParse(data.data) : undefined\n  return (\n    <Panel\n      role=\"region\"\n      aria-label={descriptor.heading ?? 'Table'}\n      className=\"overflow-hidden [&_.shadow-panel]:rounded-none [&_.shadow-panel]:border-0 [&_.shadow-panel]:shadow-none\"\n    >\n      {(descriptor.heading || descriptor.description) && (\n        <PanelHeader heading={descriptor.heading} description={descriptor.description} />\n      )}\n      <DataTable\n        props={{ descriptor: descriptor.table }}\n        tableData={parsed?.success ? parsed.data : undefined}\n        emit={() => {}}\n      />\n    </Panel>\n  )\n}\n"
+      "content": "import { tableData as tableDataSchema } from '@rikology/pupitre/catalog'\nimport type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nimport { DataTable } from './DataTable.js'\nimport { Panel, PanelHeader } from '../primitives/index.js'\n\ntype Props = { descriptor: WidgetDescriptor; data?: WidgetData }\n\nexport function WidgetTable({ descriptor, data }: Props) {\n  if (!descriptor.table) return null\n  const parsed = data?.kind === 'table' ? tableDataSchema.safeParse(data.data) : undefined\n  return (\n    <Panel\n      role=\"region\"\n      aria-label={descriptor.heading ?? t('Table')}\n      className=\"overflow-hidden [&_.shadow-panel]:rounded-none [&_.shadow-panel]:border-0 [&_.shadow-panel]:shadow-none\"\n    >\n      {(descriptor.heading || descriptor.description) && (\n        <PanelHeader heading={descriptor.heading} description={descriptor.description} />\n      )}\n      <DataTable\n        props={{ descriptor: descriptor.table }}\n        tableData={parsed?.success ? parsed.data : undefined}\n        emit={() => {}}\n      />\n    </Panel>\n  )\n}\n"
     }
   ]
 }

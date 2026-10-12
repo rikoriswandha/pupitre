@@ -249,13 +249,13 @@ test('Wizard skips hidden step fields and focuses the new current step after key
   const next = view.getByRole('button', { name: 'Next', exact: true })
   await next.focus()
   await next.press('Enter')
-  const profile = view.getByRole('button', { name: '2 Profile' })
+  const profile = view.getByRole('button', { name: 'Step 2: Profile' })
   await expect(profile).toHaveAttribute('aria-current', 'step')
   await expect(profile).toBeFocused()
   await expect(view.locator('[data-wizard-step="account"]')).toBeHidden()
   await assertAccessible(page)
   await view.getByRole('button', { name: 'Back', exact: true }).press('Enter')
-  await expect(view.getByRole('button', { name: '1 Account' })).toBeFocused()
+  await expect(view.getByRole('button', { name: 'Step 1: Account' })).toBeFocused()
 })
 
 for (const name of ['Builder', 'Repeater'] as const) {

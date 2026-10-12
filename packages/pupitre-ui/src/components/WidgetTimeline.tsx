@@ -1,4 +1,5 @@
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
+import { t } from '@rikology/pupitre-react'
 import { Panel, PanelHeader, EmptyState, toneText } from '../primitives/index.js'
 
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
@@ -12,13 +13,17 @@ function changeValue(value: unknown): string {
 export function WidgetTimeline({ descriptor, data }: Props) {
   const items = data?.kind === 'timeline' ? data.items : []
   return (
-    <Panel role="region" aria-label={descriptor.heading ?? 'Activity'} className="overflow-hidden">
+    <Panel
+      role="region"
+      aria-label={descriptor.heading ?? t('Activity')}
+      className="overflow-hidden"
+    >
       <PanelHeader heading={descriptor.heading} description={descriptor.description} />
       {items.length === 0 ? (
         <EmptyState
           icon="activity"
-          heading="No activity yet."
-          description="New activity will appear here."
+          heading={t('No activity yet.')}
+          description={t('New activity will appear here.')}
         />
       ) : (
         <ol className="px-5 pb-5 sm:px-6 sm:pb-6">
@@ -53,17 +58,19 @@ export function WidgetTimeline({ descriptor, data }: Props) {
                   {item.changes && item.changes.length > 0 && (
                     <div className="mt-3 overflow-x-auto rounded-lg border border-border">
                       <table className="w-full text-left text-sm">
-                        <caption className="sr-only">Changes for {item.title}</caption>
+                        <caption className="sr-only">
+                          {t('Changes for {label}', { label: item.title })}
+                        </caption>
                         <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
                           <tr>
                             <th scope="col" className="p-2">
-                              Field
+                              {t('Field')}
                             </th>
                             <th scope="col" className="p-2">
-                              Previous value
+                              {t('Previous value')}
                             </th>
                             <th scope="col" className="p-2">
-                              New value
+                              {t('New value')}
                             </th>
                           </tr>
                         </thead>

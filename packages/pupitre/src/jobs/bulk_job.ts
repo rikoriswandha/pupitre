@@ -16,6 +16,7 @@ type BulkJobPayload = {
   ids: Array<string | number>
   userId: string | number
   tenantId: string | number | null
+  locale?: string
   data: Record<string, unknown>
   params?: Record<string, string | number>
   query?: Record<string, unknown>

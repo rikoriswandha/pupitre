@@ -1,5 +1,7 @@
+import { getMessages, resolveLocale, resolveTranslations, t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { PanelRuntime } from '../manager.js'
+import type { PupitreConfig } from '../define_config.js'
 
 /**
  * Called by `pupitre_context` when the panel guard fails to authenticate.
@@ -15,7 +17,20 @@ export async function handleUnauthenticated(
 
   const accept = ctx.request.header('accept') ?? ''
   if (ctx.request.header('x-pupitre-action') === '1' || accept.includes('application/json')) {
-    return ctx.response.status(401).json({ message: 'Unauthenticated' })
+    const config = (await ctx.containerResolver.make('pupitre.config')) as PupitreConfig
+    const locale = resolveLocale({
+      session: ctx.session?.get(`pupitre.locale.${panel.id}`),
+      acceptLanguage: ctx.request.header('accept-language'),
+      locales: panel.locales,
+      defaultLocale: panel.locale,
+    })
+    return ctx.response.status(401).json({
+      message: resolveTranslations(
+        t('Unauthenticated'),
+        locale,
+        getMessages(config, panel, locale)
+      ),
+    })
   }
 
   const requested = ctx.request.url(true)

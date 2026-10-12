@@ -1,5 +1,22 @@
 import type { LucidModel, LucidRow, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 
+/** Literal LIKE values: escape the escape character before wildcard characters. */
+export function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, '\\$&')
+}
+
+export function applyLiteralLike(
+  query: ModelQueryBuilderContract<LucidModel, LucidRow>,
+  attribute: string,
+  value: string,
+  mode: 'contains' | 'startsWith' | 'endsWith' | 'equals'
+): void {
+  const column = query.model.$keys.attributesToColumns.get(attribute) ?? attribute
+  const escaped = escapeLike(value)
+  const pattern = `${mode === 'contains' || mode === 'endsWith' ? '%' : ''}${escaped}${mode === 'contains' || mode === 'startsWith' ? '%' : ''}`
+  query.whereRaw("lower(??) like lower(?) escape '\\'", [column, pattern])
+}
+
 /** Applies case-insensitive substring matching to one or more model attributes. */
 export function applySearchColumns(
   query: ModelQueryBuilderContract<LucidModel, LucidRow>,

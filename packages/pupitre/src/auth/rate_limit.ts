@@ -1,3 +1,4 @@
+import { getMessages, requestMessages, resolveTranslations, t } from '../i18n.js'
 import { createHash } from 'node:crypto'
 import type { HttpContext } from '@adonisjs/core/http'
 import { consumeLoginLimit } from '../drivers/limiter.js'
@@ -22,8 +23,14 @@ export async function authRateLimited(
 export function authLimitResponse(
   ctx: HttpContext,
   field?: string,
-  message = 'Too many attempts. Try again in one minute.'
+  message = t('Too many attempts. Try again in one minute.')
 ) {
+  const locale = ctx.pupitre?.locale ?? 'en'
+  message = resolveTranslations(
+    message,
+    locale,
+    requestMessages.get(ctx) ?? getMessages({}, undefined, locale)
+  )
   ctx.response.header('Retry-After', '60')
   if (ctx.request.header('x-inertia') || ctx.request.accepts(['json', 'html']) === 'html') {
     if (field) ctx.session?.flash('inputErrorsBag', { [field]: message })

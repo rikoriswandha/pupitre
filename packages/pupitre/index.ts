@@ -5,6 +5,8 @@ export type { PupitreConfig, PupitreConfigInput } from './src/define_config.js'
 export { resolveAdapter } from './src/define_config.js'
 export { authorizeResource } from './src/authz/bouncer.js'
 export { scopedQuery } from './src/query/scoped_query.js'
+export { compileValidator } from './src/compiler/vine_compiler.js'
+export type { FormValidator } from './src/compiler/vine_compiler.js'
 export type { RealtimeAdapter } from './src/adapters/realtime.js'
 export { realtimeChannels } from './src/adapters/realtime.js'
 export { panelGuard } from './src/auth/guard.js'
@@ -46,6 +48,15 @@ export type { ResourceBuilder, ResourceModel, ModelConstructor } from './src/bui
 export { nav } from './src/builder/nav.js'
 export type { NavGroupBuilder, NavItemBuilder } from './src/builder/nav.js'
 export { schema } from './src/builder/schema/schema.js'
+export { defineField, defineColumn, defineEntry } from './src/builder/extensions.js'
+export type {
+  ExtensionFieldBuilder,
+  ExtensionColumnBuilder,
+  ExtensionEntryBuilder,
+  ExtensionFieldDefinition,
+  ExtensionColumnDefinition,
+  ExtensionEntryDefinition,
+} from './src/definition/extensions.js'
 export type {
   SchemaComponent,
   SchemaNamespace,
@@ -95,6 +106,13 @@ export type {
   BadgeEntryBuilder,
 } from './src/definition/schema.js'
 export { table } from './src/builder/table/table.js'
+export { qb } from './src/builder/table/table.js'
+export type {
+  QueryConstraintBuilder,
+  QueryConstraintDefinition,
+  QueryBuilderFilterDefinition,
+  QueryBuilderFilterBuilder,
+} from './src/definition/table.js'
 export type {
   TableSchema,
   TableDefinition,
@@ -191,6 +209,20 @@ export type { JobsAdapter } from './src/adapters/jobs.js'
 export type { AuthColumns } from './src/define_config.js'
 export type { PageDefinition, PageKind } from './src/definition/page.js'
 export { t } from './src/i18n.js'
+export {
+  getMessages,
+  resolveTranslations,
+  stripTranslationMarkers,
+  captureTranslation,
+  restoreTranslation,
+} from './src/i18n.js'
+export type {
+  Message,
+  MessageDictionary,
+  LocaleMessages,
+  TranslationParams,
+  StoredTranslation,
+} from './src/i18n.js'
 export * from './src/errors.js'
 export { default as PupitreManager } from './src/manager.js'
 export type { PanelRuntime, ResourceRuntime, PageRuntime } from './src/manager.js'

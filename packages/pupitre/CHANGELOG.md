@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased (1.1.0)
+
+### Changed
+- Localization (breaking for strict comparisons): server `t()` no longer returns its input unchanged. It returns the readable, interpolated English text followed by invisible signed translation metadata, so `t('Title') === 'Title'` is false. Resolve with `resolveTranslations()` / `stripTranslationMarkers()` before strict comparison, string transformation or delivery outside Pupitre responses, and use `captureTranslation()` / `restoreTranslation()` to persist translation intent. `Error.message`, logs and regex/`includes` checks keep reading the English text.
+- Tables: toggle/checkbox inline-edit cells display "Enabled"/"Disabled" instead of "On"/"Off"; Shield permission checkboxes show human labels ("View any", "View") instead of ability names.
+
+### Added
+- Localization: request-local English/Indonesian localization. Server `t(key, params?)` markers are resolved at every Pupitre response boundary (structured Inertia props including full-page/SSR visits, JSON actions/options/search/notifications, auth mail, CSV/progress output); plural `{ one, other, zero? }` messages and `{name}` interpolation; `defineConfig({ i18n })` host dictionaries and `definePlugin({ messages })` plugin dictionaries; localized VineJS messages with field labels (host Vine providers keep precedence for untranslated rules); panel `.locale(string)` / `.locales([...])`, user/session/Accept-Language resolution, profile language selector and an optional `locale` users-column migration stub; `locale` is a reserved page/resource slug. Record data is never translated. ADR-0023.
+- Localization: persisted notifications and queued CSV headers store readable text plus translation intent and are translated at read/render time (survives `APP_KEY` rotation); `tools/i18n-check` (`npm run i18n:check`) enforces Indonesian coverage of every literal `t()` key in CI.
+- Catalog extensions: `defineCatalogExtension()` / `mergeCatalogExtensions()` in `@rikology/pupitre/catalog` and `defineField()`, `defineColumn()`, `defineEntry()` factories with typed custom methods, inherited field methods, Zod-validated props, VineJS value validation, server formatting/dehydration and live/repeater/action-modal support; `definePlugin({ catalog })` and `page.catalogExtensions` metadata. Element `type` in specs is now an open string validated by the client registry. ADR-0024.
+- Tables: `table.filter.queryBuilder(name).constraints([...])` with `qb.text/number/date/boolean/select/relationship` constraints (`qb.number(...).integer()` for integer columns), negation, AND-within/OR-between groups, strict allowlist validation (400 on malformed, fractional-for-integer, out-of-range or year-zero values), size caps, scope-safe OR wrapping and timezone-aware calendar comparisons across table data, summaries, groups, relation tables, table widgets and exports. ADR-0025.
+- Tables: opt-in `.multiSort(max = 3)`, ordered `.defaultSort([...])` and URL `sort=title,-price` with deterministic qualified primary-key tiebreakers; existing single-sort links keep working and `sort=` clears defaults.
+- Validation: public `compileValidator()` / `FormValidator` so plugins, commands and jobs can validate data with a form's VineJS rules.
+
 ## Unreleased (1.0.0, milestone M4)
 
 ### Changed

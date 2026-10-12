@@ -1,5 +1,5 @@
 import { createContext, useState, type ReactNode } from 'react'
-import { useSetState, useStateValue } from '@rikology/pupitre-react'
+import { t, useSetState, useStateValue } from '@rikology/pupitre-react'
 import { Menu } from '@base-ui/react/menu'
 import {
   buttonClasses,
@@ -79,13 +79,13 @@ export function Builder({ props, children, bindings, loading = false }: RuntimeP
           {children}
           {items.length === 0 && (
             <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
-              No blocks yet. Add a block to build your content.
+              {t('No blocks yet. Add a block to build your content.')}
             </div>
           )}
           <Menu.Root>
             <Menu.Trigger disabled={!canAdd || loading} className={buttonClasses({ size: 'sm' })}>
               <Icon name="plus" className="size-4" />
-              {descriptor.addLabel ?? 'Add block'}
+              {descriptor.addLabel ?? t('Add block')}
               <Icon name="chevron-down" className="size-4" />
             </Menu.Trigger>
             <Menu.Portal>
@@ -95,7 +95,10 @@ export function Builder({ props, children, bindings, loading = false }: RuntimeP
                     <Menu.Item
                       key={block.key}
                       className={menuItemClasses}
-                      aria-label={`${descriptor.addLabel ?? 'Add'} ${block.label}`}
+                      aria-label={t('{action} {label}', {
+                        action: descriptor.addLabel ?? t('Add'),
+                        label: block.label,
+                      })}
                       onClick={() =>
                         update([
                           ...items,

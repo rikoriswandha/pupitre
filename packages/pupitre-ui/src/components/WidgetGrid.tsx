@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import type { WidgetData, WidgetDescriptor, WidgetFilter } from '@rikology/pupitre/catalog'
+import { t } from '@rikology/pupitre-react'
 import { WidgetChart } from './WidgetChart.js'
 import { WidgetStats } from './WidgetStats.js'
 import { WidgetTable } from './WidgetTable.js'
@@ -98,7 +99,7 @@ export function WidgetGrid({
                   aria-label={filter.label}
                   value={selected}
                   onValueChange={(next) => updateFilter(filter.name, next)}
-                  options={[{ value: '', label: 'All' }, ...filter.options]}
+                  options={[{ value: '', label: t('All') }, ...filter.options]}
                 />
               </div>
             )

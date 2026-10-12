@@ -87,6 +87,7 @@ export const formSpec = z.object({
 export const columnDescriptor = z.object({
   name: z.string(),
   label: z.string(),
+  component: z.string().optional(),
   type: z.enum([
     'text',
     'badge',
@@ -127,6 +128,21 @@ export const filterDescriptor = z.discriminatedUnion('type', [
   z.object({ type: z.literal('dateRange'), name: z.string(), label: z.string(), form: filterForm }),
   z.object({ type: z.literal('trashed'), name: z.string(), label: z.string(), form: filterForm }),
   z.object({ type: z.literal('custom'), name: z.string(), label: z.string(), form: filterForm }),
+  z.object({
+    type: z.literal('queryBuilder'),
+    name: z.string(),
+    label: z.string(),
+    form: filterForm,
+    constraints: z.array(
+      z.object({
+        name: z.string(),
+        type: z.enum(['text', 'number', 'date', 'boolean', 'select', 'relationship']),
+        label: z.string(),
+        options: z.array(option).optional(),
+        operators: z.array(z.object({ value: z.string(), label: z.string() })),
+      })
+    ),
+  }),
 ])
 export type FilterDescriptor = z.infer<typeof filterDescriptor>
 export const tableDescriptor = z.object({
@@ -144,6 +160,10 @@ export const tableDescriptor = z.object({
     .array(z.object({ key: z.string(), label: z.string(), collapsible: z.boolean().optional() }))
     .optional(),
   defaultSort: z.object({ column: z.string(), direction: z.enum(['asc', 'desc']) }).optional(),
+  defaultSorts: z
+    .array(z.object({ column: z.string(), direction: z.enum(['asc', 'desc']) }))
+    .optional(),
+  multiSort: z.number().int().min(1).max(10).optional(),
   perPageOptions: z.array(z.union([z.number(), z.literal('all')])),
   searchable: z.boolean(),
   searchDebounce: z.number(),
@@ -447,65 +467,8 @@ export type ActionResult = z.infer<typeof actionResult>
 export type PatchResponse = z.infer<typeof patchResponse>
 
 export const elementSchema = z.object({
-  type: z.enum([
-    'Text',
-    'Textarea',
-    'Number',
-    'Slider',
-    'Hidden',
-    'Select',
-    'Checkbox',
-    'CheckboxList',
-    'Radio',
-    'Toggle',
-    'ToggleButtons',
-    'Date',
-    'DateTime',
-    'Time',
-    'Color',
-    'Tags',
-    'KeyValue',
-    'RichEditor',
-    'MarkdownEditor',
-    'CodeEditor',
-    'FileUpload',
-    'Repeater',
-    'Builder',
-    'BuilderItem',
-    'RepeaterItem',
-    'Form',
-    'Grid',
-    'Section',
-    'Fieldset',
-    'Tabs',
-    'Wizard',
-    'Step',
-    'Tab',
-    'Group',
-    'Split',
-    'Placeholder',
-    'Html',
-    'Divider',
-    'Actions',
-    'View',
-    'Fragment',
-    'DataTable',
-    'Widget.Stats',
-    'Widget.Chart',
-    'Widget.Table',
-    'Widget.Timeline',
-    'RelationManager',
-    'ActionBar',
-    'Infolist',
-    'TextEntry',
-    'IconEntry',
-    'ImageEntry',
-    'ColorEntry',
-    'KeyValueEntry',
-    'RepeatableEntry',
-    'CodeEntry',
-    'BadgeEntry',
-  ]),
+  // Hosts may extend the catalog; client registries reject unregistered names.
+  type: z.string().min(1),
   props: z.record(z.string(), z.unknown()).default({}),
   children: z.array(z.string()).optional(),
   slots: z.record(z.string(), z.array(z.string())).optional(),
@@ -554,6 +517,9 @@ export const actionFormResponse = z.object({
   spec: jsonRenderSpec,
   state: z.record(z.string(), z.unknown()),
   catalogVersion: z.string(),
+  catalogExtensions: z
+    .array(z.object({ name: z.string(), components: z.array(z.string()) }))
+    .optional(),
 })
 export type ActionFormResponse = z.infer<typeof actionFormResponse>
 
@@ -692,6 +658,16 @@ export const pageProps = z
       notifications: notificationsProp.optional(),
       realtime: z.object({ driver: z.string(), userChannel: z.string() }).optional(),
       locale: z.string(),
+      locales: z.array(z.string()).optional(),
+      messages: z
+        .record(
+          z.string(),
+          z.union([
+            z.string(),
+            z.object({ one: z.string(), other: z.string(), zero: z.string().optional() }),
+          ])
+        )
+        .optional(),
       timezone: z.string(),
     }),
     page: z.object({
@@ -708,6 +684,9 @@ export const pageProps = z
       subNavigation: z.array(subNavigationItem).optional(),
       deferred: z.array(z.string()).optional(),
       catalogVersion: z.string(),
+      catalogExtensions: z
+        .array(z.object({ name: z.string(), components: z.array(z.string()) }))
+        .optional(),
       component: z.string().optional(),
     }),
     data: z.union([tableData, z.record(z.string(), z.unknown())]).optional(),

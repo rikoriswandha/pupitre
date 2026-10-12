@@ -11,6 +11,12 @@ export default class Comment extends BaseModel {
   @column() declare body: string
   @column() declare postId: number | null
   @column() declare tenantId: number | null
+  @column() declare rating: number
+  @column({
+    prepare: (value) => JSON.stringify(value),
+    consume: (value: unknown) => (typeof value === 'string' ? JSON.parse(value) : value),
+  })
+  declare ratingDetails: Array<{ criterion: string; score: number }>
   @column.dateTime({ autoCreate: true }) declare createdAt: DateTime
   @column.dateTime({ autoCreate: true, autoUpdate: true }) declare updatedAt: DateTime
 

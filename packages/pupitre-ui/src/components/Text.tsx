@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
-import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
 import {
@@ -233,7 +233,7 @@ export function Text({ props, bindings }: Runtime) {
                 variant="ghost"
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('Hide password') : t('Show password')}
                 disabled={props.disabled}
               >
                 <Icon name={showPassword ? 'eye-off' : 'eye'} className="size-4" />

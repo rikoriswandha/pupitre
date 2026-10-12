@@ -1,4 +1,13 @@
-import { actions, definePlugin, defineResource, nav, pages, schema, table } from '@rikology/pupitre'
+import {
+  actions,
+  definePlugin,
+  defineResource,
+  nav,
+  pages,
+  schema,
+  table,
+  t,
+} from '@rikology/pupitre'
 import type { PupitrePlugin, ResourceDefinition } from '@rikology/pupitre'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { Exception } from '@adonisjs/core/exceptions'
@@ -16,6 +25,21 @@ import {
   type ShieldOptions,
 } from './permissions.js'
 export const panelShieldOptions = new WeakMap<object, ShieldOptions>()
+const abilityLabels: Record<string, string> = {
+  viewAny: t('View any'),
+  view: t('View'),
+  create: t('Create'),
+  update: t('Update'),
+  delete: t('Delete'),
+  restore: t('Restore'),
+  forceDelete: t('Force Delete'),
+  replicate: t('Replicate'),
+  reorder: t('Reorder'),
+  attach: t('Attach'),
+  detach: t('Detach'),
+  associate: t('Associate'),
+  dissociate: t('Dissociate'),
+}
 type RoleRelationshipClient = {
   query(): ModelQueryBuilderContract<typeof Role>
   sync(ids: string[]): Promise<unknown>
@@ -48,7 +72,7 @@ function shieldForPanel(options: ShieldOptions) {
       const { roles: submitted, ...attributes } = data
       if (submitted === undefined) return { attributes }
       if (!ctx.pupitre.authUser)
-        throw new Exception('Role assignments require an authenticated user', { status: 403 })
+        throw new Exception(t('Role assignments require an authenticated user'), { status: 403 })
       if (
         !Array.isArray(submitted) ||
         submitted.some(
@@ -59,11 +83,11 @@ function shieldForPanel(options: ShieldOptions) {
             Number(id) > 2147483647
         )
       )
-        throw new Exception('Invalid role assignment', { status: 422 })
+        throw new Exception(t('Invalid role assignment'), { status: 422 })
       const ids = [...new Set(submitted.map((id) => String(Number(id))))]
       const selected = await Role.query({ client: trx }).whereIn('id', ids).select('id')
       if (selected.length !== ids.length)
-        throw new Exception('Unknown role assignment', { status: 422 })
+        throw new Exception(t('Unknown role assignment'), { status: 422 })
       record?.useTransaction(trx)
       const current = record ? await roleRelationship(record).query() : []
       const currentIds = new Set(current.map((role) => String(Reflect.get(role, 'id'))))
@@ -74,18 +98,18 @@ function shieldForPanel(options: ShieldOptions) {
       ]
       if (changedIds.length && !(await shieldAllows(ctx, ctx.pupitre.authUser, '', options, trx))) {
         if (!(await shieldAllows(ctx, ctx.pupitre.authUser, 'roles.update', options, trx)))
-          throw new Exception('Cannot assign or revoke roles', { status: 403 })
+          throw new Exception(t('Cannot assign or revoke roles'), { status: 403 })
         const changed = await Role.query({ client: trx })
           .whereIn('id', changedIds)
           .preload('permissions')
         for (const role of changed) {
           if (role.name === (options.superAdminRole ?? 'super-admin'))
-            throw new Exception('Cannot assign or revoke the super administrator role', {
+            throw new Exception(t('Cannot assign or revoke the super administrator role'), {
               status: 403,
             })
           for (const permission of role.permissions) {
             if (!(await shieldAllows(ctx, ctx.pupitre.authUser, permission.name, options, trx)))
-              throw new Exception('Cannot delegate a permission you do not possess', {
+              throw new Exception(t('Cannot delegate a permission you do not possess'), {
                 status: 403,
               })
           }
@@ -148,7 +172,7 @@ function shieldForPanel(options: ShieldOptions) {
     if (await shieldAllows(ctx, ctx.pupitre.authUser, '', options, trx)) return
     const superAdmin = options.superAdminRole ?? 'super-admin'
     if (data.name === superAdmin || record?.name === superAdmin)
-      throw new Exception('Cannot modify the super administrator role', { status: 403 })
+      throw new Exception(t('Cannot modify the super administrator role'), { status: 403 })
     const names = new Set(
       Object.entries(data)
         .filter(([key]) => key.startsWith('permissions_'))
@@ -168,7 +192,7 @@ function shieldForPanel(options: ShieldOptions) {
     ]
     for (const name of changed) {
       if (!(await shieldAllows(ctx, ctx.pupitre.authUser, name, options, trx)))
-        throw new Exception('Cannot grant or revoke a permission you do not possess', {
+        throw new Exception(t('Cannot grant or revoke a permission you do not possess'), {
           status: 403,
         })
     }
@@ -182,7 +206,7 @@ function shieldForPanel(options: ShieldOptions) {
       .filter(([key]) => key.startsWith('permissions_'))
       .flatMap(([, value]) => (Array.isArray(value) ? value.map(String) : []))
     if (names.some((name) => !allowedPermissions.has(name)))
-      throw new Error('Unknown Shield permission')
+      throw new Error(t('Unknown Shield permission'))
     const permissions = await Permission.fetchOrCreateMany(
       'name',
       names.map((name) => ({ name })),
@@ -200,11 +224,15 @@ function shieldForPanel(options: ShieldOptions) {
   }
   const roles = defineResource(Role)
     .slug('roles')
-    .label('Role')
-    .pluralLabel('Roles')
+    .label(t('Role'))
+    .pluralLabel(t('Roles'))
     .scope(false)
-    .form((s) => [s.text('name').required().maxLength(160).unique({ ignoreRecord: true })])
-    .table((t) => t.columns([table.text('name').searchable().sortable()]))
+    .form((s) => [
+      s.text('name').label(t('Name')).required().maxLength(160).unique({ ignoreRecord: true }),
+    ])
+    .table((definition) =>
+      definition.columns([table.text('name').label(t('Name')).searchable().sortable()])
+    )
     .fill(async (record) => {
       await record.load('permissions')
       return {
@@ -237,7 +265,7 @@ function shieldForPanel(options: ShieldOptions) {
   return definePlugin({
     name: 'shield',
     resources: [roles],
-    navigation: [nav.group(options.navigationGroup ?? 'Settings').items(['roles'])],
+    navigation: [nav.group(options.navigationGroup ?? t('Settings')).items(['roles'])],
     middleware: [shieldContextMiddleware],
     extendResource(resource) {
       if (resource.slug === 'roles')
@@ -299,19 +327,25 @@ function shieldForPanel(options: ShieldOptions) {
       }
       const role = panel.resources.find((resource) => resource.slug === 'roles')!
       role.definition.form = [
-        schema.text('name').required().maxLength(160).unique({ ignoreRecord: true }).toDefinition(),
+        schema
+          .text('name')
+          .label(t('Name'))
+          .required()
+          .maxLength(160)
+          .unique({ ignoreRecord: true })
+          .toDefinition(),
         ...[...resources.values()].map((resource) =>
           schema
             .section(resource.pluralLabel)
             .components([
               schema
                 .checkboxList('permissions_' + resource.slug)
-                .label('Permissions')
+                .label(t('Permissions'))
                 .options(
                   Object.fromEntries(
                     resourceAbilities(resource).map((ability) => [
                       resource.slug + '.' + ability,
-                      ability,
+                      abilityLabels[ability] ?? ability,
                     ])
                   )
                 ),
@@ -346,7 +380,7 @@ export function shield(options: ShieldOptions) {
 export function shieldRolesField() {
   return schema
     .multiSelect('roles')
-    .label('Roles')
+    .label(t('Roles'))
     .relationship('roles', 'name')
     .preload()
     .visible(({ ctx }) =>

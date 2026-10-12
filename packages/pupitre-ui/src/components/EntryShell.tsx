@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { t } from '@rikology/pupitre-react'
 import { Button, cn, Tooltip } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 
@@ -56,7 +57,7 @@ export function entryColorStyle(color?: string) {
 
 export function EntryCopyButton({
   value,
-  label = 'value',
+  label = t('value'),
 }: {
   value: string
   label?: string | null
@@ -65,14 +66,14 @@ export function EntryCopyButton({
   const timeout = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(timeout.current), [])
   return (
-    <Tooltip label={copied ? 'Copied' : 'Copy'}>
+    <Tooltip label={copied ? t('Copied') : t('Copy')}>
       <Button
         type="button"
         size="xs"
         square
         variant="ghost"
         color={copied ? 'success' : 'gray'}
-        aria-label={`Copy ${label ?? 'value'}`}
+        aria-label={t('Copy {label}', { label: label ?? t('value') })}
         onClick={async () => {
           if (!navigator.clipboard) return
           try {
@@ -87,7 +88,7 @@ export function EntryCopyButton({
       >
         <Icon name={copied ? 'check' : 'copy'} className="size-3.5" />
         <span className="sr-only" role="status">
-          {copied ? 'Copied' : ''}
+          {copied ? t('Copied') : ''}
         </span>
       </Button>
     </Tooltip>
@@ -127,7 +128,7 @@ export function EntryShell({
           label ? 'text-[0.8125rem] font-medium leading-5 text-muted-foreground' : 'sr-only'
         }
       >
-        {label ?? 'Value'}
+        {label ?? t('Value')}
       </dt>
       <dd className="min-w-0 break-words text-sm leading-6 text-foreground">{children}</dd>
     </dl>

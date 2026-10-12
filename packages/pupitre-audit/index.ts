@@ -16,6 +16,7 @@ import {
   resolveAdapter,
   scopedQuery,
   table,
+  t,
 } from '@rikology/pupitre'
 import type { PupitreConfig, ResourceDefinition } from '@rikology/pupitre'
 
@@ -151,43 +152,43 @@ function activityResource(options: AuditOptions) {
   }
   return defineResource(ActivityAudit)
     .slug(activity.slug ?? 'activity')
-    .label(activity.label ?? 'Activity')
-    .pluralLabel(activity.label ?? 'Activity')
+    .label(activity.label ?? t('Activity'))
+    .pluralLabel(activity.label ?? t('Activity'))
     .icon('activity')
-    .navigation({ group: activity.navigationGroup ?? 'System' })
+    .navigation({ group: activity.navigationGroup ?? t('System') })
     .policy(ActivityPolicy)
     .recordTitle('event')
     .scope(false)
-    .table((t) =>
-      t
+    .table((definition) =>
+      definition
         .query((query, ctx) => {
           if (!ctx.pupitre.panel.tenancy) return
           if (!ctx.pupitre.tenant) query.whereRaw('1 = 0')
           else query.where('tenant_id', String(ctx.pupitre.tenant.id))
         })
         .columns([
-          table.badge('event').label('Event'),
-          table.text('auditableType').label('Subject').searchable(),
+          table.badge('event').label(t('Event')),
+          table.text('auditableType').label(t('Subject')).searchable(),
           table
             .text('auditableId')
-            .label('Subject ID')
+            .label(t('Subject ID'))
             .url(({ ctx, record }) => {
               const entry = record as Audit
               return subjectUrl(ctx, entry.auditableType, entry.auditableId)
             }),
-          table.text('actorLabel').label('Actor'),
-          table.text('createdAt').label('Time').dateTime().sortable(),
+          table.text('actorLabel').label(t('Actor')),
+          table.text('createdAt').label(t('Time')).dateTime().sortable(),
         ])
         .filters([
           table.filter
             .custom('event')
-            .form([schema.text('event').label('Event')])
+            .form([schema.text('event').label(t('Event'))])
             .query((query, data) => {
               if (typeof data.event === 'string' && data.event) query.where('event', data.event)
             }),
           table.filter
             .custom('auditableType')
-            .form([schema.text('subject').label('Subject type')])
+            .form([schema.text('subject').label(t('Subject type'))])
             .query((query, data) => {
               if (typeof data.subject === 'string' && data.subject)
                 query.where('auditable_type', data.subject)
@@ -195,8 +196,8 @@ function activityResource(options: AuditOptions) {
           table.filter
             .custom('createdAt')
             .form([
-              schema.date('from').label('From (UTC)'),
-              schema.date('to').label('Through (UTC)'),
+              schema.date('from').label(t('From (UTC)')),
+              schema.date('to').label(t('Through (UTC)')),
             ])
             .query((query, data) => {
               if (typeof data.from === 'string' && data.from) {
@@ -214,25 +215,25 @@ function activityResource(options: AuditOptions) {
         .paginated([options.perPage ?? 25, 50, 100])
     )
     .infolist((s) => [
-      s.textEntry('event').label('Event'),
-      s.textEntry('auditableType').label('Subject'),
-      s.textEntry('actorLabel').label('Actor'),
+      s.textEntry('event').label(t('Event')),
+      s.textEntry('auditableType').label(t('Subject')),
+      s.textEntry('actorLabel').label(t('Actor')),
       s
         .textEntry('auditableId')
-        .label('Subject ID')
+        .label(t('Subject ID'))
         .url(({ ctx, get }) => subjectUrl(ctx, get('auditableType'), get('auditableId'))),
-      s.textEntry('actorType').label('Actor type'),
-      s.textEntry('actorId').label('Actor ID'),
-      s.textEntry('createdAt').label('Time').dateTime(),
+      s.textEntry('actorType').label(t('Actor type')),
+      s.textEntry('actorId').label(t('Actor ID')),
+      s.textEntry('createdAt').label(t('Time')).dateTime(),
       s
-        .section('Old values')
+        .section(t('Old values'))
         .components([
           s
             .placeholder('oldValues')
             .content(({ get }) => JSON.stringify(get('oldValues'), null, 2)),
         ]),
       s
-        .section('New values')
+        .section(t('New values'))
         .components([
           s
             .placeholder('newValues')
@@ -257,7 +258,7 @@ export function audit(options: AuditOptions = {}) {
     navigation:
       options.activity === false
         ? []
-        : [nav.group(options.activity?.navigationGroup ?? 'System').items([activitySlug!])],
+        : [nav.group(options.activity?.navigationGroup ?? t('System')).items([activitySlug!])],
     extendResource(resource: ResourceDefinition<LucidRow>) {
       if (
         resource.slug === activitySlug ||
@@ -298,7 +299,7 @@ export function audit(options: AuditOptions = {}) {
               changes: entry.changes,
             }))
           })
-          .heading('Activity')
+          .heading(t('Activity'))
           .span('full')
           .toDefinition()
         nextPages[page] = {

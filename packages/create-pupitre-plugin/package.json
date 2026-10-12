@@ -18,6 +18,7 @@
   "files": [
     "build",
     "template",
+    "template-ui",
     "CHANGELOG.md",
     "!build/tests"
   ],
