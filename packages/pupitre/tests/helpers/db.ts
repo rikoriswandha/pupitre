@@ -25,8 +25,8 @@ export async function migrateDatabase(db: Database) {
 }
 
 export function setupDatabase() {
-  if (database) return Promise.resolve(database)
   if (databaseSetup) return databaseSetup
+  if (database) return Promise.resolve(database)
   databaseSetup = initializeDatabase().catch((error: unknown) => {
     databaseSetup = undefined
     throw error

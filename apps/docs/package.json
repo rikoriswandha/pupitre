@@ -10,7 +10,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.42.6",

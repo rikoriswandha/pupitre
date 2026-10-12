@@ -18,6 +18,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       # Package builds first: hosts resolve published entry points (e.g. pupitre-ui styles.css) from build/.
       - run: npm run build
+      - run: npm run check -w apps/docs
+      - run: npm run build -w apps/docs
       - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
         working-directory: apps/example
       - run: npm run bundle:budget

@@ -4,7 +4,7 @@ import type { TableDefinition } from '../../src/definition/table.js'
 import { applyTableQuery } from '../../src/query/table_query.js'
 import { aggregateTableSummaries } from '../../src/table/table_summary.js'
 import { buildTableData } from '../../src/table/table_data.js'
-import { setupDatabase, teardown, truncate, Post } from '../helpers/db.js'
+import { setupDatabase, teardown, truncate, Post, User } from '../helpers/db.js'
 
 const table: TableDefinition = {
   columns: [
@@ -37,6 +37,20 @@ test.group('table data query', (group) => {
     assert,
   }) => {
     const db = await setupDatabase()
+    const author = await User.create({ name: 'ADA', email: 'ada@example.test' })
+    const match = await Post.create({
+      title: 'Match',
+      slug: 'match',
+      status: 'draft',
+      authorId: author.id,
+    })
+    const otherAuthor = await User.create({ name: 'Bob', email: 'bob@example.test' })
+    await Post.create({
+      title: 'Non-match',
+      slug: 'non-match',
+      status: 'draft',
+      authorId: otherAuthor.id,
+    })
     const result = applyTableQuery(
       db.modelQuery(Post) as never,
       table,
@@ -56,7 +70,11 @@ test.group('table data query', (group) => {
       search: 'Ada',
     })
     assert.deepEqual((result.normalized.filters as Record<string, unknown>).trashed, 'only')
-    assert.deepEqual(sql.bindings, ['%ada%'])
+    const rows = await result.query
+    assert.deepEqual(
+      rows.map((post) => post.$primaryKeyValue),
+      [match.id]
+    )
   })
 
   test('stores summary aggregates from column builder chains', ({ assert }) => {

@@ -44,7 +44,7 @@ Wajib ada:
 - **Hooks**: urutan `mutateBeforeSave → beforeSave → save → afterSave` dicatat; exception di `afterSave` me-rollback.
 - **Driver optional peer**: test driver dijalankan hanya kalau peer terpasang (`test.skipIf(!hasPeer)`), dan test terpisah memastikan **tanpa** peer error-nya jelas (`E_PUPITRE_MISSING_PEER`).
 
-PostgreSQL: job CI `test:pg` menjalankan file yang ditandai `@pg` (query ILIKE, jsonb, `whereHas` + grouping). SQLite tetap default lokal.
+PostgreSQL: job CI `test-pg` menjalankan **seluruh suite core** melalui `DB=pg npm run quick:test -w packages/pupitre` terhadap PostgreSQL 16 dengan `DATABASE_URL`, bukan hanya file bertanda `@pg`. SQLite tetap default lokal. Untuk menjalankan lokal, buat database sementara yang namanya mengandung `test`; helper menolak reset database lain. Fixture memakai schema builder baru per operasi dan semua pemanggil menunggu inisialisasi yang sama.
 
 ## 4. pupitre-react
 
@@ -114,4 +114,4 @@ abilities fail as forbidden. Supply `user` for every call; record/page helpers a
 - Snapshot spec diperbolehkan karena spec **adalah** kontrak; snapshot HTML tidak.
 - Test yang menyentuh waktu memakai `DateTime` Luxon dengan `Settings.now` dikunci dan timezone eksplisit (`Asia/Jakarta` + satu kasus DST `Europe/Amsterdam`).
 - Test DB tidak boleh menyentuh `.env` developer: helper memaksa `DB_CONNECTION=sqlite` + file sementara kecuali `DB=pg` eksplisit.
-- Coverage gate c8: `pupitre` 85% lines pada `src/compiler`, `src/query`, `src/authz`; package lain tanpa gate di M1.
+- Coverage gate c8: `npm test -w packages/pupitre` mengumpulkan coverage sekali, lalu `test:coverage` memeriksa **masing-masing** direktori `src/compiler`, `src/query`, `src/authz` dengan ambang 85% lines. Tidak memakai rata-rata gabungan yang dapat menutupi direktori lemah. Pengukuran audit 2026-10-12: compiler 93,03%, query 96,69%, authz 92,94%; package lain tanpa gate di M1.
