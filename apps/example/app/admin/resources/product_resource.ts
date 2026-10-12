@@ -24,6 +24,14 @@ const STATUS_COLORS = { draft: 'gray', active: 'success', archived: 'danger' }
 const SHIPPING_OPTIONS = { standard: 'Standard', express: 'Express', freight: 'Freight' }
 const SHIPPING_ICONS = { standard: 'send', express: 'trending-up', freight: 'building' }
 const SHIPPING_COLORS = { standard: 'gray', express: 'primary', freight: 'warning' }
+const MARKET_OPTIONS = {
+  id: 'Indonesia',
+  sg: 'Singapore',
+  my: 'Malaysia',
+  nl: 'Netherlands',
+  fr: 'France',
+  jp: 'Japan',
+}
 const BRAND_PRESETS = ['#1f3a5f', '#8a5a44', '#0f172a', '#c2a878', '#d97706', '#475569']
 
 const restock = action('restock')
@@ -305,14 +313,7 @@ export default defineResource(Product)
         s
           .multiSelect('markets')
           .label('Markets')
-          .options({
-            id: 'Indonesia',
-            sg: 'Singapore',
-            my: 'Malaysia',
-            nl: 'Netherlands',
-            fr: 'France',
-            jp: 'Japan',
-          })
+          .options(MARKET_OPTIONS)
           .searchable()
           .clearable()
           .default(() => ['id']),
@@ -393,7 +394,7 @@ export default defineResource(Product)
           .sortable()
           .description(({ record }) => (record as Product).sku)
           .wrap(),
-        table.badge('status').colors(STATUS_COLORS).sortable(),
+        table.badge('status').options(STATUS_OPTIONS).colors(STATUS_COLORS).sortable(),
         table.icon('shippingClass').label('Shipping').icons(SHIPPING_ICONS).colors(SHIPPING_COLORS),
         table.color('brandColor').label('Brand').toggleable({ hiddenByDefault: true }),
         table.text('price').money('IDR').sortable().alignment('end').summarize(['avg', 'range']),
@@ -467,7 +468,7 @@ export default defineResource(Product)
       .components([
         s.textEntry('name'),
         s.textEntry('sku').label('SKU').copyable(),
-        s.badgeEntry('status'),
+        s.badgeEntry('status').options(STATUS_OPTIONS).colors(STATUS_COLORS),
         s.textEntry('price').money('IDR'),
         s.textEntry('cost').label('Unit cost').money('IDR'),
         s.textEntry('stock'),
@@ -496,7 +497,7 @@ export default defineResource(Product)
         s.keyValueEntry('attributes').label('Attributes'),
         s.codeEntry('specs').label('Technical specs'),
         s.textEntry('labels').label('Labels').badge(),
-        s.textEntry('markets').label('Markets').badge(),
+        s.textEntry('markets').label('Markets').badge().options(MARKET_OPTIONS),
       ]),
     s.section('Media').components([s.imageEntry('gallery').label('Gallery')]),
   ])

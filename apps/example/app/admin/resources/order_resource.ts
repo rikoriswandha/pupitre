@@ -158,7 +158,7 @@ const historyManager = defineRelationManager(Order, 'events')
     t
       .columns([
         table.text('event').label('Event'),
-        table.badge('toStatus').label('Status').colors(STATUS_COLORS),
+        table.badge('toStatus').label('Status').options(STATUS_OPTIONS).colors(STATUS_COLORS),
         table.text('actor').label('By'),
         table.text('note').label('Note').limit(60),
         table.text('createdAt').label('When').dateTime().since().sortable(),
@@ -341,7 +341,7 @@ export default defineResource(Order)
           .label('Customer')
           .searchable()
           .description(({ record }) => (record as Order).customerEmail),
-        table.badge('status').colors(STATUS_COLORS).sortable(),
+        table.badge('status').options(STATUS_OPTIONS).colors(STATUS_COLORS).sortable(),
         table.icon('paymentMethod').label('Payment').icons(PAYMENT_ICONS),
         table.icon('isGift').label('Gift').boolean().alignment('center'),
         table.text('total').money('IDR').sortable().alignment('end').summarize(['sum', 'avg']),
@@ -369,7 +369,7 @@ export default defineResource(Order)
       .columns(4)
       .components([
         s.textEntry('number').label('Order').copyable(),
-        s.badgeEntry('status'),
+        s.badgeEntry('status').options(STATUS_OPTIONS).colors(STATUS_COLORS),
         s.textEntry('total').money('IDR'),
         s.textEntry('placedAt').label('Placed').dateTime('dd LLL yyyy, HH:mm'),
         s.iconEntry('paymentMethod').label('Payment').icons(PAYMENT_ICONS),

@@ -10,6 +10,16 @@ import Tag from '#models/tag'
 import Revision from '#models/revision'
 import { Auditable } from '@rikology/adonisjs-audit-trail/auditable'
 
+/** Display labels and badge colors for the stored `status` enum. */
+export const POST_STATUS_OPTIONS: Record<string, string> = {
+  draft: 'Draft',
+  published: 'Published',
+}
+export const POST_STATUS_COLORS: Record<string, string> = {
+  draft: 'warning',
+  published: 'success',
+}
+
 export default class Post extends Auditable(PostSchema) {
   @column({
     prepare: (value) => JSON.stringify(value),

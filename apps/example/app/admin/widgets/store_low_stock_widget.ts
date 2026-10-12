@@ -18,7 +18,10 @@ export default defineWidget('store-low-stock', Product)
         table.text('name').label('Product').sortable(),
         table.text('sku').label('SKU'),
         table.text('stock').label('Stock').numeric().sortable(),
-        table.badge('status').colors({ draft: 'gray', active: 'success' }),
+        table
+          .badge('status')
+          .options({ draft: 'Draft', active: 'Active' })
+          .colors({ draft: 'gray', active: 'success' }),
       ])
       .defaultSort('stock', 'asc')
       .paginated([5, 10])

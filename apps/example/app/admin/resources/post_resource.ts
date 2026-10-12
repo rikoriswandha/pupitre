@@ -9,7 +9,7 @@ import {
   table,
 } from '@rikology/pupitre'
 import { DateTime } from 'luxon'
-import Post from '#models/post'
+import Post, { POST_STATUS_COLORS, POST_STATUS_OPTIONS } from '#models/post'
 import PostPolicy from '#policies/post_policy'
 import { defineRelationManager, relationGroup } from '@rikology/pupitre'
 import RevisionResource from '#admin/resources/revision_resource'
@@ -208,12 +208,9 @@ export default defineResource(Post)
           .select('status')
           .label('Status')
           .options(async ({ search }) =>
-            ['draft', 'published']
-              .filter((status) => status.includes(search.toLowerCase()))
-              .map((status) => ({
-                value: status,
-                label: status === 'draft' ? 'Draft' : 'Published',
-              }))
+            Object.entries(POST_STATUS_OPTIONS)
+              .filter(([status]) => status.includes(search.toLowerCase()))
+              .map(([value, label]) => ({ value, label }))
           )
           .searchable()
           .default('draft')
@@ -308,7 +305,7 @@ export default defineResource(Post)
           .sortable()
           .searchable(),
         table.text('category.name').label('Category').sortable(),
-        table.select('status').options({ draft: 'Draft', published: 'Published' }),
+        table.select('status').options(POST_STATUS_OPTIONS),
         table.image('cover').circular(),
         table.toggle('isFeatured'),
         table
@@ -327,7 +324,7 @@ export default defineResource(Post)
         t.count('comments'),
       ])
       .filters([
-        table.filter.select('status').options({ draft: 'Draft', published: 'Published' }),
+        table.filter.select('status').options(POST_STATUS_OPTIONS),
         table.filter.ternary('isFeatured').trueLabel('Featured').falseLabel('Not featured'),
         table.filter.dateRange('publishedAt'),
         table.filter.trashed(),
@@ -342,7 +339,7 @@ export default defineResource(Post)
     s.textEntry('title').label('Title'),
     s.textEntry('summary').label('Summary').markdown(),
     s.textEntry('slug').label('Slug').copyable(),
-    s.badgeEntry('status').label('Status'),
+    s.badgeEntry('status').label('Status').options(POST_STATUS_OPTIONS).colors(POST_STATUS_COLORS),
     s.textEntry('publishedAt').label('Published').dateTime('yyyy LLL dd, HH:mm'),
     s.textEntry('viewsCount').label('Views'),
     s.textEntry('content').label('Content blocks'),
