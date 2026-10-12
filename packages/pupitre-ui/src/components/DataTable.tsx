@@ -825,36 +825,38 @@ export function DataTable({
           ? (current as Record<string, unknown>)
           : {}
       return (
-        <div className="flex flex-wrap items-end gap-2" key={filter.name}>
-          <span className="w-full text-sm">{filter.label}</span>
-          <input
-            aria-label={`${filter.label} from`}
-            type="date"
-            className={cn(controlClasses, 'h-9 w-auto px-3 tabular-nums')}
-            value={String(range.from ?? tableState.query[`filters[${filter.name}][from]`] ?? '')}
-            onChange={(event) =>
-              descriptor.deferFilters
-                ? setFilterValue(filter.name, { ...range, from: event.currentTarget.value })
-                : tableState.setQuery({
-                    [`filters[${filter.name}][from]`]: event.currentTarget.value,
-                    page: 1,
-                  })
-            }
-          />
-          <input
-            aria-label={`${filter.label} to`}
-            type="date"
-            className={cn(controlClasses, 'h-9 w-auto px-3 tabular-nums')}
-            value={String(range.to ?? tableState.query[`filters[${filter.name}][to]`] ?? '')}
-            onChange={(event) =>
-              descriptor.deferFilters
-                ? setFilterValue(filter.name, { ...range, to: event.currentTarget.value })
-                : tableState.setQuery({
-                    [`filters[${filter.name}][to]`]: event.currentTarget.value,
-                    page: 1,
-                  })
-            }
-          />
+        <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
+          <span>{filter.label}</span>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              aria-label={`${filter.label} from`}
+              type="date"
+              className={cn(controlClasses, 'h-9 px-3 tabular-nums')}
+              value={String(range.from ?? tableState.query[`filters[${filter.name}][from]`] ?? '')}
+              onChange={(event) =>
+                descriptor.deferFilters
+                  ? setFilterValue(filter.name, { ...range, from: event.currentTarget.value })
+                  : tableState.setQuery({
+                      [`filters[${filter.name}][from]`]: event.currentTarget.value,
+                      page: 1,
+                    })
+              }
+            />
+            <input
+              aria-label={`${filter.label} to`}
+              type="date"
+              className={cn(controlClasses, 'h-9 px-3 tabular-nums')}
+              value={String(range.to ?? tableState.query[`filters[${filter.name}][to]`] ?? '')}
+              onChange={(event) =>
+                descriptor.deferFilters
+                  ? setFilterValue(filter.name, { ...range, to: event.currentTarget.value })
+                  : tableState.setQuery({
+                      [`filters[${filter.name}][to]`]: event.currentTarget.value,
+                      page: 1,
+                    })
+              }
+            />
+          </div>
         </div>
       )
     }
