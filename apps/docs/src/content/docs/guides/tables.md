@@ -79,4 +79,6 @@ Summaries support `sum`, `avg`, `count`, `min`, `max`, `range`. They aggregate t
 
 Import `actions` and `exportColumn` from `@rikology/pupitre`. Exports use the filtered table query and server formatters, writing private CSV downloads. `exports.maxSyncRows`, `maxAsyncRows` and `retentionMinutes` control limits/retention. With a jobs adapter, large exports have progress and private download endpoints; configure a worker and run `pupitre:prune` for expired files.
 
+All CSV downloads (synchronous exports, queued exports, and failed import rows) protect against spreadsheet formula injection: string cells and headers starting with `=`, `+`, `-`, `@`, tab, or carriage return receive a leading single quote. Numeric values remain numeric, including negative numbers. Importing an exported CSV preserves this quote literally; Pupitre does not strip it automatically.
+
 Import reads CSV headers and maps them to scalar resource form fields. Each row is VineJS-validated with a separate transaction; the result counts created/updated/failed rows and supplies a failed-row CSV. `.resolveRecord(callback)` on `actions.import()` supports upsert; `.async()` enables queued import where configured. Read the [action reference](/reference/api-action/) for resolver and export formatter signatures before writing callbacks.

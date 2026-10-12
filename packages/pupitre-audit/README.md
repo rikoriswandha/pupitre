@@ -44,6 +44,8 @@ Record timelines require `config.pupitre.audit`. The core enforces record `view`
 
 Tenant panels restrict Activity queries by `tenant_id`, independently of the host resource ownership column, and reject detail access for another tenant. Subject links in both the table and detail require a registered top-level resource, `viewAny`, scoped record lookup, and record `view` authorization. A view page is preferred; an edit-only resource additionally requires `update` authorization before linking to edit. Deleted, unmapped, nested, or denied subjects have no link. The default discriminator is the model class name; custom adapter discriminators that do not match a model name remain unlinked.
 
+Historical subject IDs that PostgreSQL cannot parse as the registered model's primary-key type also remain unlinked; the audit entry still renders. Only PostgreSQL invalid-input errors (`22P02`) from the subject lookup are handled this way; unrelated database errors propagate.
+
 Record timelines also pass the active `tenantId` to `AuditAdapter.forRecord`, including for shared resources declared `.scope(false)`. A custom audit adapter must honor that constraint; histories with no resolved tenant are not loaded in tenant panels.
 
 Custom adapters implement only `forRecord(model, id, options)` and drive record timelines. Activity is audit-trail-model specific, queries that peer directly, and uses the built-in `activity` icon; it does not query a custom adapter.

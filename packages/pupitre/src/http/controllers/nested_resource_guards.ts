@@ -4,6 +4,7 @@ import type { ResourceRuntime } from '../../manager.js'
 import { ensureAuthorized } from '../../authz/bouncer.js'
 import { E_PUPITRE_NOT_FOUND } from '../../errors.js'
 import { requestResource, scopedQuery } from '../../query/scoped_query.js'
+import { lookupOrNull } from '../../query/record_lookup.js'
 
 function keyName(model: LucidModel): string {
   const modelWithPrimaryKey = model as LucidModel & { primaryKey?: string }
@@ -21,9 +22,10 @@ export async function authorizeNestedParent(
   const parentResource = requestResource(ctx, resource.parent.resource)
   if (!parentResource) throw new E_PUPITRE_NOT_FOUND()
   await ensureAuthorized(ctx, parentResource, 'viewAny')
-  const parent = await scopedQuery(ctx, parentResource)
-    .where(keyName(parentResource.model), ctx.params[resource.parent.param])
-    .first()
+  const parentId = ctx.params[resource.parent.param]
+  const parent = await lookupOrNull(() =>
+    scopedQuery(ctx, parentResource).where(keyName(parentResource.model), parentId).first()
+  )
   if (!parent) throw new E_PUPITRE_NOT_FOUND()
   await ensureAuthorized(ctx, parentResource, 'view', parent)
   if (mutation) await ensureAuthorized(ctx, parentResource, 'update', parent)

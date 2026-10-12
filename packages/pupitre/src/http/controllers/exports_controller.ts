@@ -41,6 +41,25 @@ async function authorizedResource(ctx: HttpContext, slug: string) {
   if (!(await authorizeResource(ctx, resource, ability))) return null
   return resource
 }
+
+async function authorizedExportAction(ctx: HttpContext, row: ExportRow) {
+  if (row.resource.startsWith('imports:') || row.resource.startsWith('import-failures:'))
+    return true
+  let name: unknown
+  try {
+    name = row.result ? JSON.parse(row.result)?.action : undefined
+  } catch {
+    return false
+  }
+  if (typeof name !== 'string') return false
+  const resource = ctx.pupitre.panel.resources.find((item) => item.slug === row.resource)
+  if (!resource) return false
+  const action = [
+    ...(resource.definition.actions?.header ?? []),
+    ...(resource.definition.actions?.bulk ?? []),
+  ].find((item) => item.name === name && item.builtin === 'export')
+  return !!action && (!action.can || (await authorizeResource(ctx, resource, action.can)))
+}
 function importResult(row: ExportRow) {
   if (!row.result) return undefined
   try {
@@ -57,6 +76,8 @@ export default class ExportsController {
     if (!row) return errorJson(ctx, 'Export not found', 404)
     const resource = await authorizedResource(ctx, row.resource)
     if (!resource) return errorJson(ctx, 'Export not found', 404)
+    if (!(await authorizedExportAction(ctx, row)))
+      return errorJson(ctx, 'You are not authorized to export these records', 403)
     const result = importResult(row)
     return ctx.response.json({
       id: row.id,
@@ -83,6 +104,8 @@ export default class ExportsController {
     if (!row) return errorJson(ctx, 'Export not found', 404)
     const resource = await authorizedResource(ctx, row.resource)
     if (!resource) return errorJson(ctx, 'Export not found', 404)
+    if (!(await authorizedExportAction(ctx, row)))
+      return errorJson(ctx, 'You are not authorized to export these records', 403)
     if (row.status !== 'done' || !row.file_key)
       return errorJson(ctx, 'Export file is not ready', 409)
     if (!(await createPupitreStorage().exists(row.file_key)))

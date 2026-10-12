@@ -231,6 +231,18 @@ test.group('Pupitre HTTP actions', (group) => {
     assert.equal(unsafe.response.status, 200)
     assert.equal(unsafe.body.redirect, '/admin/posts')
     assert.notEqual(unsafe.body.redirect, `/admin/posts/${post.id}/actions/publish`)
+
+    const backslash = await jsonRequest(
+      fixture.baseUrl,
+      `/admin/posts/${post.id}/actions/publish`,
+      {
+        method: 'POST',
+        body: { data: { reason: 'backslash' } },
+        headers: { 'X-Pupitre-Action': '1', 'X-Pupitre-Url': '/\\evil.example/' },
+      }
+    )
+    assert.equal(backslash.response.status, 200)
+    assert.equal(backslash.body.redirect, '/admin/posts')
   })
 
   test('keeps JSON action flash out of the session', async ({ assert }) => {

@@ -15,6 +15,9 @@ export function createCsvStream(
   const serializer = stringify({
     header,
     columns: columns.map(({ key, header: label }) => ({ key, header: label })),
+    cast: {
+      string: (value) => (/^[=+\-@\t\r]/.test(value) ? `'${value}` : value),
+    },
   })
   Readable.from(records).pipe(serializer)
   return serializer

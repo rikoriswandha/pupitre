@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { ResourceRuntime } from '../manager.js'
 import { applyTenantScope } from '../tenancy/runtime.js'
+import { applyGroupedScope } from './grouped_scope.js'
 
 /**
  * The only entry point for resource queries (ARCHITECTURE §6): applies the
@@ -14,13 +15,31 @@ export function scopedQuery(
   options: { trashed?: 'with' | 'only' } = {}
 ): ModelQueryBuilderContract<LucidModel> {
   const query = resource.model.query()
-  if (typeof resource.definition.scope === 'function') resource.definition.scope(query, ctx)
+  applyResourceScope(ctx, resource, query, options)
+  return query
+}
+
+export function applyResourceScope(
+  ctx: HttpContext,
+  resource: ResourceRuntime,
+  query: ModelQueryBuilderContract<LucidModel>,
+  options: { trashed?: 'with' | 'only' } = {}
+): void {
+  const scope = resource.definition.scope
+  if (typeof scope === 'function') applyGroupedScope(query, (builder) => scope(builder, ctx))
+  if (resource.parent) {
+    const relation = resource.model.$getRelation(resource.parent.relation)
+    relation.boot()
+    if (relation.type !== 'belongsTo') throw new Error('Nested parent relation must be belongsTo')
+    const parentId = ctx.params[resource.parent.param]
+    if (parentId === undefined) query.whereRaw('1 = 0')
+    else query.where(relation.foreignKey, parentId)
+  }
   if (resource.definition.scope !== false) applyTenantScope(ctx, resource, query)
   if (resource.definition.softDeletes) {
     if (options.trashed === 'only') query.whereNotNull(resource.definition.softDeletes)
     else if (options.trashed !== 'with') query.whereNull(resource.definition.softDeletes)
   }
-  return query
 }
 
 export function requestResource(ctx: HttpContext, slug: string): ResourceRuntime | undefined {

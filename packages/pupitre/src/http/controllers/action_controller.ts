@@ -9,6 +9,7 @@ import {
 } from '../../compiler/action_compiler.js'
 import { authorizeResource, ensureAuthorized } from '../../authz/bouncer.js'
 import { isPupitreActionRequest, actionJson, errorJson, setPupitreFlash } from '../responses.js'
+import { currentPageUrl } from '../return_url.js'
 import type { ResourceRuntime } from '../../manager.js'
 import type PupitreManager from '../../manager.js'
 import type { ActionDefinition } from '../../definition/action.js'
@@ -20,14 +21,12 @@ import { consumeActionLimit } from '../../drivers/limiter.js'
 import type { JobsAdapter } from '../../adapters/jobs.js'
 import { fillTenantOwnership } from '../../tenancy/runtime.js'
 import { resourceAttributes, syncRelationshipRepeaters } from '../repeater_relationships.js'
+import { lookupOrNull } from '../../query/record_lookup.js'
+import { consumeFormUploads } from '../../storage/upload_tracking.js'
+import { compileValidator } from '../../compiler/vine_compiler.js'
 
 function isJsonRequest(ctx: HttpContext): boolean {
   return isPupitreActionRequest(ctx) || ctx.request.accepts(['json', 'html']) === 'json'
-}
-
-function currentPageUrl(ctx: HttpContext, fallback: string): string {
-  const url = ctx.request.header('x-pupitre-url')
-  return url && /^\/(?!\/)/.test(url) ? url : fallback
 }
 
 async function getResource(ctx: HttpContext): Promise<ResourceRuntime | undefined> {
@@ -36,9 +35,10 @@ async function getResource(ctx: HttpContext): Promise<ResourceRuntime | undefine
   const parentResource = requestResource(ctx, resource.parent.resource)
   if (!parentResource) return undefined
   await ensureAuthorized(ctx, parentResource, 'viewAny')
-  const parent = await scopedQuery(ctx, parentResource)
-    .where(modelKey(parentResource.model), ctx.params[resource.parent.param])
-    .first()
+  const parentId = ctx.params[resource.parent.param]
+  const parent = await lookupOrNull(() =>
+    scopedQuery(ctx, parentResource).where(modelKey(parentResource.model), parentId).first()
+  )
   if (!parent) return undefined
   await ensureAuthorized(ctx, parentResource, 'view', parent)
   return resource
@@ -48,9 +48,10 @@ async function ensureNestedParentUpdate(ctx: HttpContext, resource: ResourceRunt
   if (!resource.parent) return
   const parentResource = requestResource(ctx, resource.parent.resource)
   if (!parentResource) throw new E_PUPITRE_NOT_FOUND()
-  const parent = await scopedQuery(ctx, parentResource)
-    .where(modelKey(parentResource.model), ctx.params[resource.parent.param])
-    .first()
+  const parentId = ctx.params[resource.parent.param]
+  const parent = await lookupOrNull(() =>
+    scopedQuery(ctx, parentResource).where(modelKey(parentResource.model), parentId).first()
+  )
   if (!parent) throw new E_PUPITRE_NOT_FOUND()
   await ensureAuthorized(ctx, parentResource, 'update', parent)
 }
@@ -145,7 +146,7 @@ function findAction(
   resource: ResourceRuntime,
   name: string,
   row: boolean
-): ActionDefinition | undefined {
+): { action: ActionDefinition; field: boolean } | undefined {
   const actions = resource.definition.actions
   const groups = row ? [actions?.row] : [actions?.header, actions?.bulk]
   const findNested = (group?: readonly ActionDefinition[]): ActionDefinition | undefined => {
@@ -158,13 +159,16 @@ function findAction(
   }
   for (const group of groups) {
     const action = findNested(group)
-    if (action) return action
+    if (action) return { action, field: false }
   }
   if (resource.definition.pages.list?.modals) {
-    if (name === 'create' && !row) return simpleResourceModalAction(resource, 'create')
-    if (name === 'edit' && row) return simpleResourceModalAction(resource, 'edit')
+    if (name === 'create' && !row)
+      return { action: simpleResourceModalAction(resource, 'create'), field: false }
+    if (name === 'edit' && row)
+      return { action: simpleResourceModalAction(resource, 'edit'), field: false }
   }
-  return findFormAction(resource.definition.form ?? [], name)
+  const action = findFormAction(resource.definition.form ?? [], name)
+  return action ? { action, field: true } : undefined
 }
 async function scopedRecord(
   ctx: HttpContext,
@@ -173,9 +177,11 @@ async function scopedRecord(
   recordId: unknown = ctx.params.id
 ): Promise<LucidRow | null> {
   if (typeof recordId !== 'string' && typeof recordId !== 'number') return null
-  return scopedQuery(ctx, resource, trashed ? { trashed: 'only' } : {})
-    .where(modelKey(resource.model), recordId)
-    .first()
+  return lookupOrNull(() =>
+    scopedQuery(ctx, resource, trashed ? { trashed: 'only' } : {})
+      .where(modelKey(resource.model), recordId)
+      .first()
+  )
 }
 async function scopedRecords(
   ctx: HttpContext,
@@ -189,11 +195,13 @@ async function scopedRecords(
     ids.some((id) => typeof id !== 'string' && typeof id !== 'number')
   )
     return null
-  const records = await scopedQuery(ctx, resource, trashed ? { trashed: 'only' } : {}).whereIn(
-    modelKey(resource.model),
-    ids as (string | number)[]
+  const records = await lookupOrNull(() =>
+    scopedQuery(ctx, resource, trashed ? { trashed: 'only' } : {}).whereIn(
+      modelKey(resource.model),
+      ids as (string | number)[]
+    )
   )
-  return records.length === ids.length ? records : null
+  return records?.length === ids.length ? records : null
 }
 
 function fileCompileContext(ctx: HttpContext, record?: LucidRow) {
@@ -217,13 +225,18 @@ export default class ActionController {
     if (!resource) return errorJson(ctx, 'Resource not found', 404)
     const row = ctx.params.id !== undefined
     const recordId = ctx.params.id ?? ctx.request.input('record')
-    const action =
+    const resolved =
       findAction(resource, ctx.params.action, row) ??
       (!row && recordId !== undefined ? findAction(resource, ctx.params.action, true) : undefined)
-    if (!action) return errorJson(ctx, 'Action not found', 404)
+    if (!resolved) return errorJson(ctx, 'Action not found', 404)
+    const { action, field: fieldAction } = resolved
     if (resource.parent && action.builtin !== 'view') await ensureNestedParentUpdate(ctx, resource)
     let record: LucidRow | undefined
-    await ensureAuthorized(ctx, resource, 'viewAny')
+    await ensureAuthorized(
+      ctx,
+      resource,
+      recordId === undefined && fieldAction ? 'create' : 'viewAny'
+    )
     if (recordId !== undefined) {
       record = (await scopedRecord(ctx, resource, false, recordId)) ?? undefined
       if (!record) return errorJson(ctx, 'Record not found', 404)
@@ -243,7 +256,9 @@ export default class ActionController {
           edit: (id: string | number) => resource.urls.actions('edit', id),
         }
       : resource.urls
-    const descriptor = await compileActionDescriptor(action, {
+    const effectiveAction =
+      fieldAction && !record ? { ...action, context: 'header' as const } : action
+    const descriptor = await compileActionDescriptor(effectiveAction, {
       baseUrl: resource.urls.list,
       ...(record
         ? { record, recordKey: record.$attributes[modelKey(resource.model)] as string | number }
@@ -267,10 +282,11 @@ export default class ActionController {
     if (!resource) return errorJson(ctx, 'Resource not found', 404)
     const row = ctx.params.id !== undefined
     const recordId = ctx.params.id ?? ctx.request.input('record')
-    const action =
+    const resolved =
       findAction(resource, ctx.params.action, row) ??
       (!row && recordId !== undefined ? findAction(resource, ctx.params.action, true) : undefined)
-    if (!action) return errorJson(ctx, 'Action not found', 404)
+    if (!resolved) return errorJson(ctx, 'Action not found', 404)
+    const { action, field: fieldAction } = resolved
     if (resource.parent && action.builtin !== 'view') await ensureNestedParentUpdate(ctx, resource)
     let record: LucidRow | undefined
     let records: LucidRow[] | undefined
@@ -307,6 +323,8 @@ export default class ActionController {
         (await scopedRecords(ctx, resource, ctx.request.input('ids'), trashedAction)) ?? undefined
       if (!records) return errorJson(ctx, 'One or more records were not found', 404)
       await ensureAuthorized(ctx, resource, 'viewAny')
+    } else {
+      await ensureAuthorized(ctx, resource, fieldAction ? 'create' : 'viewAny')
     }
     if (action.rateLimit) {
       const pupitre = (
@@ -331,7 +349,7 @@ export default class ActionController {
       if (action.async && action.context === 'bulk') {
         const manager = (await ctx.containerResolver.make('pupitre.manager')) as PupitreManager
         const jobs = manager.jobs
-        if (jobs) return this.runAsyncBulk(ctx, resource, action, records ?? [], jobs)
+        if (jobs) return await this.runAsyncBulk(ctx, resource, action, records ?? [], jobs)
       }
       const recordAction =
         action.builtin === 'restore' ||
@@ -352,6 +370,9 @@ export default class ActionController {
                 ...(record ? { record } : {}),
                 ...(records ? { records } : {}),
                 data: ctx.request.input('data') ?? {},
+                beforeHandle: action.form
+                  ? (data) => consumeFormUploads(ctx, resource.slug, [...action.form!], data)
+                  : undefined,
                 authorize: (ability, target) => authorizeResource(ctx, resource, ability, target),
                 currentUrl: currentPageUrl(ctx, resource.urls.list),
                 listUrl: resource.urls.list,
@@ -404,6 +425,16 @@ export default class ActionController {
           throw new E_PUPITRE_FORBIDDEN()
       }
     }
+    const submitted = ctx.request.input('data') ?? {}
+    if (action.form) {
+      const validated = await compileValidator([...action.form]).validate(submitted, {
+        // Same meta as the bulk worker's executeAction, which validates without a record.
+        record: null,
+        ctx,
+        timezone: ctx.pupitre.timezone ?? 'UTC',
+      })
+      await consumeFormUploads(ctx, resource.slug, [...action.form], validated)
+    }
     const ids = records.map((record) => record.$primaryKeyValue as string | number)
     await jobs.dispatch('pupitre.bulk', {
       panelId: ctx.pupitre.panel.id,
@@ -412,7 +443,7 @@ export default class ActionController {
       ids,
       userId,
       tenantId,
-      data: ctx.request.input('data') ?? {},
+      data: submitted,
       params: ctx.params,
       query: ctx.request.qs(),
       headers: {

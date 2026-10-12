@@ -255,6 +255,15 @@ test.group('audit adapter', () => {
           assert.include(JSON.stringify(data.rows), row.event)
           assert.isString(data.rows[0].cells.createdAt)
           assert.isNotEmpty(data.rows[0].cells.createdAt)
+          const malformed = data.rows.find((entry) => {
+            const cell = entry.cells.auditableId
+            return (
+              cell && typeof cell === 'object' && 'value' in cell && cell.value === 'http-fixture'
+            )
+          })
+          assert.exists(malformed)
+          const cell = malformed!.cells.auditableId as { value: string; url?: string }
+          assert.isUndefined(cell.url)
           const detail = await new ApiClient(fixture.baseUrl)
             .get(`/admin/activity/${row.id}`)
             .header('Accept', 'text/html')

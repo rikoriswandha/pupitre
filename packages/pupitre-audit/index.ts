@@ -94,7 +94,15 @@ async function subjectUrl(
   )
     return
   const query = scopedQuery(ctx, resource)
-  const subject = await query.where(resource.model.primaryKey, id).first()
+  let subject: LucidRow | null
+  try {
+    subject = await query.where(resource.model.primaryKey, id).first()
+  } catch (error) {
+    // Historical morph IDs may no longer match the subject's PostgreSQL PK type.
+    // Keep the audit entry visible, but never mask other lookup failures.
+    if (error && typeof error === 'object' && 'code' in error && error.code === '22P02') return
+    throw error
+  }
   if (!subject || !(await authorizeResource(ctx, resource, 'view', subject))) return
   if (resource.definition.pages.view) return resource.urls.view(String(subject.$primaryKeyValue))
   if (await authorizeResource(ctx, resource, 'update', subject))

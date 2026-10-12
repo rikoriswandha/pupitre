@@ -296,17 +296,7 @@ export default class PupitreManager {
         parentRelation.boot()
         if (parentRelation.type !== 'belongsTo')
           throw new Error(`Nested resource "${child.slug}" parent relation must be belongsTo`)
-        const originalScope = child.scope
-        const definition: ResourceDefinition<LucidRow> = {
-          ...child,
-          scope: (query, ctx) => {
-            if (typeof originalScope === 'function') originalScope(query, ctx)
-            // Only nested routes or an explicitly bound owning relation may expose children.
-            const parentId = ctx.params[parentParam]
-            if (parentId === undefined) query.whereRaw('1 = 0')
-            else query.where(parentRelation.foreignKey, parentId)
-          },
-        }
+        const definition: ResourceDefinition<LucidRow> = { ...child }
         const routeSlug = `${parent.routeSlug}/:${parentParam}/${child.slug}`
         const existingIndex = result.findIndex((item) => item.slug === child.slug)
         if (existingIndex >= 0) {

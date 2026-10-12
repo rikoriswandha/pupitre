@@ -5,10 +5,30 @@ import type {
   MarkdownEditorFieldDefinition,
   RichEditorFieldDefinition,
 } from '../definition/schema.js'
+import type { SchemaNodeDefinition } from '../definition/schema.js'
+import { walkSchema } from '../definition/walk.js'
 import type { Readable } from 'node:stream'
 
 export type UploadField =
   FileUploadFieldDefinition | RichEditorFieldDefinition | MarkdownEditorFieldDefinition
+
+export type FileReferenceField = FileUploadFieldDefinition & { relationshipPath?: string }
+
+/** File fields, with their submitted paths and conservative relationship boundaries. */
+export function uploadFields(form: readonly SchemaNodeDefinition[]): FileReferenceField[] {
+  const fields: FileReferenceField[] = []
+  const relationships: string[] = []
+  walkSchema(form, (node, path) => {
+    if (node.kind === 'repeater' && node.relationship) relationships.push(path)
+    if (node.kind === 'fileUpload')
+      fields.push({
+        ...node,
+        name: path,
+        relationshipPath: relationships.find((parent) => path.startsWith(`${parent}.`)),
+      })
+  })
+  return fields
+}
 
 export interface PupitreStorage {
   put(
@@ -67,10 +87,10 @@ export async function resolveFileUrl(key: string, field: UploadField): Promise<s
   })
 }
 
-function keys(value: unknown): Set<string> {
+export function fileKeys(value: unknown): Set<string> {
   if (typeof value === 'string' && value.length > 0) return new Set([value])
-  if (Array.isArray(value)) return new Set(value.flatMap((item) => [...keys(item)]))
-  if (value && typeof value === 'object' && 'key' in value) return keys(value.key)
+  if (Array.isArray(value)) return new Set(value.flatMap((item) => [...fileKeys(item)]))
+  if (value && typeof value === 'object' && 'key' in value) return fileKeys(value.key)
   return new Set()
 }
 
@@ -79,8 +99,8 @@ export async function cleanupReplacedFiles(
   oldValue: unknown,
   newValue: unknown
 ): Promise<void> {
-  const removed = keys(oldValue)
-  for (const key of keys(newValue)) removed.delete(key)
+  const removed = fileKeys(oldValue)
+  for (const key of fileKeys(newValue)) removed.delete(key)
   if (removed.size === 0) return
 
   const storage = createPupitreStorage(fieldDisk(field))

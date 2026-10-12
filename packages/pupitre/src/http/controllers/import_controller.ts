@@ -214,6 +214,7 @@ export async function processImportRows(
             validated
           values = applyNestedOwnership(ctx, resource, fillTenantOwnership(ctx, resource, values))
           const attributes = resourceAttributes(form, values)
+          await resource.definition.hooks.beforeSave?.(record, values, ctx, trx)
           record.useTransaction(trx)
           saved = resource.definition.handlers.update
             ? ((await resource.definition.handlers.update(
@@ -232,6 +233,7 @@ export async function processImportRows(
           values =
             (await resource.definition.hooks.mutateBeforeSave?.(values, null, ctx, trx)) ?? values
           await resource.definition.hooks.beforeCreate?.(values, ctx, trx)
+          await resource.definition.hooks.beforeSave?.(null, values, ctx, trx)
           values = applyNestedOwnership(ctx, resource, fillTenantOwnership(ctx, resource, values))
           const attributes = resourceAttributes(form, values)
           saved = resource.definition.handlers.create

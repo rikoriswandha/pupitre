@@ -2,7 +2,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { FieldDefinitionUnion } from '../definition/schema.js'
 import type { ResourceRuntime } from '../manager.js'
-import { scopedQuery } from '../query/scoped_query.js'
+import { relatedScopedQuery } from '../tenancy/related.js'
+import { applyGroupedScope } from '../query/grouped_scope.js'
 import { applySearchColumns } from '../query/like.js'
 
 export type SelectOption = {
@@ -47,11 +48,6 @@ function normalizeOptions(value: unknown): SelectOption[] {
     }))
   }
   return []
-}
-
-function queryFor(ctx: HttpContext, model: LucidModel) {
-  const resource = ctx.pupitre.panel.resources.find((candidate) => candidate.model === model)
-  return resource ? scopedQuery(ctx, resource) : model.query()
 }
 
 function optionFromRow(
@@ -126,16 +122,19 @@ export async function queryOptions(args: {
   )
   const selectedOptions: SelectOption[] = []
   if (selectedValues.length) {
-    const selectedQuery = queryFor(ctx, model).whereIn(primaryKey, selectedValues)
-    relationship.scope?.(selectedQuery, ctx)
+    const { query: selectedQuery } = await relatedScopedQuery(ctx, model)
+    selectedQuery.whereIn(primaryKey, selectedValues)
+    if (relationship.scope)
+      applyGroupedScope(selectedQuery, (builder) => relationship.scope!(builder, ctx))
     const rows = await selectedQuery
     for (const row of rows)
       selectedOptions.push(optionFromRow(row, primaryKey, relationship.titleColumn))
   }
   if (args.selectedOnly) return { options: selectedOptions, hasMore: false }
 
-  const searchQuery = queryFor(ctx, model)
-  relationship.scope?.(searchQuery, ctx)
+  const { query: searchQuery } = await relatedScopedQuery(ctx, model)
+  if (relationship.scope)
+    applyGroupedScope(searchQuery, (builder) => relationship.scope!(builder, ctx))
   if (search && field.searchable !== false) {
     const searchColumns = Array.isArray(field.searchable)
       ? field.searchable

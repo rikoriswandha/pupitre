@@ -61,6 +61,11 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
       ].find((item) => item.name === payload.action && item.builtin === 'export')
       const table = resource.definition.table
       if (!action || !table) throw new Error('Queued export definition is unavailable')
+      if (
+        jobRow.resource !== resource.slug ||
+        JSON.parse(jobRow.result ?? 'null')?.action !== action.name
+      )
+        throw new Error('Queued export action changed')
       await authorizeNestedParent(ctx, resource)
       if (!(await authorizeResource(ctx, resource, 'viewAny')))
         throw new Error('You are not authorized to export these records')

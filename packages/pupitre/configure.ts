@@ -61,6 +61,11 @@ export async function configure(command: ConfigureCommand) {
       'database/migrations/1791700000006_create_pupitre_exports_table.ts',
       {},
     ],
+    [
+      'database/migrations/1791700000007_create_pupitre_uploads_table.stub',
+      'database/migrations/1791700000007_create_pupitre_uploads_table.ts',
+      {},
+    ],
   ] as const
   await codemods.installPackages([
     { name: '@rikology/pupitre-react', isDevDependency: false },

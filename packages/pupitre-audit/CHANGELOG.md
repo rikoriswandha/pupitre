@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Keep historical audit entries visible without subject links when PostgreSQL cannot parse their IDs as the subject model's primary-key type.
+
 ## 0.1.0
 
 - Add record activity timelines backed by the configured Pupitre audit adapter.

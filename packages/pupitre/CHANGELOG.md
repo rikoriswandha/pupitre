@@ -37,6 +37,22 @@
 - Passkeys: deleting your own passkey from the profile no longer fails with "`limit` has no effect on a `delete` statement". The ownership lookup and the delete now use separate query builders.
 - Option labels: `table.text()`/`table.badge()` columns and `textEntry`/`badgeEntry` entries accept `.options(...)` (same shapes as select options) and display the label of the stored enum value instead of the raw value (`Published`, not `published`). Array values map item by item, badge colors stay keyed by the raw value, and table group headings use the options of the same-named column. `resource` scaffolding emits the options for enum columns. `BadgeEntryBuilder` is exported and types `colors()`.
 
+### Fixed
+- Schema cache: field actions (`prefixAction`/`suffixAction`/`hintAction`), page actions, select action links, option/upload URLs and other request-derived props are re-evaluated per request on cache hits; previously the first request's record, URL and authorization result could be served to later users and tenants in production.
+- Actions: header actions (no record, not bulk) require `viewAny` before running, matching the action form endpoint; custom actions without `.can()` could otherwise run for users denied the resource. Form field actions on the create page (no record) authorize with `create`.
+- Tenancy: host `.scope()`, `table.query()`, custom filter/tab and relationship scope callbacks are applied as one AND-grouped `WHERE` clause, so a top-level `orWhere`, `orHas`/`orDoesntHave` or an OR inside a model scope (`withScopes`/`apply`) can no longer widen results past the tenant predicate. Non-`WHERE` calls (`orderBy`, `preload`, `join`, `select`, `withCount`) still apply to the main query. Nested resources keep the parent constraint outside the host scope group.
+- Tenancy: related models that are not panel resources but carry the ownership column are tenant-scoped in relationship options, relationship validation and inline option creation, matching relation managers.
+- CSV: exported cells and headers starting with `=`, `+`, `-`, `@`, tab or carriage return are prefixed with `'` to prevent spreadsheet formula execution (sync, queued and failed-row CSVs). Numeric values are unchanged.
+- Imports: CSV imports call `beforeSave` in the same lifecycle position as resource create/update.
+- Exports: queued exports persist the export action name; progress and download recheck that action's current `.can()` grant and fail closed when it is missing. Exports queued before this change must be recreated.
+- Return URLs: `X-Pupitre-Url` is validated by one helper for resource, relation-manager, page and export requests; relation managers previously used it unvalidated, and `/\host` forms are now rejected everywhere.
+- Records: identifiers that PostgreSQL cannot parse for the primary-key type (e.g. `/activity/create` on a UUID resource) return 404 instead of 500 on record, relation-manager, nested-parent, upload and bulk lookups.
+- Uploads: permanent deletes (destroy, force delete, bulk and relation-manager deletes) remove the record's file-upload objects after the transaction commits when no other row references them; soft deletes keep files and storage errors are logged without failing the delete. Reference checks are batched per field.
+- Uploads: new optional `pupitre_uploads` table tracks uploaded keys until a resource, list-page modal, custom page or action-form submission consumes them (after validation, before the save handler). `node ace pupitre:prune-uploads --older-than=24h` removes abandoned uploads: it claims each row before deleting its object and skips, without consuming, file fields whose references it cannot check (relationship repeaters, custom pages, removed fields). Run `node ace pupitre:install` and `node ace migration:run` to enable it; without the table uploads keep working and the command exits with an error.
+- Queued bulk actions validate their form in the request, so field errors reach the action modal before anything is enqueued.
+- Tables: image URL resolution is memoized per page and resolved concurrently instead of one storage `exists` round-trip per cell.
+- Tests: the PostgreSQL suite passes (relation fixtures no longer replay DDL); c8 enforces 85% line coverage on `src/compiler`, `src/query` and `src/authz`.
+
 ## Unreleased (0.3.0-beta, milestone M3)
 
 ### Added

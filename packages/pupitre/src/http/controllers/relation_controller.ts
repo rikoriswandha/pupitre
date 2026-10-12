@@ -23,15 +23,17 @@ import { applyTableQuery, parseTableParams } from '../../query/table_query.js'
 import { buildTableData } from '../../table/table_data.js'
 import { authorizeModel, ensureAuthorized } from '../../authz/bouncer.js'
 import { requestResource, scopedQuery } from '../../query/scoped_query.js'
-import { applyTenantScope } from '../../tenancy/runtime.js'
-import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
 import { errorJson, actionJson } from '../responses.js'
+import { currentPageUrl } from '../return_url.js'
+import { cleanupRecordFiles } from '../../storage/record_files.js'
 import { compileForm } from '../../compiler/schema_compiler.js'
 import { actions as builtins } from '../../builder/action.js'
 import { schema as schemaFactory, getComponentDefinition } from '../../builder/schema/schema.js'
 import { validateResourceData } from '../validation.js'
 import { E_PUPITRE_FORBIDDEN } from '../../errors.js'
-import { fillTenantOwnership } from '../../tenancy/runtime.js'
+import { applyRelatedScope, fillRelatedOwnership } from '../../tenancy/related.js'
+import { lookupOrNull } from '../../query/record_lookup.js'
+import { consumeFormUploads } from '../../storage/upload_tracking.js'
 
 async function resource(ctx: HttpContext): Promise<ResourceRuntime | undefined> {
   const target = requestResource(ctx, ctx.params.slug)
@@ -39,9 +41,10 @@ async function resource(ctx: HttpContext): Promise<ResourceRuntime | undefined> 
   const parent = requestResource(ctx, target.parent.resource)
   if (!parent) return undefined
   await ensureAuthorized(ctx, parent, 'viewAny')
-  const record = await scopedQuery(ctx, parent)
-    .where(keyName(parent.model), ctx.params[target.parent.param])
-    .first()
+  const parentId = ctx.params[target.parent.param]
+  const record = await lookupOrNull(() =>
+    scopedQuery(ctx, parent).where(keyName(parent.model), parentId).first()
+  )
   if (!record) return undefined
   await ensureAuthorized(ctx, parent, 'view', record)
   return target
@@ -51,9 +54,10 @@ async function ensureNestedParentUpdate(ctx: HttpContext, target: ResourceRuntim
   if (!target.parent) return
   const parent = requestResource(ctx, target.parent.resource)
   if (!parent) throw new E_PUPITRE_FORBIDDEN()
-  const record = await scopedQuery(ctx, parent)
-    .where(keyName(parent.model), ctx.params[target.parent.param])
-    .first()
+  const parentId = ctx.params[target.parent.param]
+  const record = await lookupOrNull(() =>
+    scopedQuery(ctx, parent).where(keyName(parent.model), parentId).first()
+  )
   if (!record) return
   await ensureAuthorized(ctx, parent, 'update', record)
 }
@@ -95,7 +99,9 @@ function relationClient(parent: LucidRow, name: string): RelationClient {
 }
 async function parentRecord(ctx: HttpContext, target: ResourceRuntime): Promise<LucidRow | null> {
   await ensureModelAbility(ctx, target.model, 'viewAny')
-  return scopedQuery(ctx, target).where(keyName(target.model), ctx.params.id).first()
+  return lookupOrNull(() =>
+    scopedQuery(ctx, target).where(keyName(target.model), ctx.params.id).first()
+  )
 }
 
 async function ensureModelAbility(
@@ -107,45 +113,6 @@ async function ensureModelAbility(
   if (!(await authorizeModel(ctx, model, ability, record))) throw new E_PUPITRE_FORBIDDEN()
 }
 
-function hasRelatedOwnership(model: LucidModel, ownership: string) {
-  model.boot()
-  const attribute = model.$keys.columnsToAttributes.get(ownership) ?? ownership
-  return model.$hasColumn(attribute)
-}
-
-async function applyRelatedScope(
-  ctx: HttpContext,
-  model: LucidModel,
-  query: ModelQueryBuilderContract<LucidModel>,
-  relatedResource = ctx.pupitre.panel.resources.find((item) => item.model === model)
-) {
-  if (relatedResource) {
-    if (typeof relatedResource.definition.scope === 'function')
-      relatedResource.definition.scope(query as never, ctx)
-    if (relatedResource.definition.scope !== false) applyTenantScope(ctx, relatedResource, query)
-    return relatedResource
-  }
-  const tenancy = ctx.pupitre.panel.tenancy
-  const tenant = ctx.pupitre.tenant
-  const adapter = tenancy ? await resolveTenancyAdapter(ctx) : null
-  if (tenancy && tenant && adapter && hasRelatedOwnership(model, tenancy.ownership)) {
-    adapter.scope(query, tenant, { ownership: tenancy.ownership, model, ctx })
-  }
-  return undefined
-}
-async function fillRelatedOwnership(
-  ctx: HttpContext,
-  model: LucidModel,
-  data: Record<string, unknown>,
-  relatedResource = ctx.pupitre.panel.resources.find((item) => item.model === model)
-) {
-  if (relatedResource) return fillTenantOwnership(ctx, relatedResource, data)
-  const tenancy = ctx.pupitre.panel.tenancy
-  const tenant = ctx.pupitre.tenant
-  const adapter = tenancy ? await resolveTenancyAdapter(ctx) : null
-  if (!tenancy || !tenant || !adapter || !hasRelatedOwnership(model, tenancy.ownership)) return data
-  return adapter.fill(data, tenant, { ownership: tenancy.ownership, model, ctx })
-}
 async function relatedQuery(
   ctx: HttpContext,
   target: ResourceRuntime,
@@ -165,14 +132,7 @@ async function relatedQuery(
         },
       })
     : ctx
-  await applyRelatedScope(scopeContext, model, query, relatedResource)
-  if (relatedResource) {
-    const softDeleteColumn = relatedResource.definition.softDeletes
-    if (softDeleteColumn) {
-      if (options.trashed === 'only') query.whereNotNull(softDeleteColumn)
-      else if (options.trashed !== 'with') query.whereNull(softDeleteColumn)
-    }
-  }
+  await applyRelatedScope(scopeContext, model, query, relatedResource, options)
   return { model, query, relatedResource }
 }
 
@@ -466,7 +426,7 @@ export default class RelationController {
     const record =
       ctx.params.rid === undefined
         ? undefined
-        : await query.where(keyName(related), ctx.params.rid).first()
+        : await lookupOrNull(() => query.where(keyName(related), ctx.params.rid).first())
     if (ctx.params.rid !== undefined && !record) return errorJson(ctx, 'Record not found', 404)
     if ((!action.builtin || action.builtin === 'bulk') && record)
       await ensureModelAbility(ctx, related, 'view', record)
@@ -556,7 +516,9 @@ export default class RelationController {
       Array.isArray(rawSelected) ? rawSelected : rawSelected === undefined ? [] : [rawSelected]
     ).filter((id): id is string | number => typeof id === 'string' || typeof id === 'number')
     const selectedRows = selectedIds.length
-      ? await query.clone().whereIn(keyName(related), selectedIds as never[])
+      ? ((await lookupOrNull(() =>
+          query.clone().whereIn(keyName(related), selectedIds as never[])
+        )) ?? [])
       : []
     const search = ctx.request.qs().q
     const searchQuery = query.clone()
@@ -604,7 +566,9 @@ export default class RelationController {
     if (!action) return errorJson(ctx, 'Action not found', 404)
     const id = ctx.params.rid
     let record =
-      id === undefined ? undefined : await query.clone().where(keyName(related), id).first()
+      id === undefined
+        ? undefined
+        : await lookupOrNull(() => query.clone().where(keyName(related), id).first())
     if (id !== undefined && !record) return errorJson(ctx, 'Record not found', 404)
     const data = ctx.request.input('data', ctx.request.all()) as Record<string, unknown>
     let records: LucidRow[] | undefined
@@ -616,8 +580,10 @@ export default class RelationController {
       )
         return errorJson(ctx, 'Invalid related record selection', 422)
       const ids = [...new Set(data.ids as (string | number)[])]
-      records = await query.clone().whereIn(keyName(related), ids)
-      if (records.length !== ids.length) return errorJson(ctx, 'Related record not found', 404)
+      records =
+        (await lookupOrNull(() => query.clone().whereIn(keyName(related), ids))) ?? undefined
+      if (!records || records.length !== ids.length)
+        return errorJson(ctx, 'Related record not found', 404)
     }
     if (!action.builtin || action.builtin === 'bulk') {
       for (const row of records ?? (record ? [record] : []))
@@ -663,7 +629,7 @@ export default class RelationController {
       return actionJson(ctx, {
         flash: [],
         reload: true,
-        redirect: ctx.request.header('x-pupitre-url') ?? relationUrl(target, manager, parent),
+        redirect: currentPageUrl(ctx, relationUrl(target, manager, parent)),
       })
     }
     if (action.builtin === 'attach') {
@@ -676,8 +642,9 @@ export default class RelationController {
       const keys = ids as (string | number)[]
       const attachableQuery = related.query()
       await applyRelatedScope(ctx, related, attachableQuery, relatedResource)
-      const attachable = await attachableQuery.whereIn(keyName(related), keys)
-      if (attachable.length !== keys.length) return errorJson(ctx, 'Related record not found', 404)
+      const attachable = await lookupOrNull(() => attachableQuery.whereIn(keyName(related), keys))
+      if (!attachable || attachable.length !== keys.length)
+        return errorJson(ctx, 'Related record not found', 404)
       for (const row of attachable) {
         if (!(await authorizeModel(ctx, related, 'attach', row))) throw new E_PUPITRE_FORBIDDEN()
       }
@@ -702,8 +669,9 @@ export default class RelationController {
       )
         return errorJson(ctx, 'Invalid related record selection', 422)
       const keys = ids as (string | number)[]
-      const rows = await query.clone().whereIn(keyName(related), keys)
-      if (rows.length !== keys.length) return errorJson(ctx, 'Related record not found', 404)
+      const rows = await lookupOrNull(() => query.clone().whereIn(keyName(related), keys))
+      if (!rows || rows.length !== keys.length)
+        return errorJson(ctx, 'Related record not found', 404)
       const rowAbility = action.builtin === 'detach' ? 'detach' : 'delete'
       for (const row of rows) {
         if (!(await authorizeModel(ctx, related, rowAbility, row))) throw new E_PUPITRE_FORBIDDEN()
@@ -712,14 +680,15 @@ export default class RelationController {
         await relationClient(parent, manager.relation).detach(keys)
       else if (action.builtin === 'delete' && relatedResource)
         await executeBuiltinDelete(relatedResource.definition, rows, ctx)
-      else if (action.builtin === 'delete')
+      else if (action.builtin === 'delete') {
         await related.transaction(async (trx) => {
           for (const row of rows) {
             row.useTransaction(trx)
             await row.delete()
           }
         })
-      else return errorJson(ctx, 'Detach requires a manyToMany relation', 400)
+        await cleanupRecordFiles(manager.form, rows, ctx)
+      } else return errorJson(ctx, 'Detach requires a manyToMany relation', 400)
       await publishResourceChange(ctx, target.slug)
       return actionJson(ctx, { flash: [], reload: true })
     }
@@ -741,9 +710,9 @@ export default class RelationController {
         await applyRelatedScope(ctx, related, candidates, relatedResource)
         candidates.whereNull(foreignKey)
       }
-      candidates.whereIn(keyName(related), keys)
-      const rows = (await candidates) as LucidRow[]
-      if (rows.length !== keys.length) return errorJson(ctx, 'Related record not found', 404)
+      const rows = await lookupOrNull(() => candidates.whereIn(keyName(related), keys))
+      if (!rows || rows.length !== keys.length)
+        return errorJson(ctx, 'Related record not found', 404)
       const associationAbility = action.builtin === 'associate' ? 'associate' : 'dissociate'
       for (const row of rows) {
         if (!(await authorizeModel(ctx, related, associationAbility, row)))
@@ -775,8 +744,11 @@ export default class RelationController {
         record: record ?? undefined,
         records,
         data,
+        beforeHandle: action.form
+          ? (validated) => consumeFormUploads(ctx, target.slug, [...action.form!], validated)
+          : undefined,
         authorize: (requestedAbility, row) => authorizeModel(ctx, related, requestedAbility, row),
-        currentUrl: ctx.request.header('x-pupitre-url') ?? relationUrl(target, manager, parent),
+        currentUrl: currentPageUrl(ctx, relationUrl(target, manager, parent)),
         listUrl: target.urls.list,
       })
       await publishResourceChange(ctx, target.slug)

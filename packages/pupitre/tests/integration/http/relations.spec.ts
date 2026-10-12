@@ -338,6 +338,29 @@ test.group('relation manager HTTP runtime', (group) => {
       const created = await RelationComment.findBy('title', 'Created comment')
       assert.isNotNull(created)
       assert.equal(created?.postId, first.id)
+      const createBody = (await create.json()) as { redirect?: string }
+      assert.match(createBody.redirect ?? '', /^\/admin\/relation-posts\/\d+\/relations\/comments/)
+
+      for (const unsafeUrl of ['https://evil.example/', '//evil.example/', '/\\evil.example/']) {
+        const unsafe = await fetch(
+          `${fixture.baseUrl}/admin/relation-posts/${first.id}/relations/comments/actions/create`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-Pupitre-Action': '1',
+              'X-Pupitre-Url': unsafeUrl,
+              'X-Relations-Tenant': '1',
+              'Cookie': cookie,
+            },
+            body: JSON.stringify({ data: { title: `Unsafe ${unsafeUrl}`, body: 'Redirect' } }),
+          }
+        )
+        assert.equal(unsafe.status, 200, await unsafe.clone().text())
+        const unsafeBody = (await unsafe.json()) as { redirect?: string }
+        assert.equal(unsafeBody.redirect, createBody.redirect)
+      }
 
       const associate = await actionRequest(
         fixture.baseUrl,

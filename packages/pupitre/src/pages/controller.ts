@@ -1,3 +1,4 @@
+import { consumeFormUploads } from '../storage/upload_tracking.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { PageRuntime } from '../manager.js'
 import { compileForm } from '../compiler/schema_compiler.js'
@@ -10,6 +11,7 @@ import { compileValidator } from '../compiler/vine_compiler.js'
 import { prepareWidgets } from '../widgets/controller.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
 import { actionJson, errorJson, setPupitreFlash } from '../http/responses.js'
+import { currentPageUrl } from '../http/return_url.js'
 import { authorizeAbility } from '../authz/bouncer.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { t } from '../i18n.js'
@@ -112,6 +114,7 @@ export default class CustomPageController {
         ctx,
         timezone: ctx.pupitre.timezone,
       })
+      await consumeFormUploads(ctx, page.slug, page.definition.form, data)
       await page.definition.save({ data, ctx })
       if (ctx.request.accepts(['json', 'html']) !== 'json')
         setPupitreFlash(ctx, [{ type: 'success', title: t('Saved successfully') }])
@@ -168,12 +171,14 @@ export default class CustomPageController {
     await ensureCanAccess(ctx, page)
     const action = page.definition.actions.find((item) => item.name === ctx.params.action)
     if (!action) return errorJson(ctx, t('Action not found'), 404)
-    const requestedUrl = ctx.request.header('x-pupitre-url')
-    const currentUrl = requestedUrl && /^\/(?!\/)/.test(requestedUrl) ? requestedUrl : page.url
+    const currentUrl = currentPageUrl(ctx, page.url)
     try {
       const result = await executeAction(action, {
         ctx,
         data: ctx.request.input('data') ?? {},
+        beforeHandle: action.form
+          ? (data) => consumeFormUploads(ctx, page.slug, [...action.form!], data)
+          : undefined,
         authorize: (ability) => authorizeAbility(ctx, ability),
         currentUrl,
         listUrl: page.url,

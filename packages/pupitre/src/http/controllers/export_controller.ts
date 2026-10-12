@@ -15,6 +15,7 @@ import { createCsvStream } from '../../table/csv_stream.js'
 import type { CsvColumn } from '../../table/csv_stream.js'
 import type { TableColumnDefinition } from '../../definition/table.js'
 import { errorJson } from '../responses.js'
+import { requestedPageUrl } from '../return_url.js'
 import { authorizeNestedParent } from './nested_resource_guards.js'
 
 function actionDefinition(resource: ResourceRuntime, name: string): ActionDefinition | undefined {
@@ -28,8 +29,8 @@ function currentQuery(ctx: HttpContext): Record<string, unknown> {
   const input = ctx.request.input('query')
   if (input && typeof input === 'object' && !Array.isArray(input))
     return input as Record<string, unknown>
-  const currentUrl = ctx.request.header('x-pupitre-url')
-  if (!currentUrl || !/^\/(?!\/)/.test(currentUrl)) return ctx.request.qs()
+  const currentUrl = requestedPageUrl(ctx)
+  if (!currentUrl) return ctx.request.qs()
   const query = new URL(currentUrl, 'http://pupitre.local').search.slice(1)
   return new QsParserFactory().create().parse(query) as Record<string, unknown>
 }
@@ -118,6 +119,7 @@ export default class ExportController {
         user_id: userId,
         tenant_id: tenantId === null ? null : String(tenantId),
         resource: resource.slug,
+        result: JSON.stringify({ action: action.name }),
         status: 'queued',
         total_rows: count,
         processed_rows: 0,

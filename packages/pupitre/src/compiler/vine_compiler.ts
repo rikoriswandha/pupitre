@@ -16,7 +16,8 @@ import type {
 import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
 import { parseInZone } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
-import { scopedQuery } from '../query/scoped_query.js'
+import { relatedScopedQuery } from '../tenancy/related.js'
+import { applyGroupedScope } from '../query/grouped_scope.js'
 import { authorizeModel, authorizeResource } from '../authz/bouncer.js'
 import { valuesAt } from '../definition/values_at.js'
 type ValidatorOptions = {
@@ -254,8 +255,9 @@ function relationshipValue(field: SelectField) {
       const relatedResource = ctx.pupitre.panel.resources.find(
         (resource) => resource.model === model
       )
-      const query = relatedResource ? scopedQuery(ctx, relatedResource) : model.query()
-      field.relationship.scope?.(query, ctx)
+      const { query } = await relatedScopedQuery(ctx, model)
+      if (field.relationship.scope)
+        applyGroupedScope(query, (builder) => field.relationship!.scope!(builder, ctx))
       const row = await query.where(model.primaryKey, value).first()
       if (!row) {
         vineField.report('The selected {{ field }} is invalid', 'relationship', vineField)

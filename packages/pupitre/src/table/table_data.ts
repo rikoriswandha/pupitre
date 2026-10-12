@@ -209,6 +209,27 @@ export async function buildTableData(
     record,
     serialized: record.serialize() as Record<string, unknown>,
   }))
+  const resolve = options.resolveFileUrl
+  if (resolve) {
+    const lookups = new Map<TableColumnDefinition, Map<string, Promise<string | null>>>()
+    options = {
+      ...options,
+      resolveFileUrl(key, column) {
+        let keys = lookups.get(column)
+        if (!keys) lookups.set(column, (keys = new Map()))
+        let result = keys.get(key)
+        if (!result) keys.set(key, (result = resolve(key, column)))
+        return result
+      },
+    }
+    await Promise.all(
+      serializedRows.flatMap(({ record, serialized }) =>
+        table.columns
+          .filter((column) => column.kind === 'image')
+          .map((column) => formatCell(column, record, serialized, options))
+      )
+    )
+  }
   const tableRows: TableRow[] = await Promise.all(
     serializedRows.map(async ({ record, serialized }) => {
       const cells: Record<string, unknown> = {}

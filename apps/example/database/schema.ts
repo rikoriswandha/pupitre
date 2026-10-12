@@ -514,6 +514,27 @@ export class PupitreRoleSchema extends BaseModel {
   declare updatedAt: DateTime
 }
 
+export class PupitreUploadSchema extends BaseModel {
+  static $columns = ['consumedAt', 'createdAt', 'disk', 'field', 'key', 'owner', 'panel', 'resource'] as const
+  $columns = PupitreUploadSchema.$columns
+  @column()
+  declare consumedAt: bigint | number | null
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare disk: string | null
+  @column()
+  declare field: string
+  @column({ isPrimary: true })
+  declare key: string
+  @column()
+  declare owner: string
+  @column()
+  declare panel: string
+  @column()
+  declare resource: string
+}
+
 export class RevisionSchema extends BaseModel {
   static $columns = ['body', 'createdAt', 'id', 'postId', 'tenantId', 'title', 'updatedAt'] as const
   $columns = RevisionSchema.$columns

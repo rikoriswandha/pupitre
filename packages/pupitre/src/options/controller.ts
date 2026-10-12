@@ -10,7 +10,7 @@ import { findFormOwner } from '../pages/form_owner.js'
 import type { FormOwner } from '../pages/form_owner.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { walkSchema } from '../definition/walk.js'
-import { fillTenantOwnership } from '../tenancy/runtime.js'
+import { fillRelatedOwnership } from '../tenancy/related.js'
 type SelectField = Extract<FieldDefinitionUnion, { kind: 'select' | 'multiSelect' }>
 function fields(nodes: SchemaNodeDefinition[]): Array<{ path: string; field: SelectField }> {
   const output: Array<{ path: string; field: SelectField }> = []
@@ -159,12 +159,7 @@ export default class OptionsController {
     if (entry.field.createOptionUsing) {
       created = await entry.field.createOptionUsing({ data: validated, ctx, model })
     } else {
-      const relatedResource = ctx.pupitre.panel.resources.find(
-        (resource) => resource.model === model
-      )
-      const createData = relatedResource
-        ? fillTenantOwnership(ctx, relatedResource, validated)
-        : validated
+      const createData = await fillRelatedOwnership(ctx, model, validated)
       created = await model.create(createData)
     }
     if (!created || typeof created !== 'object') {

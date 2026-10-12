@@ -47,10 +47,36 @@ Challenges WebAuthn disimpan di session (bukan DB), berumur lima menit, dan diko
 | `total_rows`, `processed_rows` | integer | progress |
 | `file_key` | string nullable | key di storage adapter |
 | `error` | text nullable | |
-| `result` | text nullable | Ringkasan JSON import asynchronous (`created`, `updated`, `failed`, `failedRowsUrl`). |
+| `result` | text nullable | Ekspor: identitas action JSON (`action`) untuk otorisasi ulang. Import asynchronous: ringkasan JSON (`created`, `updated`, `failed`, `failedRowsUrl`). |
 | `created_at`, `updated_at`, `expires_at` | timestamptz | file dihapus setelah `expires_at` |
 
 Tabel dipublikasikan oleh stub migrasi `1791700000006_create_pupitre_exports_table` dan boleh tetap kosong bila host tidak memakai `jobs`; ekspor sinkron tidak membuat row. `user_id` memakai FK `users.id` (integer), `tenant_id` menyimpan ID tenant aktif tanpa FK karena model tenant milik host. Retensi default 1.440 menit dapat diubah lewat `config/pupitre.ts` → `exports.retentionMinutes`; `pupitre:prune` menghapus file dari disk storage sebelum menghapus row kedaluwarsa.
+
+Progress dan download ekspor memeriksa ulang `viewAny` dan grant `.can()` dari action saat ini, selain kepemilikan user/tenant. Action yang dihapus atau metadata yang tidak tersedia ditolak. Tidak ada perubahan skema; ekspor lama tanpa identitas action harus dibuat ulang setelah upgrade.
+
+### `pupitre_uploads` — pelacakan upload yang belum dipakai
+
+| Kolom | Tipe | Catatan |
+| --- | --- | --- |
+| `key` | string(1024), primary key | key objek Drive |
+| `disk` | string nullable | disk field/config saat upload; null memakai default Drive |
+| `owner` | string | ID session pengunggah |
+| `panel` | string | ID panel |
+| `resource` | string | slug resource atau custom page pemilik form |
+| `field` | string | path field upload pada form pemilik |
+| `created_at` | bigint | waktu upload (atau klaim prune terakhir) dalam milidetik Unix |
+| `consumed_at` | bigint nullable | reservasi saat submit sebelum penyimpanan host |
+
+Upgrade: jalankan `node ace pupitre:install` untuk menerbitkan stub `1791700000007_create_pupitre_uploads_table`, lalu `node ace migration:run`. Tanpa tabel, upload tetap bekerja tetapi cleanup otomatis nonaktif dan logger memberi peringatan satu kali; command prune gagal dengan petunjuk migrasi.
+
+Jadwalkan `node ace pupitre:prune-uploads --older-than=24h` setiap jam lewat cron/scheduler host. Satu invokasi menangani paling banyak 100 kandidat non-skipped yang belum dikonsumsi atau klaim lama; kegagalan storage dicatat dan row dipertahankan untuk percobaan berikutnya. Kandidat skipped tidak memakai kapasitas tersebut: scan berhalaman dengan cursor stabil `(created_at, key)` melewatinya, dengan batas pemeriksaan 10 kali limit (1.000 row untuk command). Jika batas scan tercapai, kandidat yang lebih baru menunggu invokasi berikutnya dan backlog skipped mungkin memerlukan pemeriksaan host. Index `(consumed_at, created_at)` membatasi kandidat. Referensi hanya diperiksa pada model/field resource pemilik upload, termasuk lintas tenant dan soft-deleted records.
+
+Resource (termasuk modal create/edit bawaan pada halaman list), custom page, dan form action resource/relation/page mereservasi upload milik session setelah validasi dan sebelum handler simpan berjalan, agar cleanup tidak berlomba dengan penyimpanan. Validasi gagal tidak mengonsumsi upload; persistence gagal dapat meninggalkan upload berstatus consumed untuk keamanan data. Upload sebelum upgrade tidak masuk tracker dan tidak disapu. Attachment editor yang disubmit dipertahankan lewat reservasi; cleanup record permanen mengikuti cakupan replacement saat ini (fileUpload termasuk multiple/repeater, bukan inline rich/Markdown).
+
+Form bulk action async divalidasi dan upload direservasi pada request HTTP sebelum enqueue; worker tidak memerlukan session pengunggah.
+
+Prune mengklaim setiap row dengan update atomik `consumed_at = -1` sebelum menghapus objek. Submit yang sudah mengonsumsi kandidat menang; submit yang datang setelah klaim ditolak sebelum persistence. Tidak ada transaksi/lock yang mencakup scan referensi atau I/O storage. Jika penghapusan storage gagal, klaim dikembalikan ke null agar bisa dicoba lagi; error kandidat membuat command keluar non-zero. Field relationship repeater dan kolom model yang tidak dapat dibuktikan dipertahankan secara konservatif, tanpa query kolom parent yang tidak ada. Pemeriksaan referensi dibatch per field: satu `whereIn` untuk scalar, satu scan berhalaman untuk JSON/nested. Save tanpa upload session milik form atau tanpa field upload/editor tidak memeriksa tabel tracker. Keberadaan tabel yang positif dicache per koneksi; hasil negatif diperiksa lagi pada operasi upload berikutnya.
+Upload fileUpload dengan pemilik/field yang tidak ditemukan, custom page, relationship repeater, atau kolom model yang tidak dapat dibuktikan hanya melewati cleanup untuk kandidat itu sendiri: `consumed_at` tidak diubah dan jumlah skipped dilaporkan (exit 0 kecuali ada error). Attachment editor yang belum dikonsumsi dianggap abandoned. Klaim `consumed_at = -1` memperbarui `created_at`; klaim lebih tua dari `--older-than` dicoba lagi untuk pulih dari crash. Kegagalan storage mengembalikan waktu asli dan status null. Pemeriksaan tetap dibatch per pemilik/field, bukan seluruh resource pada setiap kandidat.
 
 ### Shield (M4, WP37) — tabel global plugin `@rikology/pupitre-shield`
 

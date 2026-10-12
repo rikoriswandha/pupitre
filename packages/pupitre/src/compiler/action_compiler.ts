@@ -12,6 +12,7 @@ import { t } from '../i18n.js'
 import { resolveAdapter } from '../define_config.js'
 import type { PupitreConfig } from '../define_config.js'
 import { DateTime } from 'luxon'
+import { cleanupRecordFiles } from '../storage/record_files.js'
 
 export type ActionAuthorize = (ability: string, record?: LucidRow) => Promise<boolean>
 export type ActionRoutes = {
@@ -296,6 +297,7 @@ export async function executeAction(
     authorize(ability: string, record?: LucidRow): Promise<boolean>
     currentUrl: string
     listUrl: string
+    beforeHandle?(data: Record<string, unknown>): Promise<void>
   }
 ): Promise<ActionResult> {
   const { record, records, ctx } = options
@@ -319,6 +321,7 @@ export async function executeAction(
         timezone,
       })
     : (options.data as Record<string, unknown>)
+  await options.beforeHandle?.(data)
   const flash: PendingFlash[] = []
   const notify = {
     success: (title: string) => flashBuilder('success', title, flash, ctx),
@@ -432,4 +435,7 @@ export async function executeBuiltinDelete<Model extends object>(
       await resource.hooks.afterDelete?.(record as Model, ctx, trx)
     }
   })
+  if (!resource.softDeletes || force) {
+    await cleanupRecordFiles(resource.form, records, ctx)
+  }
 }

@@ -518,10 +518,12 @@ async function addField(
   if (node.columnSpan !== undefined) props.columnSpan = node.columnSpan
   if (node.extraAttributes !== undefined) props.extraAttributes = node.extraAttributes
   if (node.kind === 'date' || node.kind === 'dateTime' || node.kind === 'time')
-    addValueSlot(build, id, 'timezone', (_data, _record, _ctx, request) => {
-      const current = request as SlotRequest | undefined
-      return node.timezone ?? current?.options.timezone ?? build.options.timezone
-    })
+    addValueSlot(
+      build,
+      id,
+      'timezone',
+      (_data, _record, _ctx, request) => node.timezone ?? (request as SlotRequest).options.timezone
+    )
   const excluded = new Set([
     'kind',
     'name',
@@ -583,46 +585,51 @@ async function addField(
   if ('minDate' in node && node.minDate !== undefined) props.min = node.minDate
   if ('maxDate' in node && node.maxDate !== undefined) props.max = node.maxDate
   mapOptions(node as unknown as Record<string, unknown>, props)
-  if (build.options.ctx && build.options.resourceSlug) {
-    const ctx = build.options.ctx
-    const owner = ctx.pupitre.panel.resources.find(
-      (resource) => resource.slug === build.options.resourceSlug
-    )
-    if (owner) {
-      for (const key of ['prefixAction', 'suffixAction', 'hintAction'] as const) {
-        const action = (node as unknown as Record<string, unknown>)[key] as
-          ActionDefinition | undefined
-        if (!action) continue
-        const record = build.options.model ?? undefined
-        const effectiveAction = record ? action : { ...action, context: 'header' as const }
-        addValueSlot(build, id, key, () =>
-          compileActionDescriptor(effectiveAction, {
-            baseUrl: owner.urls.list,
-            record,
-            recordKey: record?.$getAttribute(owner.model.primaryKey) as string | number | undefined,
-            ctx,
-            authorize: (ability, row) => authorizeResource(ctx, owner, ability, row),
-            routes: owner.urls,
-            resourceLabel: owner.label,
-          })
-        )
-      }
-    }
+  for (const key of ['prefixAction', 'suffixAction', 'hintAction'] as const) {
+    const action = (node as unknown as Record<string, unknown>)[key] as ActionDefinition | undefined
+    if (!action || !build.options.resourceSlug) continue
+    addValueSlot(build, id, key, (_data, _record, context, request) => {
+      const ctx = context as HttpContext | undefined
+      const options = (request as SlotRequest).options
+      const owner = ctx?.pupitre.panel.resources.find(
+        (resource) => resource.slug === options.resourceSlug
+      )
+      if (!ctx || !owner) return undefined
+      const record = options.model ?? undefined
+      const effectiveAction = record ? action : { ...action, context: 'header' as const }
+      return compileActionDescriptor(effectiveAction, {
+        baseUrl: owner.urls.list,
+        record,
+        recordKey: record?.$getAttribute(owner.model.primaryKey) as string | number | undefined,
+        ctx,
+        authorize: (ability, row) => authorizeResource(ctx, owner, ability, row),
+        routes: owner.urls,
+        resourceLabel: owner.label,
+      })
+    })
   }
   if (
     (node.kind === 'select' || node.kind === 'multiSelect') &&
     (typeof node.options === 'function' || node.relationship)
   ) {
-    const ctx = build.options.ctx
+    const initialContext = build.options.ctx
     const ownerSlug = build.options.resourceSlug
-    const owner =
-      ownerSlug && ctx?.pupitre.panel.resources.find((resource) => resource.slug === ownerSlug)
-    if (ctx && ownerSlug) {
-      const optionsUrl = `${ctx.pupitre.panel.path}/_pupitre/options/${ownerSlug}/${encodeURIComponent(path)}`
-      props.optionsUrl = optionsUrl
+    if (initialContext && ownerSlug) {
+      const optionsUrl = (context: unknown, request: unknown) =>
+        `${(context as HttpContext).pupitre.panel.path}/_pupitre/options/${(request as SlotRequest).options.resourceSlug}/${encodeURIComponent(path)}`
+      addValueSlot(build, id, 'optionsUrl', (_data, _record, context, request) =>
+        optionsUrl(context, request)
+      )
       props.searchable = node.searchable ?? true
       props.preload = node.preload ?? false
-      if (owner && node.createOptionForm?.length) props.createOption = { url: optionsUrl }
+      if (node.createOptionForm?.length)
+        addValueSlot(build, id, 'createOption', (_data, _record, context, request) => {
+          const ctx = context as HttpContext
+          const owner = ctx.pupitre.panel.resources.find(
+            (resource) => resource.slug === (request as SlotRequest).options.resourceSlug
+          )
+          return owner ? { url: optionsUrl(context, request) } : undefined
+        })
       const visibilityClosure = typeof node.hidden === 'function' ? node.hidden : node.visible
       const serverVisibility =
         typeof visibilityClosure === 'function' &&
@@ -631,8 +638,11 @@ async function addField(
           inRepeater,
           numericFields: build.numericFields,
         }).kind === 'static'
-      addValueSlot(build, id, 'options', async (data, record, context) => {
+      addValueSlot(build, id, 'options', async (data, record, context, request) => {
         const requestContext = context as HttpContext
+        const owner = requestContext.pupitre.panel.resources.find(
+          (resource) => resource.slug === (request as SlotRequest).options.resourceSlug
+        )
         if (
           serverVisibility &&
           ((typeof node.hidden === 'function' &&
@@ -685,15 +695,25 @@ async function addField(
         (resource) => resource.slug === build.options.resourceSlug
       ))
   ) {
-    const ctx = build.options.ctx
+    const initialContext = build.options.ctx
     const ownerSlug = build.options.resourceSlug
-    const page = ctx.pupitre.panel.pages?.find((candidate) => candidate.slug === ownerSlug)
+    const initialPage = initialContext.pupitre.panel.pages?.find(
+      (candidate) => candidate.slug === ownerSlug
+    )
     for (const key of ['prefixAction', 'suffixAction'] as const) {
       const action = node[key]
       if (!action) continue
-      if (page && page.definition.actions.some((candidate) => candidate.name === action.name)) {
-        addValueSlot(build, id, key, () =>
-          compileActionDescriptor(action, {
+      if (
+        initialPage &&
+        initialPage.definition.actions.some((candidate) => candidate.name === action.name)
+      ) {
+        addValueSlot(build, id, key, (_data, _record, context, request) => {
+          const ctx = context as HttpContext
+          const page = ctx.pupitre.panel.pages?.find(
+            (candidate) => candidate.slug === (request as SlotRequest).options.resourceSlug
+          )
+          if (!page) return undefined
+          return compileActionDescriptor(action, {
             baseUrl: page.url,
             ctx,
             authorize: (ability) => authorizeAbility(ctx, ability),
@@ -705,11 +725,12 @@ async function addField(
               destroy: () => page.url,
             },
           })
-        )
+        })
       } else if (action.url && !action.can && !action.builtin) {
-        const baseUrl = ctx.pupitre.panel.path
-        addValueSlot(build, id, key, () =>
-          compileActionDescriptor(action, {
+        addValueSlot(build, id, key, (_data, _record, context) => {
+          const ctx = context as HttpContext
+          const baseUrl = ctx.pupitre.panel.path
+          return compileActionDescriptor(action, {
             baseUrl,
             ctx,
             authorize: async () => true,
@@ -721,7 +742,7 @@ async function addField(
               destroy: (recordId) => `${baseUrl}/${encodeURIComponent(String(recordId))}`,
             },
           })
-        )
+        })
       }
     }
   }
@@ -732,10 +753,8 @@ async function addField(
         : typeof node.maxSize === 'string'
           ? parseFileSize(node.maxSize)
           : undefined
-    props.descriptor = {
+    const descriptor = {
       name: path,
-      uploadUrl: build.options.uploadUrls?.upload ?? '',
-      deleteUrl: build.options.uploadUrls?.delete ?? '',
       multiple: node.multiple ?? false,
       accept: typeof node.accept === 'string' ? [node.accept] : node.accept,
       maxSize,
@@ -749,8 +768,22 @@ async function addField(
       downloadable: node.downloadable ?? false,
       previewable: node.previewable ?? true,
     }
+    addValueSlot(build, id, 'descriptor', (_data, _record, _ctx, request) => {
+      const { uploadUrls } = (request as SlotRequest).options
+      return {
+        ...descriptor,
+        uploadUrl: uploadUrls?.upload ?? '',
+        deleteUrl: uploadUrls?.delete ?? '',
+      }
+    })
   }
-  if (node.kind === 'markdownEditor') props.uploadUrl = build.options.uploadUrls?.upload ?? ''
+  if (node.kind === 'markdownEditor')
+    addValueSlot(
+      build,
+      id,
+      'uploadUrl',
+      (_data, _record, _ctx, request) => (request as SlotRequest).options.uploadUrls?.upload ?? ''
+    )
   if (node.live) props.live = node.live === true ? true : node.live
   build.elements[id] = { type, props }
   for (const prop of ['label', 'disabled', 'placeholder'] as const) {
@@ -983,13 +1016,8 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
       props[key] = prop
   if (entry.markdown === true) props.html = true
   addValueSlot(build, id, 'value', async (_data, record, _ctx, request) => {
-    const current = request as SlotRequest | undefined
-    return formatEntryValue(
-      entry,
-      getPath(record ?? {}, path),
-      current?.options ?? build.options,
-      path
-    )
+    const current = request as SlotRequest
+    return formatEntryValue(entry, getPath(record ?? {}, path), current.options, path)
   })
   if (entry.kind === 'badgeEntry' && entry.colors && typeof entry.colors === 'object')
     addValueSlot(
@@ -1172,12 +1200,11 @@ async function compile(
   for (const node of nodes) children.push(await addNode(node, build))
   build.elements.root = { type: rootType, props: {}, children }
   if (form)
-    for (const [key, value] of Object.entries(form))
+    for (const key of Object.keys(form))
       addValueSlot(build, 'root', key, (_data, _record, _ctx, request) => {
-        const current = request as SlotRequest | undefined
-        if (key === 'submitLabel')
-          return wizardSubmitLabel(nodes) ?? current?.form?.submitLabel ?? value
-        return current?.form?.[key as keyof FormDescriptor] ?? value
+        const current = request as SlotRequest
+        if (key === 'submitLabel') return wizardSubmitLabel(nodes) ?? current.form?.submitLabel
+        return current.form?.[key as keyof FormDescriptor]
       })
   const ui =
     build.state.ui && typeof build.state.ui === 'object'

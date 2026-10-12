@@ -297,6 +297,28 @@
       "filePath": "make_widget.js"
     },
     {
+      "commandName": "pupitre:prune-uploads",
+      "description": "Delete old unconsumed Pupitre uploads (process at most 100, examine at most 1000 per invocation)",
+      "help": "",
+      "namespace": "pupitre",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "olderThan",
+          "flagName": "older-than",
+          "required": false,
+          "type": "string",
+          "description": "Minimum age, e.g. 24h or 7d",
+          "default": "24h"
+        }
+      ],
+      "args": [],
+      "options": {
+        "startApp": true
+      },
+      "filePath": "prune_uploads.js"
+    },
+    {
       "commandName": "pupitre:prune",
       "description": "Delete expired Pupitre password reset tokens and export files",
       "help": "",

@@ -20,6 +20,8 @@ import {
   readUploadBytes,
 } from '../../storage/upload_validation.js'
 import { scopedQuery } from '../../query/scoped_query.js'
+import { lookupOrNull } from '../../query/record_lookup.js'
+import { trackUpload, forgetUpload } from '../../storage/upload_tracking.js'
 
 import { findFormOwner } from '../../pages/form_owner.js'
 type UploadedSessionFile = {
@@ -50,7 +52,7 @@ async function findRecord(
 ): Promise<LucidRow | null> {
   if (typeof id !== 'string' && typeof id !== 'number') return null
   const keyName = (resource.model as LucidModel & { primaryKey?: string }).primaryKey ?? 'id'
-  return scopedQuery(ctx, resource).where(keyName, id).first()
+  return lookupOrNull(() => scopedQuery(ctx, resource).where(keyName, id).first())
 }
 
 export default class UploadController {
@@ -129,9 +131,17 @@ export default class UploadController {
       field.kind === 'fileUpload' ? field.disk : field.fileAttachmentsDisk
     )
     await storage.put(key, bytes, { contentType: sniffed.mime, visibility })
+    await trackUpload(
+      ctx,
+      key,
+      resourceSlug,
+      fieldName,
+      field.kind === 'fileUpload' ? field.disk : field.fileAttachmentsDisk
+    )
     const url = await resolveFileUrl(key, field)
     if (!url) {
       await storage.delete(key)
+      await forgetUpload(key)
       throw new E_PUPITRE_INVALID_UPLOAD()
     }
 
@@ -202,6 +212,7 @@ export default class UploadController {
       field.kind === 'fileUpload' ? field.disk : field.fileAttachmentsDisk
     )
     await storage.delete(key)
+    await forgetUpload(key)
     context.session.put(
       'pupitre.uploads',
       uploads.filter((upload) => upload.key !== key)

@@ -9,6 +9,7 @@ import type {
   TableFilterDefinition,
 } from '../definition/table.js'
 import { applySearchColumns } from './like.js'
+import { applyGroupedScope } from './grouped_scope.js'
 
 type ListTabs = Record<string, { label?: string; where?: Record<string, unknown> | QueryCallback }>
 type QueryOptions = { ctx?: HttpContext; tabs?: ListTabs; prefix?: string }
@@ -123,7 +124,8 @@ export function applyTableQuery(
 ): QueryResult {
   params = parseTableParams(params, options.prefix)
   const normalized: Record<string, unknown> = {}
-  if (table.query) table.query(query, options.ctx as HttpContext)
+  if (table.query)
+    applyGroupedScope(query, (builder) => table.query!(builder, options.ctx as HttpContext))
   const sort = typeof params.sort === 'string' && params.sort.length ? params.sort : undefined
   const requestedSort =
     sort ??
@@ -206,9 +208,11 @@ export function applyTableQuery(
     const attribute = filterAttribute(filter)
     if (filter.kind === 'custom') {
       if (!filter.query) continue
-      filter.query(
-        query,
-        value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+      applyGroupedScope(query, (builder) =>
+        filter.query!(
+          builder,
+          value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
+        )
       )
     } else if (filter.kind === 'select') {
       if (filter.multiple && Array.isArray(value)) query.whereIn(attribute!, value as never[])
@@ -247,7 +251,10 @@ export function applyTableQuery(
 
   if (typeof params.tab === 'string' && options.tabs?.[params.tab]) {
     const tab = options.tabs[params.tab]
-    if (typeof tab.where === 'function') tab.where(query, options.ctx as HttpContext)
+    if (typeof tab.where === 'function')
+      applyGroupedScope(query, (builder) =>
+        (tab.where as QueryCallback)(builder, options.ctx as HttpContext)
+      )
     else if (tab.where) query.where(tab.where)
     normalized.tab = params.tab
   }

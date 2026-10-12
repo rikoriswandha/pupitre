@@ -35,5 +35,4 @@ test('nested resources are registered once and retain a parent route prefix', as
   )
   assert.equal(resources[1]?.routeSlug, 'posts/:parentId/revisions')
   assert.equal(resources[1]?.parent?.relation, 'post')
-  assert.isFunction(resources[1]?.definition.scope)
 })

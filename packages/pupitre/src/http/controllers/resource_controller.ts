@@ -19,9 +19,10 @@ import { isReadOnlyResource } from '../../definition/resource.js'
 import { walkSchema } from '../../definition/walk.js'
 import { valuesAt } from '../../definition/values_at.js'
 import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../../definition/schema.js'
-import { resolveFileUrl, cleanupReplacedFiles } from '../../storage/index.js'
+import { resolveFileUrl, cleanupReplacedFiles, uploadFields } from '../../storage/index.js'
 import type { UploadField } from '../../storage/index.js'
 import { findUploadField } from '../../storage/upload_validation.js'
+import { consumeFormUploads } from '../../storage/upload_tracking.js'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import { createSpecCacheKey, SpecCache } from '../../compiler/cache.js'
 import type { PupitreConfig } from '../../define_config.js'
@@ -36,6 +37,7 @@ import type {
 import { tableData as tableDataSchema } from '../../../catalog/wire.js'
 import { actions as builtInActions } from '../../builder/action.js'
 import { requestResource, scopedQuery } from '../../query/scoped_query.js'
+import { lookupOrNull } from '../../query/record_lookup.js'
 import { fillTenantOwnership } from '../../tenancy/runtime.js'
 import {
   fillRelationshipRepeaters,
@@ -79,9 +81,10 @@ async function resource(ctx: HttpContext): Promise<ResourceRuntime> {
     const parentResource = requestResource(ctx, target.parent.resource)
     if (!parentResource) throw new E_PUPITRE_NOT_FOUND()
     await ensureAuthorized(ctx, parentResource, 'viewAny')
-    const parent = await scopedQuery(ctx, parentResource)
-      .where(keyName(parentResource.model), ctx.params[target.parent.param])
-      .first()
+    const parentId = ctx.params[target.parent.param]
+    const parent = await lookupOrNull(() =>
+      scopedQuery(ctx, parentResource).where(keyName(parentResource.model), parentId).first()
+    )
     if (!parent) throw new E_PUPITRE_NOT_FOUND()
     await ensureAuthorized(ctx, parentResource, 'view', parent)
     nestedParents.set(ctx, parent)
@@ -207,14 +210,6 @@ function pruneUploads(
   )
 }
 
-function uploadFields(nodes: SchemaNodeDefinition[]): UploadField[] {
-  const fields: UploadField[] = []
-  walkSchema(nodes, (node, path) => {
-    if (node.kind === 'fileUpload') fields.push({ ...node, name: path } as UploadField)
-  })
-  return fields
-}
-
 function richEditorFieldNames(nodes: SchemaNodeDefinition[]): string[] {
   const fields: string[] = []
   walkSchema(nodes, (node, path) => {
@@ -254,7 +249,9 @@ function keyName(model: LucidModel): string {
 }
 
 async function findRecord(ctx: HttpContext, target: ResourceRuntime): Promise<LucidRow | null> {
-  return scopedQuery(ctx, target).where(keyName(target.model), ctx.params.id).first()
+  return lookupOrNull(() =>
+    scopedQuery(ctx, target).where(keyName(target.model), ctx.params.id).first()
+  )
 }
 
 function handleActionValidation(ctx: HttpContext, error: unknown): boolean {
@@ -816,6 +813,7 @@ export default class ResourceController {
       if (handleActionValidation(ctx, error)) return
       throw error
     }
+    await consumeFormUploads(ctx, target.slug, target.definition.form, validated)
     const saved = await target.model.transaction(async (trx) => {
       let data =
         (await target.definition.hooks.mutateBeforeCreate?.(validated, ctx, trx)) ?? validated
@@ -883,6 +881,7 @@ export default class ResourceController {
       throw error
     }
     const fileFields = uploadFields(target.definition.form)
+    await consumeFormUploads(ctx, target.slug, target.definition.form, validated)
     const oldValues = new Map(
       fileFields.map((field) => [field.name, valuesAt(serialized(record), field.name)])
     )
@@ -1024,8 +1023,10 @@ export default class ResourceController {
     )
       return ctx.response.badRequest()
     const startIndex = typeof offset === 'number' ? offset : 0
-    const records = await scopedQuery(ctx, target).whereIn(keyName(target.model), ids as never[])
-    if (records.length !== ids.length) return ctx.response.notFound()
+    const records = await lookupOrNull(() =>
+      scopedQuery(ctx, target).whereIn(keyName(target.model), ids as never[])
+    )
+    if (!records || records.length !== ids.length) return ctx.response.notFound()
     for (const record of records) {
       await ensureAuthorized(ctx, target, 'reorder', record)
     }
