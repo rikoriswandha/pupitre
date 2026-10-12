@@ -34,6 +34,7 @@ import {
   controlClasses,
   popupClasses,
   positionerClasses,
+  SelectMenu,
   backdropClasses,
   sheetPopupClasses,
   segmentedListClasses,
@@ -786,38 +787,37 @@ export function DataTable({
     }
     if (filter.type === 'select')
       return (
-        <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
+        <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
-          <select
+          <SelectMenu
             aria-label={`${t('Filter')} ${filter.label}`}
-            className={`${controlClasses} pupitre-native-select h-9`}
             value={String(current)}
-            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
-          >
-            <option value="">All</option>
-            {(filter.options ?? []).map((option) => (
-              <option key={String(option.value)} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+            onValueChange={(next) => setFilterValue(filter.name, next)}
+            options={[
+              { value: '', label: 'All' },
+              ...(filter.options ?? []).map((option) => ({
+                value: String(option.value),
+                label: option.label,
+              })),
+            ]}
+          />
+        </div>
       )
     if (filter.type === 'ternary')
       return (
-        <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
+        <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
-          <select
+          <SelectMenu
             aria-label={`${t('Filter')} ${filter.label}`}
-            className={`${controlClasses} pupitre-native-select h-9`}
             value={String(current)}
-            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
-          >
-            <option value="">Any</option>
-            <option value="1">Yes</option>
-            <option value="0">No</option>
-          </select>
-        </label>
+            onValueChange={(next) => setFilterValue(filter.name, next)}
+            options={[
+              { value: '', label: 'Any' },
+              { value: '1', label: 'Yes' },
+              { value: '0', label: 'No' },
+            ]}
+          />
+        </div>
       )
     if (filter.type === 'dateRange') {
       const range =
@@ -860,18 +860,19 @@ export function DataTable({
     }
     if (filter.type === 'trashed')
       return (
-        <label className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
+        <div className="flex min-w-36 flex-col gap-1 text-sm" key={filter.name}>
           <span>{filter.label}</span>
-          <select
-            className={`${controlClasses} pupitre-native-select h-9`}
+          <SelectMenu
+            aria-label={`${t('Filter')} ${filter.label}`}
             value={String(current || 'without')}
-            onChange={(event) => setFilterValue(filter.name, event.currentTarget.value)}
-          >
-            <option value="without">{t('Without trashed')}</option>
-            <option value="with">{t('With trashed')}</option>
-            <option value="only">{t('Only trashed')}</option>
-          </select>
-        </label>
+            onValueChange={(next) => setFilterValue(filter.name, next)}
+            options={[
+              { value: 'without', label: t('Without trashed') },
+              { value: 'with', label: t('With trashed') },
+              { value: 'only', label: t('Only trashed') },
+            ]}
+          />
+        </div>
       )
     return null
   }
@@ -972,22 +973,16 @@ export function DataTable({
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
             <div className="flex flex-wrap items-center gap-3">
               {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
-                <select
+                <SelectMenu
                   aria-label="Group"
-                  className={`${controlClasses} pupitre-native-select h-9 max-w-48`}
-                  style={{ width: 'auto' }}
+                  className="w-auto max-w-48"
                   value={String(tableState.query.groupBy ?? '')}
-                  onChange={(event) =>
-                    tableState.setQuery({ groupBy: event.currentTarget.value, page: 1 })
-                  }
-                >
-                  <option value="">All groups</option>
-                  {descriptor.groups.map((group) => (
-                    <option key={group.key} value={group.key}>
-                      {group.label}
-                    </option>
-                  ))}
-                </select>
+                  onValueChange={(next) => tableState.setQuery({ groupBy: next, page: 1 })}
+                  options={[
+                    { value: '', label: 'All groups' },
+                    ...descriptor.groups.map((group) => ({ value: group.key, label: group.label })),
+                  ]}
+                />
               )}
               {selected.length > 0 && (
                 <div className="flex items-center gap-3 transition-opacity duration-150 ease-ui starting:opacity-0">
@@ -1333,27 +1328,21 @@ export function DataTable({
           </span>
           <div className="flex items-center gap-2">
             {descriptor.perPageOptions.length > 0 && (
-              <select
-                className={cn(
-                  controlClasses,
-                  'pupitre-native-select h-8 w-auto [--select-inset:0.5rem]'
-                )}
+              <SelectMenu
+                size="sm"
+                className="w-auto"
                 aria-label="Rows per page"
                 value={String(
                   tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
                 )}
-                onChange={(event) =>
-                  tableState.setPerPage(
-                    event.currentTarget.value === 'all' ? 'all' : Number(event.currentTarget.value)
-                  )
+                onValueChange={(next) =>
+                  tableState.setPerPage(next === 'all' ? 'all' : Number(next))
                 }
-              >
-                {descriptor.perPageOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option} per page
-                  </option>
-                ))}
-              </select>
+                options={descriptor.perPageOptions.map((option) => ({
+                  value: String(option),
+                  label: `${option} per page`,
+                }))}
+              />
             )}
             <button
               type="button"

@@ -19,7 +19,7 @@
 
 ### Fixed
 - Class merging (M4): `cn()` now resolves conflicting utilities with `tailwind-merge`, so a component's `className` reliably overrides primitive defaults instead of depending on CSS order. Template-literal class concatenations with conflicts now go through `cn()`.
-- Native selects (M4): table filters, grouping, rows-per-page, editable cells, widget filters, import mapping and `Select native` draw the same `chevrons-up-down` icon as the Base UI select (`.pupitre-native-select`, inset via `--select-inset`), instead of the UA arrow pinned against the right border.
+- Selects (M4): table filters, grouping, rows-per-page, editable cells, widget filters and import mapping use the new `SelectMenu` primitive, the same Base UI trigger and listbox as form `Select`, instead of native `<select>` elements. Their heights follow density (`--control-h`, `--control-h-sm`), and auto-width triggers size to their widest option like a native select, so a column of editable cells lines up. `.pupitre-native-select` remains for `Select native`, drawing the `chevrons-up-down` icon instead of the UA arrow.
 - Color (M4): the swatch fills its slot instead of collapsing to a sliver; presets are 28px square buttons.
 - Switch (M4): the thumb keeps an even 2px inset in both states instead of overrunning the track when checked, and stays light in dark mode (new `--switch-thumb` token) instead of reading as a hole in the track.
 - Tags and multi-select (M4): chips and the draft input are centered and compact, so a single row matches the control height.

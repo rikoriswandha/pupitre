@@ -97,7 +97,8 @@ test('grid layout, visibility persistence, deferred filters, keyboard reorder, a
       () => (window as Window & { __tableVisits?: unknown[] }).__tableVisits?.length ?? 0
     )
   const beforeFilter = await visits()
-  await view.getByLabel('Filter Status', { exact: true }).selectOption('draft')
+  await view.getByRole('combobox', { name: 'Filter Status', exact: true }).click()
+  await page.getByRole('option', { name: 'Draft', exact: true }).click()
   expect(await visits()).toBe(beforeFilter)
   await view.getByRole('button', { name: 'Apply' }).click()
   await expect.poll(visits).toBeGreaterThan(beforeFilter)

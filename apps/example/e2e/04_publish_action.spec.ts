@@ -13,6 +13,6 @@ pupitreTest('publish action updates its row without a full reload', async ({ adm
   await page.getByRole('dialog').getByRole('button', { name: 'Next', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Publish post', exact: true }).click()
   await admin.expectToast('published')
-  await expect(row.getByRole('combobox', { name: /^Status, row / })).toHaveValue('published')
+  await expect(row.getByRole('combobox', { name: /^Status, row / })).toHaveText('Published')
   expect(reloads).toHaveLength(0)
 })

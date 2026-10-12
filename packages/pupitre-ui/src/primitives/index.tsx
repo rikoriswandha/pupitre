@@ -14,9 +14,11 @@ import { Collapsible as BaseCollapsible } from '@base-ui/react/collapsible'
 import { Checkbox as BaseCheckbox } from '@base-ui/react/checkbox'
 import { Field as BaseField } from '@base-ui/react/field'
 import { Input as BaseInput } from '@base-ui/react/input'
+import { Select as BaseSelect } from '@base-ui/react/select'
 import { Switch as BaseSwitch } from '@base-ui/react/switch'
 import { Tooltip as BaseTooltip } from '@base-ui/react/tooltip'
 import { twMerge } from 'tailwind-merge'
+import { t } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 
 /** Joins classes; later conflicting utilities win, so `className` overrides primitive defaults. */
@@ -591,6 +593,140 @@ export function sheetPopupClasses(width: keyof typeof dialogWidths = 'md'): stri
   return cn(
     'fixed inset-y-0 right-0 z-[101] flex w-full flex-col border-l border-border bg-card text-card-foreground shadow-dialog outline-none transition-transform duration-250 ease-drawer data-ending-style:translate-x-full data-starting-style:translate-x-full',
     dialogWidths[width]
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* Select menu                                                                */
+/* -------------------------------------------------------------------------- */
+
+export type SelectMenuOption = {
+  value: string
+  label: string
+  description?: string
+  disabled?: boolean
+}
+
+export type SelectMenuProps = Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>,
+  'value' | 'defaultValue' | 'onChange' | 'className' | 'children' | 'name' | 'color'
+> & {
+  value: string
+  onValueChange: (value: string) => void
+  options: readonly SelectMenuOption[]
+  /** Shown when `value` matches no option. */
+  placeholder?: string
+  /** `sm` follows `--control-h-sm` for toolbars, footers, and table cells. */
+  size?: 'sm' | 'md'
+  /** Submits the value through Base UI's hidden input. */
+  name?: string
+  required?: boolean
+  readOnly?: boolean
+  className?: string
+}
+
+const selectTriggerSizes = {
+  sm: 'h-(--control-h-sm) px-2.5 text-[0.8125rem]',
+  md: 'h-(--control-h) px-3',
+}
+
+/** Single-value Base UI select: the trigger and listbox every Pupitre select draws. */
+export function SelectMenu({
+  value,
+  onValueChange,
+  options,
+  placeholder,
+  size = 'md',
+  name,
+  required,
+  disabled,
+  readOnly,
+  className,
+  ...trigger
+}: SelectMenuProps) {
+  return (
+    <BaseSelect.Root
+      items={options}
+      name={name}
+      value={options.some((option) => option.value === value) ? value : null}
+      required={required}
+      disabled={disabled}
+      readOnly={readOnly}
+      onValueChange={(next) => onValueChange(next ?? '')}
+    >
+      <BaseSelect.Trigger
+        role="combobox"
+        {...trigger}
+        disabled={disabled || readOnly}
+        className={cn(
+          controlClasses,
+          'flex items-center justify-between gap-2 text-left',
+          selectTriggerSizes[size],
+          className
+        )}
+      >
+        {/* Like a native select, size to the widest option: invisible labels share the value's
+            grid cell. Pseudo-element text keeps them out of textContent and the a11y tree. */}
+        <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)]">
+          <BaseSelect.Value
+            placeholder={placeholder}
+            className="col-start-1 row-start-1 min-w-0 truncate"
+          />
+          {[...(placeholder ? [placeholder] : []), ...options.map((option) => option.label)].map(
+            (label, index) => (
+              <span
+                key={index}
+                aria-hidden="true"
+                data-label={label}
+                className="invisible col-start-1 row-start-1 h-0 truncate before:content-[attr(data-label)]"
+              />
+            )
+          )}
+        </span>
+        <Icon name="chevrons-up-down" className="size-4 shrink-0 text-muted-foreground" />
+      </BaseSelect.Trigger>
+      <BaseSelect.Portal>
+        <BaseSelect.Positioner
+          sideOffset={5}
+          alignItemWithTrigger={false}
+          className={positionerClasses}
+        >
+          <BaseSelect.Popup
+            data-pupitre-popup=""
+            className={cn(popupClasses, 'min-w-(--anchor-width)')}
+          >
+            <BaseSelect.List className="max-h-64 overflow-auto">
+              {options.map((option) => (
+                <BaseSelect.Item
+                  key={option.value}
+                  value={option.value}
+                  disabled={option.disabled}
+                  aria-label={option.label}
+                  className={menuItemClasses}
+                >
+                  <span className="min-w-0 flex-1">
+                    <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
+                    {option.description && (
+                      <span className="block text-[0.8125rem] text-muted-foreground">
+                        {option.description}
+                      </span>
+                    )}
+                  </span>
+                  <BaseSelect.ItemIndicator>
+                    <Icon name="check" className="size-4" />
+                  </BaseSelect.ItemIndicator>
+                </BaseSelect.Item>
+              ))}
+              {!options.length && (
+                <p className="px-3 py-3 text-[0.8125rem] text-muted-foreground">
+                  {t('No options')}
+                </p>
+              )}
+            </BaseSelect.List>
+          </BaseSelect.Popup>
+        </BaseSelect.Positioner>
+      </BaseSelect.Portal>
+    </BaseSelect.Root>
   )
 }
 

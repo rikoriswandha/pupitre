@@ -33,7 +33,8 @@ pupitreTest(
 
     const listUrl = page.url()
     await page.getByRole('button', { name: 'Filters', exact: true }).click()
-    await page.getByLabel('Filter Status', { exact: true }).selectOption('published')
+    await page.getByRole('combobox', { name: 'Filter Status', exact: true }).click()
+    await page.getByRole('option', { name: 'Published', exact: true }).click()
     await expect(page).toHaveURL(listUrl)
     await page.getByRole('button', { name: 'Apply' }).click()
     await expect(page).toHaveURL(/filters/)

@@ -2,7 +2,6 @@ import { useId, useMemo, useState, type ReactNode } from 'react'
 import { useBoundValue, useFieldError, useOptions, useRuntime } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import { Select as BaseSelect } from '@base-ui/react/select'
 import { Popover } from '@base-ui/react/popover'
 import { Icon } from '../icons.js'
 import { InputFieldLabel } from './Text.js'
@@ -19,6 +18,7 @@ import {
   popupClasses,
   positionerClasses,
   menuItemClasses,
+  SelectMenu,
   Spinner,
 } from '../primitives/index.js'
 import { ActionModal } from '@rikology/pupitre-react'
@@ -394,61 +394,24 @@ export function Select({ props, bindings }: Runtime) {
               </Popover.Portal>
             </Popover.Root>
           ) : (
-            <BaseSelect.Root
-              items={options}
+            <SelectMenu
+              {...props.extraAttributes}
+              id={id}
               name={id}
-              value={Array.isArray(selectedOptions) ? null : selectedOptions}
+              aria-label={triggerProps['aria-label']}
+              aria-required={props.required}
+              aria-describedby={describedBy}
+              aria-invalid={!!error}
+              options={options.map((option) => ({ ...option, value: String(option.value) }))}
+              value={Array.isArray(value) ? '' : String(value ?? '')}
+              placeholder={placeholder}
               required={props.required}
               disabled={props.disabled}
               readOnly={props.readOnly}
-              onValueChange={(next) => setValue(next?.value ?? '')}
-            >
-              <BaseSelect.Trigger role="combobox" {...props.extraAttributes} {...triggerProps}>
-                <BaseSelect.Value placeholder={placeholder} />
-                <Icon name="chevrons-up-down" className="size-4 text-muted-foreground" />
-              </BaseSelect.Trigger>
-              <BaseSelect.Portal>
-                <BaseSelect.Positioner
-                  sideOffset={5}
-                  alignItemWithTrigger={false}
-                  className={positionerClasses}
-                >
-                  <BaseSelect.Popup
-                    data-pupitre-popup=""
-                    className={cn(popupClasses, 'min-w-(--anchor-width)')}
-                  >
-                    <BaseSelect.List className="max-h-64 overflow-auto">
-                      {options.map((option) => (
-                        <BaseSelect.Item
-                          key={String(option.value)}
-                          value={option}
-                          disabled={option.disabled}
-                          aria-label={option.label}
-                          className={menuItemClasses}
-                        >
-                          <span className="min-w-0 flex-1">
-                            <BaseSelect.ItemText>{option.label}</BaseSelect.ItemText>
-                            {option.description && (
-                              <span className="block text-[0.8125rem] text-muted-foreground">
-                                {option.description}
-                              </span>
-                            )}
-                          </span>
-                          <BaseSelect.ItemIndicator>
-                            <Icon name="check" className="size-4" />
-                          </BaseSelect.ItemIndicator>
-                        </BaseSelect.Item>
-                      ))}
-                      {!options.length && (
-                        <p className="px-3 py-3 text-[0.8125rem] text-muted-foreground">
-                          {t('No options')}
-                        </p>
-                      )}
-                    </BaseSelect.List>
-                  </BaseSelect.Popup>
-                </BaseSelect.Positioner>
-              </BaseSelect.Portal>
-            </BaseSelect.Root>
+              onValueChange={(next) =>
+                setValue(options.find((option) => String(option.value) === next)?.value ?? '')
+              }
+            />
           )}
           {props.clearable &&
             !props.multiple &&

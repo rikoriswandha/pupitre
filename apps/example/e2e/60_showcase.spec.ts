@@ -17,7 +17,8 @@ pupitreTest(
       'Where to look next',
     ])
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible()
-    await page.getByLabel('Sales channel').selectOption('retail')
+    await page.getByRole('combobox', { name: 'Sales channel', exact: true }).click()
+    await page.getByRole('option', { name: 'Retail', exact: true }).click()
     await expect(page).toHaveURL(/filters%5Bchannel%5D=retail|filters\[channel\]=retail/)
     await expect(page.getByRole('heading', { name: 'Last 7 days', exact: true })).toBeVisible()
   }

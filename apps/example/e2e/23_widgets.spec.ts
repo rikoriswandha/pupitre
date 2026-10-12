@@ -8,7 +8,8 @@ pupitreTest('dashboard widgets filter and resource edit header widget render', a
   await expect(page.getByRole('heading', { name: 'Posts by status' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Posts per month' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Latest posts' })).toBeVisible()
-  await page.getByLabel('Post status').selectOption('published')
+  await page.getByRole('combobox', { name: 'Post status', exact: true }).click()
+  await page.getByRole('option', { name: 'Published', exact: true }).click()
   await expect(page).toHaveURL(/filters%5Bstatus%5D=published|filters\[status\]=published/)
 
   await page.goto('/admin/acme/posts')

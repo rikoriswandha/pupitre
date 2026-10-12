@@ -5,7 +5,7 @@ import { WidgetChart } from './WidgetChart.js'
 import { WidgetStats } from './WidgetStats.js'
 import { WidgetTable } from './WidgetTable.js'
 import { WidgetTimeline } from './WidgetTimeline.js'
-import { cn, controlClasses } from '../primitives/index.js'
+import { SelectMenu } from '../primitives/index.js'
 
 type CustomWidget = ComponentType<{ descriptor: WidgetDescriptor; data: unknown }>
 type Props = {
@@ -87,27 +87,20 @@ export function WidgetGrid({
                 ? ''
                 : (new URLSearchParams(window.location.search).get(`filters[${filter.name}]`) ?? '')
             return (
-              <label
+              <div
                 key={filter.name}
                 className="flex items-center gap-2 text-[0.8125rem] font-medium text-muted-foreground"
               >
                 <span className="whitespace-nowrap">{filter.label}</span>
-                <select
+                <SelectMenu
+                  size="sm"
+                  className="w-auto min-w-28"
+                  aria-label={filter.label}
                   value={selected}
-                  onChange={(event) => updateFilter(filter.name, event.currentTarget.value)}
-                  className={cn(
-                    controlClasses,
-                    'pupitre-native-select h-(--control-h-sm) w-auto min-w-28 text-[0.8125rem] [--select-inset:0.625rem]'
-                  )}
-                >
-                  <option value="">All</option>
-                  {filter.options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  onValueChange={(next) => updateFilter(filter.name, next)}
+                  options={[{ value: '', label: 'All' }, ...filter.options]}
+                />
+              </div>
             )
           })}
         </div>

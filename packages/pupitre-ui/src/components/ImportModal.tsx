@@ -17,8 +17,8 @@ import {
   Button,
   backdropClasses,
   buttonClasses,
-  controlClasses,
   dialogPopupClasses,
+  SelectMenu,
 } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 
@@ -299,27 +299,22 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
                         >
                           {header}
                         </label>
-                        <select
+                        <SelectMenu
                           id={`pupitre-import-map-${header}`}
-                          className={`${controlClasses} pupitre-native-select h-(--control-h)`}
                           aria-label={`${t('Map')} ${header}`}
                           value={mapping[header] ?? ''}
                           disabled={busy}
-                          onChange={(event) =>
-                            setMapping((current) => ({
-                              ...current,
-                              [header]: event.target.value,
-                            }))
+                          onValueChange={(next) =>
+                            setMapping((current) => ({ ...current, [header]: next }))
                           }
-                        >
-                          <option value="">{t('Skip column')}</option>
-                          {preview.fields.map((field) => (
-                            <option key={field.name} value={field.name}>
-                              {field.label}
-                              {field.required ? ' *' : ''}
-                            </option>
-                          ))}
-                        </select>
+                          options={[
+                            { value: '', label: t('Skip column') },
+                            ...preview.fields.map((field) => ({
+                              value: field.name,
+                              label: `${field.label}${field.required ? ' *' : ''}`,
+                            })),
+                          ]}
+                        />
                       </div>
                     ))}
                   </div>

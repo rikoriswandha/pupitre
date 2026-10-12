@@ -3,6 +3,7 @@ import { WidgetsStory } from './stories/widgets.story.js'
 
 test('stats styling, table sorting, widget polling, and spans use widget endpoints', async ({
   mount,
+  page,
 }) => {
   const view = await mount(<WidgetsStory />)
   await expect(view.getByText('This month')).toBeVisible()
@@ -11,7 +12,8 @@ test('stats styling, table sorting, widget polling, and spans use widget endpoin
   await expect(view.getByRole('button', { name: /Title/ })).toBeVisible()
   await expect(view.getByText('Compared with last month')).toBeVisible()
   await expect(view.getByText('1280')).toHaveCSS('color', 'rgb(22, 122, 114)')
-  await view.getByLabel('Status').selectOption('draft')
+  await view.getByRole('combobox', { name: 'Status', exact: true }).click()
+  await page.getByRole('option', { name: 'Draft', exact: true }).click()
   await expect
     .poll(() =>
       view.evaluate(

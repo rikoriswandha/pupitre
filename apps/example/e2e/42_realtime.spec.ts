@@ -35,8 +35,8 @@ pupitreTest(
       await observerPage.getByRole('searchbox', { name: 'Search', exact: true }).press('Enter')
       await expect(observer.row(title)).toBeVisible()
       await observerPage.getByRole('button', { name: 'Notifications', exact: true }).click()
-      await expect(observer.row(title).getByRole('combobox', { name: /^Status,/ })).toHaveValue(
-        'draft'
+      await expect(observer.row(title).getByRole('combobox', { name: /^Status,/ })).toHaveText(
+        'Draft'
       )
       await expect(observerPage.getByText('Loading notifications…', { exact: true })).toHaveCount(0)
 
@@ -55,11 +55,11 @@ pupitreTest(
             return observer
               .row(title)
               .getByRole('combobox', { name: /^Status,/ })
-              .inputValue()
+              .textContent()
           },
           { timeout: 10_000 }
         )
-        .toBe('published')
+        .toBe('Published')
       await expect(tray.getByText('Post published', { exact: true }).first()).toBeVisible()
     } finally {
       await observerContext.close()

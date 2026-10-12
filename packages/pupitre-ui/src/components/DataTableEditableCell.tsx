@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { ColumnDescriptor } from '@rikology/pupitre/catalog'
 import { jsonFetch, t, useRuntime } from '@rikology/pupitre-react'
-import { CheckboxControl, SwitchControl, Input, cn, controlClasses } from '../primitives/index.js'
+import { CheckboxControl, SwitchControl, Input, SelectMenu } from '../primitives/index.js'
 
 type Props = {
   column: ColumnDescriptor
@@ -96,19 +96,15 @@ export function DataTableEditableCell({
     : []
   if (column.type === 'select') {
     return (
-      <select
+      <SelectMenu
+        size="sm"
+        className="w-auto"
         aria-label={`${column.label}, ${t('row')} ${rowKey}`}
-        className={cn(controlClasses, 'pupitre-native-select h-8 w-auto [--select-inset:0.5rem]')}
         value={String(value ?? '')}
         disabled={disabled || pending}
-        onChange={(event) => void save(event.currentTarget.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        onValueChange={(next) => void save(next)}
+        options={options.map((option) => ({ value: String(option.value), label: option.label }))}
+      />
     )
   }
   const content: ReactNode = editing ? (
