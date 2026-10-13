@@ -11,7 +11,12 @@ import {
 export function IconEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const name = typeof props.value === 'string' ? props.value : props.icon
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={!name}
+    >
       <span className="inline-flex items-center gap-1.5">
         {name ? (
           <Icon

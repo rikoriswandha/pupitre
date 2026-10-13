@@ -42,7 +42,7 @@ export function DataTableGroups({
         if (layout === 'grid') {
           return (
             <section key={group.key} className="grid gap-2">
-              <header className="border-b border-border bg-muted/50 px-5 py-3">
+              <header className="border-b border-border py-3">
                 {canCollapse ? (
                   <button
                     type="button"
@@ -74,8 +74,9 @@ export function DataTableGroups({
         }
         return (
           <Fragment key={group.key}>
-            <tr className="border-t border-border bg-muted/50">
-              <th colSpan={colSpan} className="px-4 py-3 text-left">
+            {/* Group headings read as ledger subheads: a ruled line and a semibold label. */}
+            <tr className="border-t border-rule/60">
+              <th colSpan={colSpan} className="px-4 pb-2 pt-5 text-left">
                 {canCollapse ? (
                   <button
                     type="button"
@@ -103,7 +104,7 @@ export function DataTableGroups({
             </tr>
             {!isCollapsed && renderRows(group.rows)}
             {summary && !isCollapsed && (
-              <tr className="border-t border-border bg-muted/40">
+              <tr className="border-t border-border">
                 <td colSpan={colSpan} className="px-4 py-3">
                   {summary}
                 </td>

@@ -1,7 +1,6 @@
 import { ActionList } from './ActionList.js'
 import { DataTable } from './DataTable.js'
 import type { RelationDescriptor } from '@rikology/pupitre/catalog'
-import { Badge } from '../primitives/index.js'
 
 export type RelationManagerProps = {
   props: { descriptor: RelationDescriptor }
@@ -19,20 +18,19 @@ export function RelationManager({ props, emit }: RelationManagerProps) {
       className="space-y-4"
       data-relation={descriptor.relation}
     >
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[0.9375rem] font-semibold text-foreground">{descriptor.label}</h2>
-          {descriptor.badge !== undefined && <Badge size="sm">{descriptor.badge}</Badge>}
-        </div>
-        {!descriptor.readOnly && (
+      {/* The relation tab already names the table; keep the heading for screen readers and
+          show the row only when it carries header actions. */}
+      <h2 className="sr-only">{descriptor.label}</h2>
+      {!descriptor.readOnly && descriptor.actions.header.some((action) => action.enabled) && (
+        <header className="flex flex-wrap items-center justify-end gap-3">
           <ActionList
             actions={descriptor.actions.header}
             max={3}
             size="sm"
             onRun={(action) => emit('action', { action: action.name })}
           />
-        )}
-      </header>
+        </header>
+      )}
       <DataTable props={{ descriptor: table }} emit={emit} />
     </section>
   )

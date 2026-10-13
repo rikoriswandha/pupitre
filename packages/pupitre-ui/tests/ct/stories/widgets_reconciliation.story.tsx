@@ -80,3 +80,29 @@ export function WidgetSemanticColorsStory() {
     />
   )
 }
+
+const packedSpans: Array<number | 'full'> = [1, 1, 'full', 2, 1, 3]
+export function WidgetPackingStory() {
+  return (
+    <div style={{ width: 1200 }}>
+      <WidgetGrid
+        widgets={packedSpans.map((span, index) => ({
+          name: `w${index}`,
+          kind: 'component',
+          component: 'Box',
+          dataProp: `w${index}`,
+          span,
+          sort: index,
+        }))}
+        data={Object.fromEntries(
+          packedSpans.map((_, index) => [`w${index}`, { kind: 'component', data: index }])
+        )}
+        customWidgets={{
+          Box: ({ data }: { descriptor: WidgetDescriptor; data: unknown }) => (
+            <p data-testid={`widget-${String(data)}`}>Widget {String(data)}</p>
+          ),
+        }}
+      />
+    </div>
+  )
+}

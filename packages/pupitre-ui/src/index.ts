@@ -17,6 +17,7 @@ export {
   InputSlot,
   Kbd,
   Label,
+  LedgerSection,
   Panel,
   PanelHeader,
   RequiredMark,
@@ -28,6 +29,7 @@ export {
   buttonClasses,
   cn,
   controlClasses,
+  ledgerRuleClasses,
   toTone,
 } from './primitives/index.js'
 export type { ButtonProps, ButtonSize, ButtonVariant, Tone } from './primitives/index.js'

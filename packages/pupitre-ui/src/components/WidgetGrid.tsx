@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, CSSProperties } from 'react'
 import { useCallback, useEffect, useState } from 'react'
 import type { WidgetData, WidgetDescriptor, WidgetFilter } from '@rikology/pupitre/catalog'
 import { t } from '@rikology/pupitre-react'
@@ -16,18 +16,46 @@ type Props = {
   filters?: WidgetFilter[]
   customWidgets?: Record<string, CustomWidget>
 }
-function widgetSpanClass(span: number | 'full') {
-  if (span === 'full') return 'col-span-full'
-  const normalized = Math.max(1, Math.min(4, Math.floor(span)))
-  if (normalized === 1) return ''
-  const xlSpan = { 2: 'xl:col-span-2', 3: 'xl:col-span-3', 4: 'xl:col-span-4' }[normalized]
-  return `md:col-span-2 ${xlSpan}`
+type Span = number | 'full'
+/**
+ * Packs widgets row by row (`columns` = 4 at xl, 2 at md) and returns each span in
+ * twelfths. A row that would leave empty columns (two `span(1)` charts before a full
+ * table, a lone quarter card at the end) stretches its widgets proportionally, so the
+ * dashboard never shows holes. 12 divides every partial row total, so spans stay integer.
+ */
+function packWidgetSpans(spans: readonly Span[], columns: number): number[] {
+  const twelfths: number[] = []
+  let row: Array<{ index: number; span: number }> = []
+  let used = 0
+  const flush = () => {
+    for (const item of row) twelfths[item.index] = (12 * item.span) / used
+    row = []
+    used = 0
+  }
+  spans.forEach((span, index) => {
+    if (span === 'full') {
+      flush()
+      twelfths[index] = 12
+      return
+    }
+    const size = Math.max(1, Math.min(columns, Math.floor(span)))
+    if (used + size > columns) flush()
+    row.push({ index, span: size })
+    used += size
+  })
+  flush()
+  return twelfths
 }
-function WidgetSkeleton({ span }: { span: number | 'full' }) {
+function spanStyle(md: number, xl: number) {
+  return { '--widget-md': md, '--widget-xl': xl } as CSSProperties
+}
+const spanClasses = 'md:col-span-(--widget-md) xl:col-span-(--widget-xl)'
+function WidgetSkeleton({ style }: { style: CSSProperties }) {
   return (
     <div
       aria-busy="true"
-      className={`min-h-32 animate-pulse rounded-xl border border-border bg-muted motion-reduce:animate-none ${widgetSpanClass(span)}`}
+      className={`min-h-32 animate-pulse border-t border-rule bg-muted/60 motion-reduce:animate-none ${spanClasses}`}
+      style={style}
     />
   )
 }
@@ -78,8 +106,16 @@ export function WidgetGrid({
     window.history.pushState({}, '', `${url.pathname}${url.search}`)
     for (const widget of widgets) void refresh(widget, url.search)
   }
+  const mdSpans = packWidgetSpans(
+    widgets.map((widget) => widget.span),
+    2
+  )
+  const xlSpans = packWidgetSpans(
+    widgets.map((widget) => widget.span),
+    4
+  )
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-6 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-12">
       {filters.length > 0 && (
         <div className="col-span-full flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           {filters.map((filter) => {
@@ -99,21 +135,25 @@ export function WidgetGrid({
                   aria-label={filter.label}
                   value={selected}
                   onValueChange={(next) => updateFilter(filter.name, next)}
-                  options={[{ value: '', label: t('All') }, ...filter.options]}
+                  options={
+                    filter.options.some((option) => option.value === '')
+                      ? filter.options
+                      : [{ value: '', label: t('All') }, ...filter.options]
+                  }
                 />
               </div>
             )
           })}
         </div>
       )}
-      {widgets.map((widget) => {
+      {widgets.map((widget, index) => {
         const value = widgetData[widget.dataProp] as WidgetData | undefined
+        const style = spanStyle(mdSpans[index]!, xlSpans[index]!)
         if (deferred.includes(widget.dataProp) && !value)
-          return <WidgetSkeleton key={widget.name} span={widget.span} />
+          return <WidgetSkeleton key={widget.name} style={style} />
         const Custom = widget.component ? customWidgets[widget.component] : undefined
-        const span = widgetSpanClass(widget.span)
         return (
-          <div key={widget.name} className={span}>
+          <div key={widget.name} className={`min-w-0 ${spanClasses}`} style={style}>
             {widget.kind === 'stats' ? <WidgetStats descriptor={widget} data={value} /> : null}
             {widget.kind === 'chart' ? <WidgetChart descriptor={widget} data={value} /> : null}
             {widget.kind === 'table' ? <WidgetTable descriptor={widget} data={value} /> : null}

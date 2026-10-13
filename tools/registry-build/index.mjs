@@ -4,10 +4,11 @@ import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
+/** Module specifiers from JS/TS imports and CSS `@import` (package stylesheets such as fonts). */
 export function imports(content) {
   return [
     ...content.matchAll(
-      /(?:^\s*(?:import|export)\s+(?:[^;'"]*?\sfrom\s*)?|\bimport\s*\(\s*)(['"])([^'"\n]+)\1/gm
+      /(?:^\s*(?:import|export)\s+(?:[^;'"]*?\sfrom\s*)?|^\s*@import\s+|\bimport\s*\(\s*)(['"])([^'"\n]+)\1/gm
     ),
   ].map((match) => match[2])
 }

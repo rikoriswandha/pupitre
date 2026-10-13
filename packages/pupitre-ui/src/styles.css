@@ -1,4 +1,10 @@
 /* Host integration: import `tailwindcss` first, then `@rikology/pupitre-ui/styles.css`. */
+/*
+ * Page-title serif, shipped so titles render identically on every OS (OFL-1.1, Adobe).
+ * Only weight 400 is loaded; unicode-range subsets (Latin, Latin Extended, Vietnamese,
+ * Greek, Cyrillic) download on demand, so a Latin-only page fetches one ~21 KB file.
+ */
+@import '@fontsource/source-serif-4/400.css';
 @source "./components/**/*.{tsx,js}";
 @source "./primitives/**/*.{tsx,js}";
 
@@ -74,6 +80,12 @@
   --shadow-control: var(--elevation-control);
   --shadow-popover: var(--elevation-popover);
   --shadow-dialog: var(--elevation-dialog);
+  --color-rule: var(--rule);
+  /*
+   * Page titles only. Product UI text stays in the sans; a text serif on the title is
+   * the desk's letterhead and survives any `theme.primary` override.
+   */
+  --font-display: var(--pupitre-font-display);
 }
 
 :root {
@@ -81,7 +93,7 @@
   --radius: 0.5rem;
 
   /* Surfaces: canvas < sidebar < card. */
-  --background: oklch(0.978 0.0035 84);
+  --background: oklch(0.976 0.0065 84);
   --foreground: oklch(0.225 0.012 65);
   --card: oklch(0.996 0.0015 84);
   --card-foreground: var(--foreground);
@@ -103,7 +115,11 @@
   --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23655f59' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 15 5 5 5-5'/%3E%3Cpath d='m7 9 5-5 5 5'/%3E%3C/svg%3E");
   --accent: oklch(0.945 0.006 82);
   --accent-foreground: var(--foreground);
-  --border: oklch(0.908 0.006 78);
+  --border: oklch(0.905 0.008 78);
+  /* Ledger rule: the ink line that opens a section or table. */
+  --rule: oklch(0.38 0.014 66);
+  --pupitre-font-display:
+    'Source Serif 4', 'Iowan Old Style', Charter, 'Sitka Text', Cambria, Georgia, serif;
   --input: oklch(0.868 0.008 76);
   /* Boundary of state-only controls (checkbox, radio, switch track): >= 3:1 on card. */
   --input-strong: oklch(0.6 0.012 72);
@@ -147,6 +163,7 @@
   --elevation-dialog:
     0 24px 64px -20px oklch(0.2 0.02 70 / 0.35), 0 4px 12px -4px oklch(0.2 0.02 70 / 0.12);
   --scrim: oklch(0.2 0.015 70 / 0.42);
+  --scroll-shadow: oklch(0.3 0.02 70 / 0.1);
 
   /* Density: comfortable is the default; `data-density="compact"` tightens controls and rows. */
   --control-h: 2.25rem;
@@ -178,6 +195,7 @@
   --accent: oklch(0.27 0.008 70);
   --accent-foreground: var(--foreground);
   --border: oklch(0.285 0.007 70);
+  --rule: oklch(0.6 0.01 76);
   --input: oklch(0.36 0.008 70);
   --input-strong: oklch(0.56 0.01 72);
   --switch-thumb: oklch(0.93 0.006 82);
@@ -213,6 +231,12 @@
   --elevation-popover: 0 16px 40px -12px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.04);
   --elevation-dialog: 0 28px 72px -20px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 0 0 / 0.05);
   --scrim: oklch(0.08 0.005 70 / 0.62);
+  --scroll-shadow: oklch(0 0 0 / 0.45);
+}
+/* Native controls (date pickers, scrollbars) follow the theme even when a host stylesheet
+   later sets `:root { color-scheme: light }`; tokens above keep `.dark` specificity. */
+:root.dark {
+  color-scheme: dark;
 }
 
 [data-density='compact'] {
@@ -244,6 +268,23 @@
     scrollbar-width: thin;
     scrollbar-color: var(--input) transparent;
   }
+  /* Edge shadows that appear only while more content is scrolled out of view (sidebar nav).
+     Opaque `local` covers ride with the content and hide the fixed `scroll` shadows at the ends. */
+  .pupitre-scroll-shadows {
+    background-image:
+      linear-gradient(var(--sidebar) 40%, transparent),
+      linear-gradient(transparent, var(--sidebar) 60%),
+      linear-gradient(var(--scroll-shadow), transparent),
+      linear-gradient(transparent, var(--scroll-shadow));
+    background-position: top, bottom, top, bottom;
+    background-size:
+      100% 2.5rem,
+      100% 2.5rem,
+      100% 0.75rem,
+      100% 0.75rem;
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+  }
   /* Native <select>: the UA arrow is pinned to the border and ignores padding, so draw the
      same icon as the Base UI select trigger. Compact callers set `[--select-inset:…]`. */
   .pupitre-native-select {
@@ -257,6 +298,17 @@
     background-repeat: no-repeat;
     background-position: right var(--select-inset) center;
     background-size: 1rem;
+  }
+  /* Native date/time inputs keep the UA picker button as their only icon; tone it like the
+     other control icons instead of drawing a second decorative calendar next to it. */
+  :where([data-pupitre-shell], [data-pupitre-popup]) input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 150ms;
+  }
+  :where([data-pupitre-shell], [data-pupitre-popup])
+    input:is(:hover, :focus-visible)::-webkit-calendar-picker-indicator {
+    opacity: 0.9;
   }
 }
 

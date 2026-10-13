@@ -35,7 +35,11 @@ export type ActionListProps = {
   onRun?: (action: ActionDescriptor) => void
 }
 
-/** Lays out action descriptors: inline buttons, named groups, and an overflow menu. */
+/**
+ * Lays out action descriptors: inline buttons, named groups, and an overflow menu.
+ * Descriptors the server compiled as `enabled: false` (unauthorized, `visible()` false,
+ * unsafe URL) are hidden rather than rendered disabled.
+ */
 export function ActionList({
   actions,
   ids,
@@ -52,6 +56,7 @@ export function ActionList({
   const groups = new Map<string, ActionDescriptor[]>()
   const ungrouped: ActionDescriptor[] = []
   for (const action of actions) {
+    if (!action.enabled) continue
     if (!action.group) ungrouped.push(action)
     else groups.set(action.group, [...(groups.get(action.group) ?? []), action])
   }
@@ -73,8 +78,8 @@ export function ActionList({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center',
-        appearance === 'links' ? 'gap-0.5' : 'gap-2',
+        'flex items-center',
+        appearance === 'links' ? 'flex-nowrap gap-1' : 'flex-wrap gap-2',
         align === 'end' ? 'justify-end' : align === 'center' ? 'justify-center' : 'justify-start',
         className
       )}
@@ -98,6 +103,8 @@ export function ActionList({
           fallbackTone={
             action.name === primaryName ? 'primary' : appearance === 'links' ? 'primary' : 'gray'
           }
+          // Row actions: 13px instead of xs 12px so they read as controls, not footnotes.
+          className={appearance === 'links' ? 'px-2 text-[0.8125rem]' : undefined}
           disabled={disabled}
           onRun={onRun}
         />
@@ -143,7 +150,7 @@ export type ActionMenuProps = {
 
 /** Dropdown of action descriptors; destructive actions sit last behind a separator. */
 export function ActionMenu({
-  actions,
+  actions: descriptors,
   label,
   icon,
   ids,
@@ -154,12 +161,13 @@ export function ActionMenu({
   onRun,
 }: ActionMenuProps) {
   const runAction = useRunAction()
+  const actions = descriptors.filter((action) => action.enabled)
   const safe = actions.filter((action) => actionTone(action) !== 'danger')
   const danger = actions.filter((action) => actionTone(action) === 'danger')
   const item = (action: ActionDescriptor) => (
     <Menu.Item
       key={action.name}
-      disabled={!action.enabled || disabled}
+      disabled={disabled}
       className={cn(
         menuItemClasses,
         actionTone(action) === 'danger' ? menuDangerItemClasses : undefined
@@ -174,6 +182,7 @@ export function ActionMenu({
       <span className="min-w-0 flex-1 truncate">{action.label}</span>
     </Menu.Item>
   )
+  if (!actions.length) return null
   return (
     <Menu.Root modal={false}>
       <Menu.Trigger

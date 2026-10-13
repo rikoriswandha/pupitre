@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode, useEffect, useId, useMemo, useRef } from 'react'
 import { t, useBoundValue, useEmbedded, useStateValue } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
-import { Button, Panel, cn } from '../primitives/index.js'
+import { Button, cn } from '../primitives/index.js'
 import { PanelNestingContext } from './Section.js'
 import { FormWizardContext } from './Form.js'
 
@@ -45,7 +45,6 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
   )
   const embedded = useEmbedded()
   const nested = useContext(PanelNestingContext)
-  const Container = nested || embedded ? 'div' : Panel
   const form = useContext(FormWizardContext)
   const activeButton = useRef<HTMLButtonElement>(null)
   const stepsId = useId()
@@ -89,17 +88,23 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
         select,
       }}
     >
-      <Container
-        className="min-w-0"
+      <div
+        className={cn('min-w-0', !nested && !embedded && 'border-t border-rule')}
         data-wizard={typeof props.id === 'string' ? props.id : undefined}
       >
-        <ol aria-label={t('Form steps')} className="flex overflow-x-auto px-5 py-5 sm:px-6">
+        <ol
+          aria-label={t('Form steps')}
+          className="flex gap-6 overflow-x-auto border-b border-border pt-3"
+        >
           {steps.map((step, index) => (
-            <li key={step.key} className="flex min-w-0 flex-1 items-center">
+            <li key={step.key} className="flex min-w-max flex-1 items-stretch">
               <button
                 ref={active === index ? activeButton : undefined}
                 type="button"
-                className="flex min-w-0 items-center gap-3 rounded-lg p-1 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:cursor-not-allowed"
+                className={cn(
+                  'flex min-w-0 flex-1 items-start gap-3 border-b-2 border-transparent pt-1 pb-4 text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 disabled:cursor-not-allowed',
+                  active === index && 'border-primary'
+                )}
                 aria-current={active === index ? 'step' : undefined}
                 // Name is "<n> <label>"; the description is announced, not part of the name.
                 aria-label={t('Step {number}: {label}', { number: index + 1, label: step.label })}
@@ -111,12 +116,8 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
               >
                 <span
                   className={cn(
-                    'grid size-9 shrink-0 place-items-center rounded-full text-sm font-semibold',
-                    index < active
-                      ? 'bg-primary text-primary-foreground'
-                      : index === active
-                        ? 'bg-primary-soft text-primary-ink ring-2 ring-primary'
-                        : 'bg-muted text-muted-foreground'
+                    'grid size-6 shrink-0 place-items-center text-sm font-semibold tabular-nums',
+                    index <= active ? 'text-primary-ink' : 'text-muted-foreground'
                   )}
                 >
                   {index < active ? (
@@ -131,7 +132,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
                 <span className="min-w-0">
                   <span
                     className={cn(
-                      'flex items-center gap-1.5 text-sm font-semibold',
+                      'flex items-center gap-1.5 text-[0.9375rem] font-semibold',
                       index === active ? 'text-foreground' : 'text-muted-foreground'
                     )}
                   >
@@ -149,23 +150,14 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
                   )}
                 </span>
               </button>
-              {index < steps.length - 1 && (
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    'mx-4 h-px min-w-6 flex-1',
-                    index < active ? 'bg-primary/40' : 'bg-border'
-                  )}
-                />
-              )}
             </li>
           ))}
         </ol>
         <PanelNestingContext.Provider value={true}>
-          <div className="border-t border-border p-5 sm:p-6">{children}</div>
+          <div className="py-5">{children}</div>
         </PanelNestingContext.Provider>
         {!embedded && (
-          <div className="flex justify-between gap-3 rounded-b-xl border-t border-border bg-muted/30 px-5 py-4 sm:px-6">
+          <div className="flex justify-between gap-3 border-t border-border pt-5">
             <Button
               type="button"
               variant="outline"
@@ -193,7 +185,7 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
             )}
           </div>
         )}
-      </Container>
+      </div>
     </WizardContext.Provider>
   )
 }

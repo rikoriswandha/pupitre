@@ -4,19 +4,18 @@
   "type": "registry:component",
   "title": "RelationManager",
   "dependencies": [
-    "@rikology/pupitre@^1.0.0"
+    "@rikology/pupitre@^1.1.0"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/action-list.json",
-    "https://pupitre.rikology.com/r/data-table.json",
-    "https://pupitre.rikology.com/r/primitives.json"
+    "https://pupitre.rikology.com/r/data-table.json"
   ],
   "files": [
     {
       "path": "../src/components/RelationManager.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/RelationManager.tsx",
-      "content": "import { ActionList } from './ActionList.js'\nimport { DataTable } from './DataTable.js'\nimport type { RelationDescriptor } from '@rikology/pupitre/catalog'\nimport { Badge } from '../primitives/index.js'\n\nexport type RelationManagerProps = {\n  props: { descriptor: RelationDescriptor }\n  emit: (event: string, payload?: unknown) => void\n}\n\nexport function RelationManager({ props, emit }: RelationManagerProps) {\n  const descriptor = props.descriptor\n  const table = descriptor.readOnly\n    ? { ...descriptor.table, selectable: false, bulkActions: [] }\n    : descriptor.table\n  return (\n    <section\n      aria-label={descriptor.label}\n      className=\"space-y-4\"\n      data-relation={descriptor.relation}\n    >\n      <header className=\"flex flex-wrap items-center justify-between gap-3\">\n        <div className=\"flex items-center gap-2\">\n          <h2 className=\"text-[0.9375rem] font-semibold text-foreground\">{descriptor.label}</h2>\n          {descriptor.badge !== undefined && <Badge size=\"sm\">{descriptor.badge}</Badge>}\n        </div>\n        {!descriptor.readOnly && (\n          <ActionList\n            actions={descriptor.actions.header}\n            max={3}\n            size=\"sm\"\n            onRun={(action) => emit('action', { action: action.name })}\n          />\n        )}\n      </header>\n      <DataTable props={{ descriptor: table }} emit={emit} />\n    </section>\n  )\n}\n"
+      "content": "import { ActionList } from './ActionList.js'\nimport { DataTable } from './DataTable.js'\nimport type { RelationDescriptor } from '@rikology/pupitre/catalog'\n\nexport type RelationManagerProps = {\n  props: { descriptor: RelationDescriptor }\n  emit: (event: string, payload?: unknown) => void\n}\n\nexport function RelationManager({ props, emit }: RelationManagerProps) {\n  const descriptor = props.descriptor\n  const table = descriptor.readOnly\n    ? { ...descriptor.table, selectable: false, bulkActions: [] }\n    : descriptor.table\n  return (\n    <section\n      aria-label={descriptor.label}\n      className=\"space-y-4\"\n      data-relation={descriptor.relation}\n    >\n      {/* The relation tab already names the table; keep the heading for screen readers and\n          show the row only when it carries header actions. */}\n      <h2 className=\"sr-only\">{descriptor.label}</h2>\n      {!descriptor.readOnly && descriptor.actions.header.some((action) => action.enabled) && (\n        <header className=\"flex flex-wrap items-center justify-end gap-3\">\n          <ActionList\n            actions={descriptor.actions.header}\n            max={3}\n            size=\"sm\"\n            onRun={(action) => emit('action', { action: action.name })}\n          />\n        </header>\n      )}\n      <DataTable props={{ descriptor: table }} emit={emit} />\n    </section>\n  )\n}\n"
     }
   ]
 }

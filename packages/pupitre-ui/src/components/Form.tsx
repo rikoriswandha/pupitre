@@ -20,7 +20,7 @@ import {
   matchesKeyBinding,
   t,
 } from '@rikology/pupitre-react'
-import { Button, Panel, cn } from '../primitives/index.js'
+import { Button, cn, ledgerRuleClasses } from '../primitives/index.js'
 import { PanelNestingContext } from './Section.js'
 
 export const FormWizardContext = createContext<{ label: string; submitting: boolean } | null>(null)
@@ -46,11 +46,11 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   const flush = () => {
     if (!fields.length) return
     content.push(
-      <Panel key={`fields-${content.length}`} className="p-5 sm:p-6">
+      <section key={`fields-${content.length}`} className={cn(ledgerRuleClasses, 'pt-5')}>
         <PanelNestingContext.Provider value={true}>
           <div className="space-y-5">{fields}</div>
         </PanelNestingContext.Provider>
-      </Panel>
+      </section>
     )
     fields = []
   }
@@ -124,7 +124,10 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   return (
     <form
       noValidate
-      className={cn('space-y-6', typeof props.className === 'string' ? props.className : undefined)}
+      className={cn(
+        embedded || nested ? 'space-y-5' : 'space-y-10',
+        typeof props.className === 'string' ? props.className : undefined
+      )}
       action={typeof props.url === 'string' ? props.url : undefined}
       method={typeof props.method === 'string' ? props.method : undefined}
       onSubmit={submit}
@@ -144,8 +147,8 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
         {embedded || nested ? children : content}
       </FormWizardContext.Provider>
       {/* Inside an action modal the modal footer owns submit/cancel. */}
-      {!embedded && (
-        <div className="flex flex-wrap items-center gap-3">
+      {!embedded && (!onlyWizard || typeof props.cancelUrl === 'string') && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
           {!onlyWizard && (
             <Button type="submit" color="primary" loading={loading || submitting}>
               {typeof props.submitLabel === 'string' ? props.submitLabel : t('Submit')}

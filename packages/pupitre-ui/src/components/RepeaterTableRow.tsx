@@ -45,7 +45,7 @@ export function RepeaterTableRow({
     >
       {Children.map(children, (child, position) => (
         <td
-          className="px-3 py-3 align-top [&_[data-input-label]]:sr-only"
+          className="py-3 pr-6 align-top [&_[data-input-label]]:sr-only"
           style={{
             width: context.table?.[position]?.width,
             minWidth: context.table?.[position]?.width ?? '10rem',
@@ -55,7 +55,7 @@ export function RepeaterTableRow({
           {child}
         </td>
       ))}
-      <td className="w-px whitespace-nowrap px-3 py-3 align-top">
+      <td className="w-px whitespace-nowrap py-3 align-top">
         <div className="flex justify-end gap-1">
           {context.reorderable && (
             <>

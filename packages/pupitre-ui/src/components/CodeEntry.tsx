@@ -27,7 +27,7 @@ export function CodeEntry({ props = {} }: { props?: EntryProps }) {
     }
   }
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan}>
+    <EntryShell label={props.label} columnSpan={props.columnSpan} empty={!value} block>
       {value ? (
         <div className="overflow-hidden rounded-lg border border-input bg-card text-foreground shadow-control">
           <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">

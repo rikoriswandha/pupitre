@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { t, usePanel } from '@rikology/pupitre-react'
+import { cn } from '../primitives/index.js'
 import { batchedMediaRows, type MediaItem } from './media_protocol.js'
 export type MediaEntryProps = {
   props: { value?: unknown; label?: string | null; conversion?: string }
@@ -37,7 +38,7 @@ export function MediaEntry({ props, linked = true }: MediaEntryProps & { linked?
   return (
     <div className="space-y-2">
       {props.label && <div className="text-sm font-medium">{props.label}</div>}
-      <div className="flex flex-wrap gap-2">
+      <div className={cn('flex flex-wrap', linked ? 'gap-3' : 'gap-2')}>
         {rows
           .filter((row) => ids.includes(row.id))
           .map((row) => {
@@ -49,7 +50,13 @@ export function MediaEntry({ props, linked = true }: MediaEntryProps & { linked?
               />
             )
             return linked ? (
-              <a key={row.id} href={row.url} target="_blank" rel="noopener noreferrer">
+              <a
+                key={row.id}
+                href={row.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border-t border-border pt-3"
+              >
                 {image}
               </a>
             ) : (

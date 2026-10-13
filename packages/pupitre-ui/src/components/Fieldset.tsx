@@ -11,10 +11,12 @@ export function Fieldset({ props, children }: RuntimeProps) {
   return (
     <fieldset
       disabled={props.disabled === true}
-      className={cn('min-w-0 space-y-5 rounded-lg border border-border p-4 sm:p-5', className)}
+      className={cn('min-w-0 space-y-5 border-t border-border pt-4', className)}
     >
       {typeof props.label === 'string' && (
-        <legend className="mb-3 px-1 text-sm font-semibold text-foreground">{props.label}</legend>
+        <legend className="pr-3 text-[0.9375rem] font-semibold text-foreground">
+          {props.label}
+        </legend>
       )}
       {typeof props.helperText === 'string' && (
         <p className="text-[0.8125rem] text-muted-foreground">{props.helperText}</p>

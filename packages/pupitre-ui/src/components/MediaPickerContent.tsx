@@ -131,11 +131,11 @@ export default function MediaPickerContent({ props, bindings, emit }: MediaPicke
         {props.label ?? props.name}
         {props.required ? ' *' : ''}
       </legend>
-      <ol className="space-y-2">
+      <ol className="divide-y divide-border">
         {ids.map((key, index) => {
           const item = selected.find((row) => row.id === key)
           return (
-            <li key={key} className="flex items-center gap-2">
+            <li key={key} className="flex items-center gap-2 py-3">
               {item && (
                 <img src={item.url} alt={item.alt} className="size-16 rounded object-cover" />
               )}
@@ -191,7 +191,7 @@ export default function MediaPickerContent({ props, bindings, emit }: MediaPicke
         <section
           id={`${id}-browser`}
           aria-label={t('Media library')}
-          className="space-y-3 rounded border p-3"
+          className="space-y-3 border-t border-border pt-4"
         >
           <label htmlFor={`${id}-search`}>{t('Search media')}</label>
           <Input
@@ -212,7 +212,7 @@ export default function MediaPickerContent({ props, bindings, emit }: MediaPicke
               event.currentTarget.value = ''
             }}
           />
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-x-4 md:grid-cols-3">
             {rows
               .filter((item) =>
                 (props.accept ?? ['image/*']).some((mime) =>
@@ -223,7 +223,8 @@ export default function MediaPickerContent({ props, bindings, emit }: MediaPicke
                 <Button
                   key={item.id}
                   type="button"
-                  className="h-auto flex-col p-2"
+                  variant="ghost"
+                  className="h-auto flex-col items-stretch rounded-none border-t border-border px-0 py-3"
                   aria-pressed={ids.includes(item.id)}
                   disabled={
                     ids.includes(item.id) ||
@@ -231,7 +232,7 @@ export default function MediaPickerContent({ props, bindings, emit }: MediaPicke
                   }
                   onClick={() => select(item)}
                 >
-                  <img src={item.url} alt="" className="h-24 w-full object-cover" />
+                  <img src={item.url} alt="" className="h-24 w-full rounded object-cover" />
                   <span>{item.filename}</span>
                 </Button>
               ))}

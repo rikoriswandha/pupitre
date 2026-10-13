@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ShellProps } from '@rikology/pupitre-react'
 import { t } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
@@ -142,6 +142,17 @@ export function ShellSidebar({
       // Storage can be disabled by the browser; the in-memory state still works.
     }
   }
+  const sideNavRef = useRef<HTMLElement>(null)
+  // A long navigation scrolls inside the sidebar; keep the current page's item in view.
+  useEffect(() => {
+    const navElement = sideNavRef.current
+    const active = navElement?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!navElement || !active) return
+    const navBox = navElement.getBoundingClientRect()
+    const box = active.getBoundingClientRect()
+    if (box.top >= navBox.top && box.bottom <= navBox.bottom) return
+    navElement.scrollTop += box.top - navBox.top - (navBox.height - box.height) / 2
+  }, [currentUrl, topNav])
 
   if (topNav)
     return (
@@ -157,7 +168,7 @@ export function ShellSidebar({
                   rel={item.external ? 'noreferrer' : undefined}
                   aria-current={isActive(item, currentUrl) ? 'page' : undefined}
                   onClick={onNavigate}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary-ink"
+                  className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
                 >
                   {item.icon && <Icon name={item.icon} className="size-4" />}
                   {item.label}
@@ -225,9 +236,10 @@ export function ShellSidebar({
 
   return (
     <nav
+      ref={sideNavRef}
       aria-label={t('Main navigation')}
       className={cn(
-        'pupitre-scroll flex-1 space-y-5 overflow-y-auto pb-6 pt-2',
+        'pupitre-scroll pupitre-scroll-shadows flex-1 space-y-5 overflow-y-auto pb-6 pt-2',
         railCollapsed ? 'px-2' : 'px-3'
       )}
     >
@@ -304,7 +316,7 @@ export function ShellSidebar({
                         'group/item flex h-8 items-center gap-2.5 rounded-lg text-sm outline-none transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/30',
                         railCollapsed ? 'justify-center px-0' : 'px-2.5',
                         active
-                          ? 'bg-card font-medium text-foreground shadow-control ring-1 ring-sidebar-border'
+                          ? 'bg-sidebar-accent font-medium text-foreground'
                           : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
                       )}
                     >
@@ -365,7 +377,7 @@ export function ShellSidebar({
                                   href={child.url ?? '#'}
                                   aria-current={childActive ? 'page' : undefined}
                                   onClick={onNavigate}
-                                  className="flex h-7 items-center rounded-md px-2 text-[0.8125rem] text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+                                  className="flex h-7 items-center rounded-md px-2 text-[0.8125rem] text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-foreground"
                                 >
                                   {child.label}
                                 </NavLink>

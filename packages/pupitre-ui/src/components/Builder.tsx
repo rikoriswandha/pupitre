@@ -78,7 +78,7 @@ export function Builder({ props, children, bindings, loading = false }: RuntimeP
         <div className="space-y-3" data-builder={descriptor.name}>
           {children}
           {items.length === 0 && (
-            <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
+            <div className="border-t border-border py-8 text-center text-sm text-muted-foreground">
               {t('No blocks yet. Add a block to build your content.')}
             </div>
           )}

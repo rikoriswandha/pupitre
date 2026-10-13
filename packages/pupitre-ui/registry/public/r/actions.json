@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "Actions",
   "dependencies": [
-    "@rikology/pupitre@^1.0.0"
+    "@rikology/pupitre@^1.1.0"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/action-list.json"

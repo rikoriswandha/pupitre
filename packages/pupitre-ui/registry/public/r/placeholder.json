@@ -4,16 +4,18 @@
   "type": "registry:component",
   "title": "Placeholder",
   "dependencies": [
-    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre-react@^1.1.0",
     "react@^19.2.3"
   ],
-  "registryDependencies": [],
+  "registryDependencies": [
+    "https://pupitre.rikology.com/r/entry-shell.json"
+  ],
   "files": [
     {
       "path": "../src/components/Placeholder.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Placeholder.tsx",
-      "content": "import type { ReactNode } from 'react'\nimport { t } from '@rikology/pupitre-react'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Placeholder({ props, children }: RuntimeProps) {\n  const value = props.content\n  const content =\n    value === null || value === undefined\n      ? children\n      : typeof value === 'boolean'\n        ? String(value)\n        : typeof value === 'object'\n          ? ''\n          : String(value)\n  const output =\n    content === null || content === undefined || content === ''\n      ? t('No content available')\n      : content\n  return (\n    <div className=\"min-w-0 space-y-1.5 text-sm text-muted-foreground\" aria-live=\"polite\">\n      {typeof props.label === 'string' && (\n        <p className=\"font-medium text-foreground\">{props.label}</p>\n      )}\n      {output}\n    </div>\n  )\n}\nexport default Placeholder\n"
+      "content": "import { useContext, type ReactNode } from 'react'\nimport { t } from '@rikology/pupitre-react'\nimport { EntryShell, InfolistContext } from './EntryShell.js'\n\ntype RuntimeProps = { props: Record<string, unknown>; children?: ReactNode }\nexport function Placeholder({ props, children }: RuntimeProps) {\n  const inInfolist = useContext(InfolistContext)\n  const value = props.content\n  const content =\n    value === null || value === undefined\n      ? children\n      : typeof value === 'boolean'\n        ? String(value)\n        : typeof value === 'object'\n          ? ''\n          : String(value)\n  const output =\n    content === null || content === undefined || content === ''\n      ? t('No content available')\n      : content\n  const columnSpan =\n    typeof props.columnSpan === 'number' || props.columnSpan === 'full'\n      ? props.columnSpan\n      : undefined\n  // In a view page the placeholder sits between entries, so it takes their typography.\n  if (inInfolist)\n    return (\n      <EntryShell\n        label={typeof props.label === 'string' ? props.label : null}\n        columnSpan={columnSpan}\n      >\n        <span className=\"whitespace-pre-wrap\" aria-live=\"polite\">\n          {output}\n        </span>\n      </EntryShell>\n    )\n  return (\n    <div className=\"min-w-0 space-y-1.5 text-sm text-muted-foreground\" aria-live=\"polite\">\n      {typeof props.label === 'string' && (\n        <p className=\"font-medium text-foreground\">{props.label}</p>\n      )}\n      {output}\n    </div>\n  )\n}\nexport default Placeholder\n"
     }
   ]
 }

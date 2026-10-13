@@ -1,6 +1,7 @@
-import { useEffect, useId, useState } from 'react'
+import { useContext, useEffect, useId, useState } from 'react'
 import { t } from '@rikology/pupitre-react'
-import { buttonClasses, cn, controlClasses } from '../primitives/index.js'
+import { Badge, buttonClasses, cn, controlClasses, ledgerRuleClasses } from '../primitives/index.js'
+import { PanelNestingContext } from './Section.js'
 
 type Session = {
   id: string
@@ -23,6 +24,7 @@ export function ProfileSessions({
   passkeysEnabled,
   history,
 }: ProfileSessionsProps) {
+  const nested = useContext(PanelNestingContext)
   const id = useId()
   const [sessions, setSessions] = useState<Session[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -89,8 +91,16 @@ export function ProfileSessions({
     }
   }
   return (
-    <section className="mt-8 space-y-6" aria-label={t('Browser sessions')}>
-      <h2 className="text-base font-semibold">{t('Browser sessions')}</h2>
+    <section
+      className={cn('space-y-5', nested ? 'mt-3 border-t border-border pt-5' : ledgerRuleClasses)}
+      aria-label={t('Browser sessions')}
+    >
+      <header className={cn(!nested && 'pt-3 pb-4')}>
+        <h2 className="text-[0.9375rem] font-semibold">{t('Browser sessions')}</h2>
+        <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+          {t('Review where you are signed in and revoke access to other sessions.')}
+        </p>
+      </header>
       {error && (
         <p role="alert" className="text-sm text-danger-ink">
           {error}
@@ -106,7 +116,7 @@ export function ProfileSessions({
             <div className="space-y-1 text-sm">
               <p>
                 {session.browser} · {session.device}{' '}
-                {session.current && <strong>{t('Current session')}</strong>}
+                {session.current && <Badge color="success">{t('Current session')}</Badge>}
               </p>
               <p className="text-muted-foreground">
                 {session.ip} · {t('Last active')}: {new Date(session.lastActiveAt).toLocaleString()}
@@ -169,10 +179,10 @@ export function ProfileSessions({
       )}
       {history && (
         <section className="space-y-3 border-t border-border pt-5" aria-label={t('Recent logins')}>
-          <h2 className="text-base font-semibold">{t('Recent logins')}</h2>
-          <ul className="space-y-2 text-sm">
+          <h2 className="text-[0.9375rem] font-semibold">{t('Recent logins')}</h2>
+          <ul className="divide-y divide-border text-sm">
             {events.map((event, index) => (
-              <li key={index}>
+              <li key={index} className="py-3">
                 {eventLabel(event.event)}
                 {event.method ? ` · ${methodLabel(event.method)}` : ''} · {event.ip} ·{' '}
                 {new Date(event.created_at).toLocaleString()}

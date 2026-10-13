@@ -18,16 +18,13 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
   const collapsed = builder.collapsed[item._key] === true
   const busy = loading || builder.loading
   return (
-    <article
-      key={item._key}
-      className="min-w-0 overflow-hidden rounded-lg border border-border bg-card"
-    >
-      <header className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5">
+    <article key={item._key} className="min-w-0 border-t border-border">
+      <header className="flex items-center justify-between gap-3 pt-3 pb-4">
         <div className="flex min-w-0 items-center gap-2">
           {builder.descriptor.reorderable && (
             <Icon name="grip-vertical" className="size-4 shrink-0 text-muted-foreground" />
           )}
-          <h3 className="truncate text-sm font-medium">{label}</h3>
+          <h3 className="truncate text-[0.9375rem] font-semibold">{label}</h3>
           <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>
         </div>
         <div className="flex gap-1">
@@ -107,7 +104,7 @@ export function BuilderItem({ props, children, loading = false }: RuntimeProps) 
         </div>
       </header>
       <Collapse open={!collapsed}>
-        <div className="grid gap-x-6 gap-y-5 border-t border-border p-4">
+        <div className="grid gap-x-6 gap-y-5 pb-5">
           <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
         </div>
       </Collapse>

@@ -1,9 +1,10 @@
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser'
 import { t } from '@rikology/pupitre-react'
-import { useEffect, useId, useState } from 'react'
-import { Badge, buttonClasses, controlClasses } from '../primitives/index.js'
+import { useContext, useEffect, useId, useState } from 'react'
+import { Badge, buttonClasses, cn, controlClasses, ledgerRuleClasses } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 import { ConfirmDialog } from './ConfirmDialog.js'
+import { PanelNestingContext } from './Section.js'
 
 type Passkey = { id: string | number; name: string | null }
 export type ProfileSecurityProps = {
@@ -34,6 +35,7 @@ export function ProfileSecurity({
   mfaEnabled: initialMfaEnabled,
   passkeysEnabled,
 }: ProfileSecurityProps) {
+  const nested = useContext(PanelNestingContext)
   const id = useId()
   const mfaHeadingId = `${id}-mfa-heading`
   const passkeysHeadingId = `${id}-passkeys-heading`
@@ -98,14 +100,26 @@ export function ProfileSecurity({
   }
 
   return (
-    <section className="mt-8 space-y-6" aria-label={t('Account security')}>
-      <h2 className="text-[0.9375rem] font-semibold">{t('Account security')}</h2>
+    <section
+      // Inside the profile form it is a sub-group: a hairline instead of a second ink rule.
+      className={cn('space-y-5', nested ? 'mt-3 border-t border-border pt-5' : ledgerRuleClasses)}
+      aria-label={t('Account security')}
+    >
+      <header className={cn(!nested && 'pt-3 pb-4')}>
+        <h2 className="text-[0.9375rem] font-semibold">{t('Account security')}</h2>
+        <p className="mt-1 text-[0.8125rem] text-muted-foreground">
+          {t('Manage your authenticator app and passkeys.')}
+        </p>
+      </header>
       {error && (
-        <p role="alert" className="rounded-lg bg-danger-soft p-3 text-sm text-danger-ink">
+        <p
+          role="alert"
+          className="border-y border-border bg-danger-soft px-3 py-2 text-sm text-danger-ink"
+        >
           {error}
         </p>
       )}
-      <section className="space-y-5 border-t border-border pt-5" aria-labelledby={mfaHeadingId}>
+      <section className="space-y-5" aria-labelledby={mfaHeadingId}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 id={mfaHeadingId} className="text-[0.9375rem] font-semibold">
             {t('Authenticator app')}
@@ -139,7 +153,7 @@ export function ProfileSecurity({
             <img
               src={enrollment.qrCode}
               alt={t('Scan this QR code with your authenticator app')}
-              className="size-44 rounded-lg border border-border bg-muted p-3"
+              className="size-44"
             />
             <p className="text-[0.8125rem] text-muted-foreground">
               {t('Or enter this secret manually')}:{' '}
@@ -234,7 +248,7 @@ export function ProfileSecurity({
           </div>
         )}
         {recoveryCodes && (
-          <div className="space-y-3 rounded-lg bg-muted/50 p-4">
+          <div className="space-y-3 border-t border-border pt-5">
             <h4 className="text-sm font-semibold">{t('Save these recovery codes now')}</h4>
             <p className="text-[0.8125rem] text-muted-foreground">
               {t('Each code can be used once. They will not be shown again.')}

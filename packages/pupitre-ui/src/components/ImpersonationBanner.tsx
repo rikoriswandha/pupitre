@@ -11,7 +11,7 @@ export function ImpersonationBanner({
   return (
     <section
       aria-label={t('Impersonation')}
-      className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted p-4 text-foreground"
+      className="mb-6 flex w-full flex-wrap items-center justify-between gap-3 border-y border-border bg-warning-soft px-4 py-3 text-warning-ink"
     >
       <p>{t('You are signed in as {name}', { name: impersonation.name })}</p>
       <Button variant="outline" onClick={() => visit(impersonation.leaveUrl, { method: 'post' })}>

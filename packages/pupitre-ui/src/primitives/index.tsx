@@ -477,6 +477,51 @@ export function Panel({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return <div className={cn(panelClasses, className)} {...props} />
 }
 
+/** The ink rule that opens a ledger section or table. */
+export const ledgerRuleClasses = 'border-t border-rule'
+
+/**
+ * Unboxed page region: an ink rule, a heading row, then content directly on the canvas.
+ * Widgets, view-page sections and tables use it instead of cards, so a page reads as
+ * one ruled sheet rather than a grid of boxes.
+ */
+export function LedgerSection({
+  heading,
+  description,
+  aside,
+  headingLevel = 2,
+  className,
+  children,
+  ...props
+}: Omit<HTMLAttributes<HTMLElement>, 'title'> & {
+  heading?: ReactNode
+  description?: ReactNode
+  aside?: ReactNode
+  headingLevel?: 2 | 3
+}) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h3'
+  return (
+    <section className={cn('min-w-0', ledgerRuleClasses, className)} {...props}>
+      {(heading || description || aside) && (
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-3 pb-4">
+          <div className="min-w-0">
+            {heading && (
+              <Heading className="text-[0.9375rem] font-semibold leading-6 text-foreground">
+                {heading}
+              </Heading>
+            )}
+            {description && (
+              <p className="text-[0.8125rem] leading-5 text-muted-foreground">{description}</p>
+            )}
+          </div>
+          {aside && <div className="flex shrink-0 items-center gap-2">{aside}</div>}
+        </div>
+      )}
+      {children}
+    </section>
+  )
+}
+
 export function PanelHeader({
   heading,
   description,
@@ -520,28 +565,46 @@ export function EmptyState({
   heading,
   description,
   actions,
+  compact = false,
   className,
 }: {
   icon?: string
   heading: ReactNode
   description?: ReactNode
   actions?: ReactNode
+  /** Lighter variant for tables nested in another panel (relation managers, widgets). */
+  compact?: boolean
   className?: string
 }) {
   return (
     <div
-      className={cn('flex flex-col items-center justify-center px-6 py-12 text-center', className)}
+      className={cn(
+        'flex flex-col items-center justify-center text-center',
+        compact ? 'px-4 py-7' : 'px-6 py-12',
+        className
+      )}
     >
-      <span className="grid size-11 place-items-center rounded-full bg-muted text-muted-foreground ring-8 ring-muted/40">
-        <Icon name={icon} className="size-5" />
+      <span
+        className={cn(
+          'grid place-items-center rounded-full bg-muted text-muted-foreground',
+          compact ? 'size-8' : 'size-11 ring-8 ring-muted/40'
+        )}
+      >
+        <Icon name={icon} className={compact ? 'size-4' : 'size-5'} />
       </span>
-      <p className="mt-4 text-sm font-semibold text-foreground">{heading}</p>
+      <p className={cn('text-sm font-semibold text-foreground', compact ? 'mt-3' : 'mt-4')}>
+        {heading}
+      </p>
       {description && (
         <p className="mt-1 max-w-sm text-[0.8125rem] leading-5 text-muted-foreground">
           {description}
         </p>
       )}
-      {actions && <div className="mt-5 flex flex-wrap justify-center gap-2">{actions}</div>}
+      {actions && (
+        <div className={cn('flex flex-wrap justify-center gap-2', compact ? 'mt-4' : 'mt-5')}>
+          {actions}
+        </div>
+      )}
     </div>
   )
 }

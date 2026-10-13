@@ -1,15 +1,12 @@
 import { createContext, useContext, useId, type ReactNode } from 'react'
-import { useBoundValue } from '@rikology/pupitre-react'
+import { useBoundValue, useEmbedded } from '@rikology/pupitre-react'
 import {
-  Panel,
   cn,
   underlineTabClasses,
-  underlineTabListClasses,
   segmentedListClasses,
   segmentedItemClasses,
 } from '../primitives/index.js'
 import { PanelNestingContext } from './Section.js'
-import { useEmbedded } from '@rikology/pupitre-react'
 
 type TabContextValue = { active: string; select: (key: string) => void; id: string }
 export const TabContext = createContext<TabContextValue | null>(null)
@@ -38,17 +35,20 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
   const id = typeof props.id === 'string' ? props.id : generatedId
   const nested = useContext(PanelNestingContext)
   const embedded = useEmbedded()
-  const Container = nested || embedded || props.contained === false ? 'div' : Panel
 
   return (
     <TabContext.Provider value={{ active: active ?? initial, select: setActive, id }}>
-      <Container id={id} className="min-w-0" data-tabs-id={id}>
+      <div id={id} className="min-w-0" data-tabs-id={id}>
         <div
           role="tablist"
           aria-label={typeof props.label === 'string' ? props.label : undefined}
           className={cn(
-            props.contained === false ? segmentedListClasses : underlineTabListClasses,
-            props.contained !== false && 'px-3 sm:px-4'
+            props.contained === false
+              ? segmentedListClasses
+              : cn(
+                  'flex items-end gap-5 overflow-x-auto border-b',
+                  nested || embedded ? 'border-border' : 'border-rule'
+                )
           )}
         >
           {tabs.map((tab) => (
@@ -80,7 +80,9 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
                 document.getElementById(`${id}-${next.key}-tab`)?.focus()
               }}
               className={cn(
-                props.contained === false ? segmentedItemClasses : underlineTabClasses,
+                props.contained === false
+                  ? segmentedItemClasses
+                  : cn(underlineTabClasses, 'h-9 px-0'),
                 'disabled:opacity-50'
               )}
               onClick={() => setActive(tab.key)}
@@ -93,9 +95,9 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
           ))}
         </div>
         <PanelNestingContext.Provider value={true}>
-          <div className="p-5 sm:p-6">{children}</div>
+          <div className="pt-5">{children}</div>
         </PanelNestingContext.Provider>
-      </Container>
+      </div>
     </TabContext.Provider>
   )
 }

@@ -287,14 +287,14 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
                     columns: preview.headers.length,
                   })}
                 </p>
-                <div className="max-h-80 overflow-auto rounded-lg border border-border">
-                  <div className="grid grid-cols-2 gap-4 bg-muted/50 px-4 py-2.5 text-xs font-medium text-muted-foreground">
+                <div className="max-h-80 overflow-auto border-y border-border">
+                  <div className="grid grid-cols-2 gap-4 border-b border-border py-2.5 text-[0.9375rem] font-semibold">
                     <span>{t('CSV header')}</span>
                     <span>{t('Import field')}</span>
                   </div>
                   <div className="divide-y divide-border">
                     {preview.headers.map((header) => (
-                      <div key={header} className="grid grid-cols-2 items-center gap-4 px-4 py-3">
+                      <div key={header} className="grid grid-cols-2 items-center gap-4 py-3">
                         <label
                           htmlFor={`pupitre-import-map-${header}`}
                           className="min-w-0 break-words text-sm font-medium"
@@ -325,7 +325,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
             )}
             {polling && (
               <div
-                className="grid gap-3 rounded-lg bg-muted/40 p-4"
+                className="grid gap-3 border-t border-border pt-4"
                 role="status"
                 aria-live="polite"
               >
@@ -359,7 +359,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
             )}
             {summary && (
               <div
-                className="grid gap-3 rounded-lg bg-muted/40 p-4 text-sm"
+                className="grid gap-3 border-t border-border pt-4 text-sm"
                 role="status"
                 aria-live="polite"
               >
@@ -392,7 +392,7 @@ export function ImportModal({ open, action, onClose, onComplete }: ImportModalPr
             {error && (
               <p
                 role="alert"
-                className="rounded-lg bg-danger-soft px-4 py-3 text-[0.8125rem] leading-5 text-danger-ink"
+                className="border-t border-border pt-3 text-[0.8125rem] leading-5 text-danger-ink"
               >
                 {error}
               </p>

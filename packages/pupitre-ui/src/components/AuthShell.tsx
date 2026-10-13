@@ -3,10 +3,10 @@ import type { AuthShellProps } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { usePanelTheme } from './use_panel_theme.js'
 import { PasskeyLogin } from './PasskeyLogin.js'
-import { Panel, buttonClasses } from '../primitives/index.js'
+import { buttonClasses, ledgerRuleClasses } from '../primitives/index.js'
 import { PanelNestingContext } from './Section.js'
 
-/** Centered card layout for auth pages (login, password reset, registration). */
+/** Centered ledger sheet for auth pages (login, password reset, registration). */
 export function AuthShell({ panel, title, children }: AuthShellProps) {
   const style = usePanelTheme(panel)
   const links = [
@@ -28,8 +28,8 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
       className="grid min-h-dvh place-items-center bg-background px-4 py-12 text-foreground"
       style={style}
     >
-      <main className="w-full max-w-md">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center">
+      <main className="w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
           {panel.brand.logo || panel.brand.logoDark ? (
             <>
               {panel.brand.logo && (
@@ -50,23 +50,27 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
           ) : (
             <span
               aria-hidden="true"
-              className="grid size-10 place-items-center rounded-xl bg-primary text-base font-bold text-primary-foreground shadow-control"
+              className="grid size-10 place-items-center rounded-lg bg-primary text-base font-bold text-primary-foreground"
             >
               {panel.brand.name.slice(0, 1).toUpperCase()}
             </span>
           )}
           <p className="text-sm font-semibold text-foreground">{panel.brand.name}</p>
         </div>
-        <Panel className="p-6 sm:p-8 [&_form]:space-y-5 [&_form_input]:w-full [&_form_button[type=submit]]:w-full [&_form_button[type=submit]]:bg-primary [&_form_button[type=submit]]:text-primary-foreground">
-          <header className="mb-6">
-            <h1 className="text-[1.375rem] font-semibold leading-7 tracking-tight">{title}</h1>
+        <div className="[&_form]:space-y-5 [&_form_input]:w-full [&_form_button[type=submit]]:w-full [&_form_button[type=submit]]:bg-primary [&_form_button[type=submit]]:text-primary-foreground">
+          <header className="pb-6">
+            <h1 className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]">
+              {title}
+            </h1>
             {title === t('Sign in') && (
               <p className="mt-1.5 text-[0.8125rem] text-muted-foreground">
                 {t('Sign in to your account.')}
               </p>
             )}
           </header>
-          <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
+          <div className={`${ledgerRuleClasses} pt-6`}>
+            <PanelNestingContext.Provider value={true}>{children}</PanelNestingContext.Provider>
+          </div>
           {title === t('Sign in') && panel.features.passkeys && (
             <PasskeyLogin panelPath={panel.path} />
           )}
@@ -89,7 +93,7 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
               ))}
             </div>
           )}
-        </Panel>
+        </div>
         {links.length > 0 && (
           <nav
             aria-label={t('Authentication')}

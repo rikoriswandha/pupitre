@@ -109,7 +109,8 @@ export function DataTableEditableCell({
     return (
       <SelectMenu
         size="sm"
-        className="w-auto"
+        // Tables scroll horizontally; the trigger must keep its label instead of shrinking.
+        className="w-auto min-w-max"
         aria-label={t('{column}, row {row}', { column: column.label, row: rowKey })}
         value={String(value ?? '')}
         disabled={disabled || pending}
@@ -156,7 +157,7 @@ export function DataTableEditableCell({
       ref={buttonRef}
       type="button"
       disabled={disabled}
-      className="min-h-8 rounded-md px-1 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50"
+      className={`min-h-8 rounded-md px-1 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-50 ${column.wrap ? '' : 'whitespace-nowrap'}`}
       aria-label={t('Edit {column}, {value}, row {row}', {
         column: column.label,
         value: String(value ?? ''),

@@ -34,6 +34,8 @@ export type EntryDisplayProps = EntryProps & {
 }
 
 export const InlineEntryLabelContext = createContext(false)
+/** True inside an `Infolist`; lets shared components (Placeholder) render as entries. */
+export const InfolistContext = createContext(false)
 
 export function entryIsEmpty(value: unknown): boolean {
   return value === null || value === undefined || value === ''
@@ -100,13 +102,20 @@ export function EntryShell({
   children,
   columnSpan,
   inlineLabel,
+  empty = false,
+  block = false,
 }: {
   label?: string | null
   children: ReactNode
   columnSpan?: number | 'full'
   inlineLabel?: boolean
+  /** No value to show; view pages dim these and can fold them away. */
+  empty?: boolean
+  /** Wide content (tables, code, key-value lists) keeps its label above on phones. */
+  block?: boolean
 }) {
   const inheritedInlineLabel = useContext(InlineEntryLabelContext)
+  const inInfolist = useContext(InfolistContext)
   const style =
     columnSpan === 'full'
       ? { gridColumn: '1 / -1' }
@@ -115,11 +124,21 @@ export function EntryShell({
         : undefined
   return (
     <dl
+      data-entry-empty={empty || undefined}
       className={cn(
         'min-w-0',
         (inlineLabel ?? inheritedInlineLabel) && label
           ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-start gap-x-4 gap-y-1'
-          : 'space-y-1.5'
+          : inInfolist
+            ? cn(
+                'space-y-0.5',
+                // Phones: label and value share the line, halving a long record's height.
+                !block &&
+                  'max-sm:grid max-sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] max-sm:items-baseline max-sm:gap-x-4 max-sm:space-y-0'
+              )
+            : 'space-y-1.5',
+        // On a view page every entry is a ruled line of the sheet.
+        inInfolist && 'border-b border-border py-3'
       )}
       style={style}
     >
@@ -130,7 +149,14 @@ export function EntryShell({
       >
         {label ?? t('Value')}
       </dt>
-      <dd className="min-w-0 break-words text-sm leading-6 text-foreground">{children}</dd>
+      <dd
+        className={cn(
+          'min-w-0 break-words text-sm leading-6',
+          empty ? 'text-subtle-foreground' : 'text-foreground'
+        )}
+      >
+        {children}
+      </dd>
     </dl>
   )
 }

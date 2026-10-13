@@ -1,6 +1,6 @@
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
 import { t } from '@rikology/pupitre-react'
-import { Panel, PanelHeader, EmptyState, toneText } from '../primitives/index.js'
+import { LedgerSection, EmptyState, toneText } from '../primitives/index.js'
 
 type Props = { descriptor: WidgetDescriptor; data?: WidgetData }
 const colors: Record<string, string> = toneText
@@ -13,20 +13,21 @@ function changeValue(value: unknown): string {
 export function WidgetTimeline({ descriptor, data }: Props) {
   const items = data?.kind === 'timeline' ? data.items : []
   return (
-    <Panel
+    <LedgerSection
       role="region"
       aria-label={descriptor.heading ?? t('Activity')}
-      className="overflow-hidden"
+      heading={descriptor.heading}
+      description={descriptor.description}
     >
-      <PanelHeader heading={descriptor.heading} description={descriptor.description} />
       {items.length === 0 ? (
         <EmptyState
+          compact
           icon="activity"
           heading={t('No activity yet.')}
           description={t('New activity will appear here.')}
         />
       ) : (
-        <ol className="px-5 pb-5 sm:px-6 sm:pb-6">
+        <ol className="pb-1">
           {items.map((item, index) => {
             const colorClass = item.color ? colors[item.color] : undefined
             return (
@@ -39,7 +40,7 @@ export function WidgetTimeline({ descriptor, data }: Props) {
                 )}
                 <span
                   aria-hidden="true"
-                  className={`relative mt-1.5 size-3 shrink-0 rounded-full border-2 border-card bg-current ${colorClass ?? 'text-muted-foreground'}`}
+                  className={`relative mt-1.5 size-3 shrink-0 rounded-full border-2 border-background bg-current ${colorClass ?? 'text-muted-foreground'}`}
                   style={item.color && !colorClass ? { color: item.color } : undefined}
                 />
                 <div className="min-w-0 flex-1 space-y-1">
@@ -97,6 +98,6 @@ export function WidgetTimeline({ descriptor, data }: Props) {
           })}
         </ol>
       )}
-    </Panel>
+    </LedgerSection>
   )
 }

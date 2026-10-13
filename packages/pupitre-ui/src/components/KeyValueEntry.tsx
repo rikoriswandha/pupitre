@@ -7,13 +7,20 @@ export function KeyValueEntry({ props = {} }: { props?: EntryDisplayProps }) {
       ? Object.entries(props.value)
       : []
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={entries.length === 0}
+      block
+    >
       {entries.length ? (
-        <dl className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+        <dl className="divide-y divide-border/70">
           {entries.map(([key, value]) => (
             <div
               key={key}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 px-3.5 py-2.5"
+              // Keys never break mid-word ("postc|ode"); the value column absorbs the squeeze.
+              className="grid grid-cols-[minmax(min-content,1fr)_minmax(0,2fr)] gap-x-4 py-1.5"
             >
               <dt className="break-words text-[0.8125rem] font-medium text-muted-foreground">
                 {key}

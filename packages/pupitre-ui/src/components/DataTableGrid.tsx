@@ -18,7 +18,7 @@ export function DataTableGrid({ children, columns }: Props) {
     '--pupitre-grid-xl': `repeat(${extraLarge}, minmax(0, 1fr))`,
   }
   return (
-    <div className="pupitre-table-grid grid gap-4 p-4 sm:p-5" style={style}>
+    <div className="pupitre-table-grid grid gap-4 py-4" style={style}>
       {children}
     </div>
   )

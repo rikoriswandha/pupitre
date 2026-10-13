@@ -36,13 +36,13 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
       </RepeaterTableRow>
     )
   return (
-    <article className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
-      <header className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5">
+    <article className="min-w-0 border-t border-border">
+      <header className="flex items-center justify-between gap-3 pt-3 pb-4">
         <div className="flex min-w-0 items-center gap-2">
           {context.reorderable && (
             <Icon name="grip-vertical" className="size-4 shrink-0 text-muted-foreground" />
           )}
-          <h3 className="min-w-0 truncate text-sm font-medium">{label}</h3>
+          <h3 className="min-w-0 truncate text-[0.9375rem] font-semibold">{label}</h3>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {context.reorderable && (
@@ -122,8 +122,8 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
           data-repeater-fields
           className={
             context.grid === undefined
-              ? 'space-y-5 border-t border-border p-4'
-              : 'grid min-w-0 gap-x-6 gap-y-5 border-t border-border p-4 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]'
+              ? 'space-y-5 pb-5'
+              : 'grid min-w-0 gap-x-6 gap-y-5 pb-5 grid-cols-[repeat(var(--grid-default,1),minmax(0,1fr))] sm:grid-cols-[repeat(var(--grid-sm,var(--grid-default,1)),minmax(0,1fr))] md:grid-cols-[repeat(var(--grid-md,var(--grid-sm,var(--grid-default,1))),minmax(0,1fr))] lg:grid-cols-[repeat(var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1)))),minmax(0,1fr))] xl:grid-cols-[repeat(var(--grid-xl,var(--grid-lg,var(--grid-md,var(--grid-sm,var(--grid-default,1))))),minmax(0,1fr))]'
           }
           style={gridStyle}
         >

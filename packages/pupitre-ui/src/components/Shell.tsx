@@ -178,7 +178,7 @@ export function Shell({
       )}
 
       {topNav && (
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card px-4 sm:px-6">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
           <ShellBrand panel={panel} />
           <TenantSwitcher tenant={tenant} tenants={tenants} compact />
           <ShellSidebar
@@ -249,7 +249,7 @@ export function Shell({
           style={{ maxWidth: maxContentWidth }}
         >
           <ImpersonationBanner impersonation={impersonation} />
-          <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               {breadcrumbs.length > 0 && (
                 <nav aria-label={t('Breadcrumb')} className="mb-1.5">
@@ -282,7 +282,7 @@ export function Shell({
                   </ol>
                 </nav>
               )}
-              <h1 className="text-2xl font-semibold leading-8 tracking-tight text-foreground text-balance">
+              <h1 className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em] text-foreground text-balance">
                 {title}
               </h1>
             </div>
@@ -304,7 +304,8 @@ export function Shell({
           >
             <ClusterNavigation items={clusterNavigation} position={clusterNavigationPosition} />
             <div className="min-w-0 flex-1">
-              {subNavigation.length > 0 && (
+              {/* One tab (the page you are on) navigates nowhere; show tabs only with a choice. */}
+              {subNavigation.length > 1 && (
                 <nav
                   aria-label={t('Record navigation')}
                   className={cn(underlineTabListClasses, 'mb-6')}
@@ -322,7 +323,7 @@ export function Shell({
                 </nav>
               )}
               {/* Header widgets, page content and footer widgets stack as separate panels. */}
-              <div className="min-w-0 space-y-6">{children}</div>
+              <div className="min-w-0 space-y-10">{children}</div>
             </div>
           </div>
         </main>

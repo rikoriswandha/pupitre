@@ -38,7 +38,7 @@ import {
   Input,
   InputGroup,
   InputSlot,
-  Panel,
+  ledgerRuleClasses,
   Skeleton,
   buttonClasses,
   cn,
@@ -48,8 +48,7 @@ import {
   SelectMenu,
   backdropClasses,
   sheetPopupClasses,
-  segmentedListClasses,
-  segmentedItemClasses,
+  underlineTabClasses,
   toTone,
 } from '../primitives/index.js'
 import { ActionList, ActionMenu } from './ActionList.js'
@@ -313,7 +312,13 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
       </a>
     ) : (
       <span
-        title={limit !== undefined && text.length > limit ? text : undefined}
+        title={
+          typeof cell?.title === 'string'
+            ? cell.title
+            : limit !== undefined && text.length > limit
+              ? text
+              : undefined
+        }
         className={column.wrap ? 'whitespace-normal' : 'whitespace-nowrap'}
       >
         {truncated}
@@ -336,7 +341,10 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
           type="button"
           className="text-xs text-muted-foreground underline"
           onClick={() => {
-            if (typeof navigator !== 'undefined') void navigator.clipboard?.writeText(text)
+            if (typeof navigator !== 'undefined')
+              void navigator.clipboard?.writeText(
+                typeof cell?.title === 'string' ? cell.title : text
+              )
           }}
         >
           {t('Copy')}
@@ -350,9 +358,13 @@ function renderCellValue(value: unknown, column: ColumnDescriptor): ReactNode {
 // page-index reset on every render, which loops forever once anything re-renders.
 const NO_ROWS: TableRow[] = []
 
-/** Bordered, shadowless table container for tables rendered inside another panel. */
-function NestedTableSurface({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-lg border border-border bg-card', className)} {...props} />
+/** A standalone table opens with the ledger's ink rule and sits directly on the canvas. */
+function LedgerTableSurface(props: HTMLAttributes<HTMLDivElement>) {
+  return <div className={cn('min-w-0', ledgerRuleClasses)} {...props} />
+}
+/** Inside a ruled section, tab or modal the surrounding heading already opens the table. */
+function NestedTableSurface(props: HTMLAttributes<HTMLDivElement>) {
+  return <div className="min-w-0" {...props} />
 }
 
 export function DataTable({
@@ -364,8 +376,9 @@ export function DataTable({
 }: DataTableProps) {
   const descriptor = props.descriptor as TableDescriptor & { striped?: boolean }
   const tableState = useTable(descriptor, fallbackData)
-  // Inside another panel (tabs, sections, modals) the table drops its own panel chrome.
-  const TableSurface = useContext(PanelNestingContext) ? NestedTableSurface : Panel
+  // Inside another surface (tabs, sections, modals) the table drops its opening rule.
+  const nested = useContext(PanelNestingContext)
+  const TableSurface = nested ? NestedTableSurface : LedgerTableSurface
   const runAction = useRunAction()
   const realtime = useTableRealtime(descriptor)
   const tableData =
@@ -724,7 +737,7 @@ export function DataTable({
   function renderActions(row: TableRow) {
     return (
       <ActionList
-        actions={row.actions.filter((action) => action.enabled)}
+        actions={row.actions}
         appearance="links"
         max={2}
         align="end"
@@ -925,7 +938,7 @@ export function DataTable({
             </td>
           )
         })}
-        <td className="px-4 py-(--row-py)">{renderActions(item)}</td>
+        <td className="w-px whitespace-nowrap px-4 py-(--row-py)">{renderActions(item)}</td>
       </tr>
     )
   }
@@ -1102,9 +1115,28 @@ export function DataTable({
     )
   ).length
   const filterForm = (
-    <div className="grid gap-4">
-      {descriptor.filters.map(renderFilter)}
-      <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+    <div
+      className={cn(
+        'grid gap-4',
+        // Above the table the filters share rows instead of stacking full-width selects.
+        descriptor.filtersLayout === 'above' &&
+          'gap-x-6 sm:grid-cols-[repeat(auto-fill,minmax(14rem,1fr))]'
+      )}
+    >
+      {descriptor.filters.map((filter) =>
+        filter.type === 'queryBuilder' ||
+        (filter.type === 'dateRange' && descriptor.filtersLayout === 'above') ? (
+          <div
+            key={filter.name}
+            className={filter.type === 'queryBuilder' ? 'col-span-full' : 'sm:col-span-2'}
+          >
+            {renderFilter(filter)}
+          </div>
+        ) : (
+          renderFilter(filter)
+        )
+      )}
+      <div className="col-span-full flex items-center justify-between gap-2 border-t border-border pt-3">
         <Button
           variant="ghost"
           size="sm"
@@ -1144,6 +1176,7 @@ export function DataTable({
       </div>
     ) : (
       <EmptyState
+        compact={nested}
         icon={descriptor.emptyState?.icon ?? 'inbox'}
         heading={descriptor.emptyState?.heading ?? t('No records found')}
         description={
@@ -1167,13 +1200,18 @@ export function DataTable({
     <section className="space-y-3" aria-busy={loading || tableState.isLoading}>
       {props.label && <h2 className="text-base font-medium">{props.label}</h2>}
       {!reorderMode && descriptor.tabs && descriptor.tabs.length > 0 && (
-        <nav className={segmentedListClasses} aria-label={t('Table tabs')}>
+        // Tabs sit on the ledger rule like folder tabs; the active one is underlined.
+        <nav className="!mb-0 flex items-end gap-5 overflow-x-auto" aria-label={t('Table tabs')}>
           {descriptor.tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
-              aria-current={String(tableState.query.tab ?? '') === tab.key ? 'page' : undefined}
-              className={segmentedItemClasses}
+              aria-current={
+                String(tableState.query.tab ?? descriptor.tabs?.[0]?.key ?? '') === tab.key
+                  ? 'page'
+                  : undefined
+              }
+              className={cn(underlineTabClasses, 'h-9 px-0')}
               onClick={() => tableState.setQuery({ tab: tab.key, page: 1 })}
             >
               {tab.label}
@@ -1182,7 +1220,7 @@ export function DataTable({
           ))}
         </nav>
       )}
-      <TableSurface className="overflow-hidden">
+      <TableSurface>
         {(Boolean(descriptor.groups?.length) ||
           Boolean(descriptor.views) ||
           selected.length > 0 ||
@@ -1191,7 +1229,7 @@ export function DataTable({
           (Boolean(descriptor.multiSort) && tableState.sorts.length > 0) ||
           (descriptor.filters.length > 0 && descriptor.filtersLayout !== 'above') ||
           columnsVisible) && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <div className="flex flex-wrap items-center gap-3">
               {descriptor.views && (
                 <DataTableViews
@@ -1253,9 +1291,9 @@ export function DataTable({
                 </Button>
               )}
             </div>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
+            <div className="ml-auto flex min-w-0 flex-auto flex-wrap items-center justify-end gap-2">
               {descriptor.searchable && (
-                <InputGroup className="max-w-full" style={{ width: '16rem' }}>
+                <InputGroup className="min-w-40 flex-1 sm:max-w-64">
                   <InputSlot className="pl-3 text-muted-foreground">
                     <Icon name="search" className="size-4" />
                   </InputSlot>
@@ -1383,7 +1421,7 @@ export function DataTable({
           </div>
         )}
         {!reorderMode && descriptor.filters.length > 0 && descriptor.filtersLayout === 'above' && (
-          <div className="border-b border-border bg-muted/40 px-5 py-4">{filterForm}</div>
+          <div className="border-b border-border py-4">{filterForm}</div>
         )}
         {descriptor.layout === 'grid' ? (
           rows.length === 0 ? (
@@ -1411,8 +1449,9 @@ export function DataTable({
           )
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead className="bg-muted/50 text-xs font-medium text-muted-foreground">
+            {/* Ledger columns: text sits flush with the rule; rows are hairline-ruled. */}
+            <table className="w-full border-collapse text-sm [&_tr>*:first-child]:pl-0 [&_tr>*:last-child]:pr-0">
+              <thead className="text-xs font-medium text-muted-foreground">
                 <tr>
                   {descriptor.reorderable && <th className="w-8 px-2" aria-label={t('Reorder')} />}
                   {descriptor.selectable && (
@@ -1448,11 +1487,11 @@ export function DataTable({
                               ? 'none'
                               : undefined
                         }
-                        className={`px-4 py-3 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
+                        className={`whitespace-nowrap px-4 py-3 font-medium ${column?.alignment === 'end' ? 'text-right' : column?.alignment === 'center' ? 'text-center' : 'text-left'}`}
                         style={{ width: column?.width }}
                       >
                         {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                          <span className="inline-flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-2">
                             <button
                               type="button"
                               className="inline-flex items-center gap-1.5 rounded outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/30"
@@ -1507,7 +1546,9 @@ export function DataTable({
                       </th>
                     )
                   })}
-                  <th className="px-3 py-2 text-right font-medium">{t('Actions')}</th>
+                  <th className="w-px whitespace-nowrap px-4 py-3 text-right font-medium">
+                    {t('Actions')}
+                  </th>
                 </tr>
                 {!reorderMode &&
                   descriptor.columns.some((column) => column.individuallySearchable) && (
@@ -1593,75 +1634,78 @@ export function DataTable({
         {tableData?.summary && (
           <DataTableSummary summary={tableData.summary} columns={descriptor.columns} />
         )}
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
-          <span className="tabular-nums">
-            {meta?.simple ? (
-              t('{count} results', { count: rows.length })
-            ) : (
-              <>
-                {meta
-                  ? t('Showing {from} to {to} of {total} results', {
-                      from: meta.from ?? 0,
-                      to: meta.to ?? 0,
-                      total: meta.total,
-                    })
-                  : t('{count} results', { count: rows.length })}
-              </>
-            )}
-          </span>
-          <div className="flex items-center gap-2">
-            {descriptor.perPageOptions.length > 0 && (
-              <SelectMenu
-                size="sm"
-                className="w-auto"
-                aria-label={t('Rows per page')}
-                value={String(
-                  tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
-                )}
-                onValueChange={(next) =>
-                  tableState.setPerPage(next === 'all' ? 'all' : Number(next))
-                }
-                options={descriptor.perPageOptions.map((option) => ({
-                  value: String(option),
-                  label: option === 'all' ? t('All') : t('{count} per page', { count: option }),
-                }))}
-              />
-            )}
-            <button
-              type="button"
-              aria-label={t('Previous')}
-              className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
-              disabled={page <= 1 || loading || props.disabled}
-              onClick={() => {
-                tableState.setPage(page - 1)
-                emit('reload', { page: page - 1 })
-              }}
-            >
-              <Icon name="chevron-left" />
-            </button>
-            <span className="whitespace-nowrap tabular-nums">
+        {/* An empty first page has nothing to paginate; the empty state says it all. */}
+        {(rows.length > 0 || page > 1) && (
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3 text-[0.8125rem] text-muted-foreground">
+            <span className="tabular-nums">
               {meta?.simple ? (
-                page
+                t('{count} results', { count: rows.length })
               ) : (
                 <>
-                  {page} / {lastPage}
+                  {meta
+                    ? t('Showing {from} to {to} of {total} results', {
+                        from: meta.from ?? 0,
+                        to: meta.to ?? 0,
+                        total: meta.total,
+                      })
+                    : t('{count} results', { count: rows.length })}
                 </>
               )}
             </span>
-            <button
-              type="button"
-              aria-label={t('Next')}
-              className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
-              disabled={page >= lastPage || loading || props.disabled}
-              onClick={() => {
-                tableState.setPage(page + 1)
-                emit('reload', { page: page + 1 })
-              }}
-            >
-              <Icon name="chevron-right" />
-            </button>
-          </div>
-        </footer>
+            <div className="flex items-center gap-2">
+              {descriptor.perPageOptions.length > 0 && (
+                <SelectMenu
+                  size="sm"
+                  className="w-auto"
+                  aria-label={t('Rows per page')}
+                  value={String(
+                    tableState.query.perPage ?? meta?.perPage ?? descriptor.perPageOptions[0]
+                  )}
+                  onValueChange={(next) =>
+                    tableState.setPerPage(next === 'all' ? 'all' : Number(next))
+                  }
+                  options={descriptor.perPageOptions.map((option) => ({
+                    value: String(option),
+                    label: option === 'all' ? t('All') : t('{count} per page', { count: option }),
+                  }))}
+                />
+              )}
+              <button
+                type="button"
+                aria-label={t('Previous')}
+                className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
+                disabled={page <= 1 || loading || props.disabled}
+                onClick={() => {
+                  tableState.setPage(page - 1)
+                  emit('reload', { page: page - 1 })
+                }}
+              >
+                <Icon name="chevron-left" />
+              </button>
+              <span className="whitespace-nowrap tabular-nums">
+                {meta?.simple ? (
+                  page
+                ) : (
+                  <>
+                    {page} / {lastPage}
+                  </>
+                )}
+              </span>
+              <button
+                type="button"
+                aria-label={t('Next')}
+                className={buttonClasses({ variant: 'ghost', square: true, size: 'sm' })}
+                disabled={page >= lastPage || loading || props.disabled}
+                onClick={() => {
+                  tableState.setPage(page + 1)
+                  emit('reload', { page: page + 1 })
+                }}
+              >
+                <Icon name="chevron-right" />
+              </button>
+            </div>
+          </footer>
+        )}
       </TableSurface>
       {children}
     </section>

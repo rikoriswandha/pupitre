@@ -23,9 +23,12 @@ import {
   ScatterChart,
 } from 'recharts'
 import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
+import { formatNumber } from '@rikology/pupitre-react'
 type Props = { chartType: NonNullable<WidgetDescriptor['chartType']>; data?: WidgetData }
-const compactFormatter = new Intl.NumberFormat(undefined, { notation: 'compact' })
-const compactNumber = (value: number) => compactFormatter.format(value)
+// Axes shorten (`1,5 jt`, `1.5M`); tooltips show the full value, both in the number locale.
+const compactNumber = (value: number) => formatNumber(value, { compact: true })
+const fullNumber = (value: unknown) =>
+  typeof value === 'number' ? formatNumber(value) : String(value)
 
 export function WidgetChartBody({ chartType, data }: Props) {
   if (data?.kind === 'scatter')
@@ -49,6 +52,7 @@ export function WidgetChartBody({ chartType, data }: Props) {
             tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
           />
           <Tooltip
+            formatter={fullNumber}
             contentStyle={{ background: 'var(--popover)', color: 'var(--popover-foreground)' }}
           />
           <Legend />
@@ -77,6 +81,7 @@ export function WidgetChartBody({ chartType, data }: Props) {
   )
   const tooltip = (
     <Tooltip
+      formatter={fullNumber}
       contentStyle={{
         background: 'var(--popover)',
         color: 'var(--popover-foreground)',
@@ -167,6 +172,7 @@ export function WidgetChartBody({ chartType, data }: Props) {
         tickLine={false}
         tickMargin={8}
         width={48}
+        tickFormatter={compactNumber}
       />
       {tooltip}
       {legend}

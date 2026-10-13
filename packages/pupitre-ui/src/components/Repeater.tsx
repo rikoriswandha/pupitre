@@ -178,23 +178,23 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
         >
           {descriptor?.table ? (
             <div
-              className="max-w-full overflow-x-auto rounded-lg border border-border"
+              className="max-w-full overflow-x-auto"
               tabIndex={0}
               role="region"
               aria-label={typeof props.label === 'string' ? props.label : t('Items')}
             >
-              <table className="w-full min-w-max border-collapse bg-card text-sm text-foreground">
+              <table className="w-full min-w-max border-collapse text-sm text-foreground">
                 <caption className="sr-only">
                   {typeof props.label === 'string' ? props.label : t('Items')}
                 </caption>
-                <thead className="bg-muted/40">
+                <thead className="border-b border-border">
                   <tr>
                     {descriptor.table.map((column, position) => (
                       <th
                         key={position}
                         id={`${tableId}-${position}`}
                         scope="col"
-                        className="px-3 py-3 font-medium"
+                        className="py-3 pr-6 font-medium"
                         style={{ width: column.width, textAlign: column.alignment ?? 'start' }}
                       >
                         {column.label}
@@ -205,7 +205,7 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
                         )}
                       </th>
                     ))}
-                    <th scope="col" className="px-3 py-3 text-end font-medium">
+                    <th scope="col" className="py-3 text-end font-medium">
                       {t('Actions')}
                     </th>
                   </tr>
@@ -217,7 +217,7 @@ export function Repeater({ props, children, emit, bindings, loading = false }: R
             children
           )}
           {itemCount === 0 && (
-            <div className="rounded-lg border border-dashed border-border bg-muted/30 px-5 py-8 text-center text-sm text-muted-foreground">
+            <div className="border-t border-border py-8 text-center text-sm text-muted-foreground">
               {t('No items yet. Add an item to get started.')}
             </div>
           )}

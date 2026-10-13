@@ -13,7 +13,12 @@ function imageUrls(value: unknown): string[] {
 export function ImageEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const urls = imageUrls(props.value)
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={urls.length === 0}
+    >
       {urls.length > 0 ? (
         <div className={cn('flex flex-wrap items-center', props.stacked ? '-space-x-3' : 'gap-2')}>
           {urls.map((url, index) => (

@@ -4,7 +4,12 @@ import { EntryShell } from './EntryShell.js'
 export function ColorEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const color = typeof props.value === 'string' ? props.value : props.color
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={!color}
+    >
       {color ? (
         <span className="inline-flex items-center gap-2">
           <span

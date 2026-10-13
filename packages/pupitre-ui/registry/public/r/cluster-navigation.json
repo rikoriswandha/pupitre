@@ -4,8 +4,8 @@
   "type": "registry:component",
   "title": "ClusterNavigation",
   "dependencies": [
-    "@rikology/pupitre-react@^1.0.0",
-    "@rikology/pupitre@^1.0.0"
+    "@rikology/pupitre-react@^1.1.0",
+    "@rikology/pupitre@^1.1.0"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/primitives.json"
@@ -15,7 +15,7 @@
       "path": "../src/components/ClusterNavigation.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/ClusterNavigation.tsx",
-      "content": "import type { SubNavigationItem } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nimport { NavLink } from '../primitives/nav_link.js'\nimport { cn } from '../primitives/index.js'\n\nexport function ClusterNavigation({\n  items,\n  position = 'start',\n}: {\n  items: SubNavigationItem[]\n  position?: 'start' | 'top'\n}) {\n  if (!items.length) return null\n  return (\n    <nav\n      aria-label={t('Cluster navigation')}\n      className={cn(\n        'mb-6 flex min-w-0 gap-1 overflow-x-auto border-b border-border pb-2',\n        position === 'start' &&\n          'lg:mb-0 lg:w-48 lg:shrink-0 lg:flex-col lg:self-start lg:border-b-0 lg:border-r lg:pr-4'\n      )}\n    >\n      {items.map((item) => (\n        <NavLink\n          key={item.key}\n          href={item.url}\n          aria-current={item.active ? 'page' : undefined}\n          className={cn(\n            'flex min-h-11 shrink-0 items-center rounded-md px-3 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring',\n            item.active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground'\n          )}\n        >\n          {item.label}\n        </NavLink>\n      ))}\n    </nav>\n  )\n}\n"
+      "content": "import type { SubNavigationItem } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nimport { NavLink } from '../primitives/nav_link.js'\nimport { cn } from '../primitives/index.js'\n\nexport function ClusterNavigation({\n  items,\n  position = 'start',\n}: {\n  items: SubNavigationItem[]\n  position?: 'start' | 'top'\n}) {\n  if (!items.length) return null\n  return (\n    <nav\n      aria-label={t('Cluster navigation')}\n      className={cn(\n        'mb-6 flex min-w-0 gap-4 overflow-x-auto border-b border-border',\n        position === 'start' &&\n          'lg:mb-0 lg:w-48 lg:shrink-0 lg:flex-col lg:self-start lg:border-b-0 lg:border-r lg:pr-4'\n      )}\n    >\n      {items.map((item) => (\n        <NavLink\n          key={item.key}\n          href={item.url}\n          aria-current={item.active ? 'page' : undefined}\n          className={cn(\n            'flex min-h-11 shrink-0 items-center border-b-2 border-transparent px-1 text-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring',\n            item.active ? 'border-primary font-medium text-foreground' : 'text-muted-foreground',\n            position === 'start' && 'lg:border-b-0 lg:rounded-md lg:px-3 lg:hover:bg-muted',\n            position === 'start' && item.active && 'lg:bg-muted'\n          )}\n        >\n          {item.label}\n        </NavLink>\n      ))}\n    </nav>\n  )\n}\n"
     }
   ]
 }

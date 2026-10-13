@@ -6,7 +6,12 @@ export function BadgeEntry({ props = {} }: { props?: EntryDisplayProps }) {
   const empty = entryIsEmpty(props.value)
   const text = empty ? (props.placeholder ?? '—') : String(props.value)
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={empty}
+    >
       {empty ? (
         <span className="text-subtle-foreground">{text}</span>
       ) : (

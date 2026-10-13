@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/experimental-ct-react'
 import {
+  WidgetPackingStory,
   WidgetReconciliationStory,
   WidgetSemanticColorsStory,
 } from './stories/widgets_reconciliation.story.js'
@@ -59,7 +60,7 @@ test('stats semantic colors use theme classes while raw CSS colors remain suppor
   for (const color of ['primary', 'success', 'warning', 'danger', 'gray']) {
     const value = view.getByText(`${color} value`, { exact: true })
     await expect(value).toBeVisible()
-    expect(await value.evaluate((element) => element.getAttribute('style'))).toBeNull()
+    expect(await value.evaluate((element) => (element as HTMLElement).style.color)).toBe('')
   }
   await expect(view.getByText('#167a72 value', { exact: true })).toHaveCSS(
     'color',
@@ -69,4 +70,23 @@ test('stats semantic colors use theme classes while raw CSS colors remain suppor
     'color',
     'rgb(102, 51, 153)'
   )
+})
+
+test('widget rows that would leave empty columns stretch to fill the grid', async ({
+  mount,
+  page,
+}) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  const view = await mount(<WidgetPackingStory />)
+  const widths = await view.evaluate(() =>
+    Array.from({ length: 6 }, (_, index) =>
+      Math.round(
+        document
+          .querySelector(`[data-testid="widget-${index}"]`)!
+          .parentElement!.getBoundingClientRect().width
+      )
+    )
+  )
+  // 1200px grid, 12 tracks, 32px gaps: halves 584, a [2, 1] row 789/379, full 1200.
+  expect(widths).toEqual([584, 584, 1200, 789, 379, 1200])
 })

@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "WidgetCatalogAdapters",
   "dependencies": [
-    "@rikology/pupitre@^1.0.0",
+    "@rikology/pupitre@^1.1.0",
     "react@^19.2.3"
   ],
   "registryDependencies": [

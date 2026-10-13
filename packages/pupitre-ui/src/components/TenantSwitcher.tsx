@@ -21,7 +21,7 @@ function TenantMark({ name }: { name: string }) {
   return (
     <span
       aria-hidden="true"
-      className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-[0.6875rem] font-semibold text-foreground ring-1 ring-inset ring-border"
+      className="grid size-6 shrink-0 place-items-center rounded-md bg-sidebar-accent text-[0.6875rem] font-semibold text-foreground"
     >
       {name.slice(0, 1).toUpperCase()}
     </span>
@@ -37,9 +37,7 @@ export function TenantSwitcher({ tenant, tenants, compact = false }: TenantSwitc
       <Menu.Trigger
         className={cn(
           'flex items-center gap-2.5 rounded-lg text-left text-sm outline-none transition-colors duration-150 focus-visible:ring-[3px] focus-visible:ring-ring/30 data-popup-open:bg-sidebar-accent',
-          compact
-            ? 'h-9 px-2 hover:bg-muted'
-            : 'w-full border border-sidebar-border bg-card px-2 py-1.5 shadow-control hover:bg-sidebar-accent'
+          compact ? 'h-9 px-2 hover:bg-muted' : 'w-full px-2 py-1.5 hover:bg-sidebar-accent'
         )}
         aria-label={t('Switch tenant')}
       >

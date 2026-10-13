@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "ActionBar",
   "dependencies": [
-    "@rikology/pupitre@^1.0.0",
+    "@rikology/pupitre@^1.1.0",
     "react@^19.2.3"
   ],
   "registryDependencies": [
@@ -15,7 +15,7 @@
       "path": "../src/components/ActionBar.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/ActionBar.tsx",
-      "content": "import type { ReactNode } from 'react'\nimport type { ActionDescriptor } from '@rikology/pupitre/catalog'\nimport { ActionList } from './ActionList.js'\n\nexport type ActionBarProps = {\n  props: { actions: ActionDescriptor[]; label?: string | null; disabled?: boolean }\n  children?: ReactNode\n  emit: (event: string, payload?: unknown) => void\n  on?: unknown\n  bindings?: Record<string, string | undefined>\n  loading?: boolean\n}\n\nexport function ActionBar({ props, children, emit, loading = false }: ActionBarProps) {\n  return (\n    <div\n      className=\"flex flex-wrap items-center gap-2\"\n      aria-busy={loading}\n      aria-label={props.label ?? undefined}\n    >\n      <ActionList\n        actions={props.actions.filter((action) => action.enabled)}\n        disabled={loading || props.disabled}\n        onRun={(action) => emit('action', { action: action.name })}\n      />\n      {children}\n    </div>\n  )\n}\n\nexport default ActionBar\n"
+      "content": "import type { ReactNode } from 'react'\nimport type { ActionDescriptor } from '@rikology/pupitre/catalog'\nimport { ActionList } from './ActionList.js'\n\nexport type ActionBarProps = {\n  props: { actions: ActionDescriptor[]; label?: string | null; disabled?: boolean }\n  children?: ReactNode\n  emit: (event: string, payload?: unknown) => void\n  on?: unknown\n  bindings?: Record<string, string | undefined>\n  loading?: boolean\n}\n\nexport function ActionBar({ props, children, emit, loading = false }: ActionBarProps) {\n  return (\n    <div\n      className=\"flex flex-wrap items-center gap-2\"\n      aria-busy={loading}\n      aria-label={props.label ?? undefined}\n    >\n      <ActionList\n        actions={props.actions}\n        disabled={loading || props.disabled}\n        onRun={(action) => emit('action', { action: action.name })}\n      />\n      {children}\n    </div>\n  )\n}\n\nexport default ActionBar\n"
     }
   ]
 }

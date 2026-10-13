@@ -130,8 +130,10 @@ function EventCard({
 function CalendarCell({
   date,
   hour,
+  agenda = false,
   children,
 }: {
+  agenda?: boolean
   date: Date
   hour?: number
   children: ReactNode
@@ -141,7 +143,10 @@ function CalendarCell({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-24 border border-border p-1 ${isOver ? 'bg-muted' : ''}`}
+      className={cn(
+        agenda ? 'min-h-12 py-2' : 'min-h-24 border-t border-l border-border p-2',
+        isOver && 'bg-muted'
+      )}
       data-calendar-date={key}
     >
       {children}
@@ -305,7 +310,7 @@ export function CalendarBody({
         />
       ))
   return (
-    <div className="p-3 sm:p-5">
+    <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button variant="outline" aria-label={t('Previous period')} onClick={() => shift(-1)}>
           {t('Previous')}
@@ -342,7 +347,9 @@ export function CalendarBody({
           </select>
         </label>
       </div>
-      <p className="mb-2 text-sm">{t('Timezone: {timezone}', { timezone: data.timezone })}</p>
+      <p className="mb-4 text-[0.8125rem] text-muted-foreground">
+        {t('Timezone: {timezone}', { timezone: data.timezone })}
+      </p>
       {error && (
         <p role="alert" className="mb-2 text-sm text-destructive">
           {error}
@@ -371,10 +378,10 @@ export function CalendarBody({
         }}
       >
         {view === 'list' ? (
-          <div aria-label={t('Agenda')}>
+          <div aria-label={t('Agenda')} className="divide-y divide-border border-y border-border">
             {range.days.map((date) => (
-              <section key={date.toISOString()} className="mb-3">
-                <h3 className="mb-1 font-semibold">
+              <section key={date.toISOString()} className="py-3">
+                <h3 className="mb-1 text-[0.9375rem] font-semibold">
                   {date.toLocaleDateString(undefined, {
                     timeZone: 'UTC',
                     weekday: 'long',
@@ -382,13 +389,18 @@ export function CalendarBody({
                     day: 'numeric',
                   })}
                 </h3>
-                <CalendarCell date={date}>{renderEvents(date)}</CalendarCell>
+                <CalendarCell date={date} agenda>
+                  {renderEvents(date)}
+                </CalendarCell>
               </section>
             ))}
           </div>
         ) : view === 'month' ? (
           <div className="max-w-full overflow-x-auto">
-            <div className="grid min-w-[36rem] grid-cols-7" aria-label={t('Month')}>
+            <div
+              className="grid min-w-[36rem] grid-cols-7 border-r border-b border-border"
+              aria-label={t('Month')}
+            >
               {range.days.slice(0, 7).map((date) => (
                 <div key={date.toISOString()} className="p-1 text-center text-sm font-semibold">
                   {date.toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' })}

@@ -19,7 +19,7 @@ export function ActionBar({ props, children, emit, loading = false }: ActionBarP
       aria-label={props.label ?? undefined}
     >
       <ActionList
-        actions={props.actions.filter((action) => action.enabled)}
+        actions={props.actions}
         disabled={loading || props.disabled}
         onRun={(action) => emit('action', { action: action.name })}
       />

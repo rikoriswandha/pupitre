@@ -20,8 +20,20 @@ function displayValue(value: unknown, placeholder?: string): string {
 const proseClasses =
   'max-w-[75ch] space-y-3 leading-6 [&_p]:my-3 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_h1]:text-xl [&_h2]:text-lg [&_h3]:text-base [&_h1]:font-semibold [&_h2]:font-semibold [&_h3]:font-semibold [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-1 [&_a]:text-primary-ink [&_a]:underline-offset-4 [&_a:hover]:underline [&_a:focus-visible]:outline-ring [&_blockquote]:rounded-lg [&_blockquote]:bg-muted/60 [&_blockquote]:p-3 [&_blockquote]:text-muted-foreground [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:font-mono [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:bg-muted [&_pre]:p-3 [&_hr]:border-border [&_img]:rounded-lg'
 
-export function TextEntry({ props = {} }: { props?: EntryDisplayProps }) {
+export function TextEntry({ props: incoming = {} }: { props?: EntryDisplayProps }) {
   const [expanded, setExpanded] = useState(false)
+  // `.compact()` entries arrive as `{ value, title }`: short text plus the full value.
+  const raw = incoming.value
+  const compact =
+    raw &&
+    typeof raw === 'object' &&
+    'value' in raw &&
+    'title' in raw &&
+    typeof raw.value === 'string' &&
+    typeof raw.title === 'string'
+      ? { value: raw.value, title: raw.title }
+      : undefined
+  const props = compact ? { ...incoming, value: compact.value } : incoming
   const empty = entryIsEmpty(props.value)
   const values = Array.isArray(props.value) ? props.value : [props.value]
   const value = Array.isArray(props.value)
@@ -46,10 +58,17 @@ export function TextEntry({ props = {} }: { props?: EntryDisplayProps }) {
       ))}
     </ul>
   ) : (
-    <span className="whitespace-pre-wrap">{value}</span>
+    <span className="whitespace-pre-wrap" title={compact?.title}>
+      {value}
+    </span>
   )
   return (
-    <EntryShell label={props.label} columnSpan={props.columnSpan} inlineLabel={props.inlineLabel}>
+    <EntryShell
+      label={props.label}
+      columnSpan={props.columnSpan}
+      inlineLabel={props.inlineLabel}
+      empty={empty}
+    >
       <div className="flex items-start gap-1.5">
         <div
           className={cn(
@@ -105,7 +124,7 @@ export function TextEntry({ props = {} }: { props?: EntryDisplayProps }) {
             </Button>
           )}
         </div>
-        {props.copyable && <EntryCopyButton value={value} label={props.label} />}
+        {props.copyable && <EntryCopyButton value={compact?.title ?? value} label={props.label} />}
       </div>
     </EntryShell>
   )

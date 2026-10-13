@@ -4,20 +4,21 @@
   "type": "registry:component",
   "title": "Calendar",
   "dependencies": [
-    "@rikology/pupitre-react@^1.0.0",
-    "@rikology/pupitre@^1.0.0",
+    "@rikology/pupitre-react@^1.1.0",
+    "@rikology/pupitre@^1.1.0",
     "react@^19.2.3"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/calendar-body.json",
-    "https://pupitre.rikology.com/r/primitives.json"
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/section.json"
   ],
   "files": [
     {
       "path": "../src/components/Calendar.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/Calendar.tsx",
-      "content": "import { lazy, Suspense } from 'react'\nimport type { WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nimport { Panel, PanelHeader, Skeleton } from '../primitives/index.js'\nimport type { CalendarData } from './CalendarBody.js'\nconst CalendarBody = lazy(() =>\n  import('./CalendarBody.js').then((module) => ({ default: module.CalendarBody }))\n)\nexport function Calendar({ descriptor, data }: { descriptor: WidgetDescriptor; data: unknown }) {\n  return (\n    <Panel role=\"region\" aria-label={descriptor.heading ?? t('Calendar')}>\n      <PanelHeader\n        heading={descriptor.heading ?? t('Calendar')}\n        description={descriptor.description}\n      />\n      <Suspense fallback={<Skeleton className=\"h-96\" />}>\n        <CalendarBody descriptor={descriptor} data={data as CalendarData} />\n      </Suspense>\n    </Panel>\n  )\n}\n"
+      "content": "import { lazy, Suspense, useContext } from 'react'\nimport type { WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nimport { LedgerSection, Skeleton } from '../primitives/index.js'\nimport { PanelNestingContext } from './Section.js'\nimport type { CalendarData } from './CalendarBody.js'\nconst CalendarBody = lazy(() =>\n  import('./CalendarBody.js').then((module) => ({ default: module.CalendarBody }))\n)\nexport function Calendar({ descriptor, data }: { descriptor: WidgetDescriptor; data: unknown }) {\n  const nested = useContext(PanelNestingContext)\n  const Surface = nested ? 'section' : LedgerSection\n  return (\n    <Surface\n      role=\"region\"\n      aria-label={descriptor.heading ?? t('Calendar')}\n      {...(!nested && {\n        heading: descriptor.heading ?? t('Calendar'),\n        description: descriptor.description,\n      })}\n    >\n      <Suspense fallback={<Skeleton className=\"h-96\" />}>\n        <CalendarBody descriptor={descriptor} data={data as CalendarData} />\n      </Suspense>\n    </Surface>\n  )\n}\n"
     }
   ]
 }

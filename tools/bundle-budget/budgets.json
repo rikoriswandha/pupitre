@@ -6,8 +6,8 @@
       "brotli": 119705
     },
     "initialCSS": {
-      "gzip": 17985,
-      "brotli": 15028
+      "gzip": 20090,
+      "brotli": 16586
     },
     "tiptap": {
       "gzip": 398949,

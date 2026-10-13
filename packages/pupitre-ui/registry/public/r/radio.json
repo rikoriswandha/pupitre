@@ -5,8 +5,8 @@
   "title": "Radio",
   "dependencies": [
     "@base-ui/react@^1.9.0",
-    "@rikology/pupitre-react@^1.0.0",
-    "@rikology/pupitre@^1.0.0",
+    "@rikology/pupitre-react@^1.1.0",
+    "@rikology/pupitre@^1.1.0",
     "react@^19.2.3",
     "zod@^4.3.6"
   ],

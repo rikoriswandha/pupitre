@@ -90,9 +90,9 @@ function Column({
       ref={setNodeRef}
       aria-label={column.label}
       data-over={isOver}
-      className="flex w-72 shrink-0 flex-col gap-3 rounded-xl border border-border bg-muted p-3 text-foreground"
+      className="flex w-72 shrink-0 flex-col gap-3 border-t border-rule text-foreground data-[over=true]:bg-muted/40"
     >
-      <h2 className="flex items-center justify-between gap-2 font-semibold">
+      <h2 className="flex items-center justify-between gap-2 pt-3 pb-4 text-[0.9375rem] font-semibold">
         <span className="flex items-center gap-2">
           {column.color && (
             <span

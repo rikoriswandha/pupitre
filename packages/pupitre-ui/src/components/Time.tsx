@@ -2,17 +2,9 @@ import { useId, type ReactNode } from 'react'
 import { useBoundValue, useFieldError } from '@rikology/pupitre-react'
 import type { components } from '@rikology/pupitre/catalog'
 import type { infer as Infer } from 'zod'
-import {
-  Field,
-  FieldError,
-  Input,
-  FieldDescription,
-  InputGroup,
-  InputSlot,
-} from '../primitives/index.js'
+import { Field, FieldError, Input, FieldDescription } from '../primitives/index.js'
 import { timezoneHint, toInputValue } from '../primitives/date_value.js'
 
-import { Icon } from '../icons.js'
 import { InputFieldLabel } from './Text.js'
 
 type Props = Infer<typeof components.Time.props>
@@ -55,30 +47,24 @@ export function Time({ props, bindings }: Runtime) {
     <div style={columnStyle}>
       <Field invalid={!!error}>
         <InputFieldLabel id={id} props={props} />
-        <InputGroup>
-          <InputSlot>
-            <Icon name="clock" className="ml-2 size-4 text-muted-foreground" />
-          </InputSlot>
-          <Input
-            bare
-            aria-label={props.label ?? id}
-            {...props.extraAttributes}
-            id={id}
-            name={id}
-            type="time"
-            value={toInputValue(value, 'time', props.seconds === true)}
-            min={props.min}
-            max={props.max}
-            step={props.seconds ? 1 : 60}
-            disabled={props.disabled}
-            required={props.required}
-            readOnly={props.readOnly}
-            onChange={(event) => setValue(event.currentTarget.value || null)}
-            aria-required={props.required}
-            aria-describedby={describedBy}
-            aria-invalid={!!error}
-          />
-        </InputGroup>
+        <Input
+          aria-label={props.label ?? id}
+          {...props.extraAttributes}
+          id={id}
+          name={id}
+          type="time"
+          value={toInputValue(value, 'time', props.seconds === true)}
+          min={props.min}
+          max={props.max}
+          step={props.seconds ? 1 : 60}
+          disabled={props.disabled}
+          required={props.required}
+          readOnly={props.readOnly}
+          onChange={(event) => setValue(event.currentTarget.value || null)}
+          aria-required={props.required}
+          aria-describedby={describedBy}
+          aria-invalid={!!error}
+        />
         {zoneHint && <FieldDescription id={`${id}-timezone`}>{zoneHint}</FieldDescription>}
 
         {props.helperText && (

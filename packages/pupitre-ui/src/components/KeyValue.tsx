@@ -86,8 +86,8 @@ export function KeyValue({ props, bindings }: Runtime) {
     <div style={columnStyle}>
       <Field invalid={!!error}>
         <InputFieldLabel id={id} props={props} />
-        <div className="overflow-hidden rounded-lg border border-input bg-card">
-          <div className="grid grid-cols-[1fr_1fr_6rem] gap-2 border-b border-border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
+        <div className="border-t border-border">
+          <div className="grid grid-cols-[1fr_1fr_6rem] gap-2 border-b border-border py-2 text-xs font-medium text-muted-foreground">
             <span>{props.keyLabel ?? t('Key')}</span>
             <span>{props.valueLabel ?? t('Value')}</span>
             <span className="sr-only">{t('Actions')}</span>
@@ -95,10 +95,9 @@ export function KeyValue({ props, bindings }: Runtime) {
           {entries.map((entry, index) => (
             <div
               key={entry.id}
-              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border px-2 py-1 last:border-b-0"
+              className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border py-2 last:border-b-0"
             >
               <Input
-                bare
                 {...props.extraAttributes}
                 aria-label={props.keyLabel ?? t('Key')}
                 aria-required={props.required}
@@ -109,10 +108,9 @@ export function KeyValue({ props, bindings }: Runtime) {
                 placeholder={props.keyPlaceholder}
                 onChange={(event) => update(index, 'key', event.currentTarget.value)}
                 onBlur={() => commitValue()}
-                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-(--control-h) min-w-0"
               />
               <Input
-                bare
                 {...props.extraAttributes}
                 aria-label={props.valueLabel ?? t('Value')}
                 aria-required={props.required}
@@ -123,7 +121,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                 placeholder={props.valuePlaceholder}
                 onChange={(event) => update(index, 'value', event.currentTarget.value)}
                 onBlur={() => commitValue()}
-                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-(--control-h) min-w-0"
               />
               <div className="flex items-center justify-end gap-0.5">
                 {props.reorderable && (
@@ -177,9 +175,8 @@ export function KeyValue({ props, bindings }: Runtime) {
             </div>
           ))}
           {props.addable !== false && (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border px-2 py-1 last:border-b-0">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-2 border-b border-border py-2 last:border-b-0">
               <Input
-                bare
                 {...props.extraAttributes}
                 aria-label={props.keyLabel ?? t('Key')}
                 aria-required={props.required}
@@ -189,10 +186,9 @@ export function KeyValue({ props, bindings }: Runtime) {
                 onChange={(event) => setNewEntry({ ...newEntry, key: event.currentTarget.value })}
                 placeholder={props.keyPlaceholder}
                 disabled={props.disabled || props.readOnly}
-                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-(--control-h) min-w-0"
               />
               <Input
-                bare
                 {...props.extraAttributes}
                 aria-label={props.valueLabel ?? t('Value')}
                 aria-required={props.required}
@@ -202,7 +198,7 @@ export function KeyValue({ props, bindings }: Runtime) {
                 onChange={(event) => setNewEntry({ ...newEntry, value: event.currentTarget.value })}
                 placeholder={props.valuePlaceholder}
                 disabled={props.disabled || props.readOnly}
-                className="h-(--control-h) min-w-0 rounded-md focus-visible:ring-2 focus-visible:ring-ring/30"
+                className="h-(--control-h) min-w-0"
               />
               <Button
                 type="button"

@@ -1,2 +1,8 @@
 @import 'tailwindcss';
 @import '../src/styles.css';
+
+/* Pupitre surfaces are unboxed and sit on the canvas the Shell paints; mirror it here. */
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
