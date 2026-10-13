@@ -59,6 +59,10 @@ export type PanelDefinition = {
   timezone?: string
   locale?: string
   locales?: readonly string[]
+  /** Default number/money format region, e.g. `id-ID`; falls back to the UI locale. */
+  numberLocale?: string
+  /** Formats users can pick in their profile; `[]` hides the choice. */
+  numberLocales?: readonly string[]
   breadcrumbs: boolean
   auth: PanelAuthDefinition
   sessions?: { history: boolean; retentionDays: number }

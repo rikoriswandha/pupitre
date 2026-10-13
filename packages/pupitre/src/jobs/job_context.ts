@@ -12,6 +12,7 @@ import type { PupitreContext } from '../types.js'
 import { E_PUPITRE_MISSING_PEER } from '../errors.js'
 import { resolveTenancyAdapter } from '../tenancy/runtime.js'
 import { userSummary } from '../http/middleware/pupitre_context.js'
+import { resolveNumberLocale } from '../i18n/number_locale.js'
 
 type AuthenticatedJobContext = HttpContext & {
   auth: {
@@ -105,10 +106,19 @@ export async function createJobContext(
     tenant && panel.tenancy?.mode === 'url'
       ? bindPanel(panel, `${panel.path}/${tenant.slug ?? encodeURIComponent(String(tenant.id))}`)
       : panel
+  const locale = payload.locale ?? panel.locale ?? 'en'
+  const numberLocaleColumn = config.auth.columns.numberLocale
   const pupitre: PupitreContext = {
     panel: boundPanel,
     basePath: panel.path,
-    locale: payload.locale ?? panel.locale ?? 'en',
+    locale,
+    numberLocale: resolveNumberLocale({
+      user: numberLocaleColumn
+        ? (authUser as unknown as Record<string, unknown>)[numberLocaleColumn]
+        : undefined,
+      panel,
+      locale,
+    }),
     timezone: userSummary(authUser, config)?.timezone ?? panel.timezone ?? config.timezone ?? 'UTC',
     user: userSummary(authUser, config),
     authUser,

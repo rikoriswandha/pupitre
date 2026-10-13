@@ -1,8 +1,11 @@
 import type { LucidModel, LucidRow, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { TableColumnDefinition, TableDefinition } from '../definition/table.js'
 import { formatMoney, formatNumber } from '../format/index.js'
-import type { TableDataOptions } from './table_data.js'
-type SummaryOptions = Pick<TableDataOptions, 'locale' | 'timezone' | 'normalized'>
+import { numberContextOf, type TableDataOptions } from './table_data.js'
+type SummaryOptions = Pick<
+  TableDataOptions,
+  'locale' | 'numberLocale' | 'ctx' | 'timezone' | 'normalized'
+>
 
 type SummaryValue = number | string
 type SummaryMap = Record<string, Record<string, SummaryValue>>
@@ -31,8 +34,8 @@ function formatted(
 ) {
   const number = Number(value ?? 0)
   return column.kind === 'text' && column.money
-    ? (formatMoney(number, { locale: options.locale }, { currency: column.money }) ?? '')
-    : (formatNumber(number, { locale: options.locale }) ?? '')
+    ? (formatMoney(number, numberContextOf(options), { currency: column.money }) ?? '')
+    : (formatNumber(number, numberContextOf(options)) ?? '')
 }
 
 function toSummary(

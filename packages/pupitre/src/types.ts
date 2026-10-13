@@ -23,6 +23,8 @@ export type PupitreContext = {
   /** Panel path as declared (`/admin`), without tenant segment. */
   basePath: string
   locale: string
+  /** BCP 47 locale for number and money separators (user → session → panel → `locale`). */
+  numberLocale: string
   timezone: string
   user: PupitreUser
   /** Authenticated host user model instance (guard user), when any. */

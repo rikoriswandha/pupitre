@@ -21,6 +21,12 @@ import { panelGuard } from './guard.js'
 import { E_PUPITRE_FORBIDDEN, E_PUPITRE_MAIL_ADAPTER_REQUIRED } from '../errors.js'
 import { requestMessages, resolveTranslations, t } from '../i18n.js'
 import { persistLocale } from '../i18n/locale_controller.js'
+import {
+  AUTO_NUMBER_LOCALE,
+  numberLocaleChoices,
+  numberLocaleOptions,
+  persistNumberLocale,
+} from '../i18n/number_locale.js'
 import { validationMessages } from '../i18n/validation.js'
 import { completeLogin } from './login_flow.js'
 import { recordAuthEvent, revokeCurrentSession } from './session_service.js'
@@ -865,6 +871,22 @@ export default class AuthController {
           )
       )
     }
+    const numberLocales = numberLocaleChoices(ctx.pupitre.panel)
+    if (numberLocales.length > 0) {
+      nodes.push(
+        schema
+          .select('numberLocale')
+          .required()
+          .label(t('Number format'))
+          .options(
+            numberLocaleOptions(
+              ctx.pupitre.locale,
+              ctx.pupitre.panel.numberLocale ?? ctx.pupitre.locale,
+              numberLocales
+            )
+          )
+      )
+    }
     if (ctx.pupitre.panel.auth.mfa || ctx.pupitre.panel.auth.passkeys?.enabled) {
       nodes.push(
         schema.view('PupitreProfileSecurity', {
@@ -897,6 +919,13 @@ export default class AuthController {
         name: user.$attributes[cfg.auth.columns.name],
         email: user.$attributes[cfg.auth.columns.email],
         ...(locales.length > 1 ? { locale: ctx.pupitre.locale } : {}),
+        ...(numberLocales.length > 0
+          ? {
+              numberLocale: numberLocales.includes(ctx.pupitre.numberLocale)
+                ? ctx.pupitre.numberLocale
+                : AUTO_NUMBER_LOCALE,
+            }
+          : {}),
       },
       {
         upload: `${panelPath(ctx)}/profile/avatar`,
@@ -967,6 +996,14 @@ export default class AuthController {
       (typeof locale !== 'string' || locales.length <= 1 || !locales.includes(locale))
     )
       return flashErrors(ctx, { locale: t('Choose a valid language') })
+    const numberLocale = input.numberLocale
+    if (
+      numberLocale !== undefined &&
+      (typeof numberLocale !== 'string' ||
+        (numberLocale !== AUTO_NUMBER_LOCALE &&
+          !numberLocaleChoices(ctx.pupitre.panel).includes(numberLocale)))
+    )
+      return flashErrors(ctx, { numberLocale: t('Choose a valid number format') })
     for (const field of ['password', 'password_confirmation', 'current_password']) {
       if (input[field] === '') delete input[field]
     }
@@ -1059,6 +1096,8 @@ export default class AuthController {
         await createPupitreStorage().delete(oldAvatar)
     }
     if (typeof locale === 'string') await persistLocale(ctx, locale)
+    if (typeof numberLocale === 'string')
+      await persistNumberLocale(ctx, numberLocale === AUTO_NUMBER_LOCALE ? null : numberLocale)
     if (emailChanged && ctx.pupitre.panel.auth.emailVerification)
       await sendVerification(ctx, user, cfg)
     ctx.session?.flash('pupitre', [{ type: 'success', title: t('Profile updated') }])

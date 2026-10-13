@@ -290,14 +290,22 @@ export function applyTableQuery(
     }
   }
 
-  if (typeof params.tab === 'string' && options.tabs?.[params.tab]) {
-    const tab = options.tabs[params.tab]
+  // Like Filament, the first tab is the default view: it is applied (and shown active)
+  // until another tab is chosen. The URL stays clean; `normalized.tab` only echoes a choice.
+  const tabKey =
+    typeof params.tab === 'string' && options.tabs?.[params.tab]
+      ? params.tab
+      : options.tabs
+        ? Object.keys(options.tabs)[0]
+        : undefined
+  if (tabKey !== undefined && options.tabs?.[tabKey]) {
+    const tab = options.tabs[tabKey]
     if (typeof tab.where === 'function')
       applyGroupedScope(query, (builder) =>
         (tab.where as QueryCallback)(builder, options.ctx as HttpContext)
       )
     else if (tab.where) query.where(tab.where)
-    normalized.tab = params.tab
+    if (tabKey === params.tab) normalized.tab = tabKey
   }
 
   const choices = table.paginated === false ? [] : table.paginated

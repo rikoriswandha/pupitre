@@ -4,6 +4,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, TableData, TableMeta, TableRow } from '../../catalog/wire.js'
 import type { TableColumnDefinition, TableDefinition } from '../definition/table.js'
 import {
+  formatCompact,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -12,12 +13,15 @@ import {
   formatOption,
   resolveTimezone,
   truncate,
+  type NumberFormatContext,
 } from '../format/index.js'
 
 export type TableSummary = Record<string, Record<string, number | string>>
 export type TableDataOptions = {
   ctx?: HttpContext
   locale: string
+  /** Number/money separators; defaults to `ctx.pupitre.numberLocale`, then `locale`. */
+  numberLocale?: string
   timezone: string
   rowActions(record: LucidRow): Promise<ActionDescriptor[]>
   rowUrl(record: LucidRow): string | undefined
@@ -26,6 +30,16 @@ export type TableDataOptions = {
   summaryRows?: LucidRow[]
   summary?: TableSummary
   groupSummaries?: Record<string, TableSummary>
+}
+
+/** Locale pair for number formatting: explicit option, then the request preference. */
+export function numberContextOf(
+  options: Pick<TableDataOptions, 'locale' | 'numberLocale' | 'ctx'>
+): NumberFormatContext {
+  return {
+    locale: options.locale,
+    numberLocale: options.numberLocale ?? options.ctx?.pupitre?.numberLocale,
+  }
 }
 
 function valueAt(serialized: Record<string, unknown>, path: string): unknown {
@@ -95,7 +109,7 @@ async function formatCell(
   }
   if (column.kind !== 'text') return value
   const context = {
-    locale: options.locale,
+    ...numberContextOf(options),
     timezone:
       column.kind === 'text'
         ? resolveTimezone(column.timezone, options.timezone)
@@ -108,6 +122,10 @@ async function formatCell(
     options.ctx ? (requestMessages.get(options.ctx) ?? {}) : {}
   )
   if (!column.options) {
+    if (column.compact && (column.money || column.numeric))
+      return formatCompact(value as string | number | null, context, {
+        ...(column.money ? { currency: column.money } : {}),
+      })
     if (column.money)
       return formatMoney(value as string | number | null, context, { currency: column.money })
     if (column.numeric) return formatNumber(value as string | number | null, context)
@@ -196,13 +214,13 @@ function aggregateSummary(
                   : undefined
       if (kind === 'range') {
         result[kind] = values.length
-          ? `${formatNumber(Math.min(...values), { locale: options.locale }) ?? ''} – ${formatNumber(Math.max(...values), { locale: options.locale }) ?? ''}`
+          ? `${formatNumber(Math.min(...values), numberContextOf(options)) ?? ''} – ${formatNumber(Math.max(...values), numberContextOf(options)) ?? ''}`
           : '—'
       } else if (value !== undefined) {
         result[kind] =
           column.kind === 'text' && column.money
-            ? (formatMoney(value, { locale: options.locale }, { currency: column.money }) ?? '')
-            : (formatNumber(value, { locale: options.locale }) ?? '')
+            ? (formatMoney(value, numberContextOf(options), { currency: column.money }) ?? '')
+            : (formatNumber(value, numberContextOf(options)) ?? '')
       }
     }
     summary[column.name] = result

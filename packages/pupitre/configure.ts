@@ -86,6 +86,11 @@ export async function configure(command: ConfigureCommand) {
       'database/migrations/1791800000023_add_pupitre_locale_to_users.ts',
       {},
     ],
+    [
+      'database/migrations/1791800000024_add_pupitre_number_locale_to_users.stub',
+      'database/migrations/1791800000024_add_pupitre_number_locale_to_users.ts',
+      {},
+    ],
   ] as const
   await codemods.installPackages([
     { name: '@rikology/pupitre-react', isDevDependency: false },

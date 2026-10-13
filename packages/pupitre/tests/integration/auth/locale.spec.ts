@@ -24,7 +24,7 @@ function cookies(response: Response, previous: string) {
 const inertiaHeaders = { 'Accept': 'text/html', 'X-Inertia': 'true', 'X-Inertia-Version': '1' }
 type ProfilePage = {
   props: {
-    pupitre: { locale: string }
+    pupitre: { locale: string; numberLocale?: string }
     page: {
       state: { data: Record<string, unknown> }
       spec: { elements: Record<string, { type: string; props: Record<string, unknown> }> }
@@ -155,6 +155,64 @@ test.group('Auth localization', () => {
       assert.equal(update.status, 302)
       const unchangedUser = await User.findOrFail(user.id)
       assert.equal(unchangedUser.name, 'Single Locale')
+    } finally {
+      await closeTestApp(fixture)
+    }
+  })
+
+  test('profile number format overrides separators, rejects unknown formats and resets', async ({
+    assert,
+  }) => {
+    const panel = definePanel('admin').path('/admin').login().profile().numberLocale('en-US')
+    const fixture = await createTestApp({
+      panels: { admin: async () => ({ default: panel }) },
+      pupitre: { auth: { model: async () => ({ default: User }), columns: { name: 'name' } } },
+    })
+    try {
+      const user = await User.create({
+        name: 'Number User',
+        email: 'numbers@example.test',
+        password: 'password',
+      })
+      let cookie = await fixture.loginAs(user)
+      const profile = async () => {
+        const response = await fetch(`${fixture.baseUrl}/admin/profile`, {
+          headers: { ...inertiaHeaders, Cookie: cookie },
+        })
+        return (await response.json()) as ProfilePage
+      }
+      const save = async (numberLocale: string) => {
+        const response = await fetch(`${fixture.baseUrl}/admin/profile`, {
+          method: 'PUT',
+          headers: {
+            'Cookie': cookie,
+            'Referer': `${fixture.baseUrl}/admin/profile`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'text/html',
+          },
+          body: new URLSearchParams({ name: 'Number User', numberLocale }),
+          redirect: 'manual',
+        })
+        assert.equal(response.status, 302)
+        cookie = cookies(response, cookie)
+      }
+      const initial = await profile()
+      assert.equal(initial.props.pupitre.numberLocale, 'en-US')
+      assert.equal(initial.props.page.state.data.numberLocale, 'en-US')
+
+      await save('id-ID')
+      const chosen = await profile()
+      assert.equal(chosen.props.pupitre.numberLocale, 'id-ID')
+      assert.equal(chosen.props.pupitre.locale, 'en')
+
+      await save('xx-XX')
+      const rejected = await profile()
+      assert.property(rejected.props.errors, 'numberLocale')
+      assert.equal(rejected.props.pupitre.numberLocale, 'id-ID')
+
+      await save('auto')
+      const reset = await profile()
+      assert.equal(reset.props.pupitre.numberLocale, 'en-US')
     } finally {
       await closeTestApp(fixture)
     }

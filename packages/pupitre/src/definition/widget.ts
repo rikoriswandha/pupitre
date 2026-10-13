@@ -7,7 +7,12 @@ export type WidgetFilterOption = { value: string; label: string }
 export type WidgetFilterDefinition = { name: string; label: string; options: WidgetFilterOption[] }
 export type WidgetStat = {
   label: string
+  /** Numbers are formatted with the request's number locale; strings are shown as given. */
   value: string | number
+  /** ISO 4217 currency: a numeric value renders as money in the number locale. */
+  money?: string
+  /** Shorten a numeric value (`105,9 jt`, `105.9M`); the full value shows on hover. */
+  compact?: boolean
   description?: string
   descriptionIcon?: string
   color?: string

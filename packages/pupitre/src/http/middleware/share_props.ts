@@ -137,6 +137,7 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
     locales: [...(panel.locales ?? [panel.locale ?? 'en'])],
     ...(Object.keys(clientMessages).length ? { messages: clientMessages } : {}),
     timezone: ctx.pupitre.timezone,
+    numberLocale: ctx.pupitre.numberLocale,
   }
 }
 

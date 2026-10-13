@@ -11,6 +11,7 @@ import { validateTheme } from '../definition/theme.js'
 import type { WidgetFilterDefinition } from '../definition/widget.js'
 import { stableJson } from '../definition/shared.js'
 import type { PupitrePlugin } from '../definition/plugin.js'
+import { supportedNumberLocale } from '../i18n/number_locale.js'
 
 type Definable<T> = T | { toDefinition(): T }
 export type TenancyInput = Partial<Omit<TenancyDefinition, 'mode'>> & { mode: TenancyMode }
@@ -31,6 +32,10 @@ export type PanelBuilder = {
   timezone(value: string): PanelBuilder
   locale(value: string): PanelBuilder
   locales(value: readonly string[]): PanelBuilder
+  /** Default region for number and money separators (`id-ID` → `1.234,5`). */
+  numberLocale(value: string): PanelBuilder
+  /** Number formats offered in the profile; `[]` hides the choice. */
+  numberLocales(value: readonly string[]): PanelBuilder
   breadcrumbs(value: boolean): PanelBuilder
   /** Serve the panel login/logout pages; `false` keeps the host's own auth. */
   login(enabled?: boolean): PanelBuilder
@@ -138,6 +143,13 @@ class Panel implements PanelBuilder {
       throw new Error('Panel locales must be non-empty and unique')
     for (const locale of value) new Intl.PluralRules(locale)
     return this.set({ locales: [...value] })
+  }
+  numberLocale(value: string): PanelBuilder {
+    return this.set({ numberLocale: supportedNumberLocale(value) })
+  }
+  numberLocales(value: readonly string[]): PanelBuilder {
+    if (new Set(value).size !== value.length) throw new Error('Panel number locales must be unique')
+    return this.set({ numberLocales: value.map(supportedNumberLocale) })
   }
   breadcrumbs(value: boolean): PanelBuilder {
     return this.set({ breadcrumbs: value })

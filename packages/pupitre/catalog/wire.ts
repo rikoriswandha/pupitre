@@ -280,6 +280,8 @@ export type TableData = z.infer<typeof tableData>
 export const widgetStat = z.object({
   label: z.string(),
   value: z.union([z.string(), z.number()]),
+  /** Full value behind a compact `value` (tooltip). */
+  title: z.string().optional(),
   description: z.string().optional(),
   descriptionIcon: z.string().optional(),
   color: z.string().optional(),
@@ -724,6 +726,8 @@ export const pageProps = z
         )
         .optional(),
       timezone: z.string(),
+      /** BCP 47 locale for number and money separators on the client. */
+      numberLocale: z.string().optional(),
     }),
     page: z.object({
       key: z.string(),

@@ -353,13 +353,36 @@ async function compileActions(
     })
   )
 }
+/** Header builtins that act on the whole collection; they belong to the list page only. */
+const COLLECTION_BUILTINS: Record<string, true> = {
+  create: true,
+  export: true,
+  import: true,
+  attach: true,
+  associate: true,
+  bulk: true,
+}
+/** Header builtins that need a record; meaningless on the list and create pages. */
+const RECORD_BUILTINS: Record<string, true> = {
+  edit: true,
+  view: true,
+  delete: true,
+  restore: true,
+  forceDelete: true,
+  replicate: true,
+  impersonate: true,
+}
 function headerDefinitions(
   target: ResourceRuntime,
   page: 'list' | 'create' | 'edit' | 'view'
 ): ActionDefinition[] {
-  const definitions = [...(target.definition.actions?.header ?? [])].filter(
-    (action) => action.builtin !== 'impersonate' || page === 'edit' || page === 'view'
-  )
+  const recordPage = page === 'edit' || page === 'view'
+  const definitions = [...(target.definition.actions?.header ?? [])].filter((action) => {
+    if (!action.builtin) return true
+    if (COLLECTION_BUILTINS[action.builtin]) return page === 'list'
+    if (RECORD_BUILTINS[action.builtin]) return recordPage && action.builtin !== page
+    return true
+  })
   if (
     page === 'list' &&
     (target.definition.pages.create || target.definition.pages.list?.modals) &&
@@ -368,14 +391,22 @@ function headerDefinitions(
     definitions.push(builtInActions.create().definition)
   }
   if (
-    (page === 'edit' || page === 'view') &&
+    page === 'view' &&
+    target.definition.pages.edit &&
+    !isReadOnlyResource(target.definition) &&
+    !definitions.some((item) => item.name === 'edit')
+  ) {
+    definitions.push(builtInActions.edit().definition)
+  }
+  if (
+    page === 'edit' &&
     target.definition.pages.view &&
     !definitions.some((item) => item.name === 'view')
   ) {
     definitions.push(builtInActions.view().definition)
   }
   if (
-    (page === 'edit' || page === 'view') &&
+    recordPage &&
     !isReadOnlyResource(target.definition) &&
     !definitions.some((item) => item.name === 'delete')
   ) {
@@ -560,6 +591,7 @@ export default class ResourceController {
         (column) => column.kind !== 'fragment' && column.summaries?.length
       )
         ? await aggregateTableSummaries(queryResult.query, table, {
+            ctx,
             locale: ctx.pupitre.locale,
             timezone: ctx.pupitre.timezone,
             normalized: queryResult.normalized,
@@ -680,7 +712,7 @@ export default class ResourceController {
         dirtyGuard: true,
       },
     })
-    const actions = await compileActions(ctx, target, target.definition.actions?.header ?? [])
+    const actions = await compileActions(ctx, target, headerDefinitions(target, 'create'))
     const widgetProps = await pageWidgets(ctx, target, 'create')
     return render(
       ctx,

@@ -70,6 +70,10 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       assert.equal(dashboard.headers.get('location'), '/admin/posts')
       const create = await inertia(fixture.baseUrl, '/admin/posts/create')
       assert.equal(create.status, 200, await create.clone().text())
+      const headerNames = (props: z.infer<typeof pageProps>) =>
+        (props.page.actions?.header ?? []).map((action) => action.name)
+      // Collection builtins stay on the list; record pages link to each other, never to themselves.
+      assert.deepEqual(headerNames(await responseProps(create)), ['record-header'])
       const record = await Post.create({
         title: 'HTTP row',
         slug: 'http-row',
@@ -78,6 +82,7 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       })
       const edit = await inertia(fixture.baseUrl, `/admin/posts/${record.id}/edit`)
       const editPage = await responseProps(edit)
+      assert.deepEqual(headerNames(editPage), ['record-header', 'view', 'delete'])
       assert.equal(edit.status, 200)
       assert.equal(editPage.page.kind, 'edit')
       assert.equal(editPage.page.spec.elements.root?.props.method, 'put')
@@ -89,6 +94,7 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       const view = await inertia(fixture.baseUrl, `/admin/posts/${record.id}`)
       assert.equal(view.status, 200)
       const viewProps = await responseProps(view)
+      assert.deepEqual(headerNames(viewProps), ['record-header', 'edit', 'delete'])
       assert.equal(viewProps.page.kind, 'view')
       assert.deepEqual(
         viewProps.page.breadcrumbs.slice(-2).map((crumb) => crumb.label),

@@ -46,6 +46,8 @@ export type TextColumnDefinition = TableColumnBase & {
   badge?: boolean
   money?: string
   numeric?: boolean
+  /** Shorten `money`/`numeric` values (`1,5 jt`, `1.5M`); the full value shows on hover. */
+  compact?: boolean
   dateTime?: boolean
   date?: boolean
   since?: boolean
@@ -282,6 +284,8 @@ export interface TextColumnBuilder extends TableColumnBuilder<TextColumnDefiniti
   badge(value?: boolean): this
   money(currency: string): this
   numeric(value?: boolean): this
+  /** Shorten money/numeric values (`1,5 jt`, `1.5M`) with the full value as tooltip. */
+  compact(value?: boolean): this
   dateTime(value?: boolean): this
   date(value?: boolean): this
   since(value?: boolean): this

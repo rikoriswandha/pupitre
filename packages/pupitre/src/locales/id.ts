@@ -281,6 +281,11 @@ export default {
   'Send reset link': 'Kirim tautan pengaturan ulang',
   'Show less': 'Tampilkan lebih sedikit',
   'Show more': 'Tampilkan lebih banyak',
+  'Show {count} empty fields': 'Tampilkan {count} isian kosong',
+  'Hide empty fields': 'Sembunyikan isian kosong',
+  'Manage your authenticator app and passkeys.': 'Kelola aplikasi autentikator dan kunci aksesmu.',
+  'Review where you are signed in and revoke access to other sessions.':
+    'Tinjau di mana kamu sedang masuk dan cabut akses sesi lain.',
   'The server returned an invalid CSV preview.':
     'Server mengembalikan pratinjau CSV yang tidak valid.',
   'The server returned an invalid import response.':
@@ -559,6 +564,9 @@ export default {
   'Authentication is required for queued actions':
     'Masuk dulu untuk menjalankan aksi dalam antrean',
   'Choose a valid language': 'Pilih bahasa yang tersedia',
+  'Choose a valid number format': 'Pilih format angka yang tersedia',
+  'Number format': 'Format angka',
+  'Default ({example})': 'Bawaan ({example})',
   'Choose an image no larger than 5 MB': 'Pilih gambar berukuran maksimal 5 MB',
   'Clear sorting': 'Hapus pengurutan',
   'Clone': 'Duplikat',

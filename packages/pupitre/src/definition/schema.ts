@@ -614,6 +614,10 @@ export type TextEntryDefinition = EntryCommon & {
   timezone?: string
   since?: boolean
   money?: string
+  /** Format a numeric value with the request's number locale (`1.234,5`). */
+  numeric?: boolean
+  /** Shorten `money`/`numeric` values (`1,5 jt`); the full value stays as tooltip and copy text. */
+  compact?: boolean
   limit?: number
   markdown?: boolean
   options?: SelectOptions
@@ -941,6 +945,10 @@ export interface TextEntryBuilder extends ComponentBuilder<
   date(value?: string): this
   since(value?: boolean): this
   money(currency: string): this
+  /** Format a numeric value with the request's number locale. */
+  numeric(value?: boolean): this
+  /** Shorten money/numeric values (`1,5 jt`, `1.5M`); full value as tooltip and copy text. */
+  compact(value?: boolean): this
   limit(value: number): this
   markdown(value?: boolean): this
   html(value?: boolean): this

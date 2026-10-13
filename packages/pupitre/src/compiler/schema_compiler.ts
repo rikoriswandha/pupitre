@@ -31,6 +31,7 @@ import {
   formatDateTime,
   formatSince,
   formatOption,
+  formatCompact,
   formatMoney,
   formatNumber,
   truncate,
@@ -1136,10 +1137,8 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
     Object.assign(props, extensionRenderProps(node))
     addValueSlot(build, id, 'record', (_data, record) => record)
   }
-  if (
-    node.kind === 'repeatableEntry' &&
-    node.schema?.some((child) => child.kind === 'extensionEntry')
-  ) {
+  // Column labels for every repeatable entry; custom children also carry their component.
+  if (node.kind === 'repeatableEntry' && node.schema?.length) {
     props.entries = node.schema.map((child) => ({
       name: child.name,
       label: child.label ?? headline(child.name),
@@ -1185,10 +1184,19 @@ async function formatEntryValue(
     )
     return entry.limit ? truncate(localizedLabel, Number(entry.limit)) : localizedLabel
   }
-  const context = { locale: options.locale, timezone: String(entry.timezone ?? options.timezone) }
+  const context = {
+    locale: options.locale,
+    numberLocale: options.ctx?.pupitre?.numberLocale,
+    timezone: String(entry.timezone ?? options.timezone),
+  }
   if (entry.dateTime) return formatDateTime(value as string, context, String(entry.dateTime))
   if (entry.date) return formatDate(value as string, context, String(entry.date))
   if (entry.since) return formatSince(value as string, context)
+  // Compact entries deliver `{ value, title }`: the short text plus the full value to copy.
+  if (entry.compact && (entry.money || (entry.numeric && typeof value === 'number')))
+    return formatCompact(value as number | string, context, {
+      ...(entry.money ? { currency: String(entry.money) } : {}),
+    })
   if (entry.money)
     return formatMoney(value as number | string, context, { currency: String(entry.money) })
   value = resolveTranslations(
@@ -1243,8 +1251,7 @@ async function formatEntryValue(
   }
   if (entry.kind === 'keyValueEntry' && typeof value === 'object') return value
   if (entry.kind === 'codeEntry' && typeof value !== 'string') return JSON.stringify(value, null, 2)
-  if (typeof value === 'number' && entry.numeric)
-    return formatNumber(value, { locale: options.locale })
+  if (typeof value === 'number' && entry.numeric) return formatNumber(value, context)
   return value
 }
 

@@ -68,6 +68,7 @@ export function transmitRealtime(options: TransmitRealtimeOptions = {}): Realtim
       panel,
       basePath: panel.path,
       locale: panel.locale ?? 'en',
+      numberLocale: panel.numberLocale ?? panel.locale ?? 'en',
       timezone: panel.timezone ?? 'UTC',
       authUser: user,
       user: { id: userId, name: '', email: '' },

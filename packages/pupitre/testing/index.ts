@@ -190,6 +190,7 @@ async function createContext(
     panel: boundPanel,
     basePath: panel.path,
     locale: panel.locale ?? 'en',
+    numberLocale: panel.numberLocale ?? panel.locale ?? 'en',
     timezone: panel.timezone ?? config.timezone ?? 'UTC',
     user: userSummary(options.user, config),
     authUser: options.user,

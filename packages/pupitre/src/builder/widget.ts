@@ -12,6 +12,10 @@ export type StatBuilder = {
   descriptionIcon(value: string): StatBuilder
   color(value: string): StatBuilder
   chart(value: number[]): StatBuilder
+  /** Render a numeric value as money (`Rp 105.913.958`) in the request's number locale. */
+  money(currency: string): StatBuilder
+  /** Shorten a numeric value (`105,9 jt`, `105.9M`); the full value shows on hover. */
+  compact(value?: boolean): StatBuilder
   toDefinition(): WidgetStat
 }
 
@@ -33,6 +37,12 @@ class Stat implements StatBuilder {
   }
   chart(value: number[]) {
     return this.update({ chart: [...value] })
+  }
+  money(currency: string) {
+    return this.update({ money: currency })
+  }
+  compact(value = true) {
+    return this.update({ compact: value })
   }
   toDefinition() {
     return this.definition

@@ -2,7 +2,7 @@ import { t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import { tableData as tableDataSchema, widgetData as widgetDataSchema } from '../../catalog/wire.js'
 import type { WidgetData, WidgetDescriptor } from '../../catalog/wire.js'
-import type { TimelineItem, WidgetDefinition } from '../definition/widget.js'
+import type { TimelineItem, WidgetDefinition, WidgetStat } from '../definition/widget.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
 import { authorizeResource, authorizeModel, ensureAuthorized } from '../authz/bouncer.js'
@@ -13,7 +13,13 @@ import { applyTableQuery } from '../query/table_query.js'
 import { buildTableData } from '../table/table_data.js'
 import { aggregateTableSummaries } from '../table/table_summary.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
-import { formatDateTime, toDateTime } from '../format/index.js'
+import {
+  formatCompact,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  toDateTime,
+} from '../format/index.js'
 import { authorizeAbility } from '../authz/bouncer.js'
 import { E_PUPITRE_NOT_FOUND } from '../errors.js'
 import { compileActionForm, executeAction } from '../compiler/action_compiler.js'
@@ -153,6 +159,7 @@ async function loadTableWidget(
     (column) => column.kind !== 'fragment' && column.summaries?.length
   )
     ? await aggregateTableSummaries(loaded.query, table, {
+        ctx,
         locale: ctx.pupitre.locale,
         timezone: ctx.pupitre.timezone,
         normalized: loaded.normalized,
@@ -218,7 +225,21 @@ export async function loadWidget(
         : {}
   const data =
     definition.kind === 'stats'
-      ? { kind: 'stats' as const, stats: loaded }
+      ? {
+          kind: 'stats' as const,
+          stats: (loaded as WidgetStat[]).map(({ compact, money, ...item }) => {
+            if (typeof item.value !== 'number') return item
+            const currency = money ? { currency: money } : {}
+            if (compact) {
+              const short = formatCompact(item.value, ctx.pupitre, currency)
+              return short ? { ...item, value: short.value, title: short.title } : item
+            }
+            const full = money
+              ? formatMoney(item.value, ctx.pupitre, { currency: money })
+              : formatNumber(item.value, ctx.pupitre)
+            return { ...item, value: full ?? item.value }
+          }),
+        }
       : definition.kind === 'chart'
         ? {
             kind: definition.chartType === 'scatter' ? ('scatter' as const) : ('chart' as const),

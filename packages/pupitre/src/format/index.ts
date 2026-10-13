@@ -7,8 +7,19 @@ import { DateTime } from 'luxon'
  */
 export type FormatContext = {
   timezone: string
+  /** UI language; dates and relative times. */
   locale: string
+  /**
+   * Region whose separators numbers and money use (`id-ID` → `1.234,5`). Resolved per
+   * request from the user's preference, then the panel's `.numberLocale()`; falls back
+   * to `locale` when absent.
+   */
+  numberLocale?: string
 }
+
+export type NumberFormatContext = Pick<FormatContext, 'locale' | 'numberLocale'>
+/** Compact display (`1,5 jt`, `1.5M`) plus the full value for tooltips and copying. */
+export type CompactNumber = { value: string; title: string }
 
 export type DateInput = DateTime | Date | string | number | null | undefined
 
@@ -138,40 +149,56 @@ export function formatSince(value: DateInput, context: FormatContext, now?: Date
   return dt.setLocale(context.locale).toRelative({ base: now ?? DateTime.now() })
 }
 
+function toNumber(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === '') return null
+  const number = typeof value === 'string' ? Number(value) : value
+  return Number.isNaN(number) ? null : number
+}
+
 export function formatNumber(
   value: number | string | null | undefined,
-  context: Pick<FormatContext, 'locale'>,
-  options: { decimals?: number } = {}
+  context: NumberFormatContext,
+  options: { decimals?: number; compact?: boolean } = {}
 ) {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-  const number = typeof value === 'string' ? Number(value) : value
-  if (Number.isNaN(number)) {
-    return null
-  }
-  return new Intl.NumberFormat(context.locale, {
+  const number = toNumber(value)
+  if (number === null) return null
+  return new Intl.NumberFormat(context.numberLocale ?? context.locale, {
+    ...(options.compact ? { notation: 'compact' as const } : {}),
     minimumFractionDigits: options.decimals,
-    maximumFractionDigits: options.decimals ?? 3,
+    maximumFractionDigits: options.decimals ?? (options.compact ? 1 : 3),
   }).format(number)
 }
 
 export function formatMoney(
   value: number | string | null | undefined,
-  context: Pick<FormatContext, 'locale'>,
-  options: { currency: string; divideBy?: number }
+  context: NumberFormatContext,
+  options: { currency: string; divideBy?: number; compact?: boolean }
 ) {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-  const number = (typeof value === 'string' ? Number(value) : value) / (options.divideBy ?? 1)
-  if (Number.isNaN(number)) {
-    return null
-  }
-  return new Intl.NumberFormat(context.locale, {
+  const raw = toNumber(value)
+  if (raw === null) return null
+  return new Intl.NumberFormat(context.numberLocale ?? context.locale, {
     style: 'currency',
     currency: options.currency,
-  }).format(number)
+    ...(options.compact ? { notation: 'compact' as const, maximumFractionDigits: 1 } : {}),
+  }).format(raw / (options.divideBy ?? 1))
+}
+
+/**
+ * Shortened number or money (`105,9 jt` in `id-ID`, `105.9M` in `en-US`) with the full
+ * formatted value as `title`. Abbreviations follow the number locale's CLDR rules.
+ */
+export function formatCompact(
+  value: number | string | null | undefined,
+  context: NumberFormatContext,
+  options: { currency?: string } = {}
+): CompactNumber | null {
+  const title = options.currency
+    ? formatMoney(value, context, { currency: options.currency })
+    : formatNumber(value, context)
+  const compact = options.currency
+    ? formatMoney(value, context, { currency: options.currency, compact: true })
+    : formatNumber(value, context, { compact: true })
+  return title === null || compact === null ? null : { value: compact, title }
 }
 
 /**

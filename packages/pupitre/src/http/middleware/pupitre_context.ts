@@ -11,6 +11,7 @@ import { handleUnauthenticated } from '../../auth/unauthenticated.js'
 import { panelGuard } from '../../auth/guard.js'
 import { bindPanel } from '../../manager.js'
 import { resolveTenancyAdapter } from '../../tenancy/runtime.js'
+import { resolveNumberLocale } from '../../i18n/number_locale.js'
 import {
   getMessages,
   requestMessages,
@@ -90,16 +91,27 @@ export default class PupitreContextMiddleware {
         user.avatarUrl = await createPupitreStorage().url(avatarKey, { visibility: 'public' })
       }
     }
+    const locale = resolveLocale({
+      user:
+        authUser && (authUser as unknown as Record<string, unknown>)[config.auth.columns.locale],
+      session: ctx.session?.get(`pupitre.locale.${panel.id}`),
+      acceptLanguage: ctx.request.header('accept-language'),
+      locales: panel.locales,
+      defaultLocale: panel.locale,
+    })
+    const numberLocaleColumn = config.auth.columns.numberLocale
     ctx.pupitre = {
       panel,
       basePath: panel.path,
-      locale: resolveLocale({
+      locale,
+      numberLocale: resolveNumberLocale({
         user:
-          authUser && (authUser as unknown as Record<string, unknown>)[config.auth.columns.locale],
-        session: ctx.session?.get(`pupitre.locale.${panel.id}`),
-        acceptLanguage: ctx.request.header('accept-language'),
-        locales: panel.locales,
-        defaultLocale: panel.locale,
+          authUser && numberLocaleColumn
+            ? (authUser as unknown as Record<string, unknown>)[numberLocaleColumn]
+            : undefined,
+        session: ctx.session?.get(`pupitre.numberLocale.${panel.id}`),
+        panel,
+        locale,
       }),
       timezone: user?.timezone ?? panel.timezone ?? config.timezone ?? 'UTC',
       user,

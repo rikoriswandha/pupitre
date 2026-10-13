@@ -1,0 +1,23 @@
+{{{
+  exports({ to: app.makePath('database/migrations/1791800000024_add_pupitre_number_locale_to_users.ts') })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+/** Optional user number format (BCP 47 locale); null follows the panel default. */
+export default class extends BaseSchema {
+  protected tableName = 'users'
+
+  async up() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    if (await this.schema.hasColumn(this.tableName, 'number_locale')) return
+    this.schema.alterTable(this.tableName, (table) => {
+      table.string('number_locale', 35).nullable()
+    })
+  }
+
+  async down() {
+    if (!(await this.schema.hasTable(this.tableName))) return
+    if (!(await this.schema.hasColumn(this.tableName, 'number_locale'))) return
+    this.schema.alterTable(this.tableName, (table) => table.dropColumn('number_locale'))
+  }
+}

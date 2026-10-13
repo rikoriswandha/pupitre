@@ -213,6 +213,25 @@ test.group('table data formatting', (group) => {
     assert.equal(data.rows[0].url, '/posts/1')
     assert.equal(data.rows[0].key, record.id)
   })
+  test('compact cells shorten in the number locale and carry the full value', async ({
+    assert,
+  }) => {
+    await seed({ posts: [{ title: 'Busy', slug: 'busy', status: 'draft', viewsCount: 1250000 }] })
+    const record = await Post.query().firstOrFail()
+    const definition: TableDefinition = {
+      ...table,
+      columns: [{ kind: 'text', name: 'viewsCount', numeric: true, compact: true }],
+    }
+    const data = await buildTableData(definition, [record], undefined, {
+      locale: 'en',
+      numberLocale: 'id-ID',
+      timezone: 'UTC',
+      normalized: { page: 1 },
+      rowActions: async () => [],
+      rowUrl: () => undefined,
+    })
+    assert.deepEqual(data.rows[0].cells.viewsCount, { value: '1,3\u00a0jt', title: '1.250.000' })
+  })
   test('resolves every image key, preserves unresolved URLs, and honors recordUrl', async ({
     assert,
   }) => {

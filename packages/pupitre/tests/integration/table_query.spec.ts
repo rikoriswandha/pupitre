@@ -193,6 +193,21 @@ test.group('table query', (group) => {
     assert.deepEqual(result.query.toSQL().bindings, [3, 'draft'])
     assert.deepEqual(result.normalized.tab, 'draft')
   })
+  test('applies the first tab when no tab is requested and ignores unknown tabs', async ({
+    assert,
+  }) => {
+    const db = await setupDatabase()
+    const tabs = { draft: { where: { status: 'draft' } }, all: {} }
+    const implicit = applyTableQuery(db.modelQuery(Post) as never, table, {}, { tabs })
+    assert.deepEqual(implicit.query.toSQL().bindings, ['draft'])
+    // The default is not echoed, so URLs and saved views stay free of the implicit tab.
+    assert.isUndefined(implicit.normalized.tab)
+    const unknown = applyTableQuery(db.modelQuery(Post) as never, table, { tab: 'gone' }, { tabs })
+    assert.deepEqual(unknown.query.toSQL().bindings, ['draft'])
+    const chosen = applyTableQuery(db.modelQuery(Post) as never, table, { tab: 'all' }, { tabs })
+    assert.deepEqual(chosen.query.toSQL().bindings, [])
+    assert.equal(chosen.normalized.tab, 'all')
+  })
   test('applies the user query callback before URL predicates', async ({ assert }) => {
     const db = await setupDatabase()
     const withScope: TableDefinition = {

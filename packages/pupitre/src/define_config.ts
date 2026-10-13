@@ -19,6 +19,8 @@ export type AuthColumns = {
   emailVerifiedAt: string
   timezone: string
   locale: string
+  /** Optional per-user number format preference (BCP 47 locale). */
+  numberLocale?: string
   currentTenantId: string
   mfaSecret: string
   mfaRecoveryCodes: string
@@ -76,6 +78,7 @@ const defaults: PupitreConfig = {
       emailVerifiedAt: 'emailVerifiedAt',
       timezone: 'timezone',
       locale: 'locale',
+      numberLocale: 'numberLocale',
       currentTenantId: 'currentTenantId',
       mfaSecret: 'mfaSecret',
       mfaRecoveryCodes: 'mfaRecoveryCodes',

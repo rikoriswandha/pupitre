@@ -1,13 +1,20 @@
 import { test } from '@japa/runner'
 import { DateTime, Settings } from 'luxon'
 import {
+  formatCompact,
   formatDateTime,
   formatMoney,
+  formatNumber,
   formatSince,
   parseInZone,
   resolveTimezone,
   toIsoInZone,
 } from '../../../src/format/index.js'
+import {
+  numberLocaleChoices,
+  resolveNumberLocale,
+  supportedNumberLocale,
+} from '../../../src/i18n/number_locale.js'
 
 test.group('format | dates', (group) => {
   const originalNow = Settings.now
@@ -74,5 +81,47 @@ test.group('format | numbers', () => {
       '$1,500.00'
     )
     assert.isNull(formatMoney(null, { locale: 'en-US' }, { currency: 'USD' }))
+  })
+  test('number locale sets separators independently of the UI language', ({ assert }) => {
+    const context = { locale: 'en', numberLocale: 'id-ID' }
+    assert.equal(formatNumber(1234567.5, context), '1.234.567,5')
+    // Intl separates currency symbols and compact units with a no-break space.
+    assert.equal(formatMoney(1500, context, { currency: 'IDR' }), 'Rp\u00a01.500')
+    assert.equal(formatNumber(1234567.5, { locale: 'en' }), '1,234,567.5')
+  })
+  test('compact numbers shorten per number locale and keep the full value', ({ assert }) => {
+    assert.deepEqual(formatCompact(105913958, { locale: 'id', numberLocale: 'id-ID' }), {
+      value: '105,9\u00a0jt',
+      title: '105.913.958',
+    })
+    assert.deepEqual(formatCompact(1500, { locale: 'en' }), { value: '1.5K', title: '1,500' })
+    assert.equal(formatCompact(999, { locale: 'en' })?.value, '999')
+    assert.deepEqual(formatCompact(105913958, { locale: 'id' }, { currency: 'IDR' }), {
+      value: 'Rp\u00a0105,9\u00a0jt',
+      title: 'Rp\u00a0105.913.958',
+    })
+    assert.isNull(formatCompact(null, { locale: 'en' }))
+  })
+  test('number locale resolves user, session, panel default, then UI locale', ({ assert }) => {
+    const panel = { numberLocale: 'id-ID' }
+    assert.equal(
+      resolveNumberLocale({ user: 'fr-FR', session: 'en-US', panel, locale: 'en' }),
+      'fr-FR'
+    )
+    // Values outside the offered choices (stale or forged) are ignored.
+    assert.equal(
+      resolveNumberLocale({ user: 'xx', session: 'en-US', panel, locale: 'en' }),
+      'en-US'
+    )
+    assert.equal(resolveNumberLocale({ panel, locale: 'en' }), 'id-ID')
+    assert.equal(resolveNumberLocale({ panel: {}, locale: 'id' }), 'id')
+    assert.equal(
+      resolveNumberLocale({ user: 'fr-FR', panel: { numberLocales: ['en-US'] }, locale: 'en' }),
+      'en'
+    )
+    assert.deepEqual(numberLocaleChoices({ numberLocales: [] }), [])
+    assert.include(numberLocaleChoices({ numberLocale: 'de-DE' }), 'de-DE')
+    assert.equal(supportedNumberLocale('id-id'), 'id-ID')
+    assert.throws(() => supportedNumberLocale('not a locale'))
   })
 })
