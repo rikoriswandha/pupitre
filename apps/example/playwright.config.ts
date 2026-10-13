@@ -20,6 +20,8 @@ export default defineConfig<Pick<PupitreFixtures, 'pupitre'>>({
     command:
       'npm --prefix ../.. run build && NODE_ENV=development node e2e/setup-db.mjs && node ace build --ignore-ts-errors && cd build && NODE_OPTIONS= node bin/server.js',
     cwd: import.meta.dirname,
+    // The command rebuilds every package before booting; that alone takes ~75s on CI runners.
+    timeout: 300_000,
     reuseExistingServer: !process.env.CI,
     url: 'http://localhost:3391/login',
     env: {
