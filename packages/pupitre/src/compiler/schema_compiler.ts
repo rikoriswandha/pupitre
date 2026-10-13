@@ -307,16 +307,13 @@ function applyVisibility(
   const hidden = typeof node.hidden === 'function'
   const closure = hidden ? node.hidden : node.visible
   if (typeof closure !== 'function') return
-  const result = liftClosure(closure, 'visible', {
+  const result = liftClosure(closure, hidden ? 'hidden' : 'visible', {
     pathPrefix: '/data',
     inRepeater,
     numericFields: build.numericFields,
   })
   if (result.kind === 'static') addStatic(build, id, '@visible', closure, { invert: hidden })
-  else
-    build.elements[id].visible = hidden
-      ? { ...(result.value as Record<string, unknown>), not: true }
-      : result.value
+  else build.elements[id].visible = result.value as never
 }
 function mapOptions(node: Record<string, unknown>, props: Record<string, unknown>) {
   if ('options' in node) props.options = optionsFor(node.options)
@@ -732,10 +729,11 @@ async function addField(
               }
             : undefined
         })
-      const visibilityClosure = typeof node.hidden === 'function' ? node.hidden : node.visible
+      const visibilityHidden = typeof node.hidden === 'function'
+      const visibilityClosure = visibilityHidden ? node.hidden : node.visible
       const serverVisibility =
         typeof visibilityClosure === 'function' &&
-        liftClosure(visibilityClosure, 'visible', {
+        liftClosure(visibilityClosure, visibilityHidden ? 'hidden' : 'visible', {
           pathPrefix: '/data',
           inRepeater,
           numericFields: build.numericFields,

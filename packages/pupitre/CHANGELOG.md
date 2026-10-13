@@ -27,6 +27,7 @@
 
 ### Fixed
 - Action modals: uploads inside action forms use the server-issued `uploadOwner` (resource/record context) and action validation passes the resource slug to owned-upload validation, so session-owned uploads in header-action forms validate.
+- Forms: `.hidden()` closures compile to a correct negated visibility condition — boolean literals flip (`.hidden(() => true)` → `visible: false`), `&&`/`||` conditions negate via De Morgan, and `!get(x)` drops its `not` — instead of spreading `not: true` onto non-condition values (which produced an invalid `{"not":true}` spec, e.g. the media resource's hidden `path` upload). Lifted `.visible()`/`.hidden()` results that are not valid json-render visibility conditions now fall back to server evaluation.
 
 ## Unreleased (1.0.0, milestone M4)
 

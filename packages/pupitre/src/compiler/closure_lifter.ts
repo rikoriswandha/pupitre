@@ -1,4 +1,5 @@
 import { parse } from 'acorn'
+import { VisibilityConditionStrictSchema } from '@json-render/core'
 import { computedFunctionNames } from '../../catalog/index.js'
 import type { ComputedFunctionName } from '../../catalog/index.js'
 
@@ -273,10 +274,35 @@ function hasNestedCondition(node: Node, root = true): boolean {
       hasNestedCondition(child as Node, false)
   )
 }
+/** Logical NOT of a json-render visibility condition; null when it cannot be expressed. */
+function negateVisibility(condition: unknown): unknown {
+  if (typeof condition === 'boolean') return !condition
+  const negateAll = (items: unknown[]) => {
+    const negated = items.map(negateVisibility)
+    return negated.includes(null) ? null : negated
+  }
+  if (Array.isArray(condition)) {
+    const negated = negateAll(condition)
+    return negated && { $or: negated }
+  }
+  if (!condition || typeof condition !== 'object') return null
+  const group = condition as Record<string, unknown>
+  if (Array.isArray(group.$and)) {
+    const negated = negateAll(group.$and)
+    return negated && { $or: negated }
+  }
+  if (Array.isArray(group.$or)) {
+    const negated = negateAll(group.$or)
+    return negated && { $and: negated }
+  }
+  if (!('$state' in group || '$item' in group || '$index' in group)) return null
+  const { not, ...rest } = group
+  return not === true ? rest : { ...rest, not: true }
+}
 
 export function liftClosure(
   fn: Function,
-  purpose: 'visible' | 'disabled' | 'label' | 'content' | 'afterStateUpdated',
+  purpose: 'visible' | 'hidden' | 'disabled' | 'label' | 'content' | 'afterStateUpdated',
   scope: Scope
 ): LiftResult {
   const closureScope = { ...scope, getNames: aliases(fn, 'get'), setNames: aliases(fn, 'set') }
@@ -307,12 +333,20 @@ export function liftClosure(
     }
     return { kind: 'expression', value: updates }
   }
-  if (purpose !== 'visible' && (body.type === 'LogicalExpression' || hasNestedCondition(body)))
+  if (
+    purpose !== 'visible' &&
+    purpose !== 'hidden' &&
+    (body.type === 'LogicalExpression' || hasNestedCondition(body))
+  )
     return { kind: 'static' }
   const result = lift(body, closureScope)
   if (!result) return { kind: 'static' }
-  if (purpose === 'visible')
-    return { kind: result.computed ? 'computed' : 'expression', value: result.value }
+  if (purpose === 'visible' || purpose === 'hidden') {
+    const condition = purpose === 'hidden' ? negateVisibility(result.value) : result.value
+    return condition !== null && VisibilityConditionStrictSchema.safeParse(condition).success
+      ? { kind: 'expression', value: condition }
+      : { kind: 'static' }
+  }
   const value =
     result.value && typeof result.value === 'object'
       ? (result.value as Record<string, unknown>)

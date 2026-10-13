@@ -291,6 +291,34 @@ test.group('schema compiler', () => {
       }
     )
   })
+  test('negates hidden closures into valid visibility conditions', async ({ assert }) => {
+    const compiled = await compileForm(
+      [
+        node(schema.text('always').hidden(() => true)),
+        node(schema.text('never').hidden(() => false)),
+        node(schema.text('unless').hidden(({ get }) => !get('a'))),
+        node(schema.text('both').hidden(({ get }) => get('a') && get('b') === 'x')),
+        node(schema.text('either').hidden(({ get }) => get('a') || get('b') !== 'x')),
+      ],
+      options
+    )
+    const visible = (name: string) => compiled.spec.elements[`f.${name}`]?.visible
+    assert.isFalse(visible('always'))
+    assert.isTrue(visible('never'))
+    assert.deepEqual(visible('unless'), { $state: '/data/a' })
+    assert.deepEqual(visible('both'), {
+      $or: [
+        { $state: '/data/a', not: true },
+        { $state: '/data/b', eq: 'x', not: true },
+      ],
+    })
+    assert.deepEqual(visible('either'), {
+      $and: [
+        { $state: '/data/a', not: true },
+        { $state: '/data/b', neq: 'x', not: true },
+      ],
+    })
+  })
   test('lifts boolean expressions for value props and keeps ambiguous values static', ({
     assert,
   }) => {
