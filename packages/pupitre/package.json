@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Filament-like admin panel for AdonisJS v7 + Inertia React, rendered through json-render specs",
   "type": "module",
   "sideEffects": [

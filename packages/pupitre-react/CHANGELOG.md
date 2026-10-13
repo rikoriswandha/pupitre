@@ -1,8 +1,9 @@
 # Changelog
 
-## Unreleased (1.1.0)
+## 1.1.0 (2026-10-14)
 
 ### Added
+- Number formats: `configureI18n(locale, messages, numberLocale?)` receives the shared `pupitre.numberLocale`; `formatNumber(value, { compact?, ...Intl options })` and `getNumberLocale()` format with it, and the `formatNumber` computed function defaults to it and accepts `compact`.
 - Toasts: optional `<Pupitre toastDuration={5_000}>` auto-dismiss delay in milliseconds; default `0` retains manual dismissal, with per-toast deadlines preserved across navigation.
 - Localization: client `t(key, params?)` resolves synchronously from the compact `pupitre.messages` shared prop and follows locale changes across Inertia visits.
 - Catalog extensions: `defineRegistry(components, { extensions })` merges extension schemas, requires a component per extension, and reports unregistered or unknown spec types with an actionable developer error.

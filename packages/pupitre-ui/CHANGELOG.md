@@ -1,8 +1,18 @@
 # Changelog
 
-## Unreleased (1.1.0)
+## 1.1.0 (2026-10-14)
+
+### Changed
+- Redesign (breaking visual change): the default skin is now a **ledger**. Content sits on the warm paper canvas instead of in cards; every region (widget, table, form section, record section, relation tabs) opens with a 1px ink rule (`--rule`, `border-rule`) and a heading row, and lines inside a region are hairlines. Boxes remain only for controls, overlays, grid/kanban cards and code. New primitive `LedgerSection` and `ledgerRuleClasses`; `Panel` stays exported for host use. See the root `DESIGN.md`.
+- Page titles use **Source Serif 4** 400 (`font-display`, `--pupitre-font-display`; override through `theme.vars`), shipped as a dependency (`@fontsource/source-serif-4`, OFL-1.1) and imported by `styles.css`, so titles render identically on every OS from the host's own origin. The registry `styles` item declares the same dependency. Auth pages drop the floating card for a ruled column.
+- Dashboards: stats render as one ruled strip of figures instead of four cards; widget grid gaps widen to 32px / 40px.
+- Tables: list tabs become underline tabs on the rule (default tab shown active), header rows lose their band, cells align flush with the rule, totals sit under an ink rule, group headings are ruled subheads, filters above the table share rows.
+- Record pages: entries are hairline-ruled lines (label beside value on phones), plain repeatable entries render as a ruled table with right-aligned figures, and three or more empty fields fold behind "Show N empty fields" / "Hide empty fields". Relation tabs drop the duplicated visible heading (kept for screen readers) and show the badge on the tab only.
+- Tabs: the ledger tab list (on the rule, underline on the active tab, content on the canvas) is the default for contained tabs; `contained: false` keeps the segmented control.
+- Hosts rendering Pupitre surfaces outside the Shell must paint `body` with `var(--background)`, since ledger surfaces are transparent.
 
 ### Added
+- Number formats: compact table cells, text entries and stat values show the full value as a tooltip (copy buttons copy the full value); chart axes shorten and tooltips show full values in the user's number locale.
 - Localization: accessible, tenant-aware language switcher in the user menu and profile; built-in dialogs, forms, editors, uploads, widgets and accessibility text are translated.
 - Tables: QueryBuilder editor (typed values, negation, AND/OR groups, active summaries) in every filter layout, and keyboard-accessible multi-column sort controls with priority announcements.
 - Catalog extensions: DataTable and nested infolist entries render registered custom columns/entries with formatted values and row/record context.
@@ -16,6 +26,12 @@
 ### Fixed
 - Dark theme primary (`oklch(0.545 0.1 163)`) raises primary-button text contrast above WCAG AA (4.53:1).
 - Table grid cards: the selection checkbox sits beside the card title instead of being pushed to the opposite edge, and long field values wrap inside the card instead of overflowing it.
+- Actions: descriptors compiled as `enabled: false` (policy denied, `visible()` false, unsafe URL) are hidden in page headers, overflow menus and relation headers instead of rendering disabled; a "More actions" menu with nothing left renders nothing.
+- Tables: row actions stay on one line (13px, right-aligned shrink-wrapped column) instead of wrapping into tall rows; column headers no longer wrap; inline-edit selects keep their label and inline-edit text stays on one line when the table scrolls; the toolbar search fills the row on phones; an empty first page drops the pagination footer, and tables nested in another panel (relation managers, table widgets) use a compact empty state.
+- Widgets: the dashboard grid packs widgets row by row and stretches a row that would leave empty columns (e.g. two `span(1)` charts before a full-width table), widget cells no longer grow past their column, long stat values (`Rp 105.913.958`) shrink to one line with a size shared across the widget, and cartesian chart y-axes use compact numbers instead of clipping. A dashboard filter option with value `''` replaces the built-in "All" option.
+- Forms: date, date-time and time inputs show only the native picker icon (toned like other control icons) instead of a second decorative icon; date-only fields no longer show the timezone hint.
+- Infolists: `placeholder` entries inside an infolist use entry typography (muted label, foreground value); key-value entry keys no longer break mid-word in narrow columns.
+- Shell: the sidebar navigation shows edge shadows while more items are scrolled out of view and scrolls the current page's item into view; record sub-navigation with a single tab is hidden; `:root.dark` keeps native controls dark when a host stylesheet resets `color-scheme` on `:root`.
 
 ## Unreleased (1.0.0, milestone M4)
 

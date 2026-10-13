@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre-transmit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Realtime adapter for Pupitre on top of @adonisjs/transmit",
   "type": "module",
   "sideEffects": false,

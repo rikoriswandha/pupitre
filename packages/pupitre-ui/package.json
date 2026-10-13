@@ -1,6 +1,6 @@
 {
   "name": "@rikology/pupitre-ui",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Default Pupitre catalog components built on shadcn/ui + Base UI",
   "type": "module",
   "sideEffects": [
@@ -100,12 +100,12 @@
     "tailwind-merge": "^3.7.0"
   },
   "peerDependencies": {
-    "zod": "^4.3.6",
     "@playwright/test": "^1.62.1",
-    "@rikology/pupitre": "^1.0.0",
-    "@rikology/pupitre-react": "^1.0.0",
+    "@rikology/pupitre": "^1.1.0",
+    "@rikology/pupitre-react": "^1.1.0",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "zod": "^4.3.6"
   },
   "peerDependenciesMeta": {
     "@playwright/test": {
@@ -119,8 +119,8 @@
     "@playwright/experimental-ct-react": "^1.62.1",
     "@playwright/test": "^1.62.1",
     "@poppinss/ts-exec": "^1.5.0",
-    "@rikology/pupitre": "^1.0.0",
-    "@rikology/pupitre-react": "^1.0.0",
+    "@rikology/pupitre": "^1.1.0",
+    "@rikology/pupitre-react": "^1.1.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
