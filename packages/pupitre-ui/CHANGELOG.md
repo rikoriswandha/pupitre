@@ -15,6 +15,7 @@
 
 ### Fixed
 - Dark theme primary (`oklch(0.545 0.1 163)`) raises primary-button text contrast above WCAG AA (4.53:1).
+- Table grid cards: the selection checkbox sits beside the card title instead of being pushed to the opposite edge, and long field values wrap inside the card instead of overflowing it.
 
 ## Unreleased (1.0.0, milestone M4)
 

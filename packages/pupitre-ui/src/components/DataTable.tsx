@@ -566,8 +566,10 @@ export function DataTable({
       })),
     [descriptor.columns]
   )
-  function renderCell(cell: Cell<TableRow, unknown>) {
-    const column = columnDescriptors.get(cell.column.id)!
+  /** `wrap` forces text wrapping where there is no horizontal scroll, e.g. grid cards. */
+  function renderCell(cell: Cell<TableRow, unknown>, wrap = false) {
+    const base = columnDescriptors.get(cell.column.id)!
+    const column = wrap && !base.wrap ? { ...base, wrap: true } : base
     const value = cell.getValue()
     if (column.type === 'custom' && column.component)
       return <CustomColumnCell column={column} value={value} row={cell.row.original} />
@@ -780,7 +782,7 @@ export function DataTable({
             </Button>
           </div>
         )}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-start gap-3">
           {descriptor.selectable && (
             <CheckboxControl
               className="size-6"
@@ -790,44 +792,48 @@ export function DataTable({
               onCheckedChange={(checked) => selectRow(row.original.key, checked)}
             />
           )}
-          {firstColumn?.component && firstColumn.type === 'custom' && firstCell ? (
-            row.original.url && !firstColumn.editable ? (
-              <NavLink className="text-foreground hover:underline" href={row.original.url}>
-                {renderCell(firstCell)}
-              </NavLink>
-            ) : (
-              renderCell(firstCell)
-            )
-          ) : (
-            <>
-              {firstColumn?.editable && firstCell ? (
-                renderCell(firstCell)
-              ) : row.original.url ? (
-                <NavLink
-                  className="font-medium text-foreground hover:underline"
-                  href={row.original.url}
-                >
-                  {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
-                    String(row.original.key)}
+          <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            {firstColumn?.component && firstColumn.type === 'custom' && firstCell ? (
+              row.original.url && !firstColumn.editable ? (
+                <NavLink className="text-foreground hover:underline" href={row.original.url}>
+                  {renderCell(firstCell)}
                 </NavLink>
               ) : (
-                <strong>
-                  {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
-                    String(row.original.key)}
-                </strong>
-              )}
-            </>
-          )}
+                renderCell(firstCell)
+              )
+            ) : (
+              <>
+                {firstColumn?.editable && firstCell ? (
+                  renderCell(firstCell)
+                ) : row.original.url ? (
+                  <NavLink
+                    className="font-medium text-foreground hover:underline"
+                    href={row.original.url}
+                  >
+                    {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                      String(row.original.key)}
+                  </NavLink>
+                ) : (
+                  <strong>
+                    {displayValue(row.original.cells[firstColumn?.name ?? '']) ||
+                      String(row.original.key)}
+                  </strong>
+                )}
+              </>
+            )}
+          </div>
         </div>
         {row
           .getVisibleCells()
           .slice(1)
           .map((cell) => (
             <div key={cell.id} className="flex justify-between gap-3 text-sm">
-              <span className="text-muted-foreground">
+              <span className="shrink-0 text-muted-foreground">
                 {columnDescriptors.get(cell.column.id)?.label}
               </span>
-              <span>{renderCell(cell)}</span>
+              <span className="min-w-0 text-right [overflow-wrap:anywhere]">
+                {renderCell(cell, true)}
+              </span>
             </div>
           ))}
         {renderActions(row.original)}
