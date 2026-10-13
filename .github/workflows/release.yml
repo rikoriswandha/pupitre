@@ -15,6 +15,12 @@ on:
           - pupitre-audit
           - pupitre-settings
           - pupitre-transmit
+          - pupitre-media
+          - pupitre-calendar
+          - pupitre-kanban
+          - pupitre-health
+          - pupitre-jobs
+          - pupitre-backup
           - create-pupitre-plugin
 
 permissions:

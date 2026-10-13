@@ -1,0 +1,89 @@
+{
+  "name": "@rikology/pupitre-calendar",
+  "version": "1.0.0",
+  "description": "Calendar widgets and pages with authorized drag rescheduling for Pupitre",
+  "type": "module",
+  "sideEffects": false,
+  "license": "MIT",
+  "author": "Riko Riswandha",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rikoriswandha/pupitre.git",
+    "directory": "packages/pupitre-calendar"
+  },
+  "homepage": "https://pupitre.dev",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "files": [
+    "build",
+    "CHANGELOG.md",
+    "!build/bin",
+    "!build/tests"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "adonisjs",
+    "pupitre",
+    "pupitre-plugin",
+    "calendar",
+    "scheduling"
+  ],
+  "exports": {
+    ".": {
+      "@rikology/source": "./index.ts",
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
+    "./configure": {
+      "@rikology/source": "./configure.ts",
+      "types": "./build/configure.d.ts",
+      "default": "./build/configure.js"
+    }
+  },
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('build',{recursive:true,force:true})\"",
+    "typecheck": "tsc --noEmit",
+    "quick:test": "node --conditions=@rikology/source --import=@poppinss/ts-exec --enable-source-maps bin/test.ts",
+    "test": "c8 npm run quick:test",
+    "compile": "npm run clean && tsdown && tsc -p tsconfig.build.json",
+    "build": "npm run compile",
+    "prepublishOnly": "npm run build",
+    "postcompile": "copyfiles \"stubs/**/*.stub\" build"
+  },
+  "peerDependencies": {
+    "@rikology/pupitre": "^1.0.0",
+    "@adonisjs/core": "^7.0.0",
+    "@adonisjs/lucid": "^22.0.0",
+    "luxon": "^3.4.4"
+  },
+  "devDependencies": {
+    "@adonisjs/auth": "^10.1.0",
+    "@adonisjs/bouncer": "^4.0.1",
+    "@adonisjs/core": "^7.6.0",
+    "@adonisjs/inertia": "^5.0.1",
+    "@adonisjs/lucid": "^22.4.2",
+    "@adonisjs/session": "^8.1.0",
+    "@adonisjs/shield": "^9.0.0",
+    "@adonisjs/drive": "^4.0.0",
+    "@japa/assert": "^4.2.0",
+    "@japa/runner": "^5.3.0",
+    "@japa/snapshot": "^2.0.10",
+    "@japa/file-system": "^3.0.0",
+    "@poppinss/ts-exec": "^1.5.0",
+    "@vinejs/vine": "^4.4.0",
+    "better-sqlite3": "^13.0.3",
+    "c8": "^12.0.0",
+    "copyfiles": "^2.4.1",
+    "flydrive": "^2.2.0",
+    "luxon": "^3.7.2",
+    "@types/luxon": "^3.7.1",
+    "pg": "^8.23.1",
+    "reflect-metadata": "^0.2.2",
+    "tsdown": "^0.23.0",
+    "@rikology/pupitre": "^1.0.0"
+  },
+  "prettier": "@adonisjs/prettier-config"
+}

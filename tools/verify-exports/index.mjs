@@ -22,6 +22,12 @@ const packages = [
   'packages/pupitre-audit',
   'packages/pupitre-settings',
   'packages/pupitre-transmit',
+  'packages/pupitre-media',
+  'packages/pupitre-calendar',
+  'packages/pupitre-kanban',
+  'packages/pupitre-health',
+  'packages/pupitre-jobs',
+  'packages/pupitre-backup',
   'packages/create-pupitre-plugin',
 ]
 

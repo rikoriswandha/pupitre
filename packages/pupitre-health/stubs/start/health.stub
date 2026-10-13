@@ -1,0 +1,13 @@
+{{{
+  exports({ to: app.startPath('health.ts') })
+}}}
+import { HealthChecks, DiskSpaceCheck, MemoryHeapCheck, MemoryRSSCheck } from '@adonisjs/core/health'
+import { DbCheck } from '@adonisjs/lucid/database'
+import db from '@adonisjs/lucid/services/db'
+
+export default new HealthChecks().register([
+  new DiskSpaceCheck(),
+  new MemoryHeapCheck(),
+  new MemoryRSSCheck(),
+  new DbCheck(db.connection()),
+])

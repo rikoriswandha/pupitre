@@ -12,6 +12,12 @@ export const packages = [
   'pupitre-audit',
   'pupitre-settings',
   'pupitre-transmit',
+  'pupitre-media',
+  'pupitre-calendar',
+  'pupitre-kanban',
+  'pupitre-health',
+  'pupitre-jobs',
+  'pupitre-backup',
 ]
 
 // Use the existing TypeScript parser so TS annotations and JSX cannot hide calls.

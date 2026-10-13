@@ -119,8 +119,15 @@ export default configPkg(
       'packages/pupitre-shield/**/*.ts',
       'packages/pupitre-audit/**/*.ts',
       'packages/pupitre-transmit/**/*.ts',
+      'packages/pupitre-settings/**/*.ts',
+      'packages/pupitre-media/**/*.ts',
+      'packages/pupitre-calendar/**/*.ts',
+      'packages/pupitre-kanban/**/*.ts',
+      'packages/pupitre-health/**/*.ts',
+      'packages/pupitre-jobs/**/*.ts',
+      'packages/pupitre-backup/**/*.ts',
     ],
-    ignores: ['packages/pupitre-transmit/client/**'],
+    ignores: ['packages/pupitre-transmit/client/**', 'packages/pupitre-media/catalog.ts'],
     rules: restrict([
       'react',
       'react-dom',
@@ -132,6 +139,23 @@ export default configPkg(
       '@rikology/pupitre-ui',
       '@adonisjs/transmit-client',
     ]),
+  },
+  {
+    // Plugin catalog extensions are shared with the browser: zod and the core catalog only.
+    files: ['packages/pupitre-media/catalog.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(?!zod$|zod/|@rikology/pupitre/catalog$|\\.{1,2}/).*',
+              message: 'plugin catalog entries may only import zod and @rikology/pupitre/catalog',
+            },
+          ],
+        },
+      ],
+    },
   },
   {
     // Browser realtime transport: transmit-client + the zod-only catalog contract.
