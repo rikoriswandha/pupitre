@@ -30,11 +30,17 @@ import { RealtimeProvider } from '../hooks/use_realtime.js'
 import type { RealtimeClient } from '@rikology/pupitre/catalog'
 
 type InertiaPupitreProps = PupitrePageProps & { errors?: Record<string, string> }
-export type PupitreProps = { registry: PupitreRegistry; realtime?: RealtimeClient }
+export type PupitreProps = {
+  registry: PupitreRegistry
+  realtime?: RealtimeClient
+  /** Auto-dismiss delay in milliseconds. Defaults to 0 (manual dismissal). */
+  toastDuration?: number
+}
 let toastId = 0
 const emptyToasts: ToastMessage[] = []
 let toastState: ToastMessage[] = []
 const toastListeners = new Set<() => void>()
+const toastTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 function subscribeToasts(listener: () => void) {
   toastListeners.add(listener)
@@ -48,6 +54,15 @@ function getToasts() {
 function updateToasts(update: (current: ToastMessage[]) => ToastMessage[]) {
   toastState = update(toastState)
   for (const listener of toastListeners) listener()
+}
+
+function dismissToast(id: string) {
+  const timer = toastTimers.get(id)
+  if (timer !== undefined) {
+    clearTimeout(timer)
+    toastTimers.delete(id)
+  }
+  updateToasts((current) => current.filter((toast) => toast.id !== id))
 }
 function major(version: string): string {
   return version.split('.')[0] ?? ''
@@ -98,20 +113,24 @@ function useInertiaPropsSafely(): InertiaPupitreProps | null {
     throw error
   }
 }
-export function Pupitre({ registry, realtime }: PupitreProps) {
+export function Pupitre({ registry, realtime, toastDuration }: PupitreProps) {
   const props = useInertiaPropsSafely()
   if (!props) return null
-  return <PupitreContent registry={registry} realtime={realtime} props={props} />
+  return (
+    <PupitreContent
+      registry={registry}
+      realtime={realtime}
+      toastDuration={toastDuration}
+      props={props}
+    />
+  )
 }
 export function PupitreContent({
   registry,
   realtime,
+  toastDuration = 0,
   props,
-}: {
-  registry: PupitreRegistry
-  realtime?: RealtimeClient
-  props: InertiaPupitreProps
-}) {
+}: PupitreProps & { props: InertiaPupitreProps }) {
   configureI18n(props.pupitre.locale, props.pupitre.messages)
   useEffect(() => {
     document.documentElement.lang = props.pupitre.locale
@@ -139,13 +158,23 @@ export function PupitreContent({
     return () => exportPoll.current?.abort()
   }, [props.page.key])
   useEffect(() => () => exportPoll.current?.abort(), [])
+  const toastDurationRef = useRef(toastDuration)
+  useEffect(() => {
+    toastDurationRef.current = toastDuration
+  }, [toastDuration])
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
-    updateToasts((current) => [...current, { ...toast, id: String(++toastId) }])
+    const id = String(++toastId)
+    const duration = toastDurationRef.current
+    updateToasts((current) => [...current, { ...toast, id }])
+    if (duration > 0 && Number.isFinite(duration)) {
+      // Timers share the store's lifetime, so navigation does not restart them.
+      toastTimers.set(
+        id,
+        setTimeout(() => dismissToast(id), duration)
+      )
+    }
   }, [])
-  const dismiss = useCallback(
-    (id: string) => updateToasts((current) => current.filter((toast) => toast.id !== id)),
-    []
-  )
+  const dismiss = dismissToast
   const page = props.page
   const panel = props.pupitre
   const handleActionResult = useCallback(

@@ -22,7 +22,12 @@ export default function PupitrePage(props: ComponentProps<typeof Pupitre>) {
   }, [enabled])
   return (
     <PupitreViewsProvider registry={views}>
-      <Pupitre {...props} registry={registry} realtime={enabled ? realtime : undefined} />
+      <Pupitre
+        {...props}
+        registry={registry}
+        realtime={enabled ? realtime : undefined}
+        toastDuration={5_000}
+      />
     </PupitreViewsProvider>
   )
 }

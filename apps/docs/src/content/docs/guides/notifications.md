@@ -18,6 +18,16 @@ notify?.success('Saved')
 
 Available severity methods are success, danger/error, warning and info. `.body()` adds text, `.actions([...])` adds links, `.send()` sends flash/toast feedback. `.sendToDatabase(user?)` persists through the configured notifications adapter; await it. Do not describe a toast as durable delivery.
 
+## Toast duration
+
+Set `toastDuration` on the host's `<Pupitre>` component to auto-dismiss flash and action toasts after a delay in milliseconds:
+
+```tsx
+<Pupitre registry={registry} toastDuration={5_000} />
+```
+
+The default is `0`: toasts stay visible until dismissed manually or an action is clicked. A positive finite duration enables auto-dismiss; each toast keeps its own deadline across Inertia navigation. Manual dismissal cancels its timer. Changing the setting affects new toasts only; it does not replay the current flash or reschedule existing toasts. Toast state is in memory, not database or localStorage persistence.
+
 ## Inbox
 
 Enable panel `.notifications({ interval: 30_000 })`; the default interval is 30 seconds. The tray supports paginated inbox results and marking read. Use `.notifications(false)` to disable it. Without a notifications adapter, database persistence is not available.

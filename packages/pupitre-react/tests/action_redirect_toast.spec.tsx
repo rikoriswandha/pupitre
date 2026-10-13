@@ -1,4 +1,5 @@
 import { test } from '@japa/runner'
+import { mock } from 'node:test'
 import { act } from 'react'
 import type { ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -43,11 +44,12 @@ function installDom() {
 
 const registry = defineRegistry({
   Shell: ({ children }: { children: ReactNode }) => <>{children}</>,
-  Toaster: ({ toasts }: { toasts: ToastMessage[] }) => (
+  Toaster: ({ toasts, dismiss }: { toasts: ToastMessage[]; dismiss: (id: string) => void }) => (
     <div data-testid="toaster">
       {toasts.map((toast) => (
         <div key={toast.id} role="status" data-toast-id={toast.id}>
           {toast.title}
+          <button onClick={() => dismiss(toast.id)}>Dismiss {toast.title}</button>
         </div>
       ))}
     </div>
@@ -136,6 +138,106 @@ test('redirect flash drains on a same-key URL visit and does not leak to later p
     await act(async () => root.unmount())
     restoreRouter()
     dom.happyDOM.abort()
+    restore()
+  }
+})
+
+test('toast expiry survives navigation and a newer toast keeps its own deadline', async ({
+  assert,
+}) => {
+  const { dom, restore } = installDom()
+  const container = dom.document.createElement('div')
+  const root = createRoot(container as unknown as Element)
+  mock.timers.enable({ apis: ['setTimeout'] })
+  const visible = (title: string) =>
+    [...container.querySelectorAll('[role="status"]')].some((node) =>
+      node.textContent?.startsWith(title)
+    )
+  try {
+    await act(async () =>
+      root.render(
+        <PupitreContent
+          key="first"
+          registry={registry}
+          props={{
+            ...pageProps('first'),
+            pupitre: { ...pupitre, flash: [{ type: 'success', title: 'First' }] },
+          }}
+          toastDuration={5_000}
+        />
+      )
+    )
+    await act(async () => mock.timers.tick(0))
+    assert.isTrue(visible('First'))
+    await act(async () => mock.timers.tick(3_000))
+    await act(async () =>
+      root.render(
+        <PupitreContent
+          key="next"
+          registry={registry}
+          props={{
+            ...pageProps('next'),
+            pupitre: { ...pupitre, flash: [{ type: 'success', title: 'Second' }] },
+          }}
+          toastDuration={5_000}
+        />
+      )
+    )
+    await act(async () => mock.timers.tick(0))
+    await act(async () => mock.timers.tick(1_999))
+    assert.isTrue(visible('First'))
+    assert.isTrue(visible('Second'))
+    await act(async () => mock.timers.tick(1))
+    assert.isFalse(visible('First'))
+    assert.isTrue(visible('Second'))
+    await act(async () => mock.timers.tick(3_000))
+    assert.isFalse(visible('Second'))
+  } finally {
+    await act(async () => {
+      for (const button of container.querySelectorAll('button')) button.click()
+    })
+    await act(async () => root.unmount())
+    mock.timers.reset()
+    await dom.happyDOM.abort()
+    restore()
+  }
+})
+
+test('zero duration stays manual and changing configuration does not replay flash', async ({
+  assert,
+}) => {
+  const { dom, restore } = installDom()
+  const container = dom.document.createElement('div')
+  const root = createRoot(container as unknown as Element)
+  const props = {
+    ...pageProps('manual'),
+    pupitre: { ...pupitre, flash: [{ type: 'info' as const, title: 'Manual notice' }] },
+  }
+  mock.timers.enable({ apis: ['setTimeout'] })
+  try {
+    await act(async () =>
+      root.render(<PupitreContent registry={registry} props={props} toastDuration={0} />)
+    )
+    await act(async () => mock.timers.tick(0))
+    await act(async () => mock.timers.tick(60_000))
+    assert.include(container.textContent, 'Manual notice')
+    await act(async () =>
+      root.render(<PupitreContent registry={registry} props={props} toastDuration={5_000} />)
+    )
+    await act(async () => mock.timers.tick(5_000))
+    const notices = [...container.querySelectorAll('[role="status"]')].filter((node) =>
+      node.textContent?.startsWith('Manual notice')
+    )
+    assert.equal(notices.length, 1)
+    await act(async () => notices[0].querySelector('button')!.click())
+    assert.notInclude(container.textContent, 'Manual notice')
+  } finally {
+    await act(async () => {
+      for (const button of container.querySelectorAll('button')) button.click()
+    })
+    await act(async () => root.unmount())
+    mock.timers.reset()
+    await dom.happyDOM.abort()
     restore()
   }
 })

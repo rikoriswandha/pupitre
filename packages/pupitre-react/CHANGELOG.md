@@ -3,6 +3,7 @@
 ## Unreleased (1.1.0)
 
 ### Added
+- Toasts: optional `<Pupitre toastDuration={5_000}>` auto-dismiss delay in milliseconds; default `0` retains manual dismissal, with per-toast deadlines preserved across navigation.
 - Localization: client `t(key, params?)` resolves synchronously from the compact `pupitre.messages` shared prop and follows locale changes across Inertia visits.
 - Catalog extensions: `defineRegistry(components, { extensions })` merges extension schemas, requires a component per extension, and reports unregistered or unknown spec types with an actionable developer error.
 - Tables: `useTable` supports JSON QueryBuilder filter state and ordered multi-column sort, including explicit default clearing.
