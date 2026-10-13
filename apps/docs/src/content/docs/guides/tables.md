@@ -195,6 +195,6 @@ The **Views** toolbar saves the current filters, search, sort, grouping, page si
 
 Run the `pupitre_table_views` host migration published by the configure hook. Views are scoped to panel, tenant and table. Private views are visible only to their owner; public views remain subject to table `viewAny`. Publishing or changing an existing public view requires the explicit resource policy method `managePublicViews(user)`: no policy or missing method denies access. Saved state is validated against the table definition and normalized through the live query pipeline; invalid state returns HTTP 422. Column visibility is stored explicitly in a saved view and overrides the browser's ordinary localStorage preference when applied.
 
-See [Saved table views](./saved-views) for the HTTP and client contracts. Saved views apply to resource and relation-manager tables, not custom-data widgets.
+See [Saved table views](/guides/saved-views/) for the HTTP and client contracts. Saved views apply to resource and relation-manager tables, not custom-data widgets.
 
 

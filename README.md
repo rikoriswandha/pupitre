@@ -53,7 +53,7 @@ Opt in to fail-closed policy coverage with `definePanel('admin').strictAuthoriza
 
 ## Documentation and contributing
 
-- [Documentation — pupitre.dev](https://pupitre.dev)
+- [Documentation — pupitre.rikology.com](https://pupitre.rikology.com)
 - [Development, setup and contributing](docs/DEVELOPMENT.md)
 - [Testing strategy](docs/TESTING.md)
 - [Example AdonisJS application](apps/example)

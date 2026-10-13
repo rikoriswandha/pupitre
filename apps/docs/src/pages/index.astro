@@ -1,0 +1,91 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import { Code } from "../components/ui/code";
+import { LinkButton } from "../components/ui/link-button";
+import { config } from "virtual:nimbus/config";
+import { getIndexedEntries, withBase } from "@cloudflare/nimbus-docs/runtime";
+
+// Resolve links through the indexed entries so they follow `trailingSlash`,
+// and fail the build instead of shipping a dead call to action.
+const entries = await getIndexedEntries();
+const href = (id: string): string => {
+  const entry = entries.find((e) => e.collection === "docs" && e.entry.id === id);
+  if (!entry) throw new Error(`Landing page links to missing docs entry "${id}"`);
+  return withBase(entry.url, import.meta.env.BASE_URL);
+};
+
+const example = `import { defineResource, table } from '@rikology/pupitre'
+import Post from '#models/post'
+
+export default defineResource(Post)
+  .recordTitle('title')
+  .form((s) => [
+    s.text('title').required().maxLength(200),
+    s.select('status').options({ draft: 'Draft', published: 'Published' }),
+  ])
+  .table((t) => t.columns([
+    table.text('title').searchable().sortable(),
+    table.badge('status'),
+  ]))`;
+
+const pillars = [
+  {
+    title: "Adonis-native.",
+    body: "Lucid persistence, VineJS validation, Bouncer policies and your application's session guard.",
+  },
+  {
+    title: "React, not remote JavaScript.",
+    body: "Declarative specs power forms and tables. Simple reactive closures become safe expressions, not executable source sent to the browser.",
+  },
+  {
+    title: "Yours to change.",
+    body: "Replace a registry component without forking the backend. Add behavior through panel plugins and optional adapters.",
+  },
+];
+---
+
+<BaseLayout title={config.title} description={config.description}>
+  <div class="flex flex-col min-h-screen">
+    <Header showSidebar={false} />
+    <main id="main-content" tabindex="-1" class="flex-1 mx-auto max-w-3xl w-full px-6 py-20">
+      <h1
+        class="text-foreground leading-tight max-w-[14ch] [text-wrap:balance]"
+        style="font-size: clamp(2.25rem, 6vw, 3.5rem); font-weight: var(--nb-h1-weight); letter-spacing: -0.045em;"
+      >
+        Your models. Your admin. Your code.
+      </h1>
+      <p class="mt-4 max-w-[60ch] text-[1.0625rem] text-muted-foreground leading-relaxed [text-wrap:pretty]">
+        Build an AdonisJS admin panel with typed resources, reactive forms and server-authorized
+        actions. Keep the React components yours.
+      </p>
+      <div class="mt-8 flex flex-wrap gap-3">
+        <LinkButton href={href("getting-started")} variant="primary" size="lg" icon>Get started</LinkButton>
+        <LinkButton href={href("migrating-from-filament")} variant="secondary" size="lg">Coming from Filament?</LinkButton>
+      </div>
+
+      <section class="docs-content mt-20">
+        <h2>Less plumbing. More application.</h2>
+        <p>
+          Pupitre turns Lucid models and immutable TypeScript builders into an Inertia React admin
+          panel. Describe the form and table once; Pupitre handles the routes, validation, scoped
+          queries and action transport.
+        </p>
+        <Code code={example} lang="ts" />
+        <div class="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {pillars.map((pillar) => (
+            <div class="rounded-lg border border-border p-4">
+              <div class="font-medium text-foreground">{pillar.title}</div>
+              <div class="mt-1 text-sm text-muted-foreground leading-relaxed">{pillar.body}</div>
+            </div>
+          ))}
+        </div>
+        <p class="mt-10">
+          Start with <a href={href("getting-started")}>your first panel</a>, explore the{" "}
+          <a href={href("guides/forms")}>form components</a>, or compare the{" "}
+          <a href={href("migrating-from-filament")}>Filament API equivalents</a>.
+        </p>
+      </section>
+    </main>
+  </div>
+</BaseLayout>

@@ -6,3 +6,4 @@ public/assets
 docs
 *.md
 package-lock.json
+apps/docs/src

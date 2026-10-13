@@ -1,4 +1,6 @@
 .astro/
+.nimbus/
+.wrangler/
 dist/
 src/content/docs/changelog.md
 src/content/docs/reference/api-*.md

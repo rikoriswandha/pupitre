@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import { withBase } from "@cloudflare/nimbus-docs/runtime";
+
+// Prerender the 404 so it stays a static route under `output: "server"`.
+// Hosts serve it via their not-found handling (e.g. Cloudflare
+// `not_found_handling: "404-page"`); the adapter adds no on-demand route.
+export const prerender = true;
+const homeHref = withBase("/", import.meta.env.BASE_URL);
+const suggestions = [
+  { href: "/getting-started/", label: "Getting started", blurb: "Installation and your first panel" },
+  { href: "/guides/forms/", label: "Forms and schema", blurb: "Fields, validation and reactivity" },
+  { href: "/migrating-from-filament/", label: "Migrating from Filament", blurb: "PHP to TypeScript equivalents" },
+  { href: "/reference/cli/", label: "CLI reference", blurb: "Generators and diagnostics" },
+].map((item) => ({ ...item, href: withBase(item.href, import.meta.env.BASE_URL) }));
+---
+
+<BaseLayout title="Page not found" description="The page you're looking for doesn't exist." noindex>
+  <div class="flex flex-col min-h-screen">
+    <Header />
+    <main id="main-content" tabindex="-1" class="flex-1 mx-auto max-w-2xl w-full px-6 py-24 text-center">
+      <p class="text-sm font-medium text-muted-foreground">404</p>
+      <h1
+        class="mt-2 text-foreground leading-tight"
+        style="font-size: var(--nb-h1-size); font-weight: var(--nb-h1-weight); letter-spacing: var(--nb-h1-tracking);"
+      >
+        Page not found
+      </h1>
+      <p class="mt-2 text-[1.0625rem] text-muted-foreground leading-relaxed">
+        This documentation URL does not exist. Search the docs, or start with one of these guides.
+      </p>
+      <ul class="mt-8 grid grid-cols-1 gap-3 text-left sm:grid-cols-2">
+        {suggestions.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              class="block rounded-lg border border-border p-4 no-underline transition-colors hover:border-border-strong"
+            >
+              <div class="font-medium text-foreground">{item.label}</div>
+              <div class="mt-0.5 text-sm text-muted-foreground">{item.blurb}</div>
+            </a>
+          </li>
+        ))}
+      </ul>
+      <p class="mt-8 text-sm text-muted-foreground">
+        Followed a broken link in the docs?{" "}
+        <a href="https://github.com/rikoriswandha/pupitre/issues" class="text-foreground">Report it on GitHub</a>.
+      </p>
+      <a
+        href={homeHref}
+        class="mt-8 inline-block rounded-lg border border-border px-4 py-2 font-medium text-foreground no-underline transition-colors hover:border-border-strong"
+      >
+        Back home
+      </a>
+    </main>
+  </div>
+</BaseLayout>

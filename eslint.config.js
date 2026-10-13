@@ -42,7 +42,11 @@ export default configPkg(
       'docs/**',
       // Astro docs site: generated types/output.
       'apps/docs/.astro/**',
+      'apps/docs/.wrangler/**',
       'apps/docs/dist/**',
+      // Nimbus starter files: kept in upstream shape so `nimbus-docs diff --apply`
+      // stays clean; `astro check` and `nimbus-docs check` cover them.
+      'apps/docs/src/**',
       // Scaffolded into new plugin packages; linted by the generated project.
       'packages/create-pupitre-plugin/template/**',
     ],
