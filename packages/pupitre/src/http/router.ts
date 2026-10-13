@@ -1,9 +1,11 @@
+import TableViewsController from '../table/views/controller.js'
 import type { LucidModel } from '@adonisjs/lucid/types/model'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { HttpRouterService } from '@adonisjs/core/types'
 import PupitreContextMiddleware from './middleware/pupitre_context.js'
 import SharePropsMiddleware from './middleware/share_props.js'
 import TenancyResolverMiddleware from './middleware/tenancy_resolver.js'
+import BrowserSessionMiddleware from './middleware/browser_session.js'
 import ResourceController from './controllers/resource_controller.js'
 import ActionController from './controllers/action_controller.js'
 import EvaluateController from './controllers/evaluate_controller.js'
@@ -77,12 +79,14 @@ function createGroups(router: HttpRouterService, panel: PanelRuntime): PanelRout
       group(register, panel.path, [
         ...panel.middleware,
         context(Boolean(panelGuard(panel))),
+        (ctx, next) => new BrowserSessionMiddleware().handle(ctx, next),
         share,
       ]),
     tenant: (register) =>
       group(register, tenantPrefix, [
         ...panel.middleware,
         context(Boolean(panelGuard(panel))),
+        (ctx, next) => new BrowserSessionMiddleware().handle(ctx, next),
         tenancy,
         share,
       ]),
@@ -116,6 +120,12 @@ export function registerPanelRoutes(
       })
       .as('dashboard')
     router.get('/_pupitre/widgets/:name', [WidgetController, 'data']).as('widgets.data')
+    router
+      .get('/_pupitre/widgets/:name/actions/:action', [WidgetController, 'action'])
+      .as('widgets.action.form')
+    router
+      .post('/_pupitre/widgets/:name/actions/:action', [WidgetController, 'action'])
+      .as('widgets.action.run')
 
     registerCustomPageRoutes(router, panel, manager)
 
@@ -128,6 +138,24 @@ export function registerPanelRoutes(
       const resolveSlug = (ctx: HttpContext, next: () => Promise<void>) => {
         ctx.params.slug = slug
         return next()
+      }
+      if (resource.definition.table?.savedViews) {
+        router
+          .get(`${routeBase}/views`, [TableViewsController, 'index'])
+          .as(`${routeName}.views.index`)
+          .use(resolveSlug)
+        router
+          .post(`${routeBase}/views`, [TableViewsController, 'store'])
+          .as(`${routeName}.views.store`)
+          .use(resolveSlug)
+        router
+          .put(`${routeBase}/views/:view`, [TableViewsController, 'update'])
+          .as(`${routeName}.views.update`)
+          .use(resolveSlug)
+        router
+          .delete(`${routeBase}/views/:view`, [TableViewsController, 'destroy'])
+          .as(`${routeName}.views.destroy`)
+          .use(resolveSlug)
       }
       if (resource.definition.pages.list)
         router.get(routeBase, [ResourceController, 'list']).as(`${routeName}.list`).use(resolveSlug)
@@ -169,6 +197,36 @@ export function registerPanelRoutes(
           ctx.params.slug = slug
           ctx.params.relation = relation.relation
           return next()
+        }
+        if (relation.table?.savedViews) {
+          constrainPrimaryKey(
+            router
+              .get(`${base}/views`, [TableViewsController, 'index'])
+              .as(`${routeName}.relations.${relation.relation}.views.index`)
+              .use(resolveRelation),
+            resource
+          )
+          constrainPrimaryKey(
+            router
+              .post(`${base}/views`, [TableViewsController, 'store'])
+              .as(`${routeName}.relations.${relation.relation}.views.store`)
+              .use(resolveRelation),
+            resource
+          )
+          constrainPrimaryKey(
+            router
+              .put(`${base}/views/:view`, [TableViewsController, 'update'])
+              .as(`${routeName}.relations.${relation.relation}.views.update`)
+              .use(resolveRelation),
+            resource
+          )
+          constrainPrimaryKey(
+            router
+              .delete(`${base}/views/:view`, [TableViewsController, 'destroy'])
+              .as(`${routeName}.relations.${relation.relation}.views.destroy`)
+              .use(resolveRelation),
+            resource
+          )
         }
         const relationList = router.get(base, [RelationController, 'list'])
         constrainPrimaryKey(relationList, resource)
@@ -286,3 +344,5 @@ export function registerPanelRoutes(
     registerNotificationRoutes(router, panel, manager)
   })
 }
+/** Register plugin protocols inside the same authenticated, tenant-resolved panel groups. */
+export { createGroups as panelRouteGroups }

@@ -6,6 +6,7 @@ import type { SchemaNodeBuilder } from '../definition/schema.js'
 import { liftClosure } from '../compiler/closure_lifter.js'
 import type { SchemaNodeDefinition, FieldDefinitionUnion } from '../definition/schema.js'
 
+import { missingPolicies } from '../authz/strict.js'
 export type ClosureInspection = {
   field: string
   visible?: string
@@ -73,6 +74,8 @@ export type PolicyInspection = {
   model: string
   policy: string | null
   allowByDefault: boolean
+  strictAuthorization: boolean
+  violations: string[]
   requiredAbilities: string[]
   searchableColumns: string[]
   missingAbilities: string[]
@@ -131,6 +134,7 @@ export async function buildPolicyInspection(
 ): Promise<PolicyInspection[]> {
   const report: PolicyInspection[] = []
   for (const panel of panels) {
+    const violations = await missingPolicies(panel, config)
     for (const resource of panel.resources) {
       if (selectedResource && selectedResource !== resource.slug) continue
       const policy = await resolveResourcePolicy(resource, config)
@@ -149,7 +153,9 @@ export async function buildPolicyInspection(
         resource: resource.slug,
         model: resource.definition.model,
         policy: policy?.name ?? null,
-        allowByDefault: !policy,
+        allowByDefault: !policy && !panel.strictAuthorization,
+        strictAuthorization: Boolean(panel.strictAuthorization),
+        violations,
         requiredAbilities: required,
         searchableColumns: searchable,
         missingAbilities: policy ? required.filter((ability) => !available.has(ability)) : [],

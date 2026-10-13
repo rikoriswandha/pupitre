@@ -1,3 +1,4 @@
+import { prepareClusters } from './navigation/clusters.js'
 import type { ApplicationService, HttpRouterService } from '@adonisjs/core/types'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { PanelDefinition } from './definition/panel.js'
@@ -15,6 +16,9 @@ import type { JobsAdapter } from './adapters/jobs.js'
 import { applyPlugins, bootPlugins, extendResource } from './plugins/apply.js'
 import type { RealtimeAdapter } from './adapters/realtime.js'
 import type { RealtimeEvent } from '../catalog/wire.js'
+import { missingPolicies } from './authz/strict.js'
+import { E_PUPITRE_MISSING_POLICY } from './errors.js'
+import { E_PUPITRE_AUTH_LOGIN_REQUIRED } from './errors.js'
 
 export type ResourceRuntime = {
   slug: string
@@ -175,6 +179,8 @@ export default class PupitreManager {
         )
       if (!validSlug(declared.id)) throw new Error(`Invalid Pupitre panel id "${declared.id}"`)
       const definition = applyPlugins(declared)
+      if (!definition.auth.login && (definition.sessions || definition.impersonation))
+        throw new E_PUPITRE_AUTH_LOGIN_REQUIRED([definition.id])
       if (definition.locales && !definition.locales.includes(definition.locale ?? 'en'))
         throw new Error('Panel default locale must be included in locales')
       const resources = await this.resolveResources(definition)
@@ -188,10 +194,21 @@ export default class PupitreManager {
         )
       const widgets = await this.resolveWidgets(definition)
       const panel: PanelRuntime = { ...definition, resources, pages, widgets }
+      prepareClusters(panel)
       validateNavigation(panel)
       this.panels.push(panel)
     }
     const config = (await this.app.container.make('pupitre.config')) as PupitreConfig
+    const coverage = await Promise.all(
+      this.panels
+        .filter((panel) => panel.strictAuthorization)
+        .map((panel) => missingPolicies(panel, config))
+    )
+    const violations = coverage.flat()
+    // Inspection is diagnostic-only: retain the resolved inventory but never serve routes.
+    if (this.app.getEnvironment?.() === 'console' && process.argv.includes('pupitre:inspect'))
+      return
+    if (violations.length) throw new E_PUPITRE_MISSING_POLICY([violations.join(', ')])
     const jobs = await resolveAdapter(config.jobs)
     this.jobs = jobs
     if (jobs) {

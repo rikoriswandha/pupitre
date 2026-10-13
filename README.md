@@ -36,6 +36,8 @@ export default defineResource(Post)
 
 Register the resource in your panel, configure the host auth model, then start `node ace serve --hmr`. See the [getting-started guide](apps/docs/src/content/docs/getting-started.md) for the complete panel and authentication setup. A resource without a policy allows access and logs a warning: define your authorization before exposing it.
 
+Opt in to fail-closed policy coverage with `definePanel('admin').strictAuthorization()`: missing resource, nested-resource and relation-manager model policies abort boot with `E_PUPITRE_MISSING_POLICY`; policy-less related-model authorization also denies at runtime. `node ace pupitre:inspect --json` reports strict mode and violations.
+
 ## Packages
 
 | Package | Role |

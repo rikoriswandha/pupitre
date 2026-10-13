@@ -61,7 +61,8 @@ export function createColumnTenancyAdapter(panel: PanelRuntime): TenancyAdapter 
       return tenantFromRecord(record, panel)
     },
     scope(query: ModelQueryBuilderContract<LucidModel>, tenant: ResolvedTenant, options) {
-      query.where(options.ownership, tenant.id)
+      // SQLite binds JS numbers as REAL: stringify IDs so TEXT ownership also matches; integer columns coerce safely.
+      query.where(options.ownership, String(tenant.id))
     },
     fill(data: Record<string, unknown>, tenant: ResolvedTenant, options) {
       const property =

@@ -1,3 +1,7 @@
+import { impersonationState } from '../../auth/impersonation.js'
+import { restoreRememberedSession } from '../../auth/session_service.js'
+import { setPupitreFlash } from '../responses.js'
+import { t } from '../../i18n.js'
 import { createPupitreStorage } from '../../storage/index.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
@@ -102,6 +106,15 @@ export default class PupitreContextMiddleware {
       authUser,
       tenant: null,
     }
+    if ((await restoreRememberedSession(ctx)) === false) {
+      authUser = null
+      if (this.options.requireUser)
+        return handleUnauthenticated(
+          ctx,
+          panel,
+          new Error('Remembered browser session was revoked')
+        )
+    }
     const messages = getMessages(config, panel, ctx.pupitre.locale)
     requestMessages.set(ctx, messages)
     const send = ctx.response.send.bind(ctx.response)
@@ -140,7 +153,23 @@ export default class PupitreContextMiddleware {
         )
       }
     }
-    if (this.options.requireUser && authUser && panel.auth.emailVerification) {
+    const impersonating = impersonationState(ctx)
+    if (
+      impersonating &&
+      (routeName.startsWith(`${panel.id}.profile`) || routeName === `${panel.id}.locale`) &&
+      ctx.request.method() !== 'GET'
+    ) {
+      const message = t('Security changes are unavailable while impersonating.')
+      setPupitreFlash(ctx, [{ type: 'error', title: message }])
+      return ctx.response.forbidden({ message })
+    }
+    if (
+      this.options.requireUser &&
+      authUser &&
+      panel.auth.emailVerification &&
+      !impersonating &&
+      !routeName.endsWith('.impersonation.leave')
+    ) {
       const attributes = authUser as unknown as Record<string, unknown>
       const verified = attributes[config.auth.columns.emailVerifiedAt]
       const verificationRoute = routeName.includes('.auth.verification.')
@@ -149,7 +178,13 @@ export default class PupitreContextMiddleware {
         return ctx.response.redirect(`${ctx.pupitre.basePath}/email/verify`)
       }
     }
-    if (this.options.requireUser && authUser && panel.auth.mfa?.required) {
+    if (
+      this.options.requireUser &&
+      authUser &&
+      panel.auth.mfa?.required &&
+      !impersonating &&
+      !routeName.endsWith('.impersonation.leave')
+    ) {
       const attributes = authUser as unknown as Record<string, unknown>
       const enabled = attributes[config.auth.columns.mfaEnabledAt]
       const profileRoute = routeName.startsWith(`${panel.id}.profile`)

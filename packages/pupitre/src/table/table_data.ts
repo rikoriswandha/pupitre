@@ -50,13 +50,18 @@ function editableDisplay(column: TableColumnDefinition, value: unknown): string 
 
 async function formatCell(
   column: TableColumnDefinition,
-  record: LucidRow,
+  record: LucidRow | Record<string, unknown>,
   serialized: Record<string, unknown>,
   options: TableDataOptions
 ): Promise<unknown> {
   const value =
     column.kind !== 'fragment' && column.countRelation
-      ? (record.$extras?.[`${column.countRelation}_count`] ?? valueAt(serialized, column.name))
+      ? record instanceof Object &&
+        '$extras' in record &&
+        record.$extras &&
+        typeof record.$extras === 'object'
+        ? Reflect.get(record.$extras, `${column.countRelation}_count`)
+        : valueAt(serialized, column.name)
       : column.kind === 'fragment'
         ? undefined
         : valueAt(serialized, column.name)
@@ -334,6 +339,51 @@ export async function buildTableData(
     meta: metaFrom(meta, rows.length),
     ...(summary ? { summary } : {}),
     ...(groups ? { groups } : {}),
+    query: options.normalized,
+  }
+}
+
+/** Format plain server-owned rows without pretending they are Lucid models. */
+export async function buildCustomTableData(
+  table: TableDefinition,
+  rows: Record<string, unknown>[],
+  meta: TableMeta,
+  options: Omit<TableDataOptions, 'rowActions' | 'rowUrl'> & {
+    rowActions(record: Record<string, unknown>): Promise<ActionDescriptor[]>
+  }
+): Promise<TableData> {
+  const formatting: TableDataOptions = {
+    ...options,
+    rowActions: async () => [],
+    rowUrl: () => undefined,
+  }
+  return {
+    rows: await Promise.all(
+      rows.map(async (record) => {
+        const key = record[table.recordKey ?? 'id']
+        if (typeof key !== 'string' && typeof key !== 'number')
+          throw new Error('Custom table rows require a string or numeric recordKey')
+        const cells: Record<string, unknown> = {}
+        for (const column of table.columns)
+          cells[column.kind === 'fragment' ? column.component : column.name] = await formatCell(
+            column,
+            record,
+            record,
+            formatting
+          )
+        const url = typeof table.recordUrl === 'function' ? table.recordUrl({ record }) : undefined
+        const className = safeClassName(table.rowClass?.({ record }))
+        return {
+          key,
+          cells,
+          actions: await options.rowActions(record),
+          selectable: true,
+          ...(url ? { url } : {}),
+          ...(className ? { className } : {}),
+        }
+      })
+    ),
+    meta,
     query: options.normalized,
   }
 }

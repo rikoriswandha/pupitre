@@ -66,6 +66,33 @@
       "filePath": "install.js"
     },
     {
+      "commandName": "make:cluster",
+      "description": "Generate a Pupitre navigation cluster",
+      "help": "",
+      "namespace": "make",
+      "aliases": [],
+      "flags": [
+        {
+          "name": "force",
+          "flagName": "force",
+          "required": false,
+          "type": "boolean",
+          "description": "Overwrite an existing cluster file"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "argumentName": "name",
+          "required": true,
+          "description": "Cluster name",
+          "type": "string"
+        }
+      ],
+      "options": {},
+      "filePath": "make_cluster.js"
+    },
+    {
       "commandName": "make:page",
       "description": "Generate a Pupitre custom page",
       "help": "",
@@ -326,7 +353,9 @@
       "aliases": [],
       "flags": [],
       "args": [],
-      "options": {},
+      "options": {
+        "startApp": true
+      },
       "filePath": "prune.js"
     },
     {

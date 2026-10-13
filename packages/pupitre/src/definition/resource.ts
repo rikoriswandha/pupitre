@@ -1,3 +1,4 @@
+import type { ClusterDefinition } from './cluster.js'
 import type { LucidModel, ModelQueryBuilderContract } from '@adonisjs/lucid/types/model'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDefinition } from './action.js'
@@ -45,6 +46,7 @@ export type ResourceDefinition<Model extends object = object> = {
   label: string
   pluralLabel: string
   icon?: string
+  cluster?: ClusterDefinition
   navigation?: {
     group?: string
     sort?: number

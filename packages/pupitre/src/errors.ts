@@ -1,6 +1,21 @@
 import { getMessages, requestMessages, resolveTranslations, t } from './i18n.js'
 import { createError } from '@adonisjs/core/exceptions'
 import type { HttpContext } from '@adonisjs/core/http'
+export const E_PUPITRE_AUTH_LOGIN_REQUIRED = createError<[string]>(
+  'Panel "%s" requires built-in .login() when sessions or impersonation is enabled',
+  'E_PUPITRE_AUTH_LOGIN_REQUIRED',
+  500
+)
+export const E_PUPITRE_MISSING_POLICY = createError<[string]>(
+  'Strict authorization requires policies for: %s',
+  'E_PUPITRE_MISSING_POLICY',
+  500
+)
+export const E_PUPITRE_INVALID_CLUSTER = createError<[string]>(
+  '%s',
+  'E_PUPITRE_INVALID_CLUSTER',
+  500
+)
 
 type ErrorContext = HttpContext & {
   session?: { flash(key: string, value: unknown): void }
@@ -123,5 +138,10 @@ export const E_PUPITRE_UNLIFTABLE_CLOSURE = createError(
 export const E_PUPITRE_INVALID_SPEC = createError(
   'The schema compiler produced an invalid json-render spec',
   'E_PUPITRE_INVALID_SPEC',
+  500
+)
+export const E_PUPITRE_INVALID_REPEATER_TABLE = createError<[string]>(
+  'Invalid table repeater: %s',
+  'E_PUPITRE_INVALID_REPEATER_TABLE',
   500
 )

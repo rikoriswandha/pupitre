@@ -1,3 +1,4 @@
+import { startImpersonation } from '../../auth/impersonation.js'
 import { t } from '../../i18n.js'
 import { publishResourceChange } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -161,6 +162,10 @@ function findAction(
   for (const group of groups) {
     const action = findNested(group)
     if (action) return { action, field: false }
+  }
+  if (row) {
+    const headerAction = findNested(actions?.header)
+    if (headerAction?.builtin === 'impersonate') return { action: headerAction, field: false }
   }
   if (resource.definition.pages.list?.modals) {
     if (name === 'create' && !row)
@@ -345,6 +350,13 @@ export default class ActionController {
           retryAfter: limit.retryAfter ?? 60,
         })
       }
+    }
+    if (action.builtin === 'impersonate') {
+      if (!record || fieldAction || action.context === 'bulk') throw new E_PUPITRE_FORBIDDEN()
+      if (action.can) await ensureAuthorized(ctx, resource, action.can, record)
+      if (action.visible && !action.visible({ ctx, record })) throw new E_PUPITRE_FORBIDDEN()
+      const result = await startImpersonation(ctx, resource, record)
+      return isJsonRequest(ctx) ? actionJson(ctx, result) : ctx.response.redirect(result.redirect)
     }
     try {
       if (action.async && action.context === 'bulk') {

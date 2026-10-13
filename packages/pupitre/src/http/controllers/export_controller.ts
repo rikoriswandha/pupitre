@@ -14,6 +14,8 @@ import { authorizeResource } from '../../authz/bouncer.js'
 import { requestResource } from '../../query/scoped_query.js'
 import { countExportRows, processExport } from '../../table/export_service.js'
 import { createCsvStream } from '../../table/csv_stream.js'
+import { createXlsxStream, xlsxContentType } from '../../table/xlsx_stream.js'
+import vine from '@vinejs/vine'
 import type { CsvColumn } from '../../table/csv_stream.js'
 import type { TableColumnDefinition } from '../../definition/table.js'
 import { errorJson } from '../responses.js'
@@ -53,6 +55,25 @@ export default class ExportController {
     )
       return errorJson(ctx, t('You are not authorized to export these records'), 403)
 
+    let requestedFormat: 'csv' | 'xlsx' | undefined
+    try {
+      const validated = await vine
+        .compile(vine.object({ format: vine.enum(['csv', 'xlsx']).optional() }))
+        .validate({ format: ctx.request.input('format') })
+      requestedFormat = validated.format
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'E_VALIDATION_ERROR'
+      )
+        return errorJson(ctx, t('The requested export format is unavailable'), 422)
+      throw error
+    }
+    const format = requestedFormat ?? action.exportFormats?.[0] ?? 'csv'
+    if (!(action.exportFormats ?? ['csv']).includes(format))
+      return errorJson(ctx, t('The requested export format is unavailable'), 422)
     const requestedIds = ctx.request.input('ids')
     if (
       requestedIds !== undefined &&
@@ -116,7 +137,7 @@ export default class ExportController {
       if (userId === undefined)
         return errorJson(ctx, t('Authentication is required for exports'), 401)
       const exportId = randomUUID()
-      const fileKey = `exports/${exportId}.csv`
+      const fileKey = `exports/${exportId}.${format}`
       const progressUrl = `${ctx.pupitre.panel.path}/_pupitre/exports/${exportId}`
       const downloadUrl = `${progressUrl}/download`
       const tenantId = ctx.pupitre.tenant?.id ?? null
@@ -127,7 +148,7 @@ export default class ExportController {
         user_id: userId,
         tenant_id: tenantId === null ? null : String(tenantId),
         resource: resource.slug,
-        result: JSON.stringify({ action: action.name }),
+        result: JSON.stringify({ action: action.name, format }),
         status: 'queued',
         total_rows: count,
         processed_rows: 0,
@@ -144,6 +165,7 @@ export default class ExportController {
           locale: ctx.pupitre.locale,
           resource: resource.slug,
           action: action.name,
+          format,
           userId,
           tenantId,
           params: ctx.params,
@@ -168,7 +190,7 @@ export default class ExportController {
             ...storedJobError(
               error,
               t('Unable to dispatch export'),
-              JSON.stringify({ action: action.name })
+              JSON.stringify({ action: action.name, format })
             ),
             updated_at: DateTime.now().toSQL(),
           })
@@ -180,15 +202,19 @@ export default class ExportController {
     if (result.total !== count) throw new Error('The export result set changed during processing')
     const messages = requestMessages.get(ctx) ?? {}
     const localizedColumns = resolveTranslations(csvColumns, ctx.pupitre.locale, messages)
-    const stream = createCsvStream(
-      resolveTranslations(result.rows, ctx.pupitre.locale, messages),
-      localizedColumns
+    const rows = resolveTranslations(result.rows, ctx.pupitre.locale, messages)
+    const stream =
+      format === 'xlsx'
+        ? createXlsxStream(rows, localizedColumns, resource.slug)
+        : createCsvStream(rows, localizedColumns)
+    ctx.response.header(
+      'Content-Type',
+      format === 'xlsx' ? xlsxContentType : 'text/csv; charset=utf-8'
     )
-    ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
     ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(
       'Content-Disposition',
-      `attachment; filename="${resource.slug}-${new Date().toISOString().slice(0, 10)}.csv"`
+      `attachment; filename="${resource.slug}-${new Date().toISOString().slice(0, 10)}.${format}"`
     )
     return ctx.response.stream(stream)
   }

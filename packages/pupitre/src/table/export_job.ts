@@ -14,10 +14,11 @@ import type { PupitreConfig } from '../define_config.js'
 import type { JobsAdapter } from '../adapters/jobs.js'
 import type { NotificationsAdapter } from '../adapters/notifications.js'
 import { createCsvStream, type CsvColumn } from './csv_stream.js'
+import { createXlsxStream, xlsxContentType } from './xlsx_stream.js'
 import { createPupitreStorage } from '../storage/index.js'
 import type PupitreManager from '../manager.js'
 import { createJobContext, type PupitreJobContextPayload } from '../jobs/job_context.js'
-import { processExport, type ExportQuery } from './export_service.js'
+import { exportBatches, type ExportQuery } from './export_service.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
 import { authorizeResource } from '../authz/bouncer.js'
 import { publishUserNotification } from '../realtime.js'
@@ -26,6 +27,7 @@ type ExportJobPayload = PupitreJobContextPayload & {
   id: string
   resource: string
   action: string
+  format?: 'csv' | 'xlsx'
   fileKey: string
   progressUrl: string
   downloadUrl: string
@@ -74,6 +76,13 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         JSON.parse(jobRow.result ?? 'null')?.action !== action.name
       )
         throw new Error(t('Queued export action changed'))
+      const format = payload.format ?? 'csv'
+      if (
+        JSON.parse(jobRow.result ?? 'null')?.format !== payload.format ||
+        !(action.exportFormats ?? ['csv']).includes(format) ||
+        payload.fileKey !== `exports/${payload.id}.${format}`
+      )
+        throw new Error(t('Queued export action changed'))
       await authorizeNestedParent(ctx, resource)
       if (!(await authorizeResource(ctx, resource, 'viewAny')))
         throw new Error(t('You are not authorized to export these records'))
@@ -83,7 +92,6 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         .from('pupitre_exports')
         .where('id', payload.id)
         .update({ status: 'processing', updated_at: DateTime.now().toSQL() })
-      const chunks: Uint8Array[] = []
       const config = (await app.container.make('pupitre.config')) as PupitreConfig
       const maxRows = config.exports?.maxAsyncRows ?? 100_000
       const locale = payload.locale ?? ctx.pupitre.locale
@@ -96,43 +104,57 @@ export async function registerExportJob(jobs: JobsAdapter, manager: PupitreManag
         locale,
         messages
       )
-      let wroteHeader = false
-      const result = await processExport(
-        ctx,
-        resource,
-        action,
-        table,
-        payload.columns,
-        payload.queryOptions,
-        async (rows, processed, total) => {
-          if (total > maxRows) throw new Error(t('The export exceeds the asynchronous row limit'))
-          if (rows.length > 0) {
-            const stream = createCsvStream(
-              resolveTranslations(rows, locale, messages),
-              columns,
-              !wroteHeader
-            )
-            for await (const chunk of stream) chunks.push(Buffer.from(chunk))
-            wroteHeader = true
-          }
+      let processedRows = 0
+      async function* rows() {
+        for await (const batch of exportBatches(
+          ctx,
+          resource,
+          action!,
+          table!,
+          payload.columns,
+          payload.queryOptions
+        )) {
+          if (batch.total > maxRows)
+            throw new Error(t('The export exceeds the asynchronous row limit'))
+          for (const row of resolveTranslations(batch.rows, locale, messages)) yield row
+          processedRows = batch.processed
           await database.from('pupitre_exports').where('id', payload.id).update({
-            total_rows: total,
-            processed_rows: processed,
+            total_rows: batch.total,
+            processed_rows: batch.processed,
             updated_at: DateTime.now().toSQL(),
           })
         }
-      )
-      if (!wroteHeader) {
-        for await (const chunk of createCsvStream([], columns)) chunks.push(Buffer.from(chunk))
       }
-      await createPupitreStorage().put(payload.fileKey, Buffer.concat(chunks), {
-        contentType: 'text/csv; charset=utf-8',
-        visibility: 'private',
+      const stream =
+        format === 'xlsx'
+          ? createXlsxStream(rows(), columns, resource.slug)
+          : createCsvStream(rows(), columns)
+      let sourceError: Error | undefined
+      stream.on('error', (error) => {
+        sourceError = error
       })
+      const storage = createPupitreStorage()
+      try {
+        await storage.putStream(payload.fileKey, stream, {
+          contentType: format === 'xlsx' ? xlsxContentType : 'text/csv; charset=utf-8',
+          visibility: 'private',
+        })
+      } catch (error) {
+        try {
+          await storage.delete(payload.fileKey)
+        } catch (cleanupError) {
+          const logger = await app.container.make('logger')
+          logger.warn(
+            { err: cleanupError, exportId: payload.id },
+            'Unable to remove failed export file'
+          )
+        }
+        throw sourceError ?? error
+      }
       await database.from('pupitre_exports').where('id', payload.id).update({
         status: 'done',
-        total_rows: result.total,
-        processed_rows: result.total,
+        total_rows: processedRows,
+        processed_rows: processedRows,
         file_key: payload.fileKey,
         updated_at: DateTime.now().toSQL(),
       })

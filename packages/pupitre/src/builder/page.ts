@@ -1,3 +1,4 @@
+import type { ClusterBuilder } from './cluster.js'
 import type { ComponentDefinition, FormSchema, SchemaNodeBuilder } from '../definition/schema.js'
 import type { ActionBuilder } from '../definition/action.js'
 import type { CustomPageDefinition } from '../definition/custom_page.js'
@@ -17,6 +18,7 @@ export type CustomPageBuilder = {
   path(value: string): CustomPageBuilder
   title(value: string): CustomPageBuilder
   icon(value: string): CustomPageBuilder
+  cluster(value: ClusterBuilder): CustomPageBuilder
   navigation(value: NonNullable<CustomPageDefinition['navigation']>): CustomPageBuilder
   canAccess(value: NonNullable<CustomPageDefinition['canAccess']>): CustomPageBuilder
   form(callback: (schema: FormSchema<Record<string, unknown>>) => FormInput): CustomPageBuilder
@@ -24,7 +26,7 @@ export type CustomPageBuilder = {
   save(value: NonNullable<CustomPageDefinition['save']>): CustomPageBuilder
   actions(value: readonly ActionBuilder[]): CustomPageBuilder
   component(value: string): CustomPageBuilder
-  widgets(value: readonly WidgetBuilder[]): CustomPageBuilder
+  widgets(value: readonly Pick<WidgetBuilder, 'toDefinition'>[]): CustomPageBuilder
   filters(value: readonly WidgetFilterDefinition[]): CustomPageBuilder
   toDefinition(): CustomPageDefinition
   toJSON(): string
@@ -48,6 +50,9 @@ class PageBuilder implements CustomPageBuilder {
   }
   icon(value: string) {
     return this.change({ icon: value })
+  }
+  cluster(value: ClusterBuilder) {
+    return this.change({ cluster: value.toDefinition() })
   }
   navigation(value: NonNullable<CustomPageDefinition['navigation']>) {
     return this.change({ navigation: value })
@@ -76,7 +81,7 @@ class PageBuilder implements CustomPageBuilder {
   component(value: string) {
     return this.change({ component: value })
   }
-  widgets(value: readonly WidgetBuilder[]) {
+  widgets(value: readonly Pick<WidgetBuilder, 'toDefinition'>[]) {
     return this.change({ widgets: value.map((widget) => widget.toDefinition()) })
   }
   filters(value: readonly WidgetFilterDefinition[]) {

@@ -26,6 +26,21 @@ export async function configure(command: ConfigureCommand) {
   const path = String(flags.path ?? '/admin')
   const auth = String(flags.auth ?? 'web')
   const stubs = [
+    [
+      'database/migrations/1791700000045_create_pupitre_user_sessions.stub',
+      'database/migrations/1791700000045_create_pupitre_user_sessions.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000046_create_pupitre_login_events.stub',
+      'database/migrations/1791700000046_create_pupitre_login_events.ts',
+      {},
+    ],
+    [
+      'database/migrations/1791700000044_create_pupitre_table_views.stub',
+      'database/migrations/1791700000044_create_pupitre_table_views.ts',
+      {},
+    ],
     ['config/pupitre.stub', 'config/pupitre.ts', { path }],
     ['start/pupitre.stub', 'start/pupitre.ts', {}],
     ['app/admin/panels/admin.stub', 'app/admin/panels/admin.ts', { panel, path, auth }],

@@ -12,7 +12,10 @@ import type {
   RepeaterRelationshipOptions,
   BuilderBlockBuilder,
   BuilderBlockDefinition,
+  RepeaterTableColumnBuilder,
+  RepeaterTableColumnDefinition,
 } from '../../definition/schema.js'
+import { E_PUPITRE_INVALID_REPEATER_TABLE } from '../../errors.js'
 type AnyBuilder = SchemaNodeBuilder
 const fieldBase = [
   'label',
@@ -142,6 +145,9 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
     'maxHeight',
     'fileAttachmentsDisk',
     'fileAttachmentsDirectory',
+    'mergeTags',
+    'mentions',
+    'customBlocks',
   ],
   fileUpload: [
     ...fieldBase,
@@ -173,6 +179,7 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
   repeater: [
     ...fieldBase,
     'schema',
+    'table',
     'minItems',
     'maxItems',
     'reorderable',
@@ -243,6 +250,8 @@ const methodMap: Record<SchemaKind, readonly string[]> = {
     'limit',
     'markdown',
     'options',
+    'html',
+    'richContent',
   ],
   iconEntry: ['label', 'boolean', 'icons', 'colors'],
   imageEntry: ['label', 'circular'],
@@ -367,6 +376,15 @@ function setOption(
   return { ...definition, [key]: value } as SchemaNodeDefinition
 }
 export function createNode<D extends SchemaNodeDefinition>(definition: D): SchemaNodeBuilder {
+  if (
+    definition.kind === 'repeater' &&
+    definition.table?.length &&
+    Array.isArray(definition.schema) &&
+    definition.table.length !== definition.schema.length
+  )
+    throw new E_PUPITRE_INVALID_REPEATER_TABLE([
+      `"${definition.name}" has ${definition.schema.length} schema fields but ${definition.table.length} columns; provide one column per field in schema order`,
+    ])
   return new Proxy(
     {},
     {
@@ -375,6 +393,34 @@ export function createNode<D extends SchemaNodeDefinition>(definition: D): Schem
         if (typeof property !== 'string' || !methodMap[definition.kind].includes(property))
           return undefined
         return (...args: unknown[]) => {
+          if (
+            definition.kind === 'richEditor' &&
+            (property === 'mentions' || property === 'customBlocks')
+          ) {
+            const items = args[0] as readonly { toDefinition?: () => unknown }[]
+            const normalized = items.map((item) =>
+              typeof item.toDefinition === 'function' ? item.toDefinition() : item
+            )
+            const identifiers = normalized.map((item) => {
+              if (item && typeof item === 'object') {
+                if ('id' in item) return item.id
+                if ('char' in item) return item.char
+              }
+              throw new TypeError('Invalid rich-content definition')
+            })
+            if (new Set(identifiers).size !== identifiers.length)
+              throw new TypeError('Rich-content identifiers must be unique')
+            return createNode(setOption(definition, property, normalized))
+          }
+          if (property === 'html' && definition.kind === 'textEntry')
+            return createNode(setOption(definition, property, args[0] ?? true))
+          if (property === 'table' && definition.kind === 'repeater') {
+            const columns = (args[0] ?? []) as readonly RepeaterTableColumnBuilder[]
+            return createNode({
+              ...definition,
+              table: columns.map((column) => column.toDefinition()),
+            })
+          }
           if (property === 'relationship') {
             if (definition.kind === 'repeater') {
               const options = args[1] as Omit<RepeaterRelationshipOptions, 'name'> | undefined
@@ -523,6 +569,17 @@ const factories = Object.fromEntries(
   fields.map((kind) => [kind, (name: string) => field(kind, name)])
 )
 export const schema = Object.assign(factories, {
+  tableColumn: (label: string) => {
+    const createColumn = (
+      definition: RepeaterTableColumnDefinition
+    ): RepeaterTableColumnBuilder => ({
+      width: (value) => createColumn({ ...definition, width: value }),
+      alignment: (value) => createColumn({ ...definition, alignment: value }),
+      markAsRequired: (value = true) => createColumn({ ...definition, required: value }),
+      toDefinition: () => ({ ...definition }),
+    })
+    return createColumn({ label })
+  },
   grid: () => layout('grid'),
   section: (heading?: string) => layout('section', undefined, heading ? { heading } : {}),
   fieldset: (label?: string) => layout('fieldset', undefined, label ? { label } : {}),

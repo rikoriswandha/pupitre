@@ -8,7 +8,7 @@ export type CsvColumn = {
 
 /** Stringifies records as a backpressure-aware CSV stream. */
 export function createCsvStream(
-  records: readonly Record<string, unknown>[],
+  records: Iterable<Record<string, unknown>> | AsyncIterable<Record<string, unknown>>,
   columns: readonly CsvColumn[],
   header = true
 ): Readable {
@@ -19,6 +19,9 @@ export function createCsvStream(
       string: (value) => (/^[=+\-@\t\r]/.test(value) ? `'${value}` : value),
     },
   })
-  Readable.from(records).pipe(serializer)
+  const source = Readable.from(records)
+  source.on('error', (error) => serializer.destroy(error))
+  serializer.on('close', () => source.destroy())
+  source.pipe(serializer)
   return serializer
 }

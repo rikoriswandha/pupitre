@@ -1,3 +1,22 @@
+export type { ImpersonationOptions } from './src/definition/panel.js'
+export type { ImpersonationEvent } from './src/auth/impersonation.js'
+export { recordAuthEvent } from './src/auth/session_service.js'
+export type { AuthEvent } from './src/auth/session_service.js'
+export { loginHistoryWidget } from './src/auth/login_history_widget.js'
+export { mentionProvider, richBlock } from './src/builder/rich_content.js'
+export { renderRichContent } from './src/rich_content.js'
+export type {
+  MentionOption,
+  MentionProviderBuilder,
+  MentionProviderDefinition,
+  RichBlockBuilder,
+  RichBlockDefinition,
+  RichContentOptions,
+} from './src/definition/rich_content.js'
+export { tableView } from './src/table/views/table_view.js'
+export type { TableViewBuilder, TableViewDefinition } from './src/table/views/table_view.js'
+export { defineCluster, ClusterBuilder } from './src/builder/cluster.js'
+export type { ClusterDefinition } from './src/definition/cluster.js'
 export { stubsRoot } from './stubs/main.js'
 export { configure } from './configure.js'
 export { defineConfig } from './src/define_config.js'
@@ -5,6 +24,7 @@ export type { PupitreConfig, PupitreConfigInput } from './src/define_config.js'
 export { resolveAdapter } from './src/define_config.js'
 export { authorizeResource } from './src/authz/bouncer.js'
 export { scopedQuery } from './src/query/scoped_query.js'
+export { parseInZone, toIsoInZone } from './src/format/index.js'
 export { compileValidator } from './src/compiler/vine_compiler.js'
 export type { FormValidator } from './src/compiler/vine_compiler.js'
 export type { RealtimeAdapter } from './src/adapters/realtime.js'
@@ -26,6 +46,7 @@ export { defineResource } from './src/builder/resource.js'
 export { defineRelationManager, relationGroup } from './src/builder/relation_manager.js'
 export type { RelationManagerBuilder } from './src/builder/relation_manager.js'
 export type { PanelBuilder, TenancyInput } from './src/builder/panel.js'
+export type { EnvironmentIndicatorOptions } from './src/definition/panel.js'
 export { definePlugin } from './src/builder/plugin.js'
 export type {
   PupitrePlugin,
@@ -116,6 +137,7 @@ export type {
 export type {
   TableSchema,
   TableDefinition,
+  CustomTableRecords,
   TableColumnDefinition,
   TableFilterDefinition,
   TableColumnBuilder,
@@ -227,3 +249,11 @@ export * from './src/errors.js'
 export { default as PupitreManager } from './src/manager.js'
 export type { PanelRuntime, ResourceRuntime, PageRuntime } from './src/manager.js'
 export type { PupitreContext, PupitreUser } from './src/types.js'
+export { createPupitreStorage } from './src/storage/index.js'
+export type { PupitreStorage } from './src/storage/index.js'
+export { consumeFormUploads } from './src/storage/upload_tracking.js'
+export { fileTypeFromBuffer as sniffUploadMime } from 'file-type'
+export { isUploadMimeAllowed, DEFAULT_UPLOAD_MAX_BYTES } from './src/storage/upload_validation.js'
+export { panelRouteGroups } from './src/http/router.js'
+export { lookupOrNull } from './src/query/record_lookup.js'
+export type { PanelRouteGroups } from './src/http/router.js'

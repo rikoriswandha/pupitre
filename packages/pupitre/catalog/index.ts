@@ -1,5 +1,7 @@
 import './csp.js'
 
+export { tableViewDescriptor } from './wire.js'
+export type { TableViewDescriptor } from './wire.js'
 export { catalogVersion } from './version.js'
 export { defineCatalogExtension, mergeCatalogExtensions } from './extensions.js'
 export type { CatalogExtension, CatalogExtensionComponent } from './extensions.js'

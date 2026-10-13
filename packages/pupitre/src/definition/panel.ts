@@ -1,3 +1,5 @@
+import type { HttpContext } from '@adonisjs/core/http'
+import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { MiddlewareFn, ParsedNamedMiddleware } from '@adonisjs/http-server/types'
 import type { NavEntryDefinition, UserMenuItemDefinition } from './navigation.js'
 import type { TenancyDefinition } from './tenancy.js'
@@ -24,8 +26,23 @@ export type PanelSocialDefinition = {
 
 export type PanelThemeDefinition = ThemeDefinition
 
+export type EnvironmentIndicatorOptions = {
+  visible?: boolean | ((ctx: HttpContext) => boolean | Promise<boolean>)
+  label?: string
+  color?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'gray'
+}
+
+export type ImpersonationOptions = {
+  canImpersonate?: (actor: LucidRow, ctx: HttpContext) => boolean | Promise<boolean>
+  canBeImpersonated?: (target: LucidRow, ctx: HttpContext) => boolean | Promise<boolean>
+  redirectTo?: string
+}
+
 export type PanelDefinition = {
   id: string
+  impersonation?: ImpersonationOptions
+  strictAuthorization?: boolean
+  environmentIndicator?: EnvironmentIndicatorOptions
   path: string
   brand?: { name: string; logo?: string; logoDark?: string; favicon?: string }
   /** Route-group domain, e.g. `admin.example.com` or `:tenant.example.com`. */
@@ -44,6 +61,7 @@ export type PanelDefinition = {
   locales?: readonly string[]
   breadcrumbs: boolean
   auth: PanelAuthDefinition
+  sessions?: { history: boolean; retentionDays: number }
   social?: PanelSocialDefinition
   /** Explicit navigation; when absent, nav is derived from resources/pages. */
   navigation?: NavEntryDefinition[]

@@ -1,3 +1,4 @@
+import type { ClusterDefinition } from './cluster.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { WidgetDefinition, WidgetFilterDefinition } from './widget.js'
 import type { ActionDefinition } from './action.js'
@@ -9,6 +10,7 @@ export type CustomPageDefinition = {
   path: string
   title: string
   icon?: string
+  cluster?: ClusterDefinition
   navigation?: {
     group?: string
     sort?: number

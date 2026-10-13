@@ -7,6 +7,7 @@ import { authorizeResource } from '../../authz/bouncer.js'
 import { createPupitreStorage } from '../../storage/index.js'
 import { importResultResponse } from '../../../catalog/wire.js'
 import { errorJson } from '../responses.js'
+import { xlsxContentType } from '../../table/xlsx_stream.js'
 
 type ExportRow = {
   id: string
@@ -120,11 +121,15 @@ export default class ExportsController {
       return errorJson(ctx, t('Export file is not ready'), 409)
     if (!(await createPupitreStorage().exists(row.file_key)))
       return errorJson(ctx, t('Export file is no longer available'), 404)
-    ctx.response.header('Content-Type', 'text/csv; charset=utf-8')
+    const format = row.result && JSON.parse(row.result)?.format === 'xlsx' ? 'xlsx' : 'csv'
+    ctx.response.header(
+      'Content-Type',
+      format === 'xlsx' ? xlsxContentType : 'text/csv; charset=utf-8'
+    )
     ctx.response.header('X-Content-Type-Options', 'nosniff')
     ctx.response.header(
       'Content-Disposition',
-      `attachment; filename="${resource.slug}-${row.id}.csv"`
+      `attachment; filename="${resource.slug}-${row.id}.${format}"`
     )
     return ctx.response.stream(await createPupitreStorage().getStream(row.file_key))
   }

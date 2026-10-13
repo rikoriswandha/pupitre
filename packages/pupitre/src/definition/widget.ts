@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidModel } from '@adonisjs/lucid/types/model'
 import type { TableDefinition } from './table.js'
+import type { ActionDefinition } from './action.js'
 
 export type WidgetFilterOption = { value: string; label: string }
 export type WidgetFilterDefinition = { name: string; label: string; options: WidgetFilterOption[] }
@@ -30,6 +31,10 @@ export type WidgetData =
       labels: string[]
       datasets: { label: string; data: number[]; color?: string }[]
     }
+  | {
+      kind: 'scatter'
+      datasets: { label: string; data: { x: number; y: number }[]; color?: string }[]
+    }
   | { kind: 'table'; data: unknown }
   | { kind: 'timeline'; items: TimelineItem[] }
   | { kind: 'component'; data: unknown }
@@ -39,10 +44,11 @@ export type WidgetDefinition = {
   name: string
   kind: 'stats' | 'chart' | 'table' | 'timeline' | 'component'
   load?: (args: WidgetContext) => unknown | Promise<unknown>
-  chartType?: 'line' | 'bar' | 'area' | 'pie' | 'doughnut'
+  chartType?: 'line' | 'bar' | 'area' | 'pie' | 'doughnut' | 'radar' | 'scatter'
   table?: TableDefinition
   model?: LucidModel
   component?: string
+  actions?: readonly ActionDefinition[]
   heading?: string
   description?: string
   span: number | 'full'

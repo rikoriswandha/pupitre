@@ -1,0 +1,5 @@
+import { defineCluster } from '@rikology/pupitre'
+
+export default defineCluster('{{slug}}')
+  .label({{label}})
+  .subNavigationPosition('start')

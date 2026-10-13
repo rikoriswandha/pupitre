@@ -20,6 +20,8 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `->databaseNotifications()->databaseNotificationsPolling()` | `.notifications({ interval })` + database-channel adapter | M2 | ✅ | Tray polling, paginated inbox, and mark-read endpoints; database persistence is optional |
 | `->tenant()`, `->tenantRoutePrefix()`, `->tenantMenu()`, `->tenantRegistration()`, `->tenantProfile()` | `.tenancy({...})` + `TenantSwitcher` | M2 | ✅ | URL/implicit mode, membership-aware routing, resource scoping, ownership fill, and global `.scope(false)` |
 | `->plugins()` | `.plugins([...])` | M4 | ✅ | Hook register/extendResource/boot berurutan; kontribusi dan navigasi digabung oleh manager |
+| `->strictAuthorization()` | `.strictAuthorization()` | post-1.0 | ✅ | Validasi cakupan policy setelah panel/plugin/resource selesai (`E_PUPITRE_MISSING_POLICY`), deny saat runtime untuk model tanpa policy, dilaporkan `pupitre:inspect` |
+| Clusters (`$cluster`, `make:filament-cluster`) | `defineCluster()` + `resource/page.cluster()`; `make:cluster` | post-1.0 | ✅ | Ditemukan dari child; satu entri navigasi terotorisasi, route berprefix (termasuk tenancy URL dan nested), sub-navigasi sibling, breadcrumb, tabrakan slug ditolak saat boot |
 | `->spa()` | — | — | — | Inertia sudah SPA |
 | `->unsavedChangesAlerts()` | `Form.dirtyGuard` | M1 | ✅ | |
 | `->maxContentWidth()` | theme `contentWidth` | M3 | ✅ | Lebar konten shell `md`–`7xl`, `full`, atau `screen` |
@@ -67,13 +69,14 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `ColorPicker` | `s.color` | M1 | ✅ |
 | `TagsInput` | `s.tags` | M1 | ✅ |
 | `KeyValue` | `s.keyValue` | M1 | ✅ |
-| `RichEditor` (toolbar, upload) | `s.richEditor` | M1 | ✅ |
+| `RichEditor` (toolbar, upload, mentions, merge tags, custom blocks) | `s.richEditor` + `.mergeTags()`, `.mentions([mentionProvider()])`, `.customBlocks([richBlock()])` | M1; extras post-1.0 | ✅ | Pencarian mention lewat endpoint options terotorisasi, mention palsu dibuang saat simpan, config block divalidasi Vine; `renderRichContent()` meng-escape nilai merge tag dan output block |
 | `MarkdownEditor` | `s.markdownEditor` | M3 | ✅ | Toolbar, upload lampiran, preview Markdown tersanitasi di client; hasil infolist dirender server-side dengan allowlist HTML. |
 | `CodeEditor` (v4 baru) | `s.codeEditor` | M3 | ✅ | CodeMirror 6 lazy dengan pemuatan bahasa sesuai pilihan. |
 | `FileUpload` (image, editor, multiple, reorder, directory, visibility) | `s.fileUpload` | M1 (image editor M3) | ✅ | Crop, rotasi, flip, dan aspect ratio di client sebelum upload; validasi MIME/ukuran tetap di server. |
 | `Slider` (v4 baru) | `s.slider` | M3 | ✅ | Slider native aksesibel dengan marks, nilai tunggal/range, step dan batas VineJS. |
 | `Hidden` | `s.hidden` | M1 | ✅ |
 | `Repeater` (reorderable, collapsible, cloneable, grid, simple, relationship) | `s.repeater` | M1 (relationship M3) | ✅ | `hasMany` disinkronkan transaksional; ID child diverifikasi sebagai milik parent dan urutan opsional disimpan. |
+| Table repeater (`Repeater::table()`, `TableColumn`) | `s.repeater().table([s.tableColumn(label).width().alignment().markAsRequired()])` | post-1.0 | ✅ | Kolom posisional atau header turunan label, tabel semantik responsif, error per sel, reorder drag/keyboard |
 | `Builder` blocks | `s.builder` | M3 | ✅ | Blok bertipe `{ _key, type, data }`; schema Vine mengikuti blok dan `_key` dibuang. |
 | `Grid`, `Section`, `Fieldset`, `Tabs`, `Wizard`, `Group`, `Split` | `s.grid/section/fieldset/tabs/wizard/group/split` | M1 (minus wizard) / M3 | ✅ | Wizard menyimpan langkah di `/ui/wizard/<id>/step`; semua langkah ter-mount. |
 | `Placeholder` | `s.placeholder` | M1 | ✅ |
@@ -123,7 +126,8 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Bulk actions, `deselectRecordsAfterCompletion`, `selectCurrentPageOnly` | `actions.bulk()`, `.deselectAfter()` | M1 | ✅ |
 | Header actions, row actions, action groups | `.actions({ header, row, bulk })`, `action.group()` | M1 | ✅ |
 | `deferLoading`, `deferFilters` | deferred prop `page.data`; `.deferFilters()` | M3 | ✅ | `deferLoading()` menggunakan deferred Inertia prop dan skeleton tabel; filter defer dikirim saat Apply |
-| Export/Import (`ExportAction`, `ImportAction`) | `actions.export()`, `actions.import()` CSV | M3 | ✅ | Query tabel + formatter server-side, batas sinkron, job progress/download privat, header mapping, VineJS per row, upsert, dan CSV baris gagal |
+| Export/Import (`ExportAction`, `ImportAction`) | `actions.export().formats(['csv', 'xlsx'])`, `actions.import()` CSV | M3; XLSX post-1.0 | ✅ | Query tabel + formatter server-side, batas sinkron, job progress/download privat, header mapping, VineJS per row, upsert, dan CSV baris gagal; writer XLSX streaming tanpa dependency |
+| Custom data tables (`->records()`) | `t.records()`, `t.recordKey()`, `t.resolveRecord()` pada table widget tanpa model | post-1.0 | ✅ | State URL tervalidasi, pagination tanpa total, aksi row/header/bulk me-resolve row di server, fitur khusus Lucid ditolak saat definisi (ADR-0026) |
 
 ## Actions
 
@@ -151,10 +155,10 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Filament v4 | Pupitre | Target | Status |
 | --- | --- | --- | --- |
 | `StatsOverviewWidget` + chart sparkline | `defineWidget().stats()` | M3 | ✅ |
-| `ChartWidget` line/bar/pie/doughnut/radar/scatter | `.chart()` (line/bar/area/pie/doughnut) | M3 | ✅ (radar/scatter —) |
+| `ChartWidget` line/bar/pie/doughnut/radar/scatter | `.chart()` (line/bar/area/pie/doughnut/radar/scatter) | M3; radar/scatter post-1.0 | ✅ |
 | `TableWidget` | `defineWidget(name, Model).table((t) => t.query(...).columns(...))` | M3 | ✅ | Query/pagination/sort memakai compiler dan server formatter tabel yang sama; UI memakai `DataTable` |
 | Widget `pollingInterval`, `columnSpan`, `sort`, `filters` dashboard | `.poll()`, `.span()`, `.sort()`, dashboard `.filters()` | M3 | ✅ | Filter values URL-backed dan diteruskan ke loader widget |
-| Custom widget Blade | `.component('…')` React host registry | M3 | ✅ |
+| Custom widget Blade | `.component('…', loader?)` React host registry + `.actions([...])` + `useWidget()` | M3; loader/actions post-1.0 | ✅ |
 | Dashboard page custom | `definePage().widgets([...]).filters([...])` dan panel `.widgets()` | M3 | ✅ | Grid yang sama pada dashboard panel maupun custom page |
 | Custom `Page` dengan form/actions | `definePage().path().form().fill().save().actions()` + `.component()` | M2 | ✅ | |
 | `RelationManager` (table + form, attach/detach) | `defineRelationManager()`; actions create/edit/delete/view + attach/detach/associate/dissociate | M3 | ✅ |
@@ -183,6 +187,25 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | Multi-language (`->locales()`) | `.locale('en').locales(['en', 'id'])`, `t()`, kamus host/plugin | post-1.0 | ✅ | Inggris/Indonesia, preferensi user/session/Accept-Language, marker server lazy (ADR-0023), plural/interpolasi, pesan VineJS, CI coverage key literal |
 | Theming custom CSS | theme file + CSS vars | M3 | ✅ | stylesheet host via `<link>` same-origin/HTTPS; tidak membuat inline `<style>` |
 | Testing helpers (`livewire()` assertions) | `@rikology/pupitre/testing` + `@rikology/pupitre-ui/testing` | M3 | ✅ | `visitResource`/`submitForm`/`runAction`/`visitPage` lewat controller asli (authz, tenancy, hooks) + `assertSpecHas`/`assertVisible`; fixture Playwright dipakai e2e example |
-| `make:*` commands | `make:panel <name>`; `make:resource`; `make:page`; `make:widget`; `make:relation-manager <Post> <comments>` | M2–M3 | ✅ | WP27/WP28 generator tests cover idempotent output |
+| `make:*` commands | `make:panel <name>`; `make:resource`; `make:page`; `make:widget`; `make:relation-manager <Post> <comments>`; `make:cluster` | M2–M3 | ✅ | WP27/WP28 generator tests cover idempotent output |
 | `make:plugin` | `make:plugin` + `create-pupitre-plugin` | M4 | ✅ | Modul lokal idempotent (`--force`); `--package [--dir]` menjalankan `npx @rikology/create-pupitre-plugin@<major>` untuk package plugin |
 | Plugin ecosystem | `definePlugin`, `create-pupitre-plugin`, `defineCatalogExtension` + `defineField/Column/Entry` | M4; UI extension post-1.0 | ✅ | Kontrak plugin publik dan template package dengan kontribusi navigasi serta test manager Japa; plugin dapat mengirim field/kolom/entry React lewat catalog extension (`--with-ui`, ADR-0024) |
+
+## Ekosistem plugin populer (post-1.0)
+
+Diurutkan dari unduhan Packagist bulanan plugin Filament (Oktober 2026). Plugin yang sudah tercakup di tabel atas (Shield, settings, activity log, socialite, language switch, MFA) tidak diulang.
+
+| Plugin Filament | Pupitre | Status | Catatan |
+| --- | --- | --- | --- |
+| spatie-laravel-media-library-plugin / Curator | `@rikology/pupitre-media` | ✅ | Resource Media (grid, upload, metadata), konversi `sharp` opsional, field `mediaPicker` lewat catalog extension, entry/kolom thumbnail, tenant-scoped dan fail-closed |
+| stechstudio/filament-impersonate | panel `.impersonation()` + `actions.impersonate()` | ✅ | Di core karena butuh banner shell dan alur auth; ability `impersonate` fail-closed, MFA aktor, sesi dirotasi, keamanan profil dikunci selama impersonasi |
+| filament-breezy (browser sessions) + rappasoft authentication-log | panel `.sessions()` + `loginHistoryWidget()` | ✅ | Token sesi ter-hash, revoke berlaku di request berikutnya, riwayat login tanpa menyimpan email tak dikenal, retensi lewat `pupitre:prune` |
+| pxlrbt/filament-excel | `actions.export().formats(['csv', 'xlsx'])` | ✅ | |
+| pxlrbt/filament-environment-indicator | panel `.environmentIndicator()` | ✅ | Badge teks + strip, default tampil di luar production |
+| Advanced Tables (saved views, presets) | `t.savedViews()`, `t.presetViews([...])` | ✅ | View privat/publik per user/panel/tenant/tabel, default per user, `managePublicViews` fail-closed |
+| saade/filament-fullcalendar, guava/calendar | `@rikology/pupitre-calendar` | ✅ | Bulan/minggu/hari/agenda, `resourceEvents()` terscope, reschedule terotorisasi dengan rollback, sadar timezone |
+| relaticle/flowforge, mokhosh/filament-kanban | `@rikology/pupitre-kanban` | ✅ | Board per status dari resource, pindah kartu memeriksa `update` + `canMove`, urutan transaksional, keyboard/screen reader |
+| shuvroroy/filament-spatie-laravel-health | `@rikology/pupitre-health` | ✅ | Memakai `@adonisjs/core/health`; cache + coalescing, meta disaring |
+| croustibat/filament-jobs-monitor | `@rikology/pupitre-jobs` | ✅ | Lifecycle semua job `@adonisjs/queue` lewat tracing channels, payload terenkripsi + redaksi, retry/delete/prune terotorisasi |
+| shuvroroy/filament-spatie-laravel-backup | `@rikology/pupitre-backup` | ✅ | SQLite/PostgreSQL/MySQL, unduhan privat, satu backup aktif, retensi, `backup:run`; restore sengaja manual |
+| filament-spatie-laravel-translatable, filament-tree/adjacency-list, comments, approvals, Spotlight | — | ⬜ | Belum dikerjakan; permintaan lebih rendah |

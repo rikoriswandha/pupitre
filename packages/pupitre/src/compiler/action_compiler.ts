@@ -1,9 +1,11 @@
+import { canImpersonate } from '../auth/impersonation.js'
 import { publishNotification } from '../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionDescriptor, ActionFormResponse, ActionResult } from '../../catalog/wire.js'
 import type { ActionDefinition, NotificationAction } from '../definition/action.js'
 import type { ResourceDefinition } from '../definition/resource.js'
 import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
+import { BaseModel } from '@adonisjs/lucid/orm'
 import type { CompileContext } from './schema_compiler.js'
 import { compileForm } from './schema_compiler.js'
 import { compileValidator } from './vine_compiler.js'
@@ -59,6 +61,7 @@ function getAbility(action: ActionDefinition): string | undefined {
   }
 }
 const builtinLabels: Partial<Record<NonNullable<ActionDefinition['builtin']>, string>> = {
+  impersonate: t('Impersonate'),
   create: t('Create'),
   edit: t('Edit'),
   view: t('View'),
@@ -113,7 +116,21 @@ export async function compileActionDescriptor(
     resourceAbility && action.can ? await options.authorize(resourceAbility, record) : true
   const authorized =
     resourceAuthorized && (ability ? await options.authorize(ability, record) : true)
-  const enabled = visible && authorized
+  const impersonationResource =
+    action.builtin === 'impersonate' && record
+      ? ctx.pupitre.panel.resources.find(
+          (resource) => resource.slug === ctx.params.slug && record instanceof resource.model
+        )
+      : undefined
+  const enabled =
+    visible &&
+    authorized &&
+    (action.builtin !== 'impersonate' ||
+      Boolean(
+        record &&
+        impersonationResource &&
+        (await canImpersonate(ctx, impersonationResource, record))
+      ))
   let kind: ActionDescriptor['kind']
   if (action.url) kind = 'link'
   else if ((action.builtin === 'create' || action.builtin === 'edit') && action.form) kind = 'form'
@@ -121,7 +138,9 @@ export async function compileActionDescriptor(
     kind = 'link'
   else if (action.builtin === 'attach' || action.builtin === 'associate') kind = 'form'
   else if (action.builtin === 'detach' || action.builtin === 'dissociate') kind = 'confirm'
-  else if (action.builtin === 'export' || action.builtin === 'import') kind = 'direct'
+  else if (action.builtin === 'export')
+    kind = (action.exportFormats?.length ?? 1) > 1 ? 'confirm' : 'direct'
+  else if (action.builtin === 'import') kind = 'direct'
   else if (
     action.builtin === 'restore' ||
     action.builtin === 'forceDelete' ||
@@ -173,6 +192,7 @@ export async function compileActionDescriptor(
     record &&
     id !== undefined &&
     (!action.builtin ||
+      action.builtin === 'impersonate' ||
       action.builtin === 'delete' ||
       action.builtin === 'restore' ||
       action.builtin === 'forceDelete' ||
@@ -259,6 +279,9 @@ export async function compileActionDescriptor(
     ...(action.openUrlInNewTab ? { openInNewTab: true } : {}),
     ...(action.keyBindings ? { keyBindings: [...action.keyBindings] } : {}),
     ...(action.group ? { group: action.group } : {}),
+    ...(action.builtin === 'export' && action.exportFormats
+      ? { exportFormats: [...action.exportFormats] }
+      : {}),
     ...(confirm ? { confirm } : {}),
     ...(action.deepLinkable ? { deepLink: true } : {}),
     ...(modal ? { modal } : {}),
@@ -274,7 +297,7 @@ export async function compileActionForm(
   const data = action.fillForm
     ? await action.fillForm({ record: options.model ?? options.record ?? null, ctx: options.ctx })
     : undefined
-  return compileForm([...action.form], {
+  const compiled = await compileForm([...action.form], {
     ...options,
     form: {
       method: 'post',
@@ -285,6 +308,18 @@ export async function compileActionForm(
     },
     ...(data ? { data } : {}),
   })
+  const resource = options.resourceSlug ?? options.ctx?.params?.slug
+  return {
+    ...compiled,
+    ...(typeof resource === 'string'
+      ? {
+          uploadOwner: {
+            resource,
+            ...(options.model ? { record: String(options.model.$primaryKeyValue) } : {}),
+          },
+        }
+      : {}),
+  }
 }
 
 type FlashType = 'success' | 'error' | 'warning' | 'info'
@@ -299,14 +334,14 @@ type ActionCallbacks = {
   refresh: { table(): void }
 }
 
-export async function executeAction(
+export async function executeAction<T = LucidRow>(
   action: ActionDefinition,
   options: {
     ctx: HttpContext
-    record?: LucidRow
-    records?: LucidRow[]
+    record?: T
+    records?: T[]
     data: unknown
-    authorize(ability: string, record?: LucidRow): Promise<boolean>
+    authorize(ability: string, record?: T): Promise<boolean>
     currentUrl: string
     listUrl: string
     beforeHandle?(data: Record<string, unknown>): Promise<void>
@@ -326,10 +361,13 @@ export async function executeAction(
   }
   const timezone =
     (ctx as HttpContext & { pupitre?: { timezone?: string } }).pupitre?.timezone ?? 'UTC'
+  // Lucid-specific validation rules require a real model, never a custom-data row.
+  const validationRecord = record instanceof BaseModel ? record : null
   const data = action.form
     ? await compileValidator([...action.form]).validate(options.data, {
-        record: record ?? null,
+        record: validationRecord,
         ctx,
+        resource: ctx?.params?.slug,
         timezone,
       })
     : (options.data as Record<string, unknown>)

@@ -1,3 +1,4 @@
+import { accessibleClusters } from './clusters.js'
 import { requestMessages, resolveTranslations, t } from '../i18n.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import { authorizeResource } from '../authz/bouncer.js'
@@ -35,6 +36,7 @@ async function renderItem(
   let icon = definition.icon
   if (definition.resource) {
     const resource = resourceFor(ctx.pupitre.panel.resources, definition.resource)
+    if (resource?.definition.cluster) return null
     if (resource) {
       if (!(await authorizeResource(ctx, resource, 'viewAny'))) return null
       label ||= resource.pluralLabel
@@ -42,6 +44,7 @@ async function renderItem(
       icon ??= resource.definition.icon
     } else {
       const page = pageFor(ctx.pupitre.panel.pages, definition.resource)
+      if (page?.definition.cluster) return null
       if (!page || (page.definition.canAccess && !(await page.definition.canAccess(ctx))))
         return null
       label ||= page.definition.navigation?.label ?? page.definition.title
@@ -50,6 +53,7 @@ async function renderItem(
     }
   } else if (definition.page) {
     const page = pageFor(ctx.pupitre.panel.pages, definition.page)
+    if (page?.definition.cluster) return null
     if (!page || (page.definition.canAccess && !(await page.definition.canAccess(ctx)))) return null
     label ||= page.definition.navigation?.label ?? page.definition.title
     url = page.url
@@ -148,15 +152,30 @@ function claimedSlugs(entries: readonly NavEntryDefinition[]): Set<string> {
 export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
   const panel = ctx.pupitre.panel
   const currentUrl = ctx.request.url().split('?')[0]
+  const clusters = await accessibleClusters(ctx)
+  const clusterGroups = [...clusters.values()]
+    .sort((a, b) => a.definition.sort - b.definition.sort)
+    .map(({ definition, items }) => ({
+      label: definition.navigationGroup ?? t('Resources'),
+      items: [
+        {
+          label: definition.label,
+          url: items[0]!.url,
+          active: items.some((item) => item.active),
+          ...(definition.icon ? { icon: definition.icon } : {}),
+        },
+      ],
+    }))
   if (panel.navigation) {
     const rendered = await renderEntries(ctx, panel.navigation, currentUrl)
-    return mergeGroups(rendered.map(({ group }) => group))
+    return mergeGroups([...rendered.map(({ group }) => group), ...clusterGroups])
   }
 
   const pluginNavigation = panel.pluginNavigation ?? []
   const claimed = claimedSlugs(pluginNavigation)
   const groups = new Map<string, { item: NavItem; sort: number }[]>()
   for (const resource of panel.resources) {
+    if (resource.definition.cluster) continue
     if (resource.parent || claimed.has(resource.slug)) continue
     if (!(await authorizeResource(ctx, resource, 'viewAny'))) continue
     const group = resource.definition.navigation?.group ?? t('Resources')
@@ -177,6 +196,7 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
     groups.set(group, items)
   }
   for (const page of panel.pages) {
+    if (page.definition.cluster) continue
     if (claimed.has(page.slug)) continue
     if (page.definition.canAccess && !(await page.definition.canAccess(ctx))) continue
     const group = page.definition.navigation?.group ?? t('Pages')
@@ -216,10 +236,14 @@ export async function buildNavigation(ctx: HttpContext): Promise<NavGroup[]> {
     .sort((a, b) => a.sortLabel.localeCompare(b.sortLabel, ctx.pupitre.locale))
     .map(({ label, items }) => ({ label, items }))
   if (!pluginNavigation.length)
-    return resolveTranslations(mergeGroups(derived), ctx.pupitre.locale, messages)
+    return resolveTranslations(
+      mergeGroups([...derived, ...clusterGroups]),
+      ctx.pupitre.locale,
+      messages
+    )
   const contributed = await renderEntries(ctx, pluginNavigation, currentUrl)
   return resolveTranslations(
-    mergeGroups([...derived, ...contributed.map(({ group }) => group)]),
+    mergeGroups([...derived, ...clusterGroups, ...contributed.map(({ group }) => group)]),
     ctx.pupitre.locale,
     requestMessages.get(ctx) ?? {}
   )

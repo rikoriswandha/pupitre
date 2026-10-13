@@ -1,3 +1,4 @@
+import type { ClusterBuilder } from './cluster.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { FormSchema, SchemaComponent, ComponentDefinition } from '../definition/schema.js'
 import type {
@@ -48,6 +49,7 @@ export type ResourceBuilder<M extends ResourceModel> = {
   label(value: string): ResourceBuilder<M>
   pluralLabel(value: string): ResourceBuilder<M>
   icon(value: string): ResourceBuilder<M>
+  cluster(value: ClusterBuilder): ResourceBuilder<M>
   navigation(value: {
     group?: string
     sort?: number
@@ -146,6 +148,9 @@ class Resource<M extends ResourceModel> implements ResourceBuilder<M> {
   }
   icon(value: string): ResourceBuilder<M> {
     return this.change({ icon: value })
+  }
+  cluster(value: ClusterBuilder): ResourceBuilder<M> {
+    return this.change({ cluster: value.toDefinition() })
   }
   navigation(value: {
     group?: string

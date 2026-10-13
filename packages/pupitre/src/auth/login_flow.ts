@@ -2,6 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import type { LucidRow } from '@adonisjs/lucid/types/model'
 import type { PanelRuntime } from '../manager.js'
 import type { PupitreConfig } from '../define_config.js'
+import { createBrowserSession } from './session_service.js'
 
 type Auth = {
   use(name: string): { login(user: LucidRow, remember?: boolean): Promise<void> }
@@ -12,6 +13,7 @@ export type LoginOptions = {
   redirect?: string
   /** Passkey assertions already satisfy the panel MFA requirement. */
   mfaSatisfied?: boolean
+  method?: string
 }
 
 /** Completes authentication or stores a short-lived MFA continuation in the session. */
@@ -32,9 +34,20 @@ export async function completeLogin(
       remember: options.remember ?? false,
       redirect: options.redirect ?? panel.path,
       expiresAt: Date.now() + 5 * 60 * 1000,
+      method: options.method ?? 'password',
     })
     return ctx.response.redirect(`${panel.path}/mfa/challenge`)
   }
   await (ctx as unknown as { auth: Auth }).auth.use(guard).login(user, options.remember)
+  if (options.mfaSatisfied)
+    ctx.session?.put(`pupitre.mfaSatisfied.${panel.id}`, String(user.$primaryKeyValue))
+  else ctx.session?.forget(`pupitre.mfaSatisfied.${panel.id}`)
+  await createBrowserSession(
+    ctx,
+    panel,
+    user.$primaryKeyValue,
+    options.method ?? 'password',
+    options.remember ?? false
+  )
   return ctx.response.redirect(options.redirect ?? panel.path)
 }

@@ -31,6 +31,26 @@ const descriptor = (baseUrl = '/posts') => ({
 })
 
 test.group('action compiler', () => {
+  test('export format choices preserve CSV defaults and open a picker only for multiple formats', async ({
+    assert,
+  }) => {
+    const header = { ...descriptor(), record: undefined, recordKey: undefined }
+    const csv = await compileActionDescriptor(actions.export().definition, header)
+    assert.equal(csv.kind, 'direct')
+    assert.isUndefined(csv.exportFormats)
+    const xlsx = await compileActionDescriptor(
+      actions.export().formats(['xlsx']).definition,
+      header
+    )
+    assert.equal(xlsx.kind, 'direct')
+    assert.deepEqual(actionDescriptor.parse(xlsx).exportFormats, ['xlsx'])
+    const both = await compileActionDescriptor(
+      actions.export().formats(['csv', 'xlsx']).definition,
+      header
+    )
+    assert.equal(both.kind, 'confirm')
+    assert.deepEqual(actionDescriptor.parse(both).exportFormats, ['csv', 'xlsx'])
+  })
   test('compiles link, direct, confirm, and form action kinds', async ({ assert }) => {
     const link = await compileActionDescriptor(
       action('external').url('/help').definition,

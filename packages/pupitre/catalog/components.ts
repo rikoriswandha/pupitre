@@ -234,6 +234,29 @@ export const components = {
     uploadUrl: str.optional(),
     minHeight: num.optional(),
     maxHeight: num.optional(),
+    mergeTags: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+    mentions: z
+      .array(
+        z.object({
+          char: z.string(),
+          options: z
+            .array(z.object({ id: z.union([z.string(), z.number()]), label: z.string() }))
+            .optional(),
+        })
+      )
+      .optional(),
+    optionsUrl: str.optional(),
+    customBlocks: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          icon: z.string().optional(),
+          spec: z.unknown(),
+          state: z.record(z.string(), z.unknown()),
+        })
+      )
+      .optional(),
   }),
   'MarkdownEditor': leaf({
     ...valueProps(z.string().nullable()),

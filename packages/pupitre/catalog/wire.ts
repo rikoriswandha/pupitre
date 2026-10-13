@@ -34,6 +34,10 @@ export const actionDescriptor = z.object({
   enabled: z.boolean(),
   openInNewTab: z.boolean().optional(),
   keyBindings: z.array(z.string()).optional(),
+  exportFormats: z
+    .array(z.enum(['csv', 'xlsx']))
+    .min(1)
+    .optional(),
   confirm: z
     .object({
       heading: z.string(),
@@ -145,11 +149,31 @@ export const filterDescriptor = z.discriminatedUnion('type', [
   }),
 ])
 export type FilterDescriptor = z.infer<typeof filterDescriptor>
+export const tableViewDescriptor = z.object({
+  id: z.string(),
+  name: z.string(),
+  icon: z.string().optional(),
+  query: z.record(z.string(), z.unknown()),
+  columns: z.record(z.string(), z.boolean()).optional(),
+  source: z.enum(['preset', 'public', 'mine']),
+  editable: z.boolean(),
+  isPublic: z.boolean(),
+  isDefault: z.boolean(),
+})
+export type TableViewDescriptor = z.infer<typeof tableViewDescriptor>
 export const tableDescriptor = z.object({
   id: z.string(),
   url: z.string(),
   dataProp: z.string().optional(),
   queryPrefix: z.string().optional(),
+  views: z
+    .object({
+      url: z.string(),
+      enabled: z.boolean(),
+      canManagePublic: z.boolean(),
+      items: z.array(tableViewDescriptor),
+    })
+    .optional(),
   columns: z.array(columnDescriptor),
   filters: z.array(filterDescriptor),
   filtersLayout: z.enum(['dropdown', 'above', 'slideover']),
@@ -175,6 +199,7 @@ export const tableDescriptor = z.object({
   selectable: z.boolean(),
   striped: z.boolean().optional(),
   bulkActions: z.array(actionDescriptor),
+  headerActions: z.array(actionDescriptor).optional(),
   emptyState: z
     .object({
       heading: z.string(),
@@ -223,6 +248,8 @@ export const tableRow = z.object({
 })
 export type TableRow = z.infer<typeof tableRow>
 export const tableMeta = z.object({
+  simple: z.boolean().optional(),
+  hasNext: z.boolean().optional(),
   total: z.number(),
   perPage: z.number(),
   currentPage: z.number(),
@@ -276,6 +303,16 @@ export const widgetData = z.discriminatedUnion('kind', [
       z.object({ label: z.string(), data: z.array(z.number()), color: z.string().optional() })
     ),
   }),
+  z.object({
+    kind: z.literal('scatter'),
+    datasets: z.array(
+      z.object({
+        label: z.string(),
+        data: z.array(z.object({ x: z.number(), y: z.number() })),
+        color: z.string().optional(),
+      })
+    ),
+  }),
   z.object({ kind: z.literal('timeline'), items: z.array(widgetTimelineItem) }),
   z.object({ kind: z.literal('table'), data: tableData }),
   z.object({ kind: z.literal('component'), data: z.unknown() }),
@@ -291,7 +328,7 @@ export const widgetDescriptor = z.object({
   sort: z.number(),
   poll: z.number().optional(),
   placement: z.enum(['header', 'footer']).optional(),
-  chartType: z.enum(['line', 'bar', 'area', 'pie', 'doughnut']).optional(),
+  chartType: z.enum(['line', 'bar', 'area', 'pie', 'doughnut', 'radar', 'scatter']).optional(),
   component: z.string().optional(),
   table: tableDescriptor.optional(),
 })
@@ -325,6 +362,16 @@ export const repeaterDescriptor = z.object({
   cloneable: z.boolean().optional(),
   addLabel: z.string().optional(),
   grid: z.union([z.number(), z.record(z.string(), z.number())]).optional(),
+  table: z
+    .array(
+      z.object({
+        label: z.string(),
+        width: z.string().optional(),
+        alignment: z.enum(['start', 'center', 'end']).optional(),
+        required: z.boolean().optional(),
+      })
+    )
+    .optional(),
   defaultItems: z.array(z.record(z.string(), z.unknown())).optional(),
 })
 export const builderDescriptor = z.object({
@@ -517,6 +564,7 @@ export const actionFormResponse = z.object({
   spec: jsonRenderSpec,
   state: z.record(z.string(), z.unknown()),
   catalogVersion: z.string(),
+  uploadOwner: z.object({ resource: z.string(), record: z.string().optional() }).optional(),
   catalogExtensions: z
     .array(z.object({ name: z.string(), components: z.array(z.string()) }))
     .optional(),
@@ -631,6 +679,13 @@ export type GlobalSearchResponse = z.infer<typeof globalSearchResponse>
 export const pageProps = z
   .object({
     pupitre: z.object({
+      impersonation: z.object({ name: z.string(), leaveUrl: z.string() }).optional(),
+      environment: z
+        .object({
+          label: z.string(),
+          color: z.enum(['primary', 'success', 'warning', 'danger', 'info', 'gray']),
+        })
+        .optional(),
       panel: z.object({
         id: z.string(),
         path: z.string(),
@@ -682,6 +737,8 @@ export const pageProps = z
       filters: z.array(widgetFilter).optional(),
       relations: z.array(relationDescriptor).optional(),
       subNavigation: z.array(subNavigationItem).optional(),
+      clusterNavigation: z.array(subNavigationItem).optional(),
+      clusterNavigationPosition: z.enum(['start', 'top']).optional(),
       deferred: z.array(z.string()).optional(),
       catalogVersion: z.string(),
       catalogExtensions: z

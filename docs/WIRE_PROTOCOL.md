@@ -20,6 +20,7 @@ type PupitrePageProps = {
     flash: { type: 'success' | 'error' | 'warning' | 'info'; title: string; body?: string }[]
     notifications?: { unread: number; url: string; readUrl: string; interval: number } // tray endpoint URLs + shared-prop polling interval
     realtime?: { driver: string; userChannel: string }
+    environment?: { label: string; color: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'gray' }
     locale: string
     messages?: Record<string, string | { one: string; other: string; zero?: string }>
     locales?: string[]                 // bahasa yang diizinkan panel
@@ -37,6 +38,8 @@ type PupitrePageProps = {
     filters?: WidgetFilter[]                     // dashboard/custom page URL filters
     relations?: RelationDescriptor[]             // edit/view page
     subNavigation?: { key: string; label: string; url: string; active?: boolean }[] // record pages
+    clusterNavigation?: { key: string; label: string; url: string; active?: boolean }[] // authorized cluster siblings
+    clusterNavigationPosition?: 'start' | 'top' // desktop placement; mobile always uses a horizontal row
     deferred?: string[]                          // nama prop yang masih deferred
     catalogVersion: string
     catalogExtensions?: { name: string; components: string[] }[] // metadata catalog kontribusi plugin
@@ -84,6 +87,7 @@ Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeate
 - Wizard: `Wizard` memiliki `props.steps` sesuai urutan anak `Step`; `props.step` mengikat indeks 0-based ke `/ui/wizard/<id>/step`. Semua anak tetap ter-mount dan hanya langkah aktif ditampilkan. `steps[].fields` memetakan field ke langkah agar error 422 berpindah ke langkah pertama yang memiliki error; tidak ada validasi per langkah di client.
 - Repeater: elemen `Repeater` dengan `props.descriptor: RepeaterDescriptor`, `props.value` terikat ke array (`$bindState` di level atas, `$bindItem` saat bersarang), `repeat: { statePath, key: '_key' }`, dan satu anak template `RepeaterItem` (`props.index: { $index: true }`, opsional `props.itemLabel` dievaluasi dalam scope item) yang anak-anaknya adalah field item. Tiap item di state membawa `_key` (ditambahkan compiler; item baru memakai `pushState` dengan `_key: '$id'`); VineJS membuang `_key` saat validasi. Tambah item = event `add` → `pushState`; hapus/pindah/klon/collapse dikerjakan komponen UI lewat nilai array yang terikat, karena param action json-render tidak bisa menyatakan path array induk di dalam scope repeat bersarang. Lihat [SPIKE_M0.md](./SPIKE_M0.md) §7.
   Pada `Repeater.relationship`, setiap item state juga memuat `_relationKey` (PK child internal) untuk round-trip edit. Nilai ini bukan otorisasi: server menolak PK yang tidak ditemukan lewat query hasMany milik parent. `orderColumn` hanya konfigurasi server dan tidak masuk ke wire descriptor. Text mask mengirim/menyimpan string raw; pola mask hanya prop presentasi. `Slider.value` berupa angka atau tuple dua angka, dengan `min`, `max`, `step`, `marks`, dan `range` tervalidasi di catalog.
+  Table mode adds `RepeaterDescriptor.table?: { label: string; width?: string; alignment?: 'start' | 'center' | 'end'; required?: boolean }[]`. Each column maps to one template child in order. Bindings, `_key`, `_relationKey`, async option endpoints, watches and numeric-index error paths are unchanged. Table rows do not emit or evaluate `itemLabel`.
 - Tabs: elemen `Tabs` dengan `props.tabs` dan `props.active: { $bindState: '/ui/tabs/<id>' }`, anak-anaknya elemen `Tab` (urutan sama dengan `props.tabs`); semua panel tetap ter-mount, yang tidak aktif disembunyikan. Named slots tidak dipakai karena nama slot harus statis di catalog (SPIKE Q4).
 - `watch` dipasang pada elemen field yang `.live()` dan punya `afterStateUpdated`: `{ '/data/<path>': [{ action: 'setState', params: { statePath, value: <ekspresi terangkat> } }] }`. Closure yang tidak bisa diangkat ke `setState` + `$state`/`$computed` ditolak saat compile (`E_PUPITRE_UNLIFTABLE_CLOSURE`) sampai `live({ server: true })` + `evaluate` tersedia di M3 (WP31).
 - Field/entry ekstensi memakai nama komponen catalog host (misalnya `StarRating`/`StarRatingEntry`) dengan props khusus yang lolos Zod serta binding/error yang sama dengan komponen inti. `page.catalogExtensions` hanya membawa identitas ekstensi dan nama komponen; callback validasi/dehidrasi, schema Zod dan implementasi React tidak dikirim. Host menyediakan catalog yang sama pada `defineRegistry(..., { extensions })`; metadata ini bukan instruksi untuk memuat kode dari server.
@@ -94,6 +98,17 @@ Path field mengikuti nama field di builder dengan `.` → `/` dan indeks repeate
 
 Input editor `MarkdownEditor` memakai string Markdown di `value`, toolbar/upload URL/preview sebagai props; attachment memakai upload endpoint field yang sama dengan `RichEditor`. `CodeEditor` mengirim string sumber dan hanya menerima bahasa dalam enum catalog. `FileUploadDescriptor` menambahkan `imageEditor?: boolean` serta `imageEditorAspectRatios?: (string | null)[]`; pemotongan, rotasi, flip, dan konversi Blob terjadi sebelum multipart upload, sementara server tetap memeriksa bytes MIME dan `maxSize`. `TextEntry` dengan `markdown: true` menerima nilai teks biasa; server mengubah Markdown menjadi HTML lalu menerapkan allowlist `sanitizeHtml`, bukan menerima HTML klien.
 Sub-spec yang tertanam di prop descriptor memakai `{ $raw: spec }` agar `$bindState`/`$template` di dalamnya tidak dievaluasi terhadap store halaman luar; renderer membuka wrapper sebelum spec diteruskan ke komponen. Hanya gunakan pada batas sub-spec, bukan pada ekspresi komponen biasa.
+
+RichEditor additionally emits `mergeTags: { id, label }[]`, `mentions: { char, options?: { id, label }[] }[]`,
+`optionsUrl?`, and `customBlocks: { id, label, icon?, spec: { $raw: JsonRenderSpec }, state }[]`.
+Rich blocks use isolated `SpecRenderer` form state. Stored nodes are `span[data-type=mergeTag]`
+with `data-id`, `span[data-type=mention]` with `data-id`/`data-label`/`data-char`, and
+`div[data-type=customBlock]` with `data-id`/JSON `data-config`. Only registered providers and
+blocks are accepted on save; block Vine errors use `<field>.blocks.<index>.<configField>`.
+Mention searches reuse `GET /_pupitre/options/:resource/:field?q=...&mention=...&record?=...`
+and return the existing `{ options: { value, label }[], hasMore }` shape. The edit record is
+looked up through tenant scope and requires record update authorization.
+
 
 ## 4. Action descriptor
 
@@ -109,6 +124,7 @@ type ActionDescriptor = {
   enabled: boolean                   // hasil visible && can di server
   openInNewTab?: boolean
   keyBindings?: string[]
+  exportFormats?: ('csv' | 'xlsx')[]  // server-enabled formats; multiple choices open confirmation picker
   confirm?: { heading: string; description?: string; submitLabel?: string; cancelLabel?: string; icon?: string; destructive?: boolean }
   modal?: { heading?: string; description?: string; width?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full'; slideOver?: boolean; submitLabel?: string; cancelLabel?: string; submit?: boolean; cancel?: boolean; footerActions?: { name: string; label: string; kind: 'link' | 'direct' | 'confirm' | 'form'; url: string; method?: 'get' | 'post' | 'put' | 'patch' | 'delete'; enabled: boolean }[] }
   deepLink?: boolean
@@ -144,6 +160,8 @@ type ActionResult = {
 ```
 
 `ActionFormResponse` juga membawa `catalogExtensions?: { name: string; components: string[] }[]` dengan kebutuhan komponen spec modal tersebut. Compiler selalu mengisi daftar ini (termasuk daftar kosong); schema wire membolehkan respons lama tanpa metadata, dan client tetap memeriksa nama komponen pada spec/descriptor. `ActionModal` menjalankan pre-check sebelum merender form dengan store modal terpisah.
+
+Action forms with an upload-capable form owner include `uploadOwner?: { resource: string; record?: string }`. The modal uses this server-issued context for the existing upload transport rather than inferring ownership from the action name. Resource action validation supplies the same resource slug to Vine's session-owned upload rule.
 
 Respons action setelah submit:
 
@@ -228,6 +246,9 @@ Filter QueryBuilder memakai descriptor `{ type: 'queryBuilder', name, label, con
 
 Column ekstensi memakai `component` untuk memilih implementasi registry host (misalnya `StarRatingColumn`), dengan konfigurasi khusus pada `props` dan nilai cell dari row. Kolom inti tanpa `component` tetap memakai renderer berdasarkan `type`; ekstensi tidak mengubah protokol sorting/query atau endpoint tabel.
 
+Saved-view tables add `views?: { url: string; enabled: boolean; canManagePublic: boolean; items: TableViewDescriptor[] }`. Items carry `{ id, name, icon?, query, columns?, source: 'preset'|'public'|'mine', editable, isPublic, isDefault }`; query is the normalized unprefixed table state without pagination position. Applying a view replaces only the table's URL state, including relation prefixes, and adds `view=<id>` in that namespace. Visibility is explicitly carried in `columns` rather than inferred from another browser's localStorage. Resource and relation `/views` endpoints authorize the table and scope persistence to owner/panel/tenant/table; invalid saved state is HTTP 422.
+
+
 Relation managers pada `page.relations` memakai descriptor berikut; tiap manager memiliki top-level prop data sendiri dan namespace query yang diparse server sebelum parameter tabel diproses.
 
 ```ts
@@ -269,6 +290,8 @@ type TableRow = {
 }
 ```
 
+Custom-data widget tables retain this row envelope. `meta.simple?: true` and `meta.hasNext?: boolean` indicate pagination without a count. In that mode `total` is a lower bound for backwards-compatible metadata, not a dataset count; the UI shows only the current page and visible row count. Providers return at most `perPage + 1` rows when omitting `total`; the extra row is removed and establishes `hasNext`. URL parameters and widget-name prefixes are unchanged.
+
 Nilai cell dikirim **sudah terformat** server-side (tanggal di timezone panel, angka terlokalisasi) plus nilai mentah bila kolom editable (`cells[name] = { value, display }`).
 
 Untuk kolom inline-edit, `cells[name]` berisi `{ value, display, disabled? }`; `value` dipakai saat submit, `display` adalah teks siap tampil. UI memperbarui nilai optimistis lalu mengembalikan nilai lama dan menampilkan toast bila PATCH gagal.
@@ -293,6 +316,13 @@ Untuk kolom inline-edit, `cells[name]` berisi `{ value, display, disabled? }`; `
 | `POST <list>/import` | multipart `file` + `mapping: Record<CSV header, form field>` (nilai `''` berarti Skip dan diabaikan) | `{ total, created, updated, failed, failedRowsUrl? }` (`importResultResponse`); bila `.async()` + jobs, `{ jobId, progressUrl }` (`importJobResponse`) lalu hasil tersedia pada progress endpoint |
 Ekspor di bawah atau sama dengan `exports.maxSyncRows` (default 1.000) berjalan sinkron; lebih besar akan diantrekan bila jobs tersedia, hingga `exports.maxAsyncRows` (default 100.000). Ekspor menghormati query dari `X-Pupitre-Url` (q, sort, nested filters/column search, tab, prefix, termasuk filter soft-delete) dan formatter server; kolom default adalah kolom tabel yang tampak. Tanpa adapter jobs, ekspor di atas batas sinkron menghasilkan 413.
 
+Export requests also accept `format?: 'csv' | 'xlsx'`; omission selects the action's
+first enabled format (CSV by default). Unsupported or disabled formats return 422.
+XLSX responses use `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+and `.xlsx` filenames, both synchronously and at the private download endpoint.
+Queued export rows retain `{ action, format }` in `result`; workers verify that the
+persisted format still matches the action and payload before querying records.
+
 Jobs memakai handler bernama tetap yang didaftarkan saat boot (`pupitre.export`, `pupitre.import`, `pupitre.bulk`). Payload queue hanya membawa identitas serializable—panel/resource/action, IDs, user/tenant, IDs progress, storage key, mapping, serta query options—bukan closure request atau isi hasil ekspor. Worker memuat ulang definisi, identitas dan record melalui `scopedQuery`. Handler aksi menerima job context (`ctx.pupitre`, `ctx.params`), bukan response/session HTTP; jangan mengandalkan request HTTP atau upload temporer.
 
 Impor membaca header CSV lalu menampilkan pemetaan ke field scalar dari form resource. Mapping dikirim sebagai multipart field JSON; setiap row divalidasi oleh VineJS dari definisi form, dibuat atau diperbarui lewat `actions.import().resolveRecord(...)`, dan transaksi dipisah per row. Respons merangkum `total/created/updated/failed`; `failedRowsUrl` mengunduh CSV dengan kolom `Errors`.
@@ -316,11 +346,15 @@ Semua di dalam route group panel (prefix panel + tenant), middleware sama.
 | `POST /_pupitre/notifications/read` | `{ ids: string[] \| 'all' }` | 204; only affects the authenticated user's notifications; 404 when notifications are disabled |
 | `POST /_pupitre/upload` | multipart `file`, `field`, `resource` (slug pemilik form: resource atau custom page), `record?`; header `Accept: application/json`, `X-XSRF-TOKEN` | `{ key: string; url: string; name: string; size: number; mime: string }`; 403 tanpa ability resource atau `canAccess` page; 404 bila pemilik/field tidak dikenal; 413 bila `maxSize` terlampaui; 422 bila MIME hasil sniff byte (`file-type`) tidak sesuai `accept`/`image()` |
 | `DELETE /_pupitre/upload` | `{ key, field, resource }` | 204; 403 bila key bukan unggahan sesi ini (`session` key `pupitre.uploads`) |
+| `GET /_pupitre/widgets/:name/actions/:action` | same server-issued widget context; table actions add `tableAction=row|header|bulk`, `rowKey` for row actions | `ActionFormResponse`; widget/page/resource access and action ability are checked before compiling |
+| `POST /_pupitre/widgets/:name/actions/:action` | `{ data, ids? }`, header `X-Pupitre-Action: 1`; same context query | `ActionResult`, 422 `{ errors }`, 403 denied, 404 unknown widget/action/row; table row/bulk keys are resolved on the server, never from submitted row objects |
 | `GET /_pupitre/exports/:id` | — | `{ id, status: queued\|processing\|done\|failed, totalRows, processedRows, createdRows?, updatedRows?, failedRows?, failedRowsUrl?, error?, downloadUrl? }`; pemilik user + tenant, dan ability `viewAny` (import memakai `create`) |
 | `GET /_pupitre/exports/:id/download` | — | stream CSV privat; hanya pemilik user + tenant dan ability resource |
 | `GET /_pupitre/widgets/:name` | filter dashboard `filters[<key>]`; tabel widget memakai prefix nama widget; widget resource mengirim `resource=<slug>&widgetPage=list\|create\|edit\|view`, ditambah `record=<id>` untuk edit/view dan `parentId=<id>` untuk resource nested; widget custom page mengirim `customPage=<slug>` | `WidgetData`; endpoint memeriksa ability resource, akses parent nested, `canAccess` custom page, dan `canView` widget; record dicari via `scopedQuery` dan diperiksa ability view/update sesuai `widgetPage` |
 
 `WidgetDescriptor` membawa `{ name, kind, dataProp, dataUrl, heading?, description?, span, sort, poll?, placement?, chartType?, component?, table? }`. `dataUrl` adalah URL panel-scoped untuk `GET /_pupitre/widgets/:name`; klien mengirim query filter saat polling atau refresh. URL menyertakan konteks resource/custom page di atas; widget record wajib memakai `widgetPage` eksplisit. Parameter `widgetPage` terpisah dari `page` agar pagination tabel tidak menimpa konteks widget.
+
+Radar uses `chartType: 'radar'` with `{ kind: 'chart', labels: string[], datasets: { label: string, data: number[], color?: string }[] }`. Scatter uses `chartType: 'scatter'` with `{ kind: 'scatter', datasets: { label: string, data: { x: number, y: number }[], color?: string }[] }`; its descriptor kind remains `chart`. Both are catalog-validated and rendered in the lazy chart chunk with screen-reader data tables.
 
 Widget timeline memakai `WidgetDescriptor.kind: 'timeline'` dan komponen katalog `Widget.Timeline`. Payload `WidgetData` berbentuk `{ kind: 'timeline', items: { title: string, description?: string, time: { iso: string, formatted: string }, actor?: string, icon?: string, color?: string, changes?: { field: string, old: unknown, new: unknown }[] }[] }`. Server memformat waktu; klien menampilkan `formatted` dalam elemen `<time datetime={iso}>` tanpa memformat ulang atau mengubah urutan item. Nilai perubahan adalah data JSON, bukan HTML. Warna mendukung token `primary`, `success`, `warning`, `danger`, `gray` atau warna CSS. Array kosong menampilkan empty state; data deferred dan refresh mengikuti kontrak widget lainnya.
 

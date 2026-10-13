@@ -5,7 +5,7 @@ import type { WidgetData, WidgetDescriptor } from '../../catalog/wire.js'
 import type { TimelineItem, WidgetDefinition } from '../definition/widget.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { buildPanelPageProps, pageKey, panelBreadcrumb } from '../http/page_props.js'
-import { authorizeResource, ensureAuthorized } from '../authz/bouncer.js'
+import { authorizeResource, authorizeModel, ensureAuthorized } from '../authz/bouncer.js'
 import { requestResource, scopedQuery } from '../query/scoped_query.js'
 import type { LucidRow, ModelPaginatorContract } from '@adonisjs/lucid/types/model'
 import { compileTable } from '../compiler/table_compiler.js'
@@ -14,10 +14,63 @@ import { buildTableData } from '../table/table_data.js'
 import { aggregateTableSummaries } from '../table/table_summary.js'
 import { authorizeNestedParent } from '../http/controllers/nested_resource_guards.js'
 import { formatDateTime, toDateTime } from '../format/index.js'
+import { authorizeAbility } from '../authz/bouncer.js'
+import { E_PUPITRE_NOT_FOUND } from '../errors.js'
+import { compileActionForm, executeAction } from '../compiler/action_compiler.js'
+import { actionJson, errorJson } from '../http/responses.js'
+import vine from '@vinejs/vine'
+import { loadCustomTable } from '../table/custom_table.js'
+import { compileActionDescriptor } from '../compiler/action_compiler.js'
+import type { ActionDefinition } from '../definition/action.js'
+import { compileForm } from '../compiler/schema_compiler.js'
+
+function authorizeTableAction(ctx: HttpContext, ability: string, row?: unknown) {
+  return authorizeAbility(ctx, ability, row)
+}
+
+async function widgetTableActions(
+  ctx: HttpContext,
+  definition: WidgetDefinition,
+  group: 'row' | 'header' | 'bulk',
+  baseUrl: string,
+  record?: Record<string, unknown>
+) {
+  const result = []
+  for (const action of definition.table?.actions?.[group] ?? []) {
+    const url = new URL(baseUrl, 'http://pupitre.local')
+    url.pathname += `/actions/${encodeURIComponent(action.name)}`
+    url.searchParams.set('tableAction', group)
+    const key = record?.[definition.table?.recordKey ?? 'id']
+    if (typeof key === 'string' || typeof key === 'number')
+      url.searchParams.set('rowKey', String(key))
+    const descriptor = await compileActionDescriptor(
+      {
+        ...action,
+        context: group === 'row' ? 'record' : group,
+        visible: action.visible
+          ? () => action.visible!({ record: record ?? null, ctx })
+          : undefined,
+        url: action.url,
+      },
+      {
+        ctx,
+        baseUrl,
+        recordKey: typeof key === 'string' || typeof key === 'number' ? key : undefined,
+        authorize: (ability) => authorizeTableAction(ctx, ability, record),
+        routes: { list: '', create: '', edit: () => '', view: () => '', destroy: () => '' },
+      }
+    )
+    result.push({
+      ...descriptor,
+      url: action.url ? descriptor.url : `${url.pathname}${url.search}`,
+    })
+  }
+  return result
+}
 function filtersFrom(ctx: HttpContext): Record<string, unknown> {
   const query = ctx.request.qs() as Record<string, unknown>
   return typeof query.filters === 'object' && query.filters !== null
-    ? (query.filters as Record<string, unknown>)
+    ? { ...query, ...query.filters }
     : query
 }
 
@@ -32,13 +85,48 @@ function pollMilliseconds(value?: string): number | undefined {
 async function canView(ctx: HttpContext, definition: WidgetDefinition): Promise<void> {
   if (definition.canView && !(await definition.canView(ctx))) throw new E_PUPITRE_FORBIDDEN()
 }
-async function loadTableWidget(ctx: HttpContext, definition: WidgetDefinition) {
+async function loadTableWidget(
+  ctx: HttpContext,
+  definition: WidgetDefinition,
+  record?: unknown,
+  pageContext?: WidgetPageContext
+) {
   const table = definition.table
   const model = definition.model
+  if (table?.records) {
+    const query = ctx.request.qs()
+    const pageSlug =
+      typeof query.customPage === 'string'
+        ? query.customPage
+        : ctx.pupitre.panel.pages.some((page) => page.slug === ctx.params.slug)
+          ? ctx.params.slug
+          : undefined
+    const context: WidgetPageContext | undefined =
+      pageContext ??
+      (pageSlug
+        ? { customPage: pageSlug }
+        : typeof query.resource === 'string'
+          ? {
+              resource: query.resource,
+              widgetPage: query.widgetPage as 'list' | 'create' | 'edit' | 'view',
+            }
+          : typeof ctx.params.slug === 'string'
+            ? { resource: ctx.params.slug, widgetPage: 'list' }
+            : undefined)
+    const url = widgetDataUrl(ctx, definition, record, context)
+    return loadCustomTable(
+      ctx,
+      table,
+      definition.name,
+      (row) => widgetTableActions(ctx, definition, 'row', url, row),
+      record
+    )
+  }
   if (!table || !model) throw new Error(`Table widget "${definition.name}" requires a model`)
   const resource = ctx.pupitre.panel.resources.find((item) => item.model === model)
   if (resource && !(await authorizeResource(ctx, resource, 'viewAny')))
     throw new E_PUPITRE_FORBIDDEN()
+  if (!resource && !(await authorizeModel(ctx, model, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
   if (!resource && ctx.pupitre.tenant)
     throw new Error(
       `Tenant-scoped table widget "${definition.name}" must use a registered resource model`
@@ -97,8 +185,8 @@ async function loadTableWidget(ctx: HttpContext, definition: WidgetDefinition) {
       timezone: ctx.pupitre.timezone,
       normalized: loaded.normalized,
       rowActions: async () => [],
-      rowUrl: (record) =>
-        resource ? resource.urls.view(record.$primaryKeyValue as string | number) : undefined,
+      rowUrl: (row) =>
+        resource ? resource.urls.view(row.$primaryKeyValue as string | number) : undefined,
       ...(summaryResult?.summary ? { summary: summaryResult.summary } : {}),
       ...(summaryResult?.groups ? { groupSummaries: summaryResult.groups } : {}),
     })
@@ -109,7 +197,8 @@ export async function loadWidget(
   ctx: HttpContext,
   definition: WidgetDefinition,
   record?: unknown,
-  checkVisibility = true
+  checkVisibility = true,
+  context?: WidgetPageContext
 ): Promise<WidgetData> {
   if (checkVisibility) await canView(ctx, definition)
   // Edit access alone does not grant access to a record's history.
@@ -119,7 +208,7 @@ export async function loadWidget(
   }
   const loaded =
     definition.kind === 'table'
-      ? await loadTableWidget(ctx, definition)
+      ? await loadTableWidget(ctx, definition, record, context)
       : definition.load
         ? await definition.load({
             ctx,
@@ -131,7 +220,10 @@ export async function loadWidget(
     definition.kind === 'stats'
       ? { kind: 'stats' as const, stats: loaded }
       : definition.kind === 'chart'
-        ? { kind: 'chart' as const, ...(loaded as object) }
+        ? {
+            kind: definition.chartType === 'scatter' ? ('scatter' as const) : ('chart' as const),
+            ...(loaded as object),
+          }
         : definition.kind === 'table'
           ? { kind: 'table' as const, data: loaded }
           : definition.kind === 'timeline'
@@ -215,17 +307,27 @@ async function compileWidgetTable(
   descriptor: WidgetDescriptor
 ) {
   if (!definition.table) return undefined
-  return compileTable(definition.table, {
+  const bulkActions = await widgetTableActions(ctx, definition, 'bulk', descriptor.dataUrl!)
+  const compiled = await compileTable(definition.table, {
     url: ctx.request.url(),
     id: `${ctx.pupitre.panel.id}.widget.${definition.name}`,
     dataProp: descriptor.dataProp,
     queryPrefix: definition.name,
-    bulkActions: [],
-    compileFilterForm: async () => ({
-      root: 'filters',
-      elements: { filters: { type: 'Fragment', props: {} } },
-    }),
+    bulkActions,
+    compileFilterForm: async (nodes) => {
+      const compiledFilter = await compileForm([...nodes], {
+        ctx,
+        locale: ctx.pupitre.locale,
+        timezone: ctx.pupitre.timezone,
+        form: { method: 'get', url: ctx.request.url(), submitLabel: t('Apply'), dirtyGuard: false },
+      })
+      return compiledFilter.spec
+    },
   })
+  return {
+    ...compiled,
+    headerActions: await widgetTableActions(ctx, definition, 'header', descriptor.dataUrl!),
+  }
 }
 export async function prepareWidgets(
   ctx: HttpContext,
@@ -264,9 +366,9 @@ export async function prepareWidgets(
     if (definition.lazy) {
       deferred.push(item.dataProp)
       extraProps[item.dataProp] = ctx.inertia.defer((() =>
-        loadWidget(ctx, definition, record, false)) as never)
+        loadWidget(ctx, definition, record, false, context)) as never)
     } else {
-      extraProps[item.dataProp] = await loadWidget(ctx, definition, record, false)
+      extraProps[item.dataProp] = await loadWidget(ctx, definition, record, false, context)
     }
   }
   return { widgets, deferred, extraProps }
@@ -317,36 +419,36 @@ export default class WidgetController {
     return ctx.inertia.render('pupitre' as never, props as never)
   }
 
-  async data(ctx: HttpContext) {
+  private async resolve(ctx: HttpContext) {
     const query = ctx.request.qs() as Record<string, unknown>
     let record: LucidRow | undefined
     let definition: WidgetDefinition | undefined
     if (typeof query.customPage === 'string') {
       const page = ctx.pupitre.panel.pages.find((item) => item.slug === query.customPage)
-      if (!page) return ctx.response.notFound()
+      if (!page) throw new E_PUPITRE_NOT_FOUND()
       if (page.definition.canAccess && !(await page.definition.canAccess(ctx)))
         throw new E_PUPITRE_FORBIDDEN()
       definition = page.definition.widgets?.find((item) => item.name === ctx.params.name)
     } else if (typeof query.resource === 'string') {
       const target = ctx.pupitre.panel.resources.find((item) => item.slug === query.resource)
-      if (!target) return ctx.response.notFound()
+      if (!target) throw new E_PUPITRE_NOT_FOUND()
       if (target.parent) {
-        if (typeof query.parentId !== 'string') return ctx.response.notFound()
+        if (typeof query.parentId !== 'string') throw new E_PUPITRE_NOT_FOUND()
         ctx.params[target.parent.param] = query.parentId
       }
       ctx.params.slug = query.resource
       const resource = requestResource(ctx, query.resource)!
       const page = query.widgetPage
       if (typeof page !== 'string' || !['list', 'create', 'edit', 'view'].includes(page))
-        return ctx.response.notFound()
+        throw new E_PUPITRE_NOT_FOUND()
       await authorizeNestedParent(ctx, resource, page === 'create' || page === 'edit')
       if (!(await authorizeResource(ctx, resource, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
       if (page === 'edit' || page === 'view') {
-        if (typeof query.record !== 'string') return ctx.response.notFound()
+        if (typeof query.record !== 'string') throw new E_PUPITRE_NOT_FOUND()
         const primaryKey = resource.model.primaryKey ?? 'id'
         record =
           (await scopedQuery(ctx, resource).where(primaryKey, query.record).first()) ?? undefined
-        if (!record) return ctx.response.notFound()
+        if (!record) throw new E_PUPITRE_NOT_FOUND()
         await ensureAuthorized(ctx, resource, page === 'edit' ? 'update' : 'view', record)
       } else if (page === 'create') {
         await ensureAuthorized(ctx, resource, 'create')
@@ -361,7 +463,101 @@ export default class WidgetController {
     } else {
       definition = ctx.pupitre.panel.widgets.find((item) => item.name === ctx.params.name)
     }
-    if (!definition) return ctx.response.notFound()
-    return ctx.response.ok(await loadWidget(ctx, definition, record))
+    if (!definition) throw new E_PUPITRE_NOT_FOUND()
+    await canView(ctx, definition)
+    return { definition, record }
+  }
+
+  async data(ctx: HttpContext) {
+    const { definition, record } = await this.resolve(ctx)
+    return ctx.response.ok(await loadWidget(ctx, definition, record, false))
+  }
+
+  async action(ctx: HttpContext) {
+    const resolved = await this.resolve(ctx)
+    const { definition } = resolved
+    let record: unknown = resolved.record
+    let records: Record<string, unknown>[] | undefined
+    const query: Record<string, unknown> = ctx.request.qs()
+    const group = query.tableAction
+    if (group !== undefined && group !== 'row' && group !== 'bulk' && group !== 'header')
+      throw new E_PUPITRE_NOT_FOUND()
+    let action: ActionDefinition | undefined
+    if (group === 'row' || group === 'bulk' || group === 'header') {
+      record = undefined
+      action = definition.table?.actions?.[group]?.find((item) => item.name === ctx.params.action)
+      if (!action) throw new E_PUPITRE_NOT_FOUND()
+      if (group === 'row' || (group === 'bulk' && ctx.request.method() !== 'GET')) {
+        if (!definition.table?.resolveRecord) throw new E_PUPITRE_NOT_FOUND()
+        const keys = group === 'row' ? [query.rowKey] : ctx.request.input('ids', [])
+        const keySchema = vine.union([
+          vine.union.if((value) => typeof value === 'string', vine.string()),
+          vine.union.if((value) => typeof value === 'number', vine.number()),
+        ])
+        const validated = await vine
+          .compile(vine.object({ keys: vine.array(keySchema).minLength(1) }))
+          .validate({ keys })
+        records = []
+        for (const key of validated.keys) {
+          const row = await definition.table.resolveRecord(key, ctx)
+          if (!row) throw new E_PUPITRE_NOT_FOUND()
+          records.push(row)
+        }
+        record = group === 'row' ? records[0] : undefined
+        if (group === 'row') records = undefined
+      }
+    } else action = definition.actions?.find((item) => item.name === ctx.params.action)
+    if (!action) throw new E_PUPITRE_NOT_FOUND()
+    const resource =
+      typeof ctx.params.slug === 'string' ? requestResource(ctx, ctx.params.slug) : undefined
+    const authorize = (ability: string, target?: unknown) =>
+      group
+        ? authorizeTableAction(ctx, ability, target)
+        : resource
+          ? authorizeResource(ctx, resource, ability, resolved.record)
+          : authorizeAbility(ctx, ability, target)
+    if (action.can) {
+      for (const target of records?.length ? records : [record])
+        if (!(await authorize(action.can, target))) throw new E_PUPITRE_FORBIDDEN()
+    }
+    if (action.visible && !action.visible({ record: record ?? null, ctx }))
+      throw new E_PUPITRE_FORBIDDEN()
+    if (ctx.request.method() === 'GET') {
+      return ctx.response.ok(
+        await compileActionForm(action, {
+          ctx,
+          record:
+            record && typeof record === 'object'
+              ? Object.fromEntries(Object.entries(record))
+              : undefined,
+          model: group ? undefined : resolved.record,
+          locale: ctx.pupitre.locale,
+          timezone: ctx.pupitre.timezone,
+          url: `${ctx.request.url()}?${new URLSearchParams(Object.entries(query).map(([key, value]) => [key, String(value)])).toString()}`,
+        })
+      )
+    }
+    try {
+      const envelope = await vine
+        .compile(vine.object({ data: vine.record(vine.any()).optional() }))
+        .validate(ctx.request.body())
+      const result = await executeAction(action, {
+        ctx,
+        record,
+        records,
+        data: envelope.data ?? {},
+        authorize,
+        currentUrl: '',
+        listUrl: ctx.pupitre.panel.path,
+      })
+      return actionJson(ctx, result)
+    } catch (error) {
+      if ((error as { status?: number })?.status !== 422) throw error
+      const errors: Record<string, string[]> = {}
+      for (const message of (error as { messages?: { field?: string; message: string }[] })
+        .messages ?? [])
+        (errors[message.field ?? '_form'] ??= []).push(message.message)
+      return errorJson(ctx, t('The submitted data is invalid'), 422, errors)
+    }
   }
 }

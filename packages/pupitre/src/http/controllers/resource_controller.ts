@@ -1,3 +1,4 @@
+import { prepareTableViews, defaultTableView, tableViewUrl } from '../../table/views/controller.js'
 import { t } from '../../i18n.js'
 import app from '@adonisjs/core/services/app'
 import type { ModelPaginatorContract } from '@adonisjs/lucid/types/model'
@@ -356,7 +357,9 @@ function headerDefinitions(
   target: ResourceRuntime,
   page: 'list' | 'create' | 'edit' | 'view'
 ): ActionDefinition[] {
-  const definitions = [...(target.definition.actions?.header ?? [])]
+  const definitions = [...(target.definition.actions?.header ?? [])].filter(
+    (action) => action.builtin !== 'impersonate' || page === 'edit' || page === 'view'
+  )
   if (
     page === 'list' &&
     (target.definition.pages.create || target.definition.pages.list?.modals) &&
@@ -512,6 +515,10 @@ export default class ResourceController {
         return compiled.spec
       },
     })
+    await prepareTableViews(ctx, target, table, descriptor)
+    const defaultView = defaultTableView(descriptor, ctx.request.qs())
+    if (defaultView)
+      return ctx.response.redirect(tableViewUrl(ctx.request.url(true), descriptor, defaultView))
     descriptor.realtime = await resourceRealtime(ctx, target.slug)
     const spec = {
       root: 'table',
@@ -717,6 +724,13 @@ export default class ResourceController {
       data,
     })
     const relationProps = await relationPageProps(ctx, target, record, false)
+    for (const relation of relationProps.relations) {
+      const relationDefault = defaultTableView(relation.table, ctx.request.qs())
+      if (relationDefault)
+        return ctx.response.redirect(
+          tableViewUrl(ctx.request.url(true), relation.table, relationDefault)
+        )
+    }
     const composed = relationProps.relations.length
       ? withRelationTabs(
           compiled.spec,
@@ -762,6 +776,13 @@ export default class ResourceController {
     const nodes = target.definition.infolist ?? []
     const compiled = await compileInfolist(nodes, await schemaContext(ctx, target, 'view', record))
     const relationProps = await relationPageProps(ctx, target, record, true)
+    for (const relation of relationProps.relations) {
+      const relationDefault = defaultTableView(relation.table, ctx.request.qs())
+      if (relationDefault)
+        return ctx.response.redirect(
+          tableViewUrl(ctx.request.url(true), relation.table, relationDefault)
+        )
+    }
     const composed = relationProps.relations.length
       ? withRelationTabs(
           compiled.spec,

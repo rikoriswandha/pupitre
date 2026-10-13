@@ -29,7 +29,12 @@ const resource = {
     ],
   },
 } as unknown as ResourceRuntime
-const panel = { id: 'admin', resources: [resource] } as unknown as PanelRuntime
+const panel = {
+  id: 'admin',
+  resources: [resource],
+  pages: [],
+  widgets: [],
+} as unknown as PanelRuntime
 
 test.group('pupitre inspect output', () => {
   test('includes server closure classification in JSON and text output', async ({ assert }) => {

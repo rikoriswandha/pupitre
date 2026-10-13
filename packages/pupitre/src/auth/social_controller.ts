@@ -123,6 +123,6 @@ export default class SocialAuthController {
     const storedRedirect = ctx.session?.get(`pupitre.socialRedirect.${provider}`)
     ctx.session?.forget(`pupitre.socialRedirect.${provider}`)
     const redirect = safeRedirect(ctx, storedRedirect, ctx.pupitre.basePath)
-    return completeLogin(ctx, ctx.pupitre.panel, user, { redirect })
+    return completeLogin(ctx, ctx.pupitre.panel, user, { redirect, method: `social:${provider}` })
   }
 }

@@ -125,7 +125,7 @@ test.group('Header action and queued export authorization', (group) => {
     const job = exportJobResponse.parse(await response.json())
     const row = await fixture.database.from('pupitre_exports').where('id', job.jobId).first()
     assert.equal(row.status, 'done')
-    assert.deepEqual(JSON.parse(row.result), { action: 'export' })
+    assert.deepEqual(JSON.parse(row.result), { action: 'export', format: 'csv' })
     const download = await fetch(`${fixture.baseUrl}${job.downloadUrl}`, {
       headers: { Cookie: cookie, Connection: 'close' },
     })

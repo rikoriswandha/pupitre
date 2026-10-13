@@ -90,19 +90,18 @@ export async function countExportRows(
 }
 
 /** Runs the exact scoped table query and formats rows in bounded model batches. */
-export async function processExport(
+export async function* exportBatches(
   ctx: HttpContext,
   resource: ResourceRuntime,
   action: ActionDefinition,
   table: TableDefinition,
   columns: CsvColumn[],
-  input: ExportQuery,
-  onBatch?: (
-    rows: Record<string, string | number | boolean | null>[],
-    processed: number,
-    total: number
-  ) => Promise<void>
-): Promise<{ total: number; rows: Record<string, string | number | boolean | null>[] }> {
+  input: ExportQuery
+): AsyncGenerator<{
+  rows: Record<string, string | number | boolean | null>[]
+  processed: number
+  total: number
+}> {
   const { queryResult } = exportQuery(ctx, resource, table, input)
   const total = await countExportRows(ctx, resource, table, input, false)
   // A unique final sort keeps non-unique/default sorts deterministic across batches.
@@ -110,7 +109,6 @@ export async function processExport(
   const formatters = new Map(
     (action.exportColumns ?? []).map((column) => [column.name, column.formatStateUsing])
   )
-  const rows: Record<string, string | number | boolean | null>[] = []
   const batchSize = 500
   let processed = 0
   for (let offset = 0; ; offset += batchSize) {
@@ -138,8 +136,29 @@ export async function processExport(
       }
       batchRows.push(row)
     }
-    if (onBatch) await onBatch(batchRows, processed, Math.max(processed, total))
-    else rows.push(...batchRows)
+    yield { rows: batchRows, processed, total: Math.max(processed, total) }
+  }
+}
+
+export async function processExport(
+  ctx: HttpContext,
+  resource: ResourceRuntime,
+  action: ActionDefinition,
+  table: TableDefinition,
+  columns: CsvColumn[],
+  input: ExportQuery,
+  onBatch?: (
+    rows: Record<string, string | number | boolean | null>[],
+    processed: number,
+    total: number
+  ) => Promise<void>
+): Promise<{ total: number; rows: Record<string, string | number | boolean | null>[] }> {
+  const rows: Record<string, string | number | boolean | null>[] = []
+  let processed = 0
+  for await (const batch of exportBatches(ctx, resource, action, table, columns, input)) {
+    processed = batch.processed
+    if (onBatch) await onBatch(batch.rows, batch.processed, batch.total)
+    else rows.push(...batch.rows)
   }
   return { total: processed, rows }
 }

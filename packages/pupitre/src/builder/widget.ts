@@ -4,6 +4,7 @@ import { stableJson } from '../definition/shared.js'
 import type { TimelineItem, WidgetDefinition, WidgetStat } from '../definition/widget.js'
 import { Table } from './table/table.js'
 import type { TableDefinition, TableSchema } from '../definition/table.js'
+import type { ActionBuilder } from '../definition/action.js'
 
 export type StatBuilder = {
   readonly definition: WidgetStat
@@ -43,6 +44,10 @@ export function stat(label: string, value: string | number): StatBuilder {
 }
 
 type ChartData = { labels: string[]; datasets: { label: string; data: number[]; color?: string }[] }
+type ScatterData = {
+  datasets: { label: string; data: { x: number; y: number }[]; color?: string }[]
+}
+type ChartResult<T> = T extends 'scatter' ? ScatterData : ChartData
 type WidgetContext = { ctx: HttpContext; filters: Record<string, unknown>; record?: unknown }
 type StatInput = WidgetStat | StatBuilder
 
@@ -52,12 +57,13 @@ export type WidgetBuilder = {
   timeline(
     callback: (args: WidgetContext) => TimelineItem[] | Promise<TimelineItem[]>
   ): WidgetBuilder
-  chart(
-    type: NonNullable<WidgetDefinition['chartType']>,
-    callback: (args: WidgetContext) => ChartData | Promise<ChartData>
+  chart<T extends NonNullable<WidgetDefinition['chartType']>>(
+    type: T,
+    callback: (args: WidgetContext) => ChartResult<T> | Promise<ChartResult<T>>
   ): WidgetBuilder
   table(callback: (schema: TableSchema) => TableSchema): WidgetBuilder
-  component(value: string): WidgetBuilder
+  component(value: string, loader?: NonNullable<WidgetDefinition['load']>): WidgetBuilder
+  actions(value: readonly ActionBuilder[]): WidgetBuilder
   span(value: number | 'full'): WidgetBuilder
   sort(value: number): WidgetBuilder
   poll(value: string): WidgetBuilder
@@ -101,9 +107,9 @@ class Widget implements WidgetBuilder {
     return this.change({ kind: 'timeline', load: callback })
   }
 
-  chart(
-    type: NonNullable<WidgetDefinition['chartType']>,
-    callback: (args: WidgetContext) => ChartData | Promise<ChartData>
+  chart<T extends NonNullable<WidgetDefinition['chartType']>>(
+    type: T,
+    callback: (args: WidgetContext) => ChartResult<T> | Promise<ChartResult<T>>
   ) {
     return this.change({ kind: 'chart', chartType: type, load: callback })
   }
@@ -121,8 +127,11 @@ class Widget implements WidgetBuilder {
     return this.change({ kind: 'table', table: schema.toDefinition() })
   }
 
-  component(value: string) {
-    return this.change({ kind: 'component', component: value })
+  component(value: string, loader?: NonNullable<WidgetDefinition['load']>) {
+    return this.change({ kind: 'component', component: value, load: loader })
+  }
+  actions(value: readonly ActionBuilder[]) {
+    return this.change({ actions: value.map((item) => item.definition) })
   }
   span(value: number | 'full') {
     return this.change({ span: value }, true)

@@ -1,4 +1,5 @@
 import { isTranslationMarker, requestMessages, resolveTranslations } from '../i18n.js'
+import { t } from '../i18n.js'
 import { marked } from 'marked'
 import {
   collectCatalogExtensions,
@@ -35,11 +36,14 @@ import {
   truncate,
 } from '../format/index.js'
 import { sanitizeHtml } from '../sanitize.js'
+import { renderRichContent } from '../rich_content.js'
+import type { RichContentOptions } from '../definition/rich_content.js'
 import { evaluateClosure, liftClosure } from './closure_lifter.js'
 import { type SpecCache, type StaticSlot } from './cache.js'
 import {
   E_PUPITRE_FORBIDDEN,
   E_PUPITRE_INVALID_SPEC,
+  E_PUPITRE_INVALID_REPEATER_TABLE,
   E_PUPITRE_UNLIFTABLE_CLOSURE,
 } from '../errors.js'
 import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
@@ -327,33 +331,47 @@ async function addField(
   const path = parentPath ? `${parentPath}.${node.name}` : node.name
   const id = `f.${path}`
   if (node.kind === 'repeater') {
-    const definition = node as FieldDefinitionUnion & {
-      schema?: SchemaNodeDefinition[] | ((arg: unknown) => SchemaNodeDefinition[])
-      minItems?: number
-      maxItems?: number
-      reorderable?: boolean
-      collapsible?: boolean
-      collapsed?: boolean
-      cloneable?: boolean
-      addLabel?: string
-      itemLabel?: unknown
-      defaultItems?: number
-      grid?: number | Record<string, number>
-    }
+    const definition = node as RepeaterFieldDefinition
     const children = repeaterChildren(definition.schema)
+    if (
+      definition.table?.length === 0 &&
+      children.some((child) => 'label' in child && typeof child.label === 'function')
+    )
+      throw new E_PUPITRE_INVALID_REPEATER_TABLE([
+        `"${path}" has closure-valued field labels; provide explicit table column labels`,
+      ])
+    const table =
+      definition.table === undefined
+        ? undefined
+        : definition.table.length
+          ? definition.table
+          : children.map((child) => ({
+              label:
+                'label' in child && typeof child.label === 'string'
+                  ? child.label
+                  : headline('name' in child ? String(child.name) : child.kind),
+              required: 'rules' in child && child.rules?.required === true,
+            }))
+    if (table && table.length !== children.length)
+      throw new E_PUPITRE_INVALID_REPEATER_TABLE([
+        `"${path}" has ${children.length} schema fields but ${table.length} columns; provide one column per field in schema order`,
+      ])
     const templateId = `${id}.item`
     const templateChildren: string[] = []
     build.repeaterPaths.push(path)
     try {
-      for (const child of children)
-        templateChildren.push(await addNode(child, build, path, true, false))
+      for (const [position, child] of children.entries()) {
+        const childId = await addNode(child, build, path, true, false)
+        if (table) build.elements[childId].props.label = table[position].label
+        templateChildren.push(childId)
+      }
     } finally {
       build.repeaterPaths.pop()
     }
     const defaultItem: Record<string, unknown> = {}
     defaults(children, defaultItem, true)
     const liftedLabel =
-      typeof definition.itemLabel === 'function'
+      !table && typeof definition.itemLabel === 'function'
         ? liftClosure(definition.itemLabel, 'label', {
             pathPrefix: `/data/${pointer(path)}`,
             inRepeater: true,
@@ -370,6 +388,7 @@ async function addField(
       cloneable: definition.cloneable ?? false,
       addLabel: definition.addLabel,
       grid: definition.grid,
+      ...(table ? { table } : {}),
       defaultItems: [],
     } as unknown as RepeaterDescriptor
     const statePath = inRepeater
@@ -377,7 +396,7 @@ async function addField(
         ? { $item: `data/${pointer(node.name)}` }
         : { $item: pointer(node.name) }
       : `/data/${pointer(path)}`
-    if (typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static') {
+    if (!table && typeof definition.itemLabel === 'function' && liftedLabel?.kind === 'static') {
       const error = new E_PUPITRE_UNLIFTABLE_CLOSURE()
       error.message = `Cannot lift itemLabel for repeater "${path}"`
       throw error
@@ -389,7 +408,8 @@ async function addField(
       type: 'RepeaterItem',
       props: {
         index: { $index: true },
-        ...(definition.itemLabel !== undefined &&
+        ...(!table &&
+        definition.itemLabel !== undefined &&
         (typeof definition.itemLabel !== 'function' || liftedLabel?.kind !== 'static')
           ? {
               itemLabel:
@@ -414,6 +434,10 @@ async function addField(
         ...(node.hint !== undefined ? { hint: node.hint } : {}),
         ...(node.rules?.required ? { required: true } : {}),
         ...(node.columnSpan !== undefined ? { columnSpan: node.columnSpan } : {}),
+        ...(node.disabled !== undefined && typeof node.disabled !== 'function'
+          ? { disabled: node.disabled }
+          : {}),
+        ...(node.readOnly !== undefined ? { readOnly: node.readOnly } : {}),
         descriptor,
         value: repeatValue,
       },
@@ -426,6 +450,16 @@ async function addField(
       },
     }
     build.elements[id] = repeater
+    if (typeof node.disabled === 'function') {
+      const lifted = liftClosure(node.disabled, 'disabled', {
+        pathPrefix: '/data',
+        inRepeater,
+        numericFields: build.numericFields,
+      })
+      if (lifted.kind === 'static') addStatic(build, id, 'disabled', node.disabled)
+      else repeater.props.disabled = lifted.value
+    }
+    applyVisibility(node as unknown as Record<string, unknown>, id, build, inRepeater)
     addValueSlot(build, id, 'descriptor', (data) => ({
       ...descriptor,
       defaultItems: Array.isArray(getPath(data, path)) ? getPath(data, path) : [],
@@ -579,6 +613,8 @@ async function addField(
     'imageEditor',
     'imageEditorAspectRatios',
     'options',
+    'mentions',
+    'customBlocks',
     'relationship',
     'searchable',
     'preload',
@@ -603,6 +639,49 @@ async function addField(
   if ('minDate' in node && node.minDate !== undefined) props.min = node.minDate
   if ('maxDate' in node && node.maxDate !== undefined) props.max = node.maxDate
   mapOptions(node as unknown as Record<string, unknown>, props)
+  if (node.kind === 'richEditor') {
+    if (node.mergeTags)
+      props.mergeTags = Array.isArray(node.mergeTags)
+        ? node.mergeTags.map((tag) => ({ id: tag, label: tag }))
+        : Object.entries(node.mergeTags).map(([tag, label]) => ({ id: tag, label }))
+    if (node.mentions?.length)
+      props.mentions = node.mentions.map((provider) => ({
+        char: provider.char,
+        ...(provider.options ? { options: provider.options } : {}),
+      }))
+    if (
+      node.mentions?.some((provider) => provider.search) &&
+      build.options.ctx &&
+      build.options.resourceSlug
+    )
+      addValueSlot(build, id, 'optionsUrl', (_data, _record, context, request) => {
+        const ctx = context as HttpContext
+        const options = (request as SlotRequest).options
+        const resource = ctx.pupitre.panel.resources.find(
+          (candidate) => candidate.slug === options.resourceSlug
+        )
+        const recordKey = resource && options.model?.$getAttribute(resource.model.primaryKey)
+        return `${ctx.pupitre.panel.path}/_pupitre/options/${options.resourceSlug}/${encodeURIComponent(path)}${recordKey === undefined || recordKey === null ? '' : `?record=${encodeURIComponent(String(recordKey))}`}`
+      })
+    if (node.customBlocks?.length)
+      props.customBlocks = await Promise.all(
+        node.customBlocks.map(async (block) => {
+          const compiled = await compileForm(block.schema, {
+            locale: build.options.locale,
+            timezone: build.options.timezone,
+            ctx: build.options.ctx,
+            form: { method: 'post', url: '', submitLabel: t('Apply'), dirtyGuard: false },
+          })
+          return {
+            id: block.id,
+            label: block.label,
+            icon: block.icon,
+            spec: { $raw: compiled.spec },
+            state: compiled.state,
+          }
+        })
+      )
+  }
   for (const key of ['prefixAction', 'suffixAction', 'hintAction'] as const) {
     const action = (node as unknown as Record<string, unknown>)[key] as ActionDefinition | undefined
     if (!action || !build.options.resourceSlug) continue
@@ -1034,6 +1113,7 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
     if (
       ![
         'kind',
+        'richContent',
         'name',
         'label',
         'value',
@@ -1053,6 +1133,7 @@ async function addEntry(node: SchemaNodeDefinition, build: BuildContext): Promis
     )
       props[key] = prop
   if (entry.markdown === true) props.html = true
+  if (entry.richContent) props.html = true
   if (node.kind === 'extensionEntry') {
     Object.assign(props, extensionRenderProps(node))
     addValueSlot(build, id, 'record', (_data, record) => record)
@@ -1118,9 +1199,20 @@ async function formatEntryValue(
     options.ctx ? (requestMessages.get(options.ctx) ?? {}) : {}
   )
   if (entry.limit) return truncate(value, Number(entry.limit))
+  if (entry.richContent && typeof value === 'string') {
+    const config =
+      typeof entry.richContent === 'function'
+        ? await entry.richContent({
+            record: options.record ?? {},
+            ctx: options.ctx,
+            get: (name: string) => getPath(options.record ?? {}, name),
+          })
+        : entry.richContent
+    return renderRichContent(value, config as RichContentOptions)
+  }
   if (entry.markdown === true && typeof value === 'string')
     return sanitizeHtml(marked.parse(value, { async: false }) as string)
-  if (entry.html && typeof value === 'string') return sanitizeHtml(value)
+  if (entry.html && typeof value === 'string') return renderRichContent(value)
   if (entry.kind === 'imageEntry' && options.resolveFileUrl) {
     const field = { kind: 'fileUpload', name: path } as FieldDefinitionUnion
     const resolve = async (key: unknown) =>

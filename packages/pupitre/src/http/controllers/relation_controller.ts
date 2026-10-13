@@ -1,3 +1,4 @@
+import { prepareTableViews } from '../../table/views/controller.js'
 import { t } from '../../i18n.js'
 import { publishResourceChange, resourceRealtime } from '../../realtime.js'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -305,6 +306,7 @@ export async function compileRelationDescriptor(
       },
     }
   )
+  if (manager.table) await prepareTableViews(ctx, target, manager.table, table, related)
   if (manager.table?.poll) table.realtime = await resourceRealtime(ctx, target.slug)
   const badge = manager.badge ? await manager.badge(ctx, parent) : undefined
   return {

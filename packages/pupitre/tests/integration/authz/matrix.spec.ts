@@ -47,6 +47,12 @@ function classifyPanelRoute(name: string): RouteClass | undefined {
     return { kind: 'tenant membership', expected: 'membership-scoped' }
   if (name === 'admin.exports.progress' || name === 'admin.exports.download')
     return { kind: 'export file', expected: 'owner and tenant scoped' }
+  if (name === 'admin.widgets.action.form' || name === 'admin.widgets.action.run')
+    return { kind: 'widget action', expected: 'widget visibility, page access and action ability' }
+  if (name === 'admin.impersonation.leave')
+    return { kind: 'impersonation', expected: 'restores the session-bound impersonator only' }
+  if (name.includes('.views.'))
+    return { kind: 'saved views', expected: 'table viewAny and owner/panel/tenant scoping' }
   if (name.includes('.relations.'))
     return {
       kind: 'relation manager',

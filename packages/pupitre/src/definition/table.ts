@@ -1,3 +1,4 @@
+import type { TableViewBuilder, TableViewDefinition } from './table_view.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ModelQueryBuilderContract, LucidModel } from '@adonisjs/lucid/types/model'
 import type {
@@ -180,7 +181,31 @@ export interface TableGroupBuilder {
   collapsible(value?: boolean): TableGroupBuilder
   toDefinition(): TableGroupDefinition
 }
+export type CustomTableRecords = (args: {
+  ctx: HttpContext
+  record?: unknown
+  search: string
+  filters: Record<string, unknown>
+  sort: { column: string; direction: 'asc' | 'desc' }[]
+  page: number
+  perPage: number | 'all'
+}) =>
+  | { rows: Record<string, unknown>[]; total?: number }
+  | Promise<{ rows: Record<string, unknown>[]; total?: number }>
 export type TableDefinition = {
+  records?: CustomTableRecords
+  recordKey?: string
+  resolveRecord?: (
+    key: string | number,
+    ctx: HttpContext
+  ) => Record<string, unknown> | null | Promise<Record<string, unknown> | null>
+  actions?: {
+    row?: readonly ActionDefinition[]
+    header?: readonly ActionDefinition[]
+    bulk?: readonly ActionDefinition[]
+  }
+  savedViews?: boolean
+  presetViews?: TableViewDefinition[]
   query?: QueryCallback
   defaultSort?: { column: string; direction: 'asc' | 'desc' }
   defaultSorts?: { column: string; direction: 'asc' | 'desc' }[]
@@ -203,6 +228,16 @@ export type TableDefinition = {
   layout?: { type: 'grid'; columns: { default?: number; md?: number; xl?: number } }
 }
 export interface TableSchema {
+  records(value: CustomTableRecords): this
+  recordKey(value: string): this
+  resolveRecord(value: NonNullable<TableDefinition['resolveRecord']>): this
+  actions(value: {
+    row?: readonly ActionBuilder[]
+    header?: readonly ActionBuilder[]
+    bulk?: readonly ActionBuilder[]
+  }): this
+  savedViews(value?: boolean): this
+  presetViews(value: readonly TableViewBuilder[]): this
   columns(value: readonly TableColumnBuilderUnion[]): this
   filters(value: readonly TableFilterBuilderUnion[]): this
   query(value: QueryCallback): this

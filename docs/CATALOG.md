@@ -61,6 +61,14 @@ Props Zod sederhana; satu-satu bisa diganti host. Nama komponen = PascalCase dar
 `Option = { value: string | number; label: string; description?: string; disabled?: boolean; icon?: string; color?: string }`.
 Opsi closure menerima `{ search, ctx, page, values? }`; saat validasi, `search` kosong dan `values` berisi pilihan yang harus tetap dikembalikan meski labelnya tidak cocok dengan filter pencarian.
 
+RichEditor rich-content props extend the base editor: `mergeTags?: { id, label }[]`,
+`mentions?: { char, options?: { id: string | number, label }[] }[]`, `optionsUrl?`, and
+`customBlocks?: { id, label, icon?, spec, state }[]`. Block specs are wrapped in `$raw`
+before wire serialization; the isolated modal renders the unwrapped spec. No server callbacks
+or Vine schemas are sent to the browser. Tiptap, mention/suggestion extensions, and node views
+remain in lazy chunks.
+
+
 ### 2.2 Layout
 
 | Komponen | Props | Children |
@@ -94,6 +102,7 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 
 | `Repeater` | field props umum (`name`, `label`, `helperText`, `hint`, `required`, `columnSpan`) + `descriptor: { name, minItems, maxItems, reorderable, collapsible, collapsed, cloneable, addLabel, grid, defaultItems }` + `value` terikat ke array; anak tunggal `RepeaterItem` (`index: { $index: true }`, opsional `itemLabel` expression dalam scope item) sebagai template | event `add` → `pushState` (item baru `_key: '$id'`); hapus/pindah/klon/collapse dikerjakan komponen lewat nilai array terikat (`useSetState`), karena param action tidak bisa menyatakan path array induk di scope bersarang |
   `.relationship('items', { orderColumn? })` hanya mendukung Lucid `hasMany`. Edit memuat baris terkait bersama primary key internal `_relationKey`; saat simpan server memeriksa ulang ownership, menyinkronkan insert/update/delete dalam transaksi resource, dan mengisi urutan bila `orderColumn` ditetapkan.
+  `.table(columns?)` adds optional positional `table` columns (`label`, `width`, `alignment`, `required`) to the descriptor. The same Repeater/RepeaterItem catalog components render a semantic, horizontally scrollable table; item labels, collapse and grid presentation are ignored. Row operations retain numeric-index cell errors and do not clone relationship primary keys.
 | `Builder` | field props umum (`name`, `label`, `helperText`, `hint`, `required`, `columnSpan`) + `descriptor: { name, blocks: { key, label, icon?, template: ElementId }[], minItems?, maxItems?, reorderable, collapsible, cloneable, addLabel?, blockPickerColumns? }` | nilai array item `{ _key, type: blockKey, data: { ...fields } }`; template block terikat ke `data.*`, Vine memilih schema dari `type`, menolak tipe tak dikenal, dan membuang `_key` |
 | `FileUpload` | `{ name, uploadUrl, deleteUrl, multiple, accept, maxSize, maxFiles, image, imageEditor?, imageEditorAspectRatios?, directory, visibility, reorderable, downloadable, previewable }` | `POST/DELETE /_pupitre/upload`; nilai state = `string \| string[]` (key); gambar dipotong di client dan tetap divalidasi server |
 | `RelationSelect` | `Select` + `{ optionsUrl, createOption: { url, modal } }` | `fetchOptions`; `openAction` |
@@ -112,6 +121,12 @@ Komponen "gemuk": menerima satu prop `descriptor` bertipe Pupitre, punya state i
 | `Fragment` | sub-spec dari host (`children` saja) | — |
 `page.subNavigation` menambahkan navigasi record sekunder (edit, view, relations, nested) di bawah page header; parent record title tetap muncul di breadcrumbs.
 Widget descriptor dikirim di `page.widgets`, sedangkan hasil (`WidgetData`) berada di prop top-level bernama `dataProp`; `deferred` menyebut prop yang belum dimuat. Dashboard dan halaman resource memakai descriptor yang sama. `dataUrl` menunjuk endpoint GET panel-scoped untuk refresh/poll; query filter dashboard dikirim kembali. Widget record menyertakan `resource` dan `record` pada URL, dan server memeriksa scoped record sebelum memuatnya. Nilai `span` 1–4 mengikuti jumlah kolom grid (1 di ponsel, 2 pada breakpoint md, hingga 4 di xl); `'full'` mengisi seluruh baris.
+
+Chart parity adds `radar` and `scatter` to `WidgetDescriptor.chartType`. Radar retains the labeled numeric series payload. Scatter emits `{ kind: 'scatter', datasets: [{ label, data: [{ x, y }], color? }] }`, with numeric point coordinates and no labels array; the widget descriptor and catalog component remain `chart` / `Widget.Chart`. `pupitre.environment` is optional shared shell state containing a label and one of six semantic colors.
+
+Component widget loaders emit `{ kind: 'component', data }`; `WidgetGrid` unwraps the envelope and passes `{ descriptor, data }` to the registered component. `useWidget<T>(descriptor, initialData)` from `@rikology/pupitre-react` provides local loader data, `loading`, validation `errors`, `reload(extraParams?)`, and `runAction(name, data?)`. Reload merges URL filters with extra query parameters while retaining the server-issued widget context. Actions return the existing `ActionResult` (including flash), and reject `WidgetRequestError` with `status`/`errors` on HTTP failures; callers explicitly reload after successful mutations.
+
+`Widget.Table` also accepts model-free custom-data providers. Optional `TableDescriptor.headerActions` renders widget header actions; row/bulk descriptors use the standard JSON action transport. Optional `TableMeta.simple`/`hasNext` distinguish count-free pagination; no Lucid-only editing, grouping, summaries, relations, saved views, query-builder filters, or exports are emitted for custom-data tables.
 Descriptor M3 tabel membawa `editable.url`, `poll` (ms), `reorderable.url`, `deferFilters`, `deferLoading`, dan `gridColumns`. Kolom dapat mendeklarasikan `individuallySearchable` dan `summarize`; ringkasan diproses melalui agregat SQL atas query terfilter (termasuk per grup). Baris membawa `className` hasil `.rowClass()` yang dibatasi ke token class aman. `DataTable` mengirim perubahan edit/reorder dengan CSRF, menangani rollback optimistis + toast, dan menyimpan visibilitas kolom per `descriptor.id`.
 M4 menambahkan `TableDescriptor.realtime?: { channel }` dan `pupitre.realtime?: { driver, userChannel }`. Schema `realtimeEvent` memvalidasi ping `{ type: 'pupitre:table', resource }` atau `{ type: 'pupitre:notification' }`; tipe `RealtimeClient` menyediakan `subscribe(channel, onEvent)` yang mengembalikan cleanup. Dengan client pada `<Pupitre realtime={client}>`, `useRealtimeSubscription` dan `useTableRealtime` menggantikan polling dengan partial reload yang sama; tanpa client/channel, polling tetap berlaku. Penambahan opsional ini tidak mengubah `catalogVersion`.
 
@@ -125,6 +140,9 @@ Ekspor/impor menggunakan response schemas di wire: `exportJobResponse`/`exportPr
 QueryBuilder menambahkan filter domain `{ type: 'queryBuilder', name, label, constraints }`; constraint membawa `name`, `type`, `label`, `options?` dan allowlist `operators: [{ value, label }]`. Tipe meliputi text/number/date/boolean/select/relationship. Atribut SQL, konfigurasi relasi dan timezone tetap server-only. Editor `DataTable` menyimpan JSON OR-of-AND di `filters[name]`, mendukung negasi, reset serta filter defer; batas dan validasi server ada di WIRE_PROTOCOL §5 dan ADR-0025. Ini bukan sub-spec form custom.
 
 `TableDescriptor.defaultSorts` menyatakan array prioritas; `defaultSort` lama tetap kolom primer. `multiSort` adalah batas kolom untuk tabel opt-in. URL memakai token sort berurutan dipisahkan koma; primary header saja memakai `aria-sort`, sementara tombol tambah/hapus/prioritas dapat dioperasikan lewat keyboard. `sort=` membersihkan default secara eksplisit.
+
+Saved resource and relation-manager views add optional `TableDescriptor.views` with server-authorized preset/public/personal items and a scoped persistence URL. The toolbar's internal `DataTableViews` uses `useTableViews` for JSON CRUD and whole Inertia visits, preserving relation query prefixes. Each view contains a normalized query and explicit column visibility. Public mutations require `managePublicViews`; column visibility remains presentation only, never authorization. The `tableViewDescriptor` schema is exported by the catalog.
+
 
 ## 4. Shell
 

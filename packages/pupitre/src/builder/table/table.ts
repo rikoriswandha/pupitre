@@ -1,3 +1,4 @@
+import type { TableViewBuilder } from '../../definition/table_view.js'
 import type {
   TableColumnDefinition,
   TableColumnBuilderUnion,
@@ -243,8 +244,32 @@ function makeFilter(kind: TableFilterDefinition['kind'], name: string): TableFil
 }
 class Table implements TableSchema {
   constructor(readonly value: TableDefinition) {}
+  records(value: NonNullable<TableDefinition['records']>): this {
+    return this.update({ records: value })
+  }
+  recordKey(value: string): this {
+    return this.update({ recordKey: value })
+  }
+  resolveRecord(value: NonNullable<TableDefinition['resolveRecord']>): this {
+    return this.update({ resolveRecord: value })
+  }
+  actions(value: Parameters<TableSchema['actions']>[0]): this {
+    return this.update({
+      actions: {
+        row: value.row?.map((item) => item.definition),
+        header: value.header?.map((item) => item.definition),
+        bulk: value.bulk?.map((item) => item.definition),
+      },
+    })
+  }
   private update(patch: Partial<TableDefinition>): this {
     return new Table({ ...this.value, ...patch }) as this
+  }
+  savedViews(value = true): this {
+    return this.update({ savedViews: value })
+  }
+  presetViews(value: readonly TableViewBuilder[]): this {
+    return this.update({ presetViews: value.map((view) => view.toDefinition()) })
   }
   columns(value: readonly TableColumnBuilderUnion[]): this {
     return this.update({ columns: value.map((item) => item.toDefinition()) })
@@ -337,6 +362,39 @@ class Table implements TableSchema {
     grid: (columns) => this.update({ layout: { type: 'grid', columns } }),
   }
   toDefinition(): TableDefinition {
+    if (this.value.records) {
+      const lucidOnly =
+        this.value.savedViews ||
+        this.value.presetViews?.length ||
+        this.value.query ||
+        this.value.groups?.length ||
+        this.value.defaultGroup ||
+        this.value.reorderable ||
+        this.value.columns.some(
+          (column) =>
+            column.kind !== 'fragment' &&
+            (column.name.includes('.') ||
+              column.summaries?.length ||
+              column.countRelation ||
+              ('editable' in column && column.editable))
+        ) ||
+        this.value.filters.some(
+          (filter) =>
+            filter.kind === 'queryBuilder' ||
+            filter.kind === 'trashed' ||
+            (filter.kind === 'custom' && filter.query)
+        )
+      const actions = Object.values(this.value.actions ?? {}).flatMap((items) => items ?? [])
+      if (lucidOnly || actions.some((item) => item.builtin))
+        throw new Error(
+          'Custom-data tables cannot use Lucid-only features (query, relations, summaries, groups, reorderable, inline editing, query-builder filters, or builtin/export actions)'
+        )
+      if (
+        (this.value.actions?.row?.length || this.value.actions?.bulk?.length) &&
+        !this.value.resolveRecord
+      )
+        throw new Error('Custom-data table row/bulk actions require resolveRecord()')
+    }
     const defaults = this.value.defaultSorts ?? []
     if (defaults.length > (this.value.multiSort ?? 1))
       throw new Error('Default sorting exceeds the table multiSort limit')

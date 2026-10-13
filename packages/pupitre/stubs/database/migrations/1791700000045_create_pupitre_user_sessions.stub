@@ -1,0 +1,29 @@
+{{{
+  exports({ to: app.makePath('database/migrations/1791700000045_create_pupitre_user_sessions.ts') })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'pupitre_user_sessions'
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.uuid('id').primary()
+      table.string('user_id').notNullable()
+      table.string('guard').notNullable()
+      table.string('panel').notNullable()
+      table.string('token_hash', 64).notNullable().unique()
+      table.string('remember_token_id').nullable().index()
+      table.string('ip', 64).notNullable()
+      table.string('user_agent', 512).notNullable()
+      table.timestamp('created_at').notNullable()
+      table.timestamp('last_active_at').notNullable()
+      table.timestamp('expires_at').notNullable()
+      table.boolean('remembered').notNullable().defaultTo(false)
+      table.timestamp('revoked_at').nullable()
+      table.index(['user_id', 'panel', 'guard'])
+    })
+  }
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}

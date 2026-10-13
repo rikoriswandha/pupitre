@@ -1,0 +1,29 @@
+{{{
+  exports({ to: app.makePath('database/migrations/1791700000044_create_pupitre_table_views.ts') })
+}}}
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'pupitre_table_views'
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.uuid('id').primary()
+      table.string('user_id').notNullable()
+      table.string('panel').notNullable()
+      table.string('tenant_key').nullable()
+      table.string('table_key').notNullable()
+      table.string('name', 120).notNullable()
+      table.json('query').notNullable()
+      table.json('columns').notNullable()
+      table.boolean('is_public').notNullable().defaultTo(false)
+      table.boolean('is_default').notNullable().defaultTo(false)
+      table.timestamp('created_at').notNullable()
+      table.timestamp('updated_at').notNullable()
+      table.index(['panel', 'tenant_key', 'table_key', 'user_id'], 'pupitre_views_owner_idx')
+      table.index(['panel', 'tenant_key', 'table_key', 'is_public'], 'pupitre_views_public_idx')
+    })
+  }
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}

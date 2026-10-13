@@ -4,6 +4,9 @@ import type { LucidModel, LucidRow } from '@adonisjs/lucid/types/model'
 import type { ResourceRuntime } from '../manager.js'
 import type { FieldDefinitionUnion, SchemaNodeDefinition } from '../definition/schema.js'
 import { authorizeModel } from '../authz/bouncer.js'
+import { authorizeResource } from '../authz/bouncer.js'
+import { scopedQuery } from '../query/scoped_query.js'
+import { lookupOrNull } from '../query/record_lookup.js'
 import { compileForm } from '../compiler/schema_compiler.js'
 import { compileValidator } from '../compiler/vine_compiler.js'
 import { queryOptions } from './query.js'
@@ -12,6 +15,7 @@ import type { FormOwner } from '../pages/form_owner.js'
 import { E_PUPITRE_FORBIDDEN } from '../errors.js'
 import { walkSchema } from '../definition/walk.js'
 import { fillRelatedOwnership } from '../tenancy/related.js'
+import vine from '@vinejs/vine'
 type SelectField = Extract<FieldDefinitionUnion, { kind: 'select' | 'multiSelect' }>
 function fields(nodes: SchemaNodeDefinition[]): Array<{ path: string; field: SelectField }> {
   const output: Array<{ path: string; field: SelectField }> = []
@@ -53,11 +57,51 @@ export default class OptionsController {
     const fieldPath = String(ctx.params.field ?? '').replaceAll('/', '.')
     const ownerForm = findFormOwner(ctx, slug)
     if (!ownerForm) return ctx.response.notFound()
-    if (!(await canViewForm(ownerForm))) throw new E_PUPITRE_FORBIDDEN()
     const owner =
       ownerForm.kind === 'resource'
         ? ctx.pupitre.panel.resources.find((resource) => resource.slug === slug)
         : undefined
+    let richField: Extract<FieldDefinitionUnion, { kind: 'richEditor' }> | undefined
+    walkSchema(ownerForm.form, (node, path) => {
+      if (node.kind === 'richEditor' && path === fieldPath) richField = node
+    })
+    if (richField) {
+      const query = await vine
+        .compile(
+          vine.object({
+            q: vine.string().maxLength(512).optional(),
+            mention: vine.string().maxLength(8),
+            record: vine.string().maxLength(128).optional(),
+          })
+        )
+        .validate(ctx.request.qs())
+      if (owner && query.record) {
+        if (!(await authorizeResource(ctx, owner, 'viewAny'))) throw new E_PUPITRE_FORBIDDEN()
+        const record = await lookupOrNull(() =>
+          scopedQuery(ctx, owner).where(owner.model.primaryKey, query.record!).first()
+        )
+        if (!record) return ctx.response.notFound()
+        if (!(await authorizeResource(ctx, owner, 'update', record)))
+          throw new E_PUPITRE_FORBIDDEN()
+      } else {
+        await ownerForm.authorize('create')
+      }
+      const provider = richField.mentions?.find((candidate) => candidate.char === query.mention)
+      if (!provider) return ctx.response.notFound()
+      const options = provider.options ?? (await provider.search?.(query.q ?? '', ctx)) ?? []
+      return ctx.response.ok({
+        options: options
+          .filter(
+            (option) =>
+              !provider.options ||
+              option.label.toLowerCase().includes((query.q ?? '').toLowerCase())
+          )
+          .slice(0, 20)
+          .map((option) => ({ value: option.id, label: option.label })),
+        hasMore: false,
+      })
+    }
+    if (!(await canViewForm(ownerForm))) throw new E_PUPITRE_FORBIDDEN()
     const found = fields(ownerForm.form).find((entry) => entry.path === fieldPath)
     if (!found) return ctx.response.notFound()
     const { field } = found

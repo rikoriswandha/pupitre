@@ -1,3 +1,4 @@
+import { impersonationState } from '../../auth/impersonation.js'
 import type { HttpContext } from '@adonisjs/core/http'
 import type { PupitrePageProps, ThemeVars } from '../../../catalog/wire.js'
 import type { PanelRuntime } from '../../manager.js'
@@ -12,6 +13,8 @@ import { realtimeChannels } from '../../adapters/realtime.js'
 import { requestMessages, resolveTranslations } from '../../i18n.js'
 import type { PupitreConfig } from '../../define_config.js'
 import clientKeys from '../../locales/client_keys.js'
+
+import { environmentProps } from '../environment.js'
 
 type SharedPupitre = PupitrePageProps['pupitre']
 
@@ -105,6 +108,7 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
         }
       : undefined
   return {
+    environment: await environmentProps(ctx),
     panel: {
       id: panel.id,
       path: panel.path,
@@ -116,6 +120,14 @@ export async function buildSharedProps(ctx: HttpContext): Promise<SharedPupitre>
       ...(search ? { search } : {}),
     },
     user: ctx.pupitre.user,
+    ...(impersonationState(ctx)
+      ? {
+          impersonation: {
+            name: ctx.pupitre.user?.name ?? '',
+            leaveUrl: `${ctx.pupitre.basePath}/impersonation/leave`,
+          },
+        }
+      : {}),
     ...(await tenancyProps(ctx)),
     nav: tenantUnbound ? [] : await buildNavigation(ctx),
     flash,

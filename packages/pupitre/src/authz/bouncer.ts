@@ -35,7 +35,7 @@ function isPolicyClass(value: unknown): value is PolicyClass {
 type BouncerContext = HttpContext & {
   bouncer?: {
     with(policy: PolicyClass): { allows(ability: string, record?: LucidRow): Promise<boolean> }
-    allows(ability: string): Promise<boolean>
+    allows(ability: string, record?: unknown): Promise<boolean>
   }
 }
 
@@ -85,6 +85,7 @@ async function allows(
   record?: LucidRow
 ): Promise<boolean> {
   if (!policy) {
+    if (ctx.pupitre?.panel?.strictAuthorization) return false
     if (!warnedResources.has(identity)) {
       warnedResources.add(identity)
       ctx.logger
@@ -116,10 +117,14 @@ export async function authorizeResource(
 }
 
 /** Evaluates a host-registered Bouncer ability without a resource policy. */
-export async function authorizeAbility(ctx: HttpContext, ability: string): Promise<boolean> {
+export async function authorizeAbility(
+  ctx: HttpContext,
+  ability: string,
+  record?: unknown
+): Promise<boolean> {
   const bouncer = (ctx as BouncerContext).bouncer
   if (!bouncer) throw new E_PUPITRE_BOUNCER_NOT_INITIALIZED()
-  return bouncer.allows(ability)
+  return record === undefined ? bouncer.allows(ability) : bouncer.allows(ability, record)
 }
 
 /**

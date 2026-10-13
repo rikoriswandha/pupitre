@@ -36,6 +36,11 @@ export interface PupitreStorage {
     contents: Uint8Array,
     options: { contentType: string; visibility: 'public' | 'private' }
   ): Promise<void>
+  putStream(
+    key: string,
+    contents: Readable,
+    options: { contentType: string; visibility: 'public' | 'private' }
+  ): Promise<void>
   delete(key: string): Promise<void>
   exists(key: string): Promise<boolean>
   url(key: string, options: { visibility: 'public' | 'private' }): Promise<string>
@@ -53,6 +58,10 @@ export function createPupitreStorage(diskName?: string): PupitreStorage {
     async put(key, contents, options) {
       const disk = await getDisk()
       await disk.put(key, contents, options)
+    },
+    async putStream(key, contents, options) {
+      const disk = await getDisk()
+      await disk.putStream(key, contents, options)
     },
     async delete(key) {
       const disk = await getDisk()

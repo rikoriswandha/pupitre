@@ -1,9 +1,11 @@
+import ImpersonationController from './impersonation.js'
 import type { HttpRouterService } from '@adonisjs/core/types'
 import type { PanelRuntime } from '../manager.js'
 import type PupitreManager from '../manager.js'
 import type { PanelRouteGroups } from '../http/router.js'
 import AuthController from './controller.js'
 import SocialAuthController from './social_controller.js'
+import SessionsController from './sessions_controller.js'
 /** Registers only the auth routes enabled for this panel. */
 export function registerAuthRoutes(
   router: HttpRouterService,
@@ -54,7 +56,28 @@ export function registerAuthRoutes(
     }
   })
   groups.user(() => {
+    if (panel.impersonation) {
+      router
+        .post('/impersonation/leave', [ImpersonationController, 'leave'])
+        .as('impersonation.leave')
+    }
     router.post('/logout', [AuthController, 'logout']).as('auth.logout')
+    if (panel.sessions) {
+      if (!panel.auth.profile?.enabled && !panel.auth.mfa && !panel.auth.passkeys?.enabled) {
+        router.get('/profile', [AuthController, 'profile']).as('profile')
+        router.put('/profile', [AuthController, 'updateProfile']).as('profile.update')
+      }
+      router.get('/profile/sessions', [SessionsController, 'index']).as('profile.sessions')
+      router
+        .delete('/profile/sessions/:id', [SessionsController, 'revoke'])
+        .as('profile.sessions.revoke')
+      router
+        .post('/profile/sessions/logout-others', [SessionsController, 'revokeOthers'])
+        .as('profile.sessions.others')
+      router
+        .post('/profile/sessions/passkey-options', [SessionsController, 'options'])
+        .as('profile.sessions.passkeyOptions')
+    }
     if (panel.auth.emailVerification) {
       router
         .get('/email/verify', [AuthController, 'verificationNotice'])

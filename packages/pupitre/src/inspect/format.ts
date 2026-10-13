@@ -7,6 +7,12 @@ export function formatPolicyInspection(
   for (const item of report) {
     output.push({ level: 'info', message: `${item.panel}.${item.resource} (${item.model})` })
     output.push({
+      level: 'info',
+      message: `  Strict authorization: ${item.strictAuthorization ? 'enabled' : 'disabled'}`,
+    })
+    for (const violation of item.violations ?? [])
+      output.push({ level: 'warning', message: `  Missing policy: ${violation}` })
+    output.push({
       level: item.allowByDefault ? 'warning' : 'info',
       message: item.allowByDefault
         ? '  WARNING: no policy found; authorization allows by default'

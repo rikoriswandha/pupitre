@@ -16,7 +16,7 @@ import type {
 } from '../definition/schema.js'
 import { getComponentDefinition, schema as schemaFactory } from '../builder/schema/schema.js'
 import { parseInZone } from '../format/index.js'
-import { sanitizeHtml } from '../sanitize.js'
+import { validateRichEditor } from './rich_content_validator.js'
 import { relatedScopedQuery } from '../tenancy/related.js'
 import { applyGroupedScope } from '../query/grouped_scope.js'
 import { authorizeModel, authorizeResource } from '../authz/bouncer.js'
@@ -326,7 +326,14 @@ function baseSchema(field: FieldDefinitionUnion, fieldPath = field.name): any {
       schema = vine.string()
       if (field.kind === 'email' || rules.email) schema = schema.email()
       if (field.kind === 'richEditor')
-        schema = schema.transform((value: string) => sanitizeHtml(value))
+        schema = schema
+          .use(
+            vine.createRule(async (value: unknown, _args: unknown, vineField: FieldContext) => {
+              if (typeof value === 'string') await validateRichEditor(value, field, vineField)
+            })()
+          )
+          // Preserve the sanitizer's pre-existing empty-value transform semantics.
+          .transform((value: string | null) => value ?? '')
       if (field.kind === 'text' && (field.tel || field.telRegex)) {
         const configured = field.telRegex
         const phonePattern =

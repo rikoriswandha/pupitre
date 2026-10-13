@@ -11,10 +11,10 @@ class Page {
   tabs(value: NonNullable<PageDefinition['tabs']>): Page {
     return new Page({ ...this.definition, tabs: value })
   }
-  widgets(value: readonly WidgetBuilder[]): Page {
+  widgets(value: readonly Pick<WidgetBuilder, 'toDefinition'>[]): Page {
     return new Page({ ...this.definition, widgets: value.map((widget) => widget.toDefinition()) })
   }
-  footerWidgets(value: readonly WidgetBuilder[]): Page {
+  footerWidgets(value: readonly Pick<WidgetBuilder, 'toDefinition'>[]): Page {
     return new Page({
       ...this.definition,
       footerWidgets: value.map((widget) => widget.toDefinition()),

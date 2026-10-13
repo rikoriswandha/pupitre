@@ -23,6 +23,7 @@ import { requestMessages, resolveTranslations, t } from '../i18n.js'
 import { persistLocale } from '../i18n/locale_controller.js'
 import { validationMessages } from '../i18n/validation.js'
 import { completeLogin } from './login_flow.js'
+import { recordAuthEvent, revokeCurrentSession } from './session_service.js'
 import { consumeMfaLimit, clearMfaLimit } from './mfa_limit.js'
 import { consumeRecoveryCode } from './recovery_code.js'
 import { verifyTotp } from './totp.js'
@@ -311,6 +312,7 @@ export default class AuthController {
     try {
       user = await Model.verifyCredentials(data.email, data.password)
     } catch {
+      await recordAuthEvent(ctx, { event: 'failed', method: 'password' })
       return flashErrors(ctx, { email: t('These credentials do not match our records') })
     }
     await clearLoginLimit(key)
@@ -399,6 +401,7 @@ export default class AuthController {
       )
     }
     if (!verified) {
+      await recordAuthEvent(ctx, { event: 'mfa_failed', userId: pending.userId, method: 'mfa' })
       if (limit.exhausted) {
         ctx.session?.forget('pupitre.pendingLogin')
         return ctx.response.redirect(`${panelPath(ctx)}/login`)
@@ -412,6 +415,7 @@ export default class AuthController {
         typeof pending.redirect === 'string' ? safeRedirect(ctx, pending.redirect) : panelPath(ctx),
       remember: pending.remember === true,
       mfaSatisfied: true,
+      method: typeof pending.method === 'string' ? pending.method : 'password',
     })
   }
   async mfaSetup(ctx: AuthContext) {
@@ -552,6 +556,7 @@ export default class AuthController {
     return completeLogin(ctx, ctx.pupitre.panel, user, {
       redirect: panelPath(ctx),
       mfaSatisfied: result.userVerified,
+      method: 'passkey',
     })
   }
   async passkeyRegisterOptions(ctx: AuthContext) {
@@ -614,9 +619,12 @@ export default class AuthController {
     return deleted ? ctx.response.noContent() : ctx.response.notFound()
   }
   async logout(ctx: AuthContext) {
+    await revokeCurrentSession(ctx)
     await panelAuth(ctx)
       .use(panelGuard(ctx.pupitre.panel) ?? 'web')
       .logout()
+    ctx.session?.forget('pupitre.impersonation')
+    ctx.session?.forget(`pupitre.mfaSatisfied.${ctx.pupitre.panel.id}`)
     return ctx.response.redirect(`${panelPath(ctx)}/login`)
   }
   async forgotPage(ctx: AuthContext) {
@@ -863,6 +871,16 @@ export default class AuthController {
           basePath: panelPath(ctx),
           mfaEnabled: Boolean(user.$attributes[cfg.auth.columns.mfaEnabledAt]),
           passkeysEnabled: ctx.pupitre.panel.auth.passkeys?.enabled === true,
+        })
+      )
+    }
+    if (ctx.pupitre.panel.sessions && !ctx.session.get('pupitre.impersonation')) {
+      nodes.push(
+        schema.view('PupitreProfileSessions', {
+          basePath: panelPath(ctx),
+          hasPassword: Boolean(user.$attributes[cfg.auth.columns.password]),
+          passkeysEnabled: ctx.pupitre.panel.auth.passkeys?.enabled === true,
+          history: ctx.pupitre.panel.sessions.history,
         })
       )
     }

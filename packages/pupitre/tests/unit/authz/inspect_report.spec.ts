@@ -28,7 +28,7 @@ function panel(policy: unknown, actions: unknown[] = []) {
       actions: { header: [], row: actions, bulk: [] },
     },
   } as unknown as ResourceRuntime
-  return { id: 'admin', resources: [resource] } as unknown as PanelRuntime
+  return { id: 'admin', resources: [resource], pages: [], widgets: [] } as unknown as PanelRuntime
 }
 
 test.group('pupitre inspect policy report', () => {

@@ -1,3 +1,4 @@
+import { requestClusters } from '../navigation/clusters.js'
 import { symbols as inertiaSymbols } from '@adonisjs/inertia'
 import app from '@adonisjs/core/services/app'
 import { catalogVersion, pageProps } from '../../catalog/index.js'
@@ -82,11 +83,19 @@ export function buildPanelPageProps(options: {
     filters,
     subNavigation,
   } = options
+  const activeCluster = [...(requestClusters.get(ctx)?.values() ?? [])].find(({ items }) =>
+    items.some((item) => item.active)
+  )
+  const clusterBreadcrumb = activeCluster
+    ? [{ label: activeCluster.definition.label, url: activeCluster.items[0]!.url }]
+    : []
   const page = {
     key,
     kind: component ? ('custom' as const) : kind,
     title,
-    breadcrumbs: ctx.pupitre.panel.breadcrumbs ? options.breadcrumbs : [],
+    breadcrumbs: ctx.pupitre.panel.breadcrumbs
+      ? [...options.breadcrumbs.slice(0, 1), ...clusterBreadcrumb, ...options.breadcrumbs.slice(1)]
+      : [],
     spec,
     state,
     actions: { header: headerActions },
@@ -94,6 +103,12 @@ export function buildPanelPageProps(options: {
     ...(filters ? { filters } : {}),
     ...(relations ? { relations } : {}),
     ...(subNavigation ? { subNavigation } : {}),
+    ...(activeCluster
+      ? {
+          clusterNavigation: activeCluster.items,
+          clusterNavigationPosition: activeCluster.definition.subNavigationPosition,
+        }
+      : {}),
     ...(deferred ? { deferred } : {}),
     catalogVersion,
     catalogExtensions: collectCatalogExtensions({ spec, relations, widgets }),

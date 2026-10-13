@@ -125,6 +125,15 @@ class Action implements ActionBuilder {
   async(value = true): this {
     return this.set({ async: value })
   }
+  formats(value: readonly ('csv' | 'xlsx')[]): this {
+    if (
+      this.definition.builtin !== 'export' ||
+      value.length === 0 ||
+      value.some((format) => format !== 'csv' && format !== 'xlsx')
+    )
+      throw new E_PUPITRE_INVALID_ACTION_CONTEXT()
+    return this.set({ exportFormats: [...new Set(value)] })
+  }
   columns(value: readonly ExportColumnBuilder[]): this {
     if (this.definition.builtin !== 'export') throw new E_PUPITRE_INVALID_ACTION_CONTEXT()
     return this.set({ exportColumns: value.map((column) => column.definition) })
@@ -165,6 +174,8 @@ export function action(name: string): ActionBuilder {
   return create(name)
 }
 export const actions = {
+  impersonate: (name = 'impersonate') =>
+    new Action({ name, kind: 'action', builtin: 'impersonate', context: 'record' }),
   create: (name = 'create') => create(name, 'create'),
   edit: (name = 'edit') => create(name, 'edit'),
   view: (name = 'view') => create(name, 'view'),

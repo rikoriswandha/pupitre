@@ -1,3 +1,5 @@
+import type { ImpersonationOptions } from '../definition/panel.js'
+import type { EnvironmentIndicatorOptions } from '../definition/panel.js'
 import type {
   PanelAuthDefinition,
   PanelDefinition,
@@ -15,6 +17,9 @@ export type TenancyInput = Partial<Omit<TenancyDefinition, 'mode'>> & { mode: Te
 
 export type PanelBuilder = {
   readonly definition: PanelDefinition
+  impersonation(options?: ImpersonationOptions): PanelBuilder
+  strictAuthorization(enabled?: boolean): PanelBuilder
+  environmentIndicator(options?: EnvironmentIndicatorOptions): PanelBuilder
   path(value: string): PanelBuilder
   domain(value: string): PanelBuilder
   guard(value: string): PanelBuilder
@@ -35,6 +40,7 @@ export type PanelBuilder = {
   mfa(options?: { required?: boolean; issuer?: string } | false): PanelBuilder
   passkeys(enabled?: boolean): PanelBuilder
   profile(options?: boolean | { avatar?: boolean }): PanelBuilder
+  sessions(options?: { history?: boolean; retentionDays?: number }): PanelBuilder
   social(providers: string[] | { providers: string[]; registration?: boolean }): PanelBuilder
   navigation(entries: readonly Definable<NavEntryDefinition>[]): PanelBuilder
   userMenu(items: readonly UserMenuItemDefinition[]): PanelBuilder
@@ -78,6 +84,15 @@ class Panel implements PanelBuilder {
   }
   private setAuth(patch: Partial<PanelAuthDefinition>): PanelBuilder {
     return this.set({ auth: { ...this.definition.auth, ...patch } })
+  }
+  impersonation(options: ImpersonationOptions = {}): PanelBuilder {
+    return this.set({ impersonation: { ...options } })
+  }
+  strictAuthorization(enabled = true): PanelBuilder {
+    return this.set({ strictAuthorization: enabled })
+  }
+  environmentIndicator(options: EnvironmentIndicatorOptions = {}): PanelBuilder {
+    return this.set({ environmentIndicator: { ...options } })
   }
   path(value: string): PanelBuilder {
     return this.set({ path: value })
@@ -157,6 +172,12 @@ class Panel implements PanelBuilder {
           ? { enabled: options, avatar: options }
           : { enabled: true, avatar: options.avatar ?? true },
     })
+  }
+  sessions(options: { history?: boolean; retentionDays?: number } = {}): PanelBuilder {
+    const retentionDays = options.retentionDays ?? 90
+    if (!Number.isInteger(retentionDays) || retentionDays < 1)
+      throw new Error('Session retentionDays must be a positive integer')
+    return this.set({ sessions: { history: options.history ?? true, retentionDays } })
   }
   social(providers: string[] | { providers: string[]; registration?: boolean }): PanelBuilder {
     const options = Array.isArray(providers) ? { providers } : providers

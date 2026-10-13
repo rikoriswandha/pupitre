@@ -2,6 +2,13 @@ import type { ExtensionFieldDefinition, ExtensionEntryDefinition } from './exten
 import type { HttpContext } from '@adonisjs/core/http'
 import type { ActionBuilder, ActionDefinition } from './action.js'
 import type { ModelQueryBuilderContract, LucidModel } from '@adonisjs/lucid/types/model'
+import type {
+  MentionProviderBuilder,
+  MentionProviderDefinition,
+  RichBlockBuilder,
+  RichBlockDefinition,
+  RichContentOptions,
+} from './rich_content.js'
 
 export type SchemaKind =
   | 'extensionField'
@@ -323,6 +330,9 @@ export type RichEditorFieldDefinition = FieldDefinition<
     maxHeight?: number
     fileAttachmentsDisk?: string
     fileAttachmentsDirectory?: string
+    mergeTags?: readonly string[] | Record<string, string>
+    mentions?: readonly MentionProviderDefinition[]
+    customBlocks?: readonly RichBlockDefinition[]
   }
 >
 export type FileUploadFieldDefinition = FieldDefinition<
@@ -344,10 +354,23 @@ export type FileUploadFieldDefinition = FieldDefinition<
   }
 >
 export type RepeaterRelationshipOptions = { name: string; orderColumn?: string }
+export type RepeaterTableColumnDefinition = {
+  label: string
+  width?: string
+  alignment?: 'start' | 'center' | 'end'
+  required?: boolean
+}
+export interface RepeaterTableColumnBuilder {
+  width(value: string): this
+  alignment(value: 'start' | 'center' | 'end'): this
+  markAsRequired(value?: boolean): this
+  toDefinition(): RepeaterTableColumnDefinition
+}
 export type RepeaterFieldDefinition = FieldDefinition<
   'repeater',
   {
     schema?: SchemaNodeDefinition[] | ((repeater: SchemaNamespace) => SchemaNodeDefinition[])
+    table?: RepeaterTableColumnDefinition[]
     minItems?: number
     maxItems?: number
     reorderable?: boolean
@@ -581,6 +604,8 @@ export type EntryCommon = {
 }
 export type TextEntryDefinition = EntryCommon & {
   kind: 'textEntry'
+  html?: boolean
+  richContent?: RichContentOptions | FieldClosure<RichContentOptions>
   badge?: boolean
   copyable?: boolean
   url?: string | FieldClosure<string | undefined | Promise<string | undefined>>
@@ -757,6 +782,7 @@ export interface RepeaterBuilder extends FieldBuilderBase<RepeaterFieldDefinitio
     value:
       readonly SchemaNodeBuilder[] | ((repeater: SchemaNamespace) => readonly SchemaNodeBuilder[])
   ): this
+  table(columns?: readonly RepeaterTableColumnBuilder[]): this
   minItems(value: number): this
   maxItems(value: number): this
   reorderable(value?: boolean): this
@@ -785,6 +811,9 @@ export interface FileUploadBuilder extends FieldBuilderBase<FileUploadFieldDefin
   previewable(value?: boolean): this
 }
 export interface RichEditorBuilder extends FieldBuilderBase<RichEditorFieldDefinition> {
+  mergeTags(value: readonly string[] | Record<string, string>): this
+  mentions(value: readonly (MentionProviderBuilder | MentionProviderDefinition)[]): this
+  customBlocks(value: readonly (RichBlockBuilder | RichBlockDefinition)[]): this
   toolbar(value: readonly string[]): this
   minHeight(value: number): this
   maxHeight(value: number): this
@@ -914,6 +943,8 @@ export interface TextEntryBuilder extends ComponentBuilder<
   money(currency: string): this
   limit(value: number): this
   markdown(value?: boolean): this
+  html(value?: boolean): this
+  richContent(value: RichContentOptions | FieldClosure<RichContentOptions>): this
   /** Display labels for stored option values, e.g. `{ draft: 'Draft' }`. */
   options(value: SelectOptions): this
 }
@@ -1023,6 +1054,7 @@ export type FieldConstructors<M> = {
   markdownEditor(name: FieldName<M>): MarkdownEditorBuilder
   codeEditor(name: FieldName<M>): CodeEditorBuilder
   repeater(name: string): RepeaterBuilder
+  tableColumn(label: string): RepeaterTableColumnBuilder
   textEntry(name: FieldName<M>): TextEntryBuilder
   iconEntry(name: FieldName<M>): IconEntryBuilder
   imageEntry(name: FieldName<M>): ImageEntryBuilder

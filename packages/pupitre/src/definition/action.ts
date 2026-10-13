@@ -62,6 +62,7 @@ export type ActionDefinition = {
     | 'forceDelete'
     | 'replicate'
   builtin?:
+    | 'impersonate'
     | 'create'
     | 'edit'
     | 'view'
@@ -122,6 +123,7 @@ export type ActionDefinition = {
   group?: string
   async?: boolean
   exportColumns?: readonly ExportColumnDefinition[]
+  exportFormats?: readonly ('csv' | 'xlsx')[]
   deselectAfter?: boolean
   excludeAttributes?: readonly string[]
 }
@@ -162,6 +164,7 @@ export interface ActionBuilder {
   group(value: string): this
   async(value?: boolean): this
   columns(value: readonly ExportColumnBuilder[]): this
+  formats(value: readonly ('csv' | 'xlsx')[]): this
   deselectAfter(value?: boolean): this
   destructive(value?: boolean): this
 }
