@@ -1,68 +1,89 @@
 name: release
 
-# Publishes already-versioned packages (versions are bumped and committed beforehand,
-# see docs/DEVELOPMENT.md §9) through npm trusted publishing (OIDC, no token).
+# Publishes every workspace whose package.json version is not yet on npm, after `ci` passes
+# on main. Versions are bumped and committed beforehand (docs/DEVELOPMENT.md §9); a push
+# without a version bump publishes nothing. npm trusted publishing (OIDC, no token): the
+# trusted publisher of every package must name this workflow file, release.yml.
 on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  # Manual retry, e.g. after a partial publish failure; publishes whatever is still missing.
   workflow_dispatch:
-    inputs:
-      target:
-        description: Package set to publish
-        required: true
-        type: choice
-        options:
-          - core
-          - pupitre-shield
-          - pupitre-audit
-          - pupitre-settings
-          - pupitre-transmit
-          - pupitre-media
-          - pupitre-calendar
-          - pupitre-kanban
-          - pupitre-health
-          - pupitre-jobs
-          - pupitre-backup
-          - create-pupitre-plugin
 
 permissions:
   contents: write
   id-token: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  plan:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+      workspaces: ${{ steps.unpublished.outputs.workspaces }}
+    steps:
+      - id: sha
+        run: echo "sha=${{ github.event.workflow_run.head_sha || github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.sha.outputs.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Find unpublished versions
+        id: unpublished
+        # Root `build` lists the publishable workspaces in dependency order; publish in that order.
+        run: |
+          workspaces=$(node -p "require('./package.json').scripts.build.match(/-w (\S+)/g).map((w) => w.slice(3)).join(' ')")
+          pending=""
+          for workspace in $workspaces; do
+            name=$(node -p "require('./$workspace/package.json').name")
+            version=$(node -p "require('./$workspace/package.json').version")
+            if [ -z "$(npm view "$name@$version" version 2>/dev/null)" ]; then
+              echo "$name@$version: unpublished"
+              pending="$pending $workspace"
+            else
+              echo "$name@$version: already on npm"
+            fi
+          done
+          echo "workspaces=${pending# }" >> "$GITHUB_OUTPUT"
+
   publish:
+    needs: plan
+    if: needs.plan.outputs.workspaces != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
       - run: npm ci
+      # The commit already passed `ci`; build output and tarball contents are re-checked here.
       - run: npm run build
-      - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
-        working-directory: apps/example
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
       - run: npm run verify:exports
-      - run: npm run registry:check
-      - name: Resolve workspaces
-        id: workspaces
-        run: |
-          if [ "${{ inputs.target }}" = "core" ]; then
-            echo "list=packages/pupitre packages/pupitre-react packages/pupitre-ui" >> "$GITHUB_OUTPUT"
-          else
-            echo "list=packages/${{ inputs.target }}" >> "$GITHUB_OUTPUT"
-          fi
       - name: Publish and tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for workspace in ${{ steps.workspaces.outputs.list }}; do
+          for workspace in ${{ needs.plan.outputs.workspaces }}; do
             name=$(node -p "require('./$workspace/package.json').name")
             version=$(node -p "require('./$workspace/package.json').version")
             tag=$(node -p "/-/.test('$version') ? 'next' : 'latest'")
             npm publish --workspace "$workspace" --provenance --access public --tag "$tag"
-            git tag "$name@$version"
+            if git ls-remote --exit-code --tags origin "refs/tags/$name@$version" > /dev/null; then
+              echo "tag $name@$version already exists"
+            else
+              git tag "$name@$version"
+              git push origin "refs/tags/$name@$version"
+            fi
           done
-          git push origin --tags

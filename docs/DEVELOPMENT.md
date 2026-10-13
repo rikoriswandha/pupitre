@@ -61,7 +61,6 @@ Setiap entri `exports` package punya kondisi `"@rikology/source": "./<file>.ts"`
 | `registry:build` / `registry:check` | M4 (WP40): bangun `packages/pupitre-ui/registry/registry.json`; `check` gagal kalau diff |
 | `bundle:budget` | WP42: test gate + ukuran gzip/Brotli graph Vite, batas chunk lazy; jalankan sesudah build example |
 | `e2e`                               | Playwright terhadap `apps/example`                                                       |
-| `release`                           | `release-it` per package (lihat §9)                                                      |
 
 WP40 tersedia: `registry:build` memindai sumber UI dan menulis manifest serta `registry/public/{registry.json,r/*.json}` secara deterministik; `registry:check` membangun ke direktori sementara, membandingkan artefak committed, lalu menjalankan test copy-ability semua item. Jalankan build dan commit hasil setelah mengubah komponen. Origin dependency dapat diganti dengan `PUPITRE_REGISTRY_URL=http://localhost:3404/r npm run registry:build` atau `node tools/registry-build/index.mjs --base-url http://localhost:3404/r --output /tmp/pupitre-registry`; jangan commit output origin lokal.
 
@@ -157,7 +156,7 @@ Langkah WP40 aktif di job `checks`, tepat sesudah `verify:exports`; perubahan su
 | `npm run bundle:budget` | Langsung setelah build example | Budget gzip/Brotli terlampaui, fitur berat tidak lazy, referensi manifest tidak lengkap |
 | `npm run verify:exports` | Setelah test package | Import runtime tidak dideklarasikan/tidak resolve, tarball kotor, aset rilis hilang |
 
-`release.yml` (`workflow_dispatch`, input `target`: `core` = `pupitre` + `pupitre-react` + `pupitre-ui` lockstep, atau satu plugin/scaffolder) menjalankan gerbang yang sama dengan CI (build, lint, typecheck, test, `verify:exports`, `registry:check`), lalu `npm publish --provenance` per workspace lewat npm trusted publishing (OIDC, tanpa token) dan mendorong tag `@rikology/<package>@x.y.z`. Versi tidak di-bump oleh workflow: bump dan CHANGELOG di-commit lebih dulu. Versi berisi `-` dipublikasikan dengan dist-tag `next`, selain itu `latest`.
+`release.yml` berjalan otomatis setelah `ci` sukses untuk push ke `main` (`workflow_run`, checkout tepat di commit yang lulus CI), atau manual lewat `workflow_dispatch` untuk retry. Job `plan` membaca daftar workspace publishable dari script `build` root (urutan dependency) dan memilih workspace yang `name@version`-nya belum ada di npm; push tanpa bump versi tidak mempublikasikan apa pun. Job `publish` menjalankan `build` + `verify:exports`, lalu `npm publish --provenance` per workspace lewat npm trusted publishing (OIDC, tanpa token; trusted publisher tiap package harus menunjuk `release.yml`) dan mendorong tag `@rikology/<package>@x.y.z` bila belum ada. Versi tidak di-bump oleh workflow: bump dan CHANGELOG di-commit lebih dulu. Versi berisi `-` dipublikasikan dengan dist-tag `next`, selain itu `latest`. Provenance mensyaratkan repo publik. Publish yang gagal sebagian cukup diulang lewat `workflow_dispatch`.
 
 ## 9. Versi & rilis
 
