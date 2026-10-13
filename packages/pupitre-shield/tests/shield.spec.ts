@@ -214,6 +214,99 @@ async function responseStatus(response: Promise<Response>) {
 }
 
 test.group('Shield permissions', () => {
+  test('an impersonation grant cannot assume a super administrator identity', async ({
+    assert,
+  }) => {
+    const app = await createTestApp({
+      panels: {
+        admin: async () => ({
+          default: definePanel('admin')
+            .login()
+            .impersonation()
+            .resources([
+              defineResource(User)
+                .slug('users')
+                .scope(false)
+                .actions({ row: [actions.impersonate().can('impersonate')] })
+                .pages({ list: pages.list() }),
+            ])
+            .plugins([shield(options)]),
+        }),
+      },
+      pupitre: { auth: { model: async () => ({ default: User }), columns: { name: 'name' } } },
+      setup: async (_router, application) => {
+        const database = await application.container.make('lucid.db')
+        if (!(await database.connection().schema.hasTable('pupitre_roles')))
+          await new Migration(database.connection(), 'shield').execUp()
+        for (const name of [
+          'pupitre_role_user',
+          'pupitre_permission_role',
+          'pupitre_permissions',
+          'pupitre_roles',
+        ])
+          await database.from(name).delete()
+      },
+    })
+    try {
+      const actor = await User.create({
+        name: 'Delegated',
+        email: 'delegated@example.test',
+        password: 'password',
+      })
+      const target = await User.create({
+        name: 'Super',
+        email: 'super@example.test',
+        password: 'password',
+      })
+      const ordinary = await User.create({
+        name: 'Ordinary',
+        email: 'ordinary@example.test',
+        password: 'password',
+      })
+      const admin = await Role.create({ name: 'super-admin' })
+      const delegated = await Role.create({ name: 'delegated-impersonator' })
+      const permissions = await Permission.createMany([
+        { name: 'users.impersonate' },
+        { name: 'users.viewAny' },
+        { name: 'users.view' },
+      ])
+      await delegated.related('permissions').attach(permissions.map((permission) => permission.id))
+      await app.database.table('pupitre_role_user').multiInsert([
+        { user_id: actor.id, role_id: delegated.id },
+        { user_id: target.id, role_id: admin.id },
+      ])
+      const cookie = await app.loginAs(actor)
+      const denied = await request(
+        app.baseUrl,
+        `/admin/users/${target.id}/actions/impersonate`,
+        'POST',
+        {},
+        cookie
+      )
+      assert.equal(denied.status, 403)
+      const allowed = await request(
+        app.baseUrl,
+        `/admin/users/${ordinary.id}/actions/impersonate`,
+        'POST',
+        {},
+        cookie
+      )
+      assert.equal(allowed.status, 200)
+      await app.database.table('pupitre_role_user').insert({ user_id: actor.id, role_id: admin.id })
+      invalidateShieldPermissions()
+      const superCookie = await app.loginAs(actor)
+      const superAllowed = await request(
+        app.baseUrl,
+        `/admin/users/${target.id}/actions/impersonate`,
+        'POST',
+        {},
+        superCookie
+      )
+      assert.equal(superAllowed.status, 200)
+    } finally {
+      await closeTestApp(app)
+    }
+  })
   test('editors without roles.viewAny can create and edit users with the roles field hidden', async ({
     assert,
   }) => {

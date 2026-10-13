@@ -285,6 +285,15 @@ function shieldForPanel(options: ShieldOptions) {
     },
     boot({ panel }) {
       panelShieldOptions.set(panel, options)
+      if (panel.impersonation && !panel.impersonation.canBeImpersonated) {
+        panel.impersonation = {
+          ...panel.impersonation,
+          canBeImpersonated: async (target, ctx) =>
+            String(target.$primaryKeyValue) !== String(ctx.pupitre.authUser?.$primaryKeyValue) &&
+            (!(await shieldAllows(ctx, target, '', options)) ||
+              (await shieldAllows(ctx, ctx.pupitre.authUser, '', options))),
+        }
+      }
       // Relation actions authorize the related model, not their owning resource.
       const visit = (value: unknown): void => {
         if (!value || typeof value !== 'object') return
