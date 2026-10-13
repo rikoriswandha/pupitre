@@ -49,7 +49,7 @@ graph LR
 
 Batas ini ditegakkan oleh lint rule `no-restricted-imports` per workspace dan oleh `verify:exports` di CI (lihat [DEVELOPMENT.md](./DEVELOPMENT.md)).
 
-Distribusi copy-ownership WP40: `tools/registry-build` memindai sumber `pupitre-ui` dan graph import. Manifest committed: `packages/pupitre-ui/registry/registry.json`; payload dengan `content`: `registry/public/r/<name>.json`, disajikan docs site sebagai `https://pupitre.dev/r/<name>.json` bersama index `/registry.json`. Dependency registry memakai URL absolut; runtime/core catalog tetap npm. Target `components/pupitre/<path relatif sumber>` menjaga import relatif; host mengimpor stylesheet sesudah Tailwind. CI `registry:check` mencegah drift sumber/JSON dan menguji semua import setelah salinan hanya dari JSON.
+Distribusi copy-ownership WP40: `tools/registry-build` memindai sumber `pupitre-ui` dan graph import. Manifest committed: `packages/pupitre-ui/registry/registry.json`; payload dengan `content`: `registry/public/r/<name>.json`, disajikan docs site sebagai `https://pupitre.rikology.com/r/<name>.json` bersama index `/registry.json`. Dependency registry memakai URL absolut; runtime/core catalog tetap npm. Target `components/pupitre/<path relatif sumber>` menjaga import relatif; host mengimpor stylesheet sesudah Tailwind. CI `registry:check` mencegah drift sumber/JSON dan menguji semua import setelah salinan hanya dari JSON.
 
 ## 2. Modul internal `@rikology/pupitre`
 

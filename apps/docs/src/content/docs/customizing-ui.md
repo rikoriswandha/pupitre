@@ -24,14 +24,14 @@ Catalog component names go into the renderer registry; non-catalog names form th
 ```sh
 node ace pupitre:ui add select --yes
 # Equivalent single item:
-npx shadcn@4 add https://pupitre.dev/r/select.json --yes
+npx shadcn@4 add https://pupitre.rikology.com/r/select.json --yes
 ```
 
 The site serves `/registry.json` and `/r/<name>.json`. Registry dependencies use full URLs and keep shared dependencies/imports consistent. Every payload file is `registry:file` with an explicit `~/inertia/components/pupitre/<source-path>` target. Shadcn resolves `~/` from the host root (or `--cwd` for the direct installer), independently of `components.json` aliases. Files retain their layout, including `inertia/components/pupitre/components/Select.tsx`, `primitives/index.tsx` and `icons.tsx`.
 
 Do not pass `--path` to shadcn: it flattens files to their basenames and breaks relative imports. `pupitre:ui add` intentionally has no `--path` option. Register the copied component explicitly; copying does not automatically change the host registry.
 
-Browse the item index at [https://pupitre.dev/registry.json](https://pupitre.dev/registry.json); individual payloads are `https://pupitre.dev/r/<name>.json`. Names are kebab-case, including hooks whose source filenames use underscores. In an initialized shadcn host, copy multiple items with `node ace pupitre:ui add select styles --yes`. `pupitre:ui` is the Ace command name and `add` is the operation; copying is explicit source ownership, not plugin installation.
+Browse the item index at [https://pupitre.rikology.com/registry.json](https://pupitre.rikology.com/registry.json); individual payloads are `https://pupitre.rikology.com/r/<name>.json`. Names are kebab-case, including hooks whose source filenames use underscores. In an initialized shadcn host, copy multiple items with `node ace pupitre:ui add select styles --yes`. `pupitre:ui` is the Ace command name and `add` is the operation; copying is explicit source ownership, not plugin installation.
 
 For a hook item, use `node ace pupitre:ui add use-live-field --yes`.
 

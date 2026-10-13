@@ -56,7 +56,7 @@ test('pupitre:ui dry run validates without spawning', async ({ assert }) => {
   assert.deepEqual(await addUiComponents(['select'], { dryRun: true }, services), [
     'shadcn@4',
     'add',
-    'https://pupitre.dev/r/select.json',
+    'https://pupitre.rikology.com/r/select.json',
   ])
   assert.lengthOf(calls, 0)
 })
@@ -72,9 +72,9 @@ test('pupitre:ui rejects unsafe registry URLs and names before network or spawn'
   }) as typeof fetch
   for (const registry of [
     'http://evil.example',
-    'https://user:pass@pupitre.dev',
-    'https://pupitre.dev?token=secret',
-    'https://pupitre.dev#fragment',
+    'https://user:pass@pupitre.rikology.com',
+    'https://pupitre.rikology.com?token=secret',
+    'https://pupitre.rikology.com#fragment',
     'file://remote/share',
     'javascript:alert(1)',
   ])
@@ -90,6 +90,6 @@ test('pupitre:ui accepts kebab-case hook registry names', async ({ assert }) => 
   services.fetch = (async () =>
     new Response(JSON.stringify({ items: [{ name: 'use-mobile' }] }))) as typeof fetch
   const installerArgs = await addUiComponents(['use-mobile'], { dryRun: true }, services)
-  assert.include(installerArgs, 'https://pupitre.dev/r/use-mobile.json')
+  assert.include(installerArgs, 'https://pupitre.rikology.com/r/use-mobile.json')
   assert.notInclude(installerArgs, '--path')
 })

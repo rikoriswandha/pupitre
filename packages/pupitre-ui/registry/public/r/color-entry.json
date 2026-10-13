@@ -5,7 +5,7 @@
   "title": "ColorEntry",
   "dependencies": [],
   "registryDependencies": [
-    "https://pupitre.dev/r/entry-shell.json"
+    "https://pupitre.rikology.com/r/entry-shell.json"
   ],
   "files": [
     {

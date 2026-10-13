@@ -10,10 +10,10 @@
     "zod@^4.3.6"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/primitives.json",
-    "https://pupitre.dev/r/text.json",
-    "https://pupitre.dev/r/use-live-field.json"
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/text.json",
+    "https://pupitre.rikology.com/r/use-live-field.json"
   ],
   "files": [
     {

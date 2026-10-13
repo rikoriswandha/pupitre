@@ -4,7 +4,7 @@ export default definePlugin({
   name: '{{slug}}',
   navigation: [
     nav.group('Plugins').items([
-      nav.item('{{slug}} documentation').url('https://pupitre.dev').external(),
+      nav.item('{{slug}} documentation').url('https://pupitre.rikology.com').external(),
     ]),
   ],
 })

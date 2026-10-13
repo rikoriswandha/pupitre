@@ -8,8 +8,8 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/media-protocol.json",
-    "https://pupitre.dev/r/primitives.json"
+    "https://pupitre.rikology.com/r/media-protocol.json",
+    "https://pupitre.rikology.com/r/primitives.json"
   ],
   "files": [
     {

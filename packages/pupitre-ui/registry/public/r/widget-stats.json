@@ -8,8 +8,8 @@
     "@rikology/pupitre@^1.0.0"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/primitives.json"
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/primitives.json"
   ],
   "files": [
     {

@@ -11,7 +11,7 @@ export function __camelName__(options: PluginOptions = {}) {
       nav.group('Plugins').items([
         nav
           .item('{{name}} documentation')
-          .url(options.documentationUrl ?? 'https://pupitre.dev')
+          .url(options.documentationUrl ?? 'https://pupitre.rikology.com')
           .external(),
       ]),
     ],

@@ -9,10 +9,10 @@ In an initialized shadcn host:
 ```sh
 node ace pupitre:ui add select --yes
 # Equivalent installer:
-npx shadcn@4 add https://pupitre.dev/r/select.json --yes
+npx shadcn@4 add https://pupitre.rikology.com/r/select.json --yes
 ```
 
-The Ace command validates kebab-case names against `https://pupitre.dev/registry.json`. It supports multiple names, `--registry <origin>`, `--yes`, and `--dry-run`. Hook item names use hyphens even when their source filenames use underscores. Local registries can use loopback HTTP or `file:///absolute/path/to/registry/public`; regenerate dependency URLs for the same local origin.
+The Ace command validates kebab-case names against `https://pupitre.rikology.com/registry.json`. It supports multiple names, `--registry <origin>`, `--yes`, and `--dry-run`. Hook item names use hyphens even when their source filenames use underscores. Local registries can use loopback HTTP or `file:///absolute/path/to/registry/public`; regenerate dependency URLs for the same local origin.
 
 Every payload file is `registry:file` with an explicit `~/inertia/components/pupitre/<source-path>` target. Shadcn resolves `~/` from the host root (`--cwd` for the direct installer), independently of `components.json` aliases and Vite's `src` directory. **Do not pass `--path`**: shadcn flattens every file to its basename, breaking relative imports. The Ace wrapper intentionally does not expose this option.
 
@@ -40,7 +40,7 @@ Run `npm run registry:build` from the monorepo root after source edits and commi
 - Public index: `registry/public/registry.json`.
 - Inlined item payloads: `registry/public/r/<name>.json`.
 - Docs site must serve `registry/public` at its root, exposing `/registry.json` and `/r/*` as JSON.
-- Default item origin: `https://pupitre.dev/r`.
+- Default item origin: `https://pupitre.rikology.com/r`.
 - For isolated local generation: `node tools/registry-build/index.mjs --base-url http://localhost:3404/r --output /tmp/pupitre-registry`.
 - Real installer smoke: `node tools/registry-build/shadcn-smoke.mjs` runs shadcn@4 into an isolated Vite/React/TS host and type-checks the copied source. Unpublished npm dependencies are pre-provisioned from the workspace; only their version specifiers are omitted in the served smoke payload to prevent reinstallation.
 

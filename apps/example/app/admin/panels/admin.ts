@@ -84,9 +84,9 @@ const adminPanel = definePanel('admin')
         nav.item().page('form-playground').sort(4),
         nav.item().page('tour').sort(5),
       ]),
-    nav.item('Documentation').url('https://pupitre.dev/docs').external(),
+    nav.item('Documentation').url('https://pupitre.rikology.com').external(),
   ])
-  .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])
+  .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.rikology.com', external: true, sort: 10 }])
   .theme(adminTheme)
   .plugins([
     media({

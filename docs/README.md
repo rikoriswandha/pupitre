@@ -1,6 +1,6 @@
 # Pupitre — Dokumentasi
 
-Admin panel Filament-like untuk AdonisJS v7 + Inertia React. Dokumen di folder ini adalah bahan kerja implementasi; dokumentasi pengguna akhir akan tinggal di `pupitre.dev` (M4).
+Admin panel Filament-like untuk AdonisJS v7 + Inertia React. Dokumen di folder ini adalah bahan kerja implementasi; dokumentasi pengguna akhir akan tinggal di `pupitre.rikology.com` (M4).
 
 | Dokumen | Isi | Baca saat |
 | --- | --- | --- |

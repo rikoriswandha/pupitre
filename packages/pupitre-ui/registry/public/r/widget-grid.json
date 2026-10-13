@@ -9,11 +9,11 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/primitives.json",
-    "https://pupitre.dev/r/widget-chart.json",
-    "https://pupitre.dev/r/widget-stats.json",
-    "https://pupitre.dev/r/widget-table.json",
-    "https://pupitre.dev/r/widget-timeline.json"
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/widget-chart.json",
+    "https://pupitre.rikology.com/r/widget-stats.json",
+    "https://pupitre.rikology.com/r/widget-table.json",
+    "https://pupitre.rikology.com/r/widget-timeline.json"
   ],
   "files": [
     {

@@ -17,4 +17,4 @@ Metadata is restricted to known finite numeric measurements. Connection details,
 
 Trusted server APIs: `HealthRunner.run(force?)`, `safeHealthMeta(meta)` and `authorizeHealth(ctx, options, config)`.
 
-Full documentation: https://pupitre.dev/plugins/health
+Full documentation: https://pupitre.rikology.com/plugins/health

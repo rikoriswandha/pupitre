@@ -10,7 +10,7 @@
     "tailwind-merge@^3.7.0"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/icons.json"
+    "https://pupitre.rikology.com/r/icons.json"
   ],
   "files": [
     {

@@ -11,16 +11,16 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/action-list.json",
-    "https://pupitre.dev/r/data-table-editable-cell.json",
-    "https://pupitre.dev/r/data-table-grid.json",
-    "https://pupitre.dev/r/data-table-groups.json",
-    "https://pupitre.dev/r/data-table-query-builder.json",
-    "https://pupitre.dev/r/data-table-summary.json",
-    "https://pupitre.dev/r/data-table-views.json",
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/primitives.json",
-    "https://pupitre.dev/r/section.json"
+    "https://pupitre.rikology.com/r/action-list.json",
+    "https://pupitre.rikology.com/r/data-table-editable-cell.json",
+    "https://pupitre.rikology.com/r/data-table-grid.json",
+    "https://pupitre.rikology.com/r/data-table-groups.json",
+    "https://pupitre.rikology.com/r/data-table-query-builder.json",
+    "https://pupitre.rikology.com/r/data-table-summary.json",
+    "https://pupitre.rikology.com/r/data-table-views.json",
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/section.json"
   ],
   "files": [
     {

@@ -11,7 +11,7 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/kanban-board.json"
+    "https://pupitre.rikology.com/r/kanban-board.json"
   ],
   "files": [
     {

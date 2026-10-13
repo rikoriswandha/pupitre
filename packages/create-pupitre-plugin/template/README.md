@@ -16,7 +16,7 @@ import { {{camelName}} } from '{{packageName}}'
 ```
 
 The plugin name is `{{name}}`; the npm package is `{{packageName}}`.
-The optional `documentationUrl` defaults to https://pupitre.dev.
+The optional `documentationUrl` defaults to https://pupitre.rikology.com.
 Pupitre merges navigation groups sharing the Plugins label.
 
 ## Development

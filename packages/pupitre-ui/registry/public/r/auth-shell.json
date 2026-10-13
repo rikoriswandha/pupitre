@@ -7,11 +7,11 @@
     "@rikology/pupitre-react@^1.0.0"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/passkey-login.json",
-    "https://pupitre.dev/r/primitives.json",
-    "https://pupitre.dev/r/section.json",
-    "https://pupitre.dev/r/use-panel-theme.json"
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/passkey-login.json",
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/section.json",
+    "https://pupitre.rikology.com/r/use-panel-theme.json"
   ],
   "files": [
     {

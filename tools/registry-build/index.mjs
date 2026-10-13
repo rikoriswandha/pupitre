@@ -33,7 +33,7 @@ const itemName = (file) =>
 
 export async function buildRegistry({
   source = join(root, 'packages/pupitre-ui/src'),
-  base = 'https://pupitre.dev/r',
+  base = 'https://pupitre.rikology.com/r',
 } = {}) {
   base = base.replace(/\/$/, '')
   const pkg = JSON.parse(await readFile(join(root, 'packages/pupitre-ui/package.json'), 'utf8'))
@@ -133,7 +133,7 @@ export async function buildRegistry({
   const manifest = {
     $schema: 'https://ui.shadcn.com/schema/registry.json',
     name: 'pupitre',
-    homepage: 'https://pupitre.dev',
+    homepage: 'https://pupitre.rikology.com',
     items: built.map(({ $schema, ...item }) => ({
       ...item,
       files: item.files.map(({ content, ...file }) => file),

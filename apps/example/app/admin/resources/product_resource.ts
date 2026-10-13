@@ -79,7 +79,7 @@ const openStorefront = action('storefront')
   .label('Open storefront page')
   .icon('external-link')
   .variant('link')
-  .url(({ record }) => `https://pupitre.dev/?product=${(record as Product).slug}`)
+  .url(({ record }) => `https://pupitre.rikology.com/?product=${(record as Product).slug}`)
   .openUrlInNewTab()
 
 const setStatus = action('set-status')
@@ -427,7 +427,7 @@ export default defineResource(Product)
         table.text('rating').numeric().toggleable({ hiddenByDefault: true }),
         table
           .text('slug')
-          .url(({ record }) => `https://pupitre.dev/?product=${(record as Product).slug}`)
+          .url(({ record }) => `https://pupitre.rikology.com/?product=${(record as Product).slug}`)
           .toggleable({ hiddenByDefault: true }),
         t.count('variants'),
       ])
@@ -499,7 +499,7 @@ export default defineResource(Product)
         s
           .textEntry('slug')
           .label('Storefront')
-          .url(({ get }) => `https://pupitre.dev/?product=${String(get('slug'))}`),
+          .url(({ get }) => `https://pupitre.rikology.com/?product=${String(get('slug'))}`),
       ]),
     s
       .section('Description')

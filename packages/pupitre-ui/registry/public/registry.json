@@ -1,7 +1,7 @@
 {
   "$schema": "https://ui.shadcn.com/schema/registry.json",
   "name": "pupitre",
-  "homepage": "https://pupitre.dev",
+  "homepage": "https://pupitre.rikology.com",
   "items": [
     {
       "name": "action-bar",
@@ -12,7 +12,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json"
+        "https://pupitre.rikology.com/r/action-list.json"
       ],
       "files": [
         {
@@ -31,8 +31,8 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -52,9 +52,9 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/action-button.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -72,7 +72,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json"
+        "https://pupitre.rikology.com/r/action-list.json"
       ],
       "files": [
         {
@@ -90,11 +90,11 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/passkey-login.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json",
-        "https://pupitre.dev/r/use-panel-theme.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/passkey-login.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json",
+        "https://pupitre.rikology.com/r/use-panel-theme.json"
       ],
       "files": [
         {
@@ -110,8 +110,8 @@
       "title": "BadgeEntry",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -131,9 +131,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/collection-field.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/collection-field.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -152,10 +152,10 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/builder.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/builder.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -175,8 +175,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/calendar-body.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/calendar-body.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -197,8 +197,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/modal.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/modal.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -219,7 +219,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -241,8 +241,8 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -261,7 +261,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -293,8 +293,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -313,9 +313,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -333,7 +333,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -354,8 +354,8 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json"
       ],
       "files": [
         {
@@ -371,7 +371,7 @@
       "title": "ColorEntry",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.rikology.com/r/entry-shell.json"
       ],
       "files": [
         {
@@ -390,8 +390,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -413,16 +413,16 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json",
-        "https://pupitre.dev/r/data-table-editable-cell.json",
-        "https://pupitre.dev/r/data-table-grid.json",
-        "https://pupitre.dev/r/data-table-groups.json",
-        "https://pupitre.dev/r/data-table-query-builder.json",
-        "https://pupitre.dev/r/data-table-summary.json",
-        "https://pupitre.dev/r/data-table-views.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/action-list.json",
+        "https://pupitre.rikology.com/r/data-table-editable-cell.json",
+        "https://pupitre.rikology.com/r/data-table-grid.json",
+        "https://pupitre.rikology.com/r/data-table-groups.json",
+        "https://pupitre.rikology.com/r/data-table-query-builder.json",
+        "https://pupitre.rikology.com/r/data-table-summary.json",
+        "https://pupitre.rikology.com/r/data-table-views.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -442,7 +442,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -478,7 +478,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.rikology.com/r/icons.json"
       ],
       "files": [
         {
@@ -497,7 +497,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -535,8 +535,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -557,9 +557,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json"
       ],
       "files": [
         {
@@ -580,9 +580,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json"
       ],
       "files": [
         {
@@ -615,8 +615,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -635,7 +635,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -653,7 +653,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -673,9 +673,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/image-cropper.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/image-cropper.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -694,8 +694,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -733,8 +733,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -768,7 +768,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -821,9 +821,9 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -861,8 +861,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -878,8 +878,8 @@
       "title": "ImageEntry",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -897,7 +897,7 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -918,8 +918,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -939,9 +939,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -961,7 +961,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/kanban-board-body.json"
+        "https://pupitre.rikology.com/r/kanban-board-body.json"
       ],
       "files": [
         {
@@ -983,7 +983,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/kanban-board.json"
+        "https://pupitre.rikology.com/r/kanban-board.json"
       ],
       "files": [
         {
@@ -1004,10 +1004,10 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json",
-        "https://pupitre.dev/r/use-live-field.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json",
+        "https://pupitre.rikology.com/r/use-live-field.json"
       ],
       "files": [
         {
@@ -1023,7 +1023,7 @@
       "title": "KeyValueEntry",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.rikology.com/r/entry-shell.json"
       ],
       "files": [
         {
@@ -1045,8 +1045,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1062,7 +1062,7 @@
       "title": "MediaColumn",
       "dependencies": [],
       "registryDependencies": [
-        "https://pupitre.dev/r/media-entry.json"
+        "https://pupitre.rikology.com/r/media-entry.json"
       ],
       "files": [
         {
@@ -1081,7 +1081,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/media-protocol.json"
+        "https://pupitre.rikology.com/r/media-protocol.json"
       ],
       "files": [
         {
@@ -1100,7 +1100,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/media-picker-content.json"
+        "https://pupitre.rikology.com/r/media-picker-content.json"
       ],
       "files": [
         {
@@ -1119,8 +1119,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/media-protocol.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/media-protocol.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1155,8 +1155,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1174,7 +1174,7 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1195,8 +1195,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1218,10 +1218,10 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json",
-        "https://pupitre.dev/r/use-live-field.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json",
+        "https://pupitre.rikology.com/r/use-live-field.json"
       ],
       "files": [
         {
@@ -1241,8 +1241,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1280,7 +1280,7 @@
         "tailwind-merge@^3.7.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json"
+        "https://pupitre.rikology.com/r/icons.json"
       ],
       "files": [
         {
@@ -1310,9 +1310,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/confirm-dialog.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/confirm-dialog.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1332,7 +1332,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1354,7 +1354,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1372,9 +1372,9 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json",
-        "https://pupitre.dev/r/data-table.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/action-list.json",
+        "https://pupitre.rikology.com/r/data-table.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1393,7 +1393,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json"
+        "https://pupitre.rikology.com/r/entry-shell.json"
       ],
       "files": [
         {
@@ -1413,9 +1413,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/collection-field.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/collection-field.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1434,11 +1434,11 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/repeater-table-row.json",
-        "https://pupitre.dev/r/repeater.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/repeater-table-row.json",
+        "https://pupitre.rikology.com/r/repeater.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -1457,9 +1457,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/repeater.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/repeater.json"
       ],
       "files": [
         {
@@ -1483,9 +1483,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/rich-editor-extensions.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/rich-editor-extensions.json"
       ],
       "files": [
         {
@@ -1510,9 +1510,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/modal.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/modal.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1532,9 +1532,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/action-list.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1556,10 +1556,10 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json"
+        "https://pupitre.rikology.com/r/action-button.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json"
       ],
       "files": [
         {
@@ -1580,18 +1580,18 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-list.json",
-        "https://pupitre.dev/r/cluster-navigation.json",
-        "https://pupitre.dev/r/environment-indicator.json",
-        "https://pupitre.dev/r/global-search.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/impersonation-banner.json",
-        "https://pupitre.dev/r/notification-tray.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/shell-sidebar.json",
-        "https://pupitre.dev/r/tenant-switcher.json",
-        "https://pupitre.dev/r/use-panel-theme.json",
-        "https://pupitre.dev/r/user-menu.json"
+        "https://pupitre.rikology.com/r/action-list.json",
+        "https://pupitre.rikology.com/r/cluster-navigation.json",
+        "https://pupitre.rikology.com/r/environment-indicator.json",
+        "https://pupitre.rikology.com/r/global-search.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/impersonation-banner.json",
+        "https://pupitre.rikology.com/r/notification-tray.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/shell-sidebar.json",
+        "https://pupitre.rikology.com/r/tenant-switcher.json",
+        "https://pupitre.rikology.com/r/use-panel-theme.json",
+        "https://pupitre.rikology.com/r/user-menu.json"
       ],
       "files": [
         {
@@ -1610,8 +1610,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1633,7 +1633,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1667,7 +1667,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/wizard.json"
+        "https://pupitre.rikology.com/r/wizard.json"
       ],
       "files": [
         {
@@ -1699,7 +1699,7 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/tabs.json"
+        "https://pupitre.rikology.com/r/tabs.json"
       ],
       "files": [
         {
@@ -1718,8 +1718,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {
@@ -1740,10 +1740,10 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json",
-        "https://pupitre.dev/r/use-live-field.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json",
+        "https://pupitre.rikology.com/r/use-live-field.json"
       ],
       "files": [
         {
@@ -1762,8 +1762,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1784,10 +1784,10 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-button.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/use-live-field.json"
+        "https://pupitre.rikology.com/r/action-button.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/use-live-field.json"
       ],
       "files": [
         {
@@ -1806,9 +1806,9 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/entry-shell.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/entry-shell.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1829,9 +1829,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json",
-        "https://pupitre.dev/r/use-live-field.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json",
+        "https://pupitre.rikology.com/r/use-live-field.json"
       ],
       "files": [
         {
@@ -1852,9 +1852,9 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/text.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/text.json"
       ],
       "files": [
         {
@@ -1873,8 +1873,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1895,7 +1895,7 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1917,8 +1917,8 @@
         "zod@^4.3.6"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1970,8 +1970,8 @@
         "@rikology/pupitre-react@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -1990,8 +1990,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/profile-security.json",
-        "https://pupitre.dev/r/profile-sessions.json"
+        "https://pupitre.rikology.com/r/profile-security.json",
+        "https://pupitre.rikology.com/r/profile-sessions.json"
       ],
       "files": [
         {
@@ -2010,10 +2010,10 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/widget-chart.json",
-        "https://pupitre.dev/r/widget-stats.json",
-        "https://pupitre.dev/r/widget-table.json",
-        "https://pupitre.dev/r/widget-timeline.json"
+        "https://pupitre.rikology.com/r/widget-chart.json",
+        "https://pupitre.rikology.com/r/widget-stats.json",
+        "https://pupitre.rikology.com/r/widget-table.json",
+        "https://pupitre.rikology.com/r/widget-timeline.json"
       ],
       "files": [
         {
@@ -2033,8 +2033,8 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/widget-chart-body.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/widget-chart-body.json"
       ],
       "files": [
         {
@@ -2088,11 +2088,11 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/widget-chart.json",
-        "https://pupitre.dev/r/widget-stats.json",
-        "https://pupitre.dev/r/widget-table.json",
-        "https://pupitre.dev/r/widget-timeline.json"
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/widget-chart.json",
+        "https://pupitre.rikology.com/r/widget-stats.json",
+        "https://pupitre.rikology.com/r/widget-table.json",
+        "https://pupitre.rikology.com/r/widget-timeline.json"
       ],
       "files": [
         {
@@ -2111,8 +2111,8 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -2131,9 +2131,9 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/action-bar.json",
-        "https://pupitre.dev/r/data-table.json",
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/action-bar.json",
+        "https://pupitre.rikology.com/r/data-table.json",
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -2152,7 +2152,7 @@
         "@rikology/pupitre@^1.0.0"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/primitives.json"
+        "https://pupitre.rikology.com/r/primitives.json"
       ],
       "files": [
         {
@@ -2171,10 +2171,10 @@
         "react@^19.2.3"
       ],
       "registryDependencies": [
-        "https://pupitre.dev/r/form.json",
-        "https://pupitre.dev/r/icons.json",
-        "https://pupitre.dev/r/primitives.json",
-        "https://pupitre.dev/r/section.json"
+        "https://pupitre.rikology.com/r/form.json",
+        "https://pupitre.rikology.com/r/icons.json",
+        "https://pupitre.rikology.com/r/primitives.json",
+        "https://pupitre.rikology.com/r/section.json"
       ],
       "files": [
         {

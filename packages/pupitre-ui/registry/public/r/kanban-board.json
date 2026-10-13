@@ -9,7 +9,7 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/kanban-board-body.json"
+    "https://pupitre.rikology.com/r/kanban-board-body.json"
   ],
   "files": [
     {

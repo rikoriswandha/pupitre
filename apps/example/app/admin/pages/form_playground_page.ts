@@ -180,7 +180,7 @@ export default definePage('form-playground')
           s
             .placeholder('handlePreview')
             .label('Profile URL preview')
-            .content(({ get }) => `https://pupitre.dev/@${get('handle')}`),
+            .content(({ get }) => `https://pupitre.rikology.com/@${get('handle')}`),
         ]),
         s
           .text('internalRef')

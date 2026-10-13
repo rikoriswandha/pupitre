@@ -8,7 +8,7 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/media-picker-content.json"
+    "https://pupitre.rikology.com/r/media-picker-content.json"
   ],
   "files": [
     {

@@ -107,8 +107,8 @@ Gate: [FILAMENT_PARITY.md](./FILAMENT_PARITY.md) semua baris "v1" ✅.
 | **WP37** `pupitre-shield`: tabel roles/permissions, UI resource, policy generik `posts.update`, `superAdminRole` |
 | **WP38** `pupitre-audit`: adapter `audit` + driver `adonisjs-audit-trail`, timeline di view/edit page, resource "Activity" |
 | **WP39** `pupitre-transmit`: realtime adapter atas `@adonisjs/transmit`, event `pupitre:notification`, table push |
-| **WP40** shadcn registry publik (`registry.json`, build dari sumber `pupitre-ui`, CI diff check, `pupitre.dev/r/*`) + `pupitre:ui add` |
-| **WP41** Docs site (`pupitre.dev`), panduan migrasi dari Filament (padanan API), changelog |
+| **WP40** shadcn registry publik (`registry.json`, build dari sumber `pupitre-ui`, CI diff check, `pupitre.rikology.com/r/*`) + `pupitre:ui add` |
+| **WP41** Docs site (`pupitre.rikology.com`), panduan migrasi dari Filament (padanan API), changelog |
 | **WP42** Rilis 1.0: audit keamanan (CSRF semua POST, CSP tanpa unsafe-eval, upload MIME sniff, rate limit auth), audit a11y komponen, perf budget bundle |
 
 ## Definisi "selesai" untuk setiap WP

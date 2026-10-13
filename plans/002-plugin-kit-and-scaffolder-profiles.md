@@ -340,7 +340,7 @@ The API decisions are fixed for this plan:
 | Command | A real `<name>:info` command that prints generated package/runtime plugin identity; `startApp: false`, no business mock/no-op |
 | Migration | Real reversible sample `<snake_name>_records` table with incrementing primary id and timestamp columns; clearly documented as an example authors customize before release |
 | Migration destination | Capture one 13-digit `Date.now()` when scaffolding; same destination literal in configure, stub frontmatter, tests and README; never generate a new name at configure time |
-| Configure-only behavior | Publish `config/<snake_name>.ts` exporting `{ documentationUrl: 'https://pupitre.dev' }`; generated README shows passing this options object to the factory. UI profile documents its configuration artifact without passing unsupported factory args |
+| Configure-only behavior | Publish `config/<snake_name>.ts` exporting `{ documentationUrl: 'https://pupitre.rikology.com' }`; generated README shows passing this options object to the factory. UI profile documents its configuration artifact without passing unsupported factory args |
 
 Add the API fields and destructuring defaults. Extend CLI parseArgs, forwarding, help and error usage text. Compute profile-only snake-case/timestamp tokens separately; keep `pluginNames` and its existing default token output unchanged. Generated code must tolerate names such as `app`, `test`, `configure`, and scoped packages by using aliased imports and noncolliding internal bindings.
 

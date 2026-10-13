@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 
 export const SHADCN_VERSION = '4'
-export const DEFAULT_REGISTRY = 'https://pupitre.dev'
+export const DEFAULT_REGISTRY = 'https://pupitre.rikology.com'
 type InstallerOptions = { registry?: string; yes?: boolean; dryRun?: boolean }
 type InstallerServices = { spawn: typeof spawn; fetch: typeof fetch }
 

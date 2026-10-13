@@ -10,18 +10,18 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/action-list.json",
-    "https://pupitre.dev/r/cluster-navigation.json",
-    "https://pupitre.dev/r/environment-indicator.json",
-    "https://pupitre.dev/r/global-search.json",
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/impersonation-banner.json",
-    "https://pupitre.dev/r/notification-tray.json",
-    "https://pupitre.dev/r/primitives.json",
-    "https://pupitre.dev/r/shell-sidebar.json",
-    "https://pupitre.dev/r/tenant-switcher.json",
-    "https://pupitre.dev/r/use-panel-theme.json",
-    "https://pupitre.dev/r/user-menu.json"
+    "https://pupitre.rikology.com/r/action-list.json",
+    "https://pupitre.rikology.com/r/cluster-navigation.json",
+    "https://pupitre.rikology.com/r/environment-indicator.json",
+    "https://pupitre.rikology.com/r/global-search.json",
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/impersonation-banner.json",
+    "https://pupitre.rikology.com/r/notification-tray.json",
+    "https://pupitre.rikology.com/r/primitives.json",
+    "https://pupitre.rikology.com/r/shell-sidebar.json",
+    "https://pupitre.rikology.com/r/tenant-switcher.json",
+    "https://pupitre.rikology.com/r/use-panel-theme.json",
+    "https://pupitre.rikology.com/r/user-menu.json"
   ],
   "files": [
     {

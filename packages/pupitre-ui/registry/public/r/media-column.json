@@ -5,7 +5,7 @@
   "title": "MediaColumn",
   "dependencies": [],
   "registryDependencies": [
-    "https://pupitre.dev/r/media-entry.json"
+    "https://pupitre.rikology.com/r/media-entry.json"
   ],
   "files": [
     {

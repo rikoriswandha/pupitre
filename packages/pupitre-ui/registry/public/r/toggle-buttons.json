@@ -11,8 +11,8 @@
     "zod@^4.3.6"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/icons.json",
-    "https://pupitre.dev/r/primitives.json"
+    "https://pupitre.rikology.com/r/icons.json",
+    "https://pupitre.rikology.com/r/primitives.json"
   ],
   "files": [
     {

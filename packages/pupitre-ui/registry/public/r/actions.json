@@ -7,7 +7,7 @@
     "@rikology/pupitre@^1.0.0"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/action-list.json"
+    "https://pupitre.rikology.com/r/action-list.json"
   ],
   "files": [
     {

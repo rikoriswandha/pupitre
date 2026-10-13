@@ -22,4 +22,4 @@ Custom `.events(({start,end,ctx,filters}) => events)` loaders return `CalendarEv
 
 Start/end/title mappings accept physical or model column names. Resource calendars require `viewAny`, only disclose links allowed by `view`/`update`, and reject foreign-tenant moves. Moves use direct timestamp persistence rather than resource form lifecycle hooks. Keyboard users can use the Move dialog; rejected requests roll back optimistically displayed events.
 
-See [the calendar guide](https://pupitre.dev/plugins/calendar/) for complete configuration and timezone behavior.
+See [the calendar guide](https://pupitre.rikology.com/plugins/calendar/) for complete configuration and timezone behavior.

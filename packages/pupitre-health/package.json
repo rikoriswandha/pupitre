@@ -11,7 +11,7 @@
     "url": "git+https://github.com/rikoriswandha/pupitre.git",
     "directory": "packages/pupitre-health"
   },
-  "homepage": "https://pupitre.dev",
+  "homepage": "https://pupitre.rikology.com",
   "engines": {
     "node": ">=24.0.0"
   },

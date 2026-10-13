@@ -49,7 +49,7 @@ Keputusan tambahan setelah audit package `@rikology/adonisjs-*` yang sudah ada d
 | Theming | CSS variables shadcn + theme file per panel (font, density, sidebar style) |
 | Testing | Helper Japa (`visitResource`, `submitForm`, `runAction`, assert spec) + fixture Playwright untuk `pupitre-ui` |
 | Audit log | Plugin `pupitre-audit`: UI timeline di atas `adonisjs-audit-trail` |
-| Repo & domain | `rikoriswandha/pupitre`, `pupitre.dev` |
+| Repo & domain | `rikoriswandha/pupitre`, `pupitre.rikology.com` |
 
 Dua keputusan terakhir: tooling monorepo **npm workspaces** (bukan pnpm), dan **timezone**: semua `dateTime` disimpan UTC (Luxon `DateTime`), ditampilkan dan di-parse di timezone panel (`.timezone('Asia/Jakarta')`, default dari `config/app.ts`), dengan override per user bila model user punya kolom `timezone`; komponen bisa menimpa lewat `.timezone()` sendiri seperti Filament. Cache compiled schema dikunci `panel:resource:page:locale:hash(closure)`, tidak per tenant; closure yang bergantung `ctx`/`tenant` dievaluasi per request dan ditambal ke spec hasil cache.
 
@@ -417,7 +417,7 @@ Empat bagian runtime di `pupitre-react`:
 3. **Inertia bridge**: implementasi semua action json-render: `setState` (bawaan), `visit`, `reload({ only })`, `submitForm`, `openAction`, `runAction`, `evaluate` (untuk `live({ server: true })`), `fetchOptions`, `upload`. Semuanya memakai `router` Inertia v3 (deferred props, `only`, `preserveState`), bukan fetch manual, sehingga flash, redirect, dan error 422 ditangani seragam.
 4. **Registry**: `defineRegistry(catalog, components)`; default `components` diimpor dari `pupitre-ui`. Host menimpa satu-satu: `components: { ...pupitreUi, Select: MySelect }`. Komponen hasil `shadcn add` punya kontrak Zod yang sama, jadi penggantiannya type-checked.
 
-Distribusi `pupitre-ui` ganda: paket npm dan registry shadcn dari sumber yang sama. `npx shadcn@4 add https://pupitre.dev/r/select.json` menyalin sumber ke `inertia/components/pupitre/`; CI memastikan registry tidak tertinggal. Semua komponen memakai Base UI, bukan Radix.
+Distribusi `pupitre-ui` ganda: paket npm dan registry shadcn dari sumber yang sama. `npx shadcn@4 add https://pupitre.rikology.com/r/select.json` menyalin sumber ke `inertia/components/pupitre/`; CI memastikan registry tidak tertinggal. Semua komponen memakai Base UI, bukan Radix.
 
 Kontrak WP40: manifest di `packages/pupitre-ui/registry/registry.json`, payload berisi `content` di `registry/public/r/`, index publik di `registry/public/registry.json`. Docs menyajikan `/registry.json` dan `/r/*`. Jenis item tetap semantik (`registry:component`, `registry:lib`, `registry:hook`, dan lainnya), tetapi setiap file memakai `registry:file` dengan target `~/inertia/components/pupitre/<path-sumber>`. Shadcn menyelesaikan `~/` relatif terhadap root host (`--cwd`), bukan alias `components.json` atau direktori `src`. Nama item hook memakai kebab-case; nama file underscore tetap dipertahankan agar import relatif tidak berubah. Jangan memakai `--path`: shadcn meratakan semua file ke basename dan memutus import.
 
@@ -519,4 +519,4 @@ Open questions, belum perlu dijawab sebelum M0:
 - [ ] Format `custom` column/field dari host: diputuskan dua-duanya, komponen React untuk kasus bebas dan fragment deklaratif untuk sisanya
 - [ ] Cache compiled schema per tenant kalau `visible` bergantung tenant — diputuskan: cache per panel:resource:page:locale:hash(closure); closure yang bergantung ctx/tenant ditandai static, dievaluasi per request, hasilnya ditambal ke spec cache
 - [ ] Diputuskan: React dulu, Vue/Svelte lewat renderer json-render lain setelah 1.0; kontrak catalog tinggal di pupitre/catalog agar framework-agnostic
-- [ ] Domain docs/registry (`pupitre.dev`?) dan org GitHub: `rikoriswandha/pupitre` — diputuskan: repo pribadi rikoriswandha/pupitre, domain pupitre.dev
+- [ ] Domain docs/registry (`pupitre.rikology.com`?) dan org GitHub: `rikoriswandha/pupitre` — diputuskan: repo pribadi rikoriswandha/pupitre, domain pupitre.rikology.com

@@ -16,7 +16,7 @@
     "url": "git+https://github.com/rikoriswandha/pupitre.git",
     "directory": "packages/pupitre"
   },
-  "homepage": "https://pupitre.dev",
+  "homepage": "https://pupitre.rikology.com",
   "keywords": [
     "adonisjs",
     "admin",

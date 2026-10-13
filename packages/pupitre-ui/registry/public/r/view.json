@@ -8,8 +8,8 @@
     "react@^19.2.3"
   ],
   "registryDependencies": [
-    "https://pupitre.dev/r/profile-security.json",
-    "https://pupitre.dev/r/profile-sessions.json"
+    "https://pupitre.rikology.com/r/profile-security.json",
+    "https://pupitre.rikology.com/r/profile-sessions.json"
   ],
   "files": [
     {
