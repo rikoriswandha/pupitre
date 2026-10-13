@@ -23,6 +23,8 @@ Resource/relation generators and inspection/routes boot the app when needed, so 
 
 `pupitre:inspect posts --json` is especially useful for client-first forms: it reports lifted expressions/computed expressions, server-static conditions and server watches rather than requiring you to guess why a callback is not reactive.
 
+Inspection additionally reports `strictAuthorization` and a `violations` array listing missing policies for resources, nested resources and relation-manager related models. Strict panels can be inspected without registering HTTP routes even when their missing policies would prevent a web server from booting. The text report prints the same mode and violations as `--json`.
+
 `npm create @rikology/pupitre-plugin <name> -- [--dir <path>] [--force]` is a standalone npm initializer, not an Ace command. See [plugins](/plugins/) for its package shape and naming rules.
 
 `node ace make:plugin team-tools --package --dir packages/team-tools` executes `npx --yes @rikology/create-pupitre-plugin@<major> team-tools --dir packages/team-tools`, where `<major>` matches the installed Pupitre version. Without `--dir`, the Ace wrapper passes the normalized plugin name as the destination directory. It waits for the scaffolder and reports spawn/nonzero-exit failures; it does not merely print a command. `--force` applies to local generation, not the Ace package invocation.

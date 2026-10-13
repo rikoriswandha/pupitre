@@ -123,6 +123,43 @@ schema.wizard([
 
 Relationship repeaters synchronize hasMany children transactionally. Submitted child IDs must belong to the parent. Builder items use `{ _key, type, data }` in UI state; server validation strips `_key` and validates by block schema. Wizard steps stay mounted, preserving input; 422 errors select the first step containing an error. The wizard does not replace final server validation with client per-step validation.
 
+### Table repeaters
+
+Use table mode for compact, comparable line items:
+
+```ts
+s.repeater('items')
+  .schema([s.text('sku').required(), s.number('quantity').required().min(1)])
+  .table([
+    s.tableColumn('SKU').width('8rem').markAsRequired(),
+    s.tableColumn('Qty').alignment('end').markAsRequired(),
+  ])
+  .defaultItems(1).minItems(1).maxItems(20).reorderable().cloneable()
+```
+
+Columns map to the schema's direct children **by order**, not by label or field name.
+An explicit column list must contain exactly one column per schema child; mismatches
+are rejected with `E_PUPITRE_INVALID_REPEATER_TABLE`. Call `.table()` without
+arguments to derive headers and required marks from the fields' labels and rules.
+Implicit headers require static field labels. If a field has a closure-valued label,
+provide explicit `tableColumn(...)` labels; otherwise compilation rejects it with
+`E_PUPITRE_INVALID_REPEATER_TABLE` rather than silently replacing the configured label.
+Column `.markAsRequired()` only controls the header mark: field `.required()` still
+controls server validation.
+
+Table mode keeps the same bindings, async option endpoints, live/server watchers,
+relationship synchronization, dirty guard, item limits and per-cell server errors
+(`items.0.sku`). Add, remove and clone controls include the row number in their
+accessible names. Reorder with the up/down buttons, the drag handle's ArrowUp/
+ArrowDown keys, or drag the handle onto another row. The table scrolls horizontally
+on narrow screens; field labels remain available to screen readers.
+
+`.itemLabel()`, `.grid()`, `.collapsed()` and `.collapsible()` are ignored in table
+mode: column headers replace item headings and rows remain visible. Disabled or
+read-only repeaters prevent both cell changes and row operations. The Orders
+example uses table mode with tenant-scoped async Product options.
+
+
 ## Files and editors
 
 ```ts
@@ -153,3 +190,56 @@ Permanent record deletion cleans file-upload objects after commit, including mul
 Pruning atomically claims each tracker row before deleting its bytes. A submission that reserves the row first keeps the object; a submission arriving after the prune claim is rejected before persistence. Storage deletion failures release the claim for retry, and any candidate error makes the command exit non-zero. Relationship-repeater fields and unmapped model columns retain candidates conservatively rather than querying nonexistent parent columns. Reference reads batch keys per field and include soft-deleted/cross-tenant records. Ordinary saves with no relevant session uploads or no upload-capable fields do not probe the tracking table; successful table probes are cached per connection, while a missing table is checked again on later upload operations.
 
 Conservative retention applies only to the candidate's own file-upload field: custom pages, relationship repeaters, unmapped columns, and unresolvable owners/fields are skipped without marking the upload consumed. Unconsumed editor attachments are abandoned and are deleted once old enough. The command reports skipped counts and exits zero unless an error occurred. Prune claims use `consumed_at = -1` and refresh `created_at` to the claim time; claims older than `--older-than` are retried after a crash. A storage failure restores the original timestamp and unconsumed status.
+
+## Rich editor: merge tags, mentions, and custom blocks
+
+Rich-editor content stays an HTML string. Tiptap and its extensions load only when the editor mounts.
+Declare supported merge tags as identifiers or an identifier-to-label object:
+
+```ts
+import { mentionProvider, richBlock, schema } from '@rikology/pupitre'
+
+const callout = richBlock('callout')
+  .label('Callout')
+  .icon('info')
+  .schema((f) => [
+    f.text('title').required(),
+    f.select('tone').options({ info: 'Information', warning: 'Warning' }).required(),
+  ])
+  .toHtml(({ config }) => `${config.tone}: ${config.title}`)
+
+schema.richEditor('body')
+  .mergeTags({ name: 'Customer name', today: 'Today' })
+  .mentions([
+    mentionProvider('@').options([{ id: 'alice', label: 'Alice' }]),
+    mentionProvider('#').search(async (query, ctx) => searchPermittedProjects(query, ctx)),
+  ])
+  .customBlocks([callout])
+```
+
+`searchPermittedProjects` is your application lookup: authorize the related resource before querying,
+use `scopedQuery(ctx, resource)`, and authorize individual records before returning `{ id, label }`.
+Never query an unscoped model or expose records just because the user can edit the parent.
+
+Type `{{` to choose a merge tag, or use **Merge tags** in the toolbar. Type the provider's trigger
+(`@` or `#`) to open suggestions; Arrow Up/Down selects an item and Enter inserts it.
+Async providers use the existing authenticated options endpoint, not a separate public route.
+Create searches require the form owner's `create` ability; edit searches resolve the supplied
+record through tenant scope and require `viewAny` and record `update`.
+
+Mentions store `data-type="mention"`, `data-id`, `data-label`, and `data-char` on a span.
+Saving checks static membership or reruns the search callback using the submitted label and request
+context. Unknown IDs/providers lose their mention metadata, and valid labels are canonicalized
+from the provider. The HTML sanitizer removes scripts, event handlers, and unsupported data attributes.
+
+**Insert block** opens the block's schema in an isolated modal form. **Edit block** reopens its
+configuration. Blocks store a div with `data-type="customBlock"`, `data-id`, and JSON `data-config`.
+On resource/action form save, Pupitre validates configuration against that block's VineJS schema;
+invalid data returns 422 with paths such as `body.blocks.0.title`. Unknown block IDs are dropped,
+undeclared configuration keys are removed, and malformed or non-object JSON is rejected.
+
+Use the same block definitions in [`textEntry().richContent()`](/guides/infolists/) or
+`renderRichContent()` when displaying the saved string. Block `toHtml` output is **escaped text by
+default**. Add `.rawHtml()` only to an application-owned renderer that deliberately returns markup;
+that output is still passed through the sanitizer. Merge-tag values are always escaped.
+

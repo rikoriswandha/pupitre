@@ -32,3 +32,7 @@ Both `defineTheme()` and panel `.theme()` validate values. Color names must be i
 The default skin uses warm neutrals and a green primary. Every colored state derives from a handful of base tokens: setting `primary` (or `colors: { primary }`) also re-tints selection fills (`--primary-soft`), colored text (`--primary-ink`), focus rings and the first chart series, in both light and dark mode. The same pattern applies to `success`, `warning`, `destructive` and `info`. Override `--background`, `--card`, `--sidebar`, `--foreground`, `--border` or `--input` through `vars` to change the neutral layers; keep `--primary-foreground` readable on your primary.
 
 Use the registry for structural component changes, not theme tokens. The sidebar collapse/group state persists per panel; table column visibility persists separately. [Customizing UI](/customizing-ui/) explains replacement component ownership.
+
+## Environment colors
+
+Panel `.environmentIndicator({ color: 'warning', label: 'Staging' })` adds an environment badge to the topbar and a thin strip at the shell top. Its six semantic colors use contrast-safe foreground/background pairs in both themes, independent of host token overrides. The visible label communicates the environment without relying on color. See [Panels](/guides/panels/#environment-indicator) for production defaults and async visibility.

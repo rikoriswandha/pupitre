@@ -43,3 +43,17 @@ Install and configure a shared-store `@adonisjs/limiter` for multi-worker or mul
 Install/configure Ally in your host and select actual configured provider names. Pupitre uses provider identity, verified-email fallback and an MFA-aware callback. Social registration defaults to false and can be explicitly enabled. Do not assume unverified provider email is sufficient to link an existing privileged account.
 
 Disable features by passing false (`mfa(false)`, `passkeys(false)`, `profile(false)`) or an empty social provider list. These are server configuration choices, not frontend-only switches.
+
+## Browser sessions and login history
+
+Enable `.sessions({ history: true, retentionDays: 90 })` on a login-enabled panel. Run the published `1791700000045` and `1791700000046` migrations before enabling it. Password, social, passkey and MFA-completed logins create browser sessions with random session tokens; only SHA-256 hashes are persisted. Existing untracked sessions must sign in again.
+
+Panels configured with `.sessions()` or `.impersonation()` must enable built-in `.login()`; invalid configurations fail at boot. A successful remember-me reauthentication renews its tracked browser session, updates its recycled remember-token identity, and records a `remember` login event. Unknown or revoked remembered sessions must sign in again.
+
+The profile lists non-revoked browser sessions within their configured lifetime, newest first, with device/browser, IP and last activity. Ordinary sessions use the host session age (renewed on activity); remembered sessions use the guard's remember-token expiration. Users can revoke another session individually; revocation and ordinary logout also invalidate its remember token, preventing return after the server session expires. Logging out all other browser sessions requires the current password. Passwordless users must complete a fresh user-verified passkey assertion when passkeys are enabled; otherwise this operation is unavailable. Ownership is constrained to the authenticated user, panel and guard.
+
+With `history: true`, the profile displays the latest ten authentication events. Unknown-email failures never store the submitted email. User agents are limited to 512 characters. IP and user-agent data are personal data: document retention and access in your privacy policy.
+
+Put `loginHistoryWidget()` in a User view page's footer widgets to render a record-aware table. The User resource must declare a policy with `viewLoginHistory(user, record)`; missing policies/abilities deny access. Resource record scoping and view authorization still apply before this additional ability.
+
+Schedule `node ace pupitre:prune` to remove old events and revoked/inactive session rows. Retention is per panel; inactivity longer than `retentionDays` makes a row eligible for deletion. Impersonation keeps the actor's browser token and checks the actor's session, never creates an untracked target session.

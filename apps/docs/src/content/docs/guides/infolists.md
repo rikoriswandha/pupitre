@@ -25,3 +25,31 @@ The complete entry catalog is `textEntry`, `badgeEntry`, `iconEntry`, `imageEntr
 Stored enum values (`draft`, `published`) display as-is unless you pass `.options(...)`. It accepts the same shapes as a select field (`{ draft: 'Draft' }`, `{ draft: { label: 'Draft' } }` or `[{ value, label }]`), so you can share one constant between the form, table and infolist. The server maps the value, or each item of an array value, to its label; unknown values stay unchanged. `colors` stay keyed by the stored value.
 
 Use the same grid/section/fieldset/tabs/group/split/fragment layouts as forms. Infolists format values on the server. Markdown entries render server-sanitized HTML; they do not accept arbitrary HTML supplied by the browser. Available methods differ by entry kind: for example, `codeEntry` is not a `codeEditor` field and does not expose all editor methods. See the exact [entry interfaces](/reference/api-schema/).
+
+## Rendering rich-editor content
+
+Use `.html()` for sanitized HTML or `.richContent(...)` to resolve rich-editor merge tags and
+custom blocks. Both run the server rich-content renderer; unknown custom blocks are omitted.
+The saved HTML and configuration never become an executable template.
+
+```ts
+import { renderRichContent } from '@rikology/pupitre'
+
+s.textEntry('body').richContent(({ record }) => ({
+  mergeTags: { name: String(record.customerName ?? ''), today: '2026-10-13' },
+  blocks: [callout],
+}))
+
+const html = renderRichContent(post.body, {
+  mergeTags: { name: customer.name, today: 2026 },
+  blocks: [callout],
+})
+```
+
+`callout` is the application-owned `richBlock(...)` definition used by the editor.
+`mergeTags` maps identifiers to strings or numbers. Values are HTML-escaped, including quotes;
+unresolved tags remain readable as `{{ identifier }}`. Mentions remain safe, labelled spans.
+Block renderers receive `{ config }` and produce escaped text unless their definition explicitly
+opts into `.rawHtml()`. Even opted-in markup is sanitized, so scripts, event handlers, and
+unsafe URL schemes cannot survive. Only renderers supplied by your application execute.
+

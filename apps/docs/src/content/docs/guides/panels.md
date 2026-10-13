@@ -48,8 +48,24 @@ export default definePanel('staff')
 | `filters(definitions)` | Dashboard filter definitions |
 | `plugins(plugin[])` | Ordered plugin list; repeated calls replace the list |
 | `toDefinition()`, `toJSON()` | Inspect the definition or deterministic serialized representation |
+| `strictAuthorization(enabled?)` | Require resource/related-model policies at boot and deny missing policies at runtime |
+| `environmentIndicator(options?)` | Opt-in environment badge and top strip; hidden in production by default |
 
 Auth methods that take an optional boolean enable their feature when called without arguments. Built-in auth is disabled initially. Notifications are disabled initially; global search is enabled but only resources declaring searchable fields participate.
+
+## Environment indicator
+
+Call `.environmentIndicator()` to show the Adonis application environment name outside production. The shared `pupitre.environment` prop is omitted when hidden. Options are `{ visible?: boolean | ((ctx) => boolean | Promise<boolean>), label?: string, color?: 'primary' | 'success' | 'warning' | 'danger' | 'info' | 'gray' }`; color defaults to `warning`. Explicit visibility or an async callback overrides the production default.
+
+```ts
+definePanel('admin').environmentIndicator({
+  label: 'Staging',
+  color: 'info',
+  visible: async (ctx) => ctx.auth.user?.email === 'admin@example.com',
+})
+```
+
+The badge includes text and an accessible environment title; the thin shell-top strip is decorative. It works with expanded/collapsed sidebars and top navigation.
 
 ## Navigation and menus
 

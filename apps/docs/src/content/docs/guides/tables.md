@@ -130,8 +130,71 @@ Summaries support `sum`, `avg`, `count`, `min`, `max`, `range`. They aggregate t
 ] })
 ```
 
-Import `actions` and `exportColumn` from `@rikology/pupitre`. Exports use the filtered table query and server formatters, writing private CSV downloads. `exports.maxSyncRows`, `maxAsyncRows` and `retentionMinutes` control limits/retention. With a jobs adapter, large exports have progress and private download endpoints; configure a worker and run `pupitre:prune` for expired files.
+Import `actions` and `exportColumn` from `@rikology/pupitre`. Exports use the filtered table query and server formatters, writing CSV or XLSX downloads. `exports.maxSyncRows`, `maxAsyncRows` and `retentionMinutes` control limits/retention. With a jobs adapter, large exports have progress and private download endpoints; configure a worker and run `pupitre:prune` for expired files.
+
+Enable Excel with `actions.export().formats(['csv', 'xlsx'])`. CSV is the default;
+multiple formats show a picker, while `['xlsx']` downloads Excel directly. Both
+sync and queued exports share filtered/tenant-scoped queries, locale-resolved
+headers, private downloads and retention. XLSX cells preserve numeric/boolean
+formatter results and represent null as empty. Its bold header and one worksheet
+are written incrementally into a deflated ZIP, without a shared-string table.
+Like CSV, strings beginning with `=`, `+`, `-`, `@`, tab or carriage return receive
+a literal single quote; numeric negatives remain numbers. XML-illegal characters
+are removed and worksheet names are sanitized/truncated to 31 characters.
+
 
 All CSV downloads (synchronous exports, queued exports, and failed import rows) protect against spreadsheet formula injection: string cells and headers starting with `=`, `+`, `-`, `@`, tab, or carriage return receive a leading single quote. Numeric values remain numeric, including negative numbers. Importing an exported CSV preserves this quote literally; Pupitre does not strip it automatically.
 
 Import reads CSV headers and maps them to scalar resource form fields. Each row is VineJS-validated with a separate transaction; the result counts created/updated/failed rows and supplies a failed-row CSV. `.resolveRecord(callback)` on `actions.import()` supports upsert; `.async()` enables queued import where configured. Read the [action reference](/reference/api-action/) for resolver and export formatter signatures before writing callbacks.
+
+## Custom-data tables
+
+Table widgets do not require a Lucid model when `records()` is supplied. Custom pages display them with `definePage(...).widgets([widget])`.
+
+```ts
+defineWidget('currencies').table(t => t
+  .columns([table.text('name').searchable().sortable()])
+  .recordKey('code')
+  .paginated([10, 25])
+  .records(async ({ search, filters, sort, page, perPage, ctx, record }) => {
+    return currencyService.list({ search, filters, sort, page, perPage, tenant: ctx.pupitre.tenant })
+  })
+  .resolveRecord(async (key, ctx) => currencyService.findForTenant(key, ctx.pupitre.tenant))
+  .actions({ row: [action('inspect').form([schema.text('name').readOnly()])
+    .fillForm(({ record }) => ({ name: record.name }))] })
+)
+```
+
+`records()` receives `search: string`, validated `filters: Record<string, unknown>`, `sort: { column, direction: 'asc' | 'desc' }[]`, `page: number`, `perPage: number | 'all'`, the HTTP `ctx`, and optional enclosing edit/view `record`. It returns `{ rows: Record<string, unknown>[], total?: number }`. The callback performs filtering/search/sorting itself; SQL is never inferred. Unknown/non-sortable sort keys return 400. Select/ternary/date-range values and custom filter forms are validated before calling the provider.
+
+Search/sort/filter/pagination remain in the URL, prefixed by the widget name (`currencies[q]`, `currencies[sort]`, `currencies[filters][region]`, `currencies[page]`). For counted pagination return `total`. For simple pagination omit `total` and return up to **perPage + 1** rows at offset `(page - 1) * perPage`; the extra row determines whether Next is enabled, but is not displayed. The callback still receives the requested page size, not the incremented size.
+
+`recordKey()` defaults to `id`, which must be a string or number. `resolveRecord(key, ctx)` is mandatory for row/bulk actions; it must enforce tenancy itself and return null for inaccessible keys (404). Submitted row objects are never trusted. `.actions({ row, header, bulk })` uses standard action builders, modal forms, `.can()` host abilities, and JSON execution.
+
+Custom-data tables reject Lucid query callbacks, relation dot notation/counts, summaries, groups, reordering, inline editing, query-builder/trashed filters, SQL custom-filter callbacks, saved views and builtin/export actions at definition time. Regular columns and formatting remain available. The example Store overview includes a searchable, sortable, filtered Currencies widget and an Inspect modal.
+
+## Saved views
+
+Opt in to personal and public saved views with `.savedViews()`. Import `tableView` to define immutable developer presets:
+
+```ts
+import { table, tableView } from '@rikology/pupitre'
+
+.table((t) => t
+  .savedViews()
+  .presetViews([
+    tableView('Drafts').icon('file-pen')
+      .query({ filters: { status: 'draft' }, sort: '-createdAt' }).default(),
+  ])
+  .columns([table.text('createdAt').sortable()])
+  .filters([table.filter.select('status').options({ draft: 'Draft', published: 'Published' })])
+)
+```
+
+The **Views** toolbar saves the current filters, search, sort, grouping, page size, tab, individual column searches and visible columns. Users can apply, update, rename or delete their own views, and set or unset a default. Defaults apply only when the URL has no state for that table. Presets are read-only; a user's default takes priority over a preset default. Relation-manager tables use their own query prefix and table identity, preserving unrelated URL parameters.
+
+Run the `pupitre_table_views` host migration published by the configure hook. Views are scoped to panel, tenant and table. Private views are visible only to their owner; public views remain subject to table `viewAny`. Publishing or changing an existing public view requires the explicit resource policy method `managePublicViews(user)`: no policy or missing method denies access. Saved state is validated against the table definition and normalized through the live query pipeline; invalid state returns HTTP 422. Column visibility is stored explicitly in a saved view and overrides the browser's ordinary localStorage preference when applied.
+
+See [Saved table views](./saved-views) for the HTTP and client contracts. Saved views apply to resource and relation-manager tables, not custom-data widgets.
+
+

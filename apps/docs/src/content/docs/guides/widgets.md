@@ -23,11 +23,28 @@ Callbacks receive `{ ctx, filters, record? }`. **Write tenant-aware queries in y
 
 ## Widget kinds
 
-`.stats(callback)` accepts plain stat definitions or `stat(label, value)` builders. Stats support description, description icon, color and sparkline chart values. `.chart(type, callback)` supports line/bar/area/pie/doughnut; return `{ labels, datasets: [{ label, data, color? }] }`. Radar and scatter are not built-in chart kinds.
+`.stats(callback)` accepts plain stat definitions or `stat(label, value)` builders. Stats support description, description icon, color and sparkline chart values. `.chart(type, callback)` supports line/bar/area/pie/doughnut/radar/scatter; return `{ labels, datasets: [{ label, data, color? }] }` (scatter uses `{ x, y }` points, see below).
 
 For `.table(callback)`, supply a model: `defineWidget('latest-posts', Post).table((t) => t.query(...).columns(...))`. Use the exported `table` namespace for columns. `.component('HostWidget')` renders a registered host component.
 
 Common controls: `.span(number | 'full')`, `.sort(number)`, `.poll(intervalString)`, `.heading(string)`, `.description(string)`, `.canView(callback)`, `.lazy(boolean)`. Defaults are span 1, sort 0 and lazy loading enabled.
+
+## Radar and scatter charts
+
+Both stay in the lazy Recharts chunk and expose their values in a screen-reader data table.
+
+```ts
+defineWidget('capabilities').chart('radar', async ({ ctx }) => ({
+  labels: ['Speed', 'Quality', 'Cost'],
+  datasets: [{ label: 'Team', data: [8, 9, 6] }],
+}))
+
+defineWidget('distribution').chart('scatter', async ({ ctx }) => ({
+  datasets: [{ label: 'Products', data: [{ x: 12, y: 40 }, { x: 25, y: 18 }] }],
+}))
+```
+
+Radar uses the usual numeric `{ labels, datasets }` shape. Scatter has no labels array: each dataset's `data` contains numeric `{ x, y }` points; `color` is optional on either dataset type. Loader types follow the selected chart kind, and catalog validation rejects incompatible shapes. In real loaders, authorize and tenant-scope the underlying queries.
 
 ## Placement and filters
 
@@ -56,3 +73,26 @@ export const history = defineWidget('publication-history')
 The fixed item demonstrates the shape; replace it with your authorized history query. `title` and ISO timestamp `time` are required. `description`, `actor`, `icon`, `color` and `changes` are optional; each change has `field`, `old` and `new`. Server compilation formats the timestamp for the panel timezone. The built-in `Widget.Timeline` component renders the core spec, so no transport/plugin-specific React component is needed.
 
 Attach it to a dashboard/custom page or use `pages.view().footerWidgets([history])`. Scope custom queries to the tenant and apply access checks rather than assuming widget placement authorizes an external history store. The [Audit plugin](/plugins/audit/) automatically appends record timelines to selected existing view/edit pages.
+
+## Component loaders and actions
+
+`.component(name, loader?)` accepts `(args: { ctx, filters, record? }) => unknown | Promise<unknown>`. Its return value reaches the registered React component as **data**, not the `{ kind, data }` transport envelope. Register widget actions with `.actions([action('move').form([...]).can('move').handle(...)])`; form fields use the ordinary Vine validation and JSON action transport. Widget `canView` and enclosing page/resource authorization are checked on every request. A string `.can()` uses the enclosing resource policy, or a host Bouncer ability on custom pages/dashboard widgets. Without `.can()`, any mutation-specific checks belong in the handler.
+
+The action transport accepts `tableAction` only as `row`, `bulk`, or `header`; unknown values return 404 and never switch a widget action from resource-policy authorization to a host ability.
+
+```tsx
+import { useWidget } from '@rikology/pupitre-react'
+
+function CalendarWidget({ descriptor, data: initialData }) {
+  const { data, errors, loading, reload, runAction } = useWidget(descriptor, initialData)
+  async function move(id, start) {
+    await runAction('move', { id, start })
+    await reload({ start, end: '2026-11-01' })
+  }
+  // Render your host component using data; errors contains field errors after 422.
+}
+```
+
+`reload(params?)` returns the loader value and updates local component data. `runAction(name, data?)` returns `ActionResult` including `flash`; it does not automatically reload or navigate. HTTP failures reject `WidgetRequestError` with `status` and `errors`, allowing drag/drop components to roll back. Preserve the supplied descriptor: its data URL binds panel, tenant, custom page or resource page, and record context. Loaders/actions must scope any external data themselves.
+
+Model-free widgets can use `.table(t => t.records(...))`; see [Custom-data tables](/guides/tables/#custom-data-tables).

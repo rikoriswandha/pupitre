@@ -320,6 +320,25 @@ assertSpecHas(page.spec, { type: 'Text' })
 
 Use `@rikology/pupitre-ui/testing` Playwright fixtures for rendered behavior. Port policy denial, tenancy isolation, hooks and validation cases as well as happy paths. Controllers/specs are the server test boundary; browser helpers use accessible labels rather than Livewire component state.
 
+## Popular Filament plugins
+
+| Filament plugin | Pupitre equivalent |
+| --- | --- |
+| Spatie media library plugin / Curator | [`@rikology/pupitre-media`](/plugins/media/) |
+| filament-shield | [`@rikology/pupitre-shield`](/plugins/shield/) |
+| filament-impersonate | panel `.impersonation()` + `actions.impersonate()` ([guide](/guides/impersonation/)) |
+| Spatie settings plugin | [`@rikology/pupitre-settings`](/plugins/settings/) |
+| Breezy browser sessions, authentication-log | panel `.sessions()` + `loginHistoryWidget()` ([auth guide](/guides/auth/)) |
+| filament-excel | `actions.export().formats(['csv', 'xlsx'])` |
+| environment-indicator | panel `.environmentIndicator()` |
+| Advanced Tables saved views | `t.savedViews()` / `t.presetViews()` ([guide](/guides/saved-views/)) |
+| filament-fullcalendar, guava/calendar | [`@rikology/pupitre-calendar`](/plugins/calendar/) |
+| flowforge, filament-kanban | [`@rikology/pupitre-kanban`](/plugins/kanban/) |
+| Spatie health plugin | [`@rikology/pupitre-health`](/plugins/health/) |
+| filament-jobs-monitor | [`@rikology/pupitre-jobs`](/plugins/jobs/) |
+| Spatie backup plugin | [`@rikology/pupitre-backup`](/plugins/backup/) |
+| activity log plugins | [`@rikology/pupitre-audit`](/plugins/audit/) |
+
 ## Intentional architectural differences
 
 - **Static discovery:** build initialization generates imports; no request-time filesystem scanning or PHP reflection.

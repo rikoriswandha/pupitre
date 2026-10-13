@@ -37,6 +37,33 @@ Execution: `.form([...])`, `.fillForm(callback)`, `.handle(callback)`, `.after(c
 
 `actions` includes create/edit/view/delete, restore/forceDelete/replicate, bulk, bulkRestore/bulkForceDelete, export/import, attach/detach/associate/dissociate, bulkDetach/bulkDissociate. Defaults supply action names; override them when registering multiple versions. Generic bulk actions are `actions.bulk('name').handle(...)` and receive selected records, not one row. Use `.deselectAfter()` when selection should be cleared after completion.
 
+### Spreadsheet exports
+
+`actions.export().formats(['csv', 'xlsx'])` offers a labelled format picker before
+downloading. The default remains CSV; `.formats(['xlsx'])` downloads XLSX directly.
+Only formats enabled on the server action are accepted. `.columns([...])` and
+`exportColumn(...).formatStateUsing(...)` apply identically to both formats.
+
+```ts
+actions.export().formats(['csv', 'xlsx']).columns([
+  exportColumn('name').label(t('Name')),
+  exportColumn('price').formatStateUsing((value) => Number(value)),
+])
+```
+
+Small exports download immediately; larger exports use the jobs adapter and the
+same private, owner/tenant-scoped download and retention lifecycle as CSV. XLSX
+preserves numeric and boolean formatter results; return a number rather than a
+formatted currency string when you want a numeric Excel cell. Headers resolve
+the requesting locale, including in background jobs.
+
+Both formats prefix string values and headers beginning with `=`, `+`, `-`, `@`,
+tab or carriage return with a literal single quote. Numeric negatives are not
+quoted. XLSX uses inline strings, never formulas, strips XML 1.0-illegal characters,
+and sanitizes worksheet names to 31 characters. The streaming writer uses raw
+deflate ZIP entries and data descriptors without buffering the worksheet.
+
+
 ## Modal transport
 
 Page props include authorized descriptors, not handlers. Direct actions submit JSON; confirmation actions prompt first. Form actions GET their authorized `{ spec, state }`, then POST `{ data, ids? }` with `X-Pupitre-Action: 1` and JSON acceptance. Successful results use `ActionResult` fields for flash, patch, reload, redirect and deselect. Validation errors are 422 field errors; 403 preserves the modal and reports denial. The runtime handles this protocol for you; do not submit action modals as ordinary Inertia page forms.

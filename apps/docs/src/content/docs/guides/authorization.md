@@ -8,6 +8,14 @@ Pupitre maps resource access to Bouncer policies. Use `.policy(PostPolicy)` or a
 
 **No policy means allow, with a warning.** A present policy that lacks an ability denies it unless the documented fallback applies. Audit every resource before deployment using `pupitre:inspect`.
 
+## Strict authorization
+
+Opt in per panel with `definePanel('admin').strictAuthorization()`. The default remains allow-with-warning for missing policies. Strict mode resolves explicit (including lazy) `.policy()` declarations and discovered `<Model>Policy` classes after every panel and plugin resource resolves, before registering routes. Missing policies abort boot with `E_PUPITRE_MISSING_POLICY`, listing all resource, nested-resource and relation-manager model paths.
+
+Runtime authorization for any model without a policy also denies in strict mode, including relationship options. Existing policies still deny absent methods unless a documented fallback exists. Shield's generated policies and Audit's explicit authorization policy remain valid; Settings pages use their own fail-closed callbacks. `pupitre:inspect` and `pupitre:inspect --json` report `strictAuthorization` and missing-policy `violations`.
+
+Use `.strictAuthorization(false)` to turn the option off on a derived immutable panel builder.
+
 ## Ability mapping
 
 | Operation | Policy method | Fallback if method absent |

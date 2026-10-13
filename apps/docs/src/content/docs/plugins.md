@@ -4,7 +4,7 @@ title: Writing plugins
 
 Plugins are ordinary server-side definitions. Export an options factory returning `definePlugin()` and add its result to a panel's `.plugins([...])` list.
 
-Official integrations demonstrate the boundaries: [Shield](/plugins/shield/) contributes roles and policies, [Audit](/plugins/audit/) contributes a read-only resource and timeline specs, and [Transmit](/plugins/transmit/) supplies server/browser realtime adapters rather than a panel `.plugins()` entry.
+Official integrations demonstrate the boundaries: [Shield](/plugins/shield/) contributes roles and policies, [Audit](/plugins/audit/) contributes a read-only resource and timeline specs, [Media](/plugins/media/), [Jobs](/plugins/jobs/) and [Backup](/plugins/backup/) contribute resources over their own tables, [Calendar](/plugins/calendar/), [Kanban](/plugins/kanban/) and [Health](/plugins/health/) contribute pages and widgets rendered by components that ship in `@rikology/pupitre-ui`, and [Transmit](/plugins/transmit/) supplies server/browser realtime adapters rather than a panel `.plugins()` entry. Official plugins stay server-only: their React surfaces live in the default UI package so hosts can own them through the registry.
 
 ```ts
 import { definePlugin, nav } from '@rikology/pupitre'
