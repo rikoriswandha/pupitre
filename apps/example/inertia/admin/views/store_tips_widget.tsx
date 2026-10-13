@@ -1,9 +1,17 @@
 import { Link, usePage } from '@inertiajs/react'
 import type { PupitrePageProps, WidgetDescriptor } from '@rikology/pupitre/catalog'
 import { Icon, Panel, PanelHeader } from '@rikology/pupitre-ui'
+import { t, useWidget } from '@rikology/pupitre-react'
 
 /** Host widget rendered by `defineWidget(...).component('StoreTipsWidget')`. */
-export function StoreTipsWidget({ descriptor }: { descriptor: WidgetDescriptor; data: unknown }) {
+export function StoreTipsWidget({
+  descriptor,
+  data: initialData,
+}: {
+  descriptor: WidgetDescriptor
+  data: { tenant?: string; channel?: string }
+}) {
+  const { data, reload, loading } = useWidget(descriptor, initialData)
   const { pupitre } = usePage<PupitrePageProps>().props
   // `panel.path` already includes the current tenant segment (e.g. /admin/acme).
   const base = pupitre.panel.path
@@ -20,6 +28,14 @@ export function StoreTipsWidget({ descriptor }: { descriptor: WidgetDescriptor; 
         description="A host React component placed in the widget grid."
         icon="info"
       />
+      <div className="flex items-center justify-between px-4 pb-3">
+        <span data-testid="component-loader-data">
+          {data?.tenant} · {data?.channel}
+        </span>
+        <button type="button" onClick={() => void reload()} disabled={loading}>
+          {t('Refresh')}
+        </button>
+      </div>
       <ul className="grid gap-1 px-3 pb-4 sm:grid-cols-2 sm:px-4">
         {links.map((link) => (
           <li key={link.href}>

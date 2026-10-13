@@ -273,13 +273,16 @@ export default defineResource(Order)
                   .label('Line total')
                   .content(({ get }) => get('quantity') * get('unitPrice')),
               ])
-              .grid({ default: 1, md: 4 })
-              .itemLabel(({ get }) => `${get('quantity')} × Rp ${get('unitPrice')}`)
+              .table([
+                s.tableColumn('Product').width('18rem').markAsRequired(),
+                s.tableColumn('Qty').width('10rem').alignment('end').markAsRequired(),
+                s.tableColumn('Unit price').width('12rem').alignment('end').markAsRequired(),
+                s.tableColumn('Line total').width('10rem').alignment('end'),
+              ])
               .minItems(1)
               .maxItems(20)
               .defaultItems(1)
               .reorderable()
-              .collapsible()
               .cloneable()
               .addLabel('Add line item'),
             s

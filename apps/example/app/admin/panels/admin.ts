@@ -1,3 +1,7 @@
+import { media } from '@rikology/pupitre-media'
+import { databaseBackups } from '../backup.js'
+import { calendarDemo } from '../calendar_demo.js'
+import { ordersKanban } from '../kanban.js'
 import { definePanel, nav } from '@rikology/pupitre'
 import { shield } from '@rikology/pupitre-shield'
 import { audit } from '@rikology/pupitre-audit'
@@ -9,13 +13,20 @@ import type User from '#models/user'
 import Tenant from '#models/tenant'
 import adminTheme from '../themes/admin.js'
 import { ratingPlugin } from '../extensions/rating.js'
+import { health } from '@rikology/pupitre-health'
+import healthChecks from '#start/health'
+import { jobs } from '@rikology/pupitre-jobs'
+import { jobsDemo } from '../plugins/jobs_demo.js'
 
 const adminPanel = definePanel('admin')
+  .impersonation()
+  .environmentIndicator({ visible: true })
   .guard('web')
   .login()
   .passwordReset()
   .emailVerification()
   .profile()
+  .sessions()
   .mfa({ issuer: 'Pupitre Editorial' })
   .passkeys()
   .tenancy({
@@ -59,6 +70,7 @@ const adminPanel = definePanel('admin')
             return Number(count?.$extras.total ?? 0)
           }),
         'categories',
+        'media',
       ]),
     nav.group('Administration').sort(20).items(['users']),
     nav
@@ -77,7 +89,26 @@ const adminPanel = definePanel('admin')
   .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.dev', external: true, sort: 10 }])
   .theme(adminTheme)
   .plugins([
+    media({
+      disk: 'uploads',
+      visibility: 'private',
+      tenancy: true,
+      authorize: (ctx) => (ctx.auth.user as User | undefined)?.email === 'admin@example.com',
+    }),
+    databaseBackups,
+    jobs({
+      navigationGroup: 'Administration',
+      authorize: (ctx) => (ctx.auth.user as User | undefined)?.email === 'admin@example.com',
+      allowRetry: (_ctx, run) => run.name === 'MonitorDemoJob',
+    }),
+    jobsDemo,
+    calendarDemo,
+    ordersKanban,
     ratingPlugin,
+    health({
+      checks: healthChecks,
+      authorize: (ctx) => (ctx.auth.user as User | undefined)?.email === 'admin@example.com',
+    }),
     shield({
       userModel: () => import('#models/user'),
       resources: ['roles'],

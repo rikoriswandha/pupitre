@@ -519,14 +519,17 @@ export default defineResource(Product)
   .actions({
     header: [
       actions.create(),
-      actions.export().columns([
-        exportColumn('sku').label('SKU'),
-        exportColumn('name').label('Name'),
-        exportColumn('price')
-          .label('Price (IDR)')
-          .formatStateUsing((value) => Number(value ?? 0).toFixed(0)),
-        exportColumn('stock').label('Stock'),
-      ]),
+      actions
+        .export()
+        .formats(['csv', 'xlsx'])
+        .columns([
+          exportColumn('sku').label('SKU'),
+          exportColumn('name').label('Name'),
+          exportColumn('price')
+            .label('Price (IDR)')
+            .formatStateUsing((value) => Number(value ?? 0).toFixed(0)),
+          exportColumn('stock').label('Stock'),
+        ]),
       lowStockReport,
     ],
     row: [actions.view(), actions.edit(), restock, archive, openStorefront, actions.delete()],

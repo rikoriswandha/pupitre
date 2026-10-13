@@ -21,6 +21,7 @@ export const POST_STATUS_COLORS: Record<string, string> = {
 }
 
 export default class Post extends Auditable(PostSchema) {
+  @column() declare coverMediaId: number | null
   @column({
     prepare: (value) => JSON.stringify(value),
     consume: (value: unknown) => (typeof value === 'string' ? JSON.parse(value) : value),

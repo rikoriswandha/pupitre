@@ -1,6 +1,12 @@
 import type User from '#models/user'
 
 export default class UserPolicy {
+  viewLoginHistory(user: User) {
+    return this.isAdmin(user)
+  }
+  impersonate(user: User, target: User) {
+    return this.isAdmin(user) && user.id !== target.id
+  }
   private isAdmin(user: User) {
     return user.email === 'admin@example.com'
   }

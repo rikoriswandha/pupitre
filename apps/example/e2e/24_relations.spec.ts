@@ -32,7 +32,7 @@ pupitreTest(
   async ({ page }) => {
     const admin = new AdminPage(page, examplePanel)
     await admin.login()
-    await page.goto('/admin/acme/tags')
+    await page.goto('/admin/acme/catalog/tags')
     await page.getByRole('button', { name: 'Create', exact: true }).click()
 
     const suffix = Date.now().toString()

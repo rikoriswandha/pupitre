@@ -1,3 +1,4 @@
+import { mediaCatalog } from '@rikology/pupitre-media/catalog'
 import { defineRegistry } from '@rikology/pupitre-react'
 import { components } from '@rikology/pupitre-ui'
 import { MarginPreview } from './views/margin_preview.js'
@@ -8,7 +9,7 @@ import { StarRating, StarRatingColumn, StarRatingEntry } from './extensions/Star
 /** Non-catalog names (here `StoreTipsWidget`) become host shell/widget components. */
 export const registry = defineRegistry(
   { ...components, StoreTipsWidget, StarRating, StarRatingColumn, StarRatingEntry },
-  { extensions: [ratingCatalog] }
+  { extensions: [ratingCatalog, mediaCatalog] }
 )
 
 /** Components available to `schema.view(name, props)`. */

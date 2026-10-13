@@ -28,12 +28,15 @@ export default defineConfig({
   |
   */
   commands: [
+    () => import('@rikology/pupitre-backup/commands'),
     () => import('@adonisjs/core/commands'),
     () => import('@adonisjs/lucid/commands'),
     () => import('@adonisjs/session/commands'),
     () => import('@adonisjs/inertia/commands'),
     () => import('@rikology/pupitre/commands'),
     () => import('@rikology/pupitre-shield/commands'),
+    () => import('@rikology/pupitre-jobs/commands'),
+    () => import('@adonisjs/queue/commands'),
   ],
 
   /*
@@ -68,6 +71,7 @@ export default defineConfig({
     () => import('@rikology/adonisjs-notifications/notification_provider'),
     () => import('@adonisjs/transmit/transmit_provider'),
     () => import('@rikology/adonisjs-audit-trail/audit_provider'),
+    () => import('@adonisjs/queue/queue_provider'),
     () => import('@rikology/pupitre/pupitre_provider'),
     () => import('@adonisjs/limiter/limiter_provider'),
   ],

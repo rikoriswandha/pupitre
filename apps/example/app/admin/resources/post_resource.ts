@@ -1,3 +1,6 @@
+import { mediaPicker, mediaEntry } from '@rikology/pupitre-media'
+import { tableView } from '@rikology/pupitre'
+import { postCallout, postMentions } from '#admin/rich_post_content'
 import {
   action,
   actions,
@@ -19,7 +22,7 @@ import postEditSummaryWidget from '#admin/widgets/post_edit_summary_widget'
 
 const manageCategories = action('manage-categories')
   .label('Manage categories')
-  .url(({ ctx }) => `${ctx?.pupitre.panel.path}/categories`)
+  .url(({ ctx }) => `${ctx?.pupitre.panel.path}/catalog/categories`)
 const publishNotice = action('publish-notice')
   .label('Send a preview notification')
   .handle(({ data, notify }) => {
@@ -253,6 +256,9 @@ export default defineResource(Post)
           .columnSpan('full'),
         s
           .richEditor('body')
+          .mergeTags({ name: 'Customer name', today: 'Today' })
+          .mentions([postMentions])
+          .customBlocks([postCallout])
           .label('Body')
           .toolbar(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
           .fileAttachmentsDisk('uploads')
@@ -286,6 +292,10 @@ export default defineResource(Post)
       s
         .tab('Media')
         .components([
+          mediaPicker('coverMediaId')
+            .label('Library cover')
+            .accept(['image/*'])
+            .conversion('thumb'),
           s
             .fileUpload('cover')
             .label('Cover image')
@@ -300,6 +310,15 @@ export default defineResource(Post)
   ])
   .table((t) =>
     t
+      .savedViews()
+      .presetViews([
+        tableView('Drafts')
+          .icon('file-pen')
+          .query({ filters: { status: 'draft' }, sort: 'title' }),
+        tableView('Published posts')
+          .icon('check')
+          .query({ filters: { status: 'published' }, sort: '-title' }),
+      ])
       .columns([
         table
           .textInput('title')
@@ -358,6 +377,7 @@ export default defineResource(Post)
     s.textEntry('viewsCount').label('Views'),
     s.textEntry('content').label('Content blocks'),
     s.imageEntry('cover').label('Cover').circular(),
+    mediaEntry('coverMediaId').label('Library cover').conversion('thumb'),
     s
       .repeatableEntry('items')
       .label('Items')
@@ -366,7 +386,13 @@ export default defineResource(Post)
         s.textEntry('qty').label('Quantity'),
         s.textEntry('price').label('Price').money('IDR'),
       ]),
-    s.html().content(({ get }) => String(get('body') ?? '')),
+    s
+      .textEntry('body')
+      .label('Body')
+      .richContent(() => ({
+        mergeTags: { name: 'Pupitre reader', today: DateTime.utc().toISODate()! },
+        blocks: [postCallout],
+      })),
   ])
   .actions({
     header: [

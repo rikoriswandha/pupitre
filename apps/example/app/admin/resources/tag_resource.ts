@@ -1,7 +1,9 @@
+import CatalogCluster from '../clusters/catalog_cluster.js'
 import { actions, defineResource, pages, table } from '@rikology/pupitre'
 import Tag from '#models/tag'
 
 export default defineResource(Tag)
+  .cluster(CatalogCluster)
   .slug('tags')
   .label('Tag')
   .pluralLabel('Tags')

@@ -7,6 +7,9 @@ import storePayments from '../widgets/store_payments_widget.js'
 import storeLowStock from '../widgets/store_low_stock_widget.js'
 import storeActivity from '../widgets/store_activity_widget.js'
 import storeTips from '../widgets/store_tips_widget.js'
+import storeRadar from '../widgets/store_radar_widget.js'
+import storeScatter from '../widgets/store_scatter_widget.js'
+import currenciesWidget from '../widgets/currencies_widget.js'
 
 /**
  * Showcase: a custom dashboard page with every widget kind (stats, line, area,
@@ -23,9 +26,12 @@ export default definePage('store-overview')
     storeOrdersByWeek,
     storeStatus,
     storePayments,
+    storeRadar,
+    storeScatter,
     storeLowStock,
     storeActivity,
     storeTips,
+    currenciesWidget,
   ])
   .filters([
     {

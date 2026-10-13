@@ -5,4 +5,7 @@ export default defineWidget('store-tips')
   .heading('Where to look next')
   .span(2)
   .sort(8)
-  .component('StoreTipsWidget')
+  .component('StoreTipsWidget', ({ ctx, filters }) => ({
+    tenant: ctx.pupitre.tenant?.name ?? 'Global',
+    channel: filters.channel ?? 'All',
+  }))

@@ -261,7 +261,7 @@ export class PostTagSchema extends BaseModel {
 }
 
 export class PostSchema extends BaseModel {
-  static $columns = ['authorId', 'body', 'categoryId', 'contactPhone', 'content', 'cover', 'createdAt', 'deletedAt', 'excerpt', 'id', 'isFeatured', 'items', 'priority', 'publishedAt', 'slug', 'status', 'summary', 'tenantId', 'title', 'updatedAt', 'viewsCount', 'website'] as const
+  static $columns = ['authorId', 'body', 'categoryId', 'contactPhone', 'content', 'cover', 'coverMediaId', 'createdAt', 'deletedAt', 'excerpt', 'id', 'isFeatured', 'items', 'priority', 'publishedAt', 'slug', 'status', 'summary', 'tenantId', 'title', 'updatedAt', 'viewsCount', 'website'] as const
   $columns = PostSchema.$columns
   @column()
   declare authorId: number
@@ -275,6 +275,8 @@ export class PostSchema extends BaseModel {
   declare content: any
   @column()
   declare cover: string | null
+  @column()
+  declare coverMediaId: number | null
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
   @column.dateTime()
@@ -397,6 +399,37 @@ export class ProductSchema extends BaseModel {
   declare visibility: string
 }
 
+export class PupitreBackupSchema extends BaseModel {
+  static $columns = ['activeLock', 'connection', 'createdBy', 'dialect', 'disk', 'error', 'finishedAt', 'id', 'path', 'size', 'startedAt', 'status', 'tenantId'] as const
+  $columns = PupitreBackupSchema.$columns
+  @column()
+  declare activeLock: string | null
+  @column()
+  declare connection: string
+  @column()
+  declare createdBy: string | null
+  @column()
+  declare dialect: string
+  @column()
+  declare disk: string
+  @column()
+  declare error: string | null
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare path: string
+  @column()
+  declare size: bigint | number
+  @column.dateTime()
+  declare startedAt: DateTime
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string | null
+}
+
 export class PupitreExportSchema extends BaseModel {
   static $columns = ['createdAt', 'error', 'expiresAt', 'fileKey', 'id', 'processedRows', 'resource', 'result', 'status', 'tenantId', 'totalRows', 'updatedAt', 'userId'] as const
   $columns = PupitreExportSchema.$columns
@@ -426,6 +459,105 @@ export class PupitreExportSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare userId: number
+}
+
+export class PupitreJobRunSchema extends BaseModel {
+  static $columns = ['attempt', 'durationMs', 'errorMessage', 'errorStack', 'finishedAt', 'id', 'jobId', 'name', 'payloadSummary', 'queue', 'queuedAt', 'retryPayload', 'retrySafe', 'startedAt', 'status', 'tenantId'] as const
+  $columns = PupitreJobRunSchema.$columns
+  @column()
+  declare attempt: number
+  @column()
+  declare durationMs: number | null
+  @column()
+  declare errorMessage: string | null
+  @column()
+  declare errorStack: string | null
+  @column.dateTime()
+  declare finishedAt: DateTime | null
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare jobId: string
+  @column()
+  declare name: string
+  @column()
+  declare payloadSummary: string
+  @column()
+  declare queue: string
+  @column.dateTime()
+  declare queuedAt: DateTime
+  @column()
+  declare retryPayload: string | null
+  @column()
+  declare retrySafe: boolean
+  @column.dateTime()
+  declare startedAt: DateTime | null
+  @column()
+  declare status: string
+  @column()
+  declare tenantId: string | null
+}
+
+export class PupitreLoginEventSchema extends BaseModel {
+  static $columns = ['createdAt', 'event', 'id', 'ip', 'method', 'panel', 'userAgent', 'userId'] as const
+  $columns = PupitreLoginEventSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare event: string
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare ip: string
+  @column()
+  declare method: string | null
+  @column()
+  declare panel: string
+  @column()
+  declare userAgent: string
+  @column()
+  declare userId: string | null
+}
+
+export class PupitreMediaSchema extends BaseModel {
+  static $columns = ['alt', 'caption', 'conversions', 'createdAt', 'directory', 'disk', 'filename', 'height', 'id', 'mime', 'path', 'size', 'tenantId', 'title', 'updatedAt', 'uploadedBy', 'visibility', 'width'] as const
+  $columns = PupitreMediaSchema.$columns
+  @column()
+  declare alt: string | null
+  @column()
+  declare caption: string | null
+  @column()
+  declare conversions: any
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column()
+  declare directory: string
+  @column()
+  declare disk: string
+  @column()
+  declare filename: string
+  @column()
+  declare height: number | null
+  @column({ isPrimary: true })
+  declare id: number
+  @column()
+  declare mime: string
+  @column()
+  declare path: string
+  @column()
+  declare size: bigint | number
+  @column()
+  declare tenantId: string | null
+  @column()
+  declare title: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare uploadedBy: string | null
+  @column()
+  declare visibility: string
+  @column()
+  declare width: number | null
 }
 
 export class PupitrePasskeySchema extends BaseModel {
@@ -537,6 +669,35 @@ export class PupitreSettingSchema extends BaseModel {
   declare value: any
 }
 
+export class PupitreTableViewSchema extends BaseModel {
+  static $columns = ['columns', 'createdAt', 'id', 'isDefault', 'isPublic', 'name', 'panel', 'query', 'tableKey', 'tenantKey', 'updatedAt', 'userId'] as const
+  $columns = PupitreTableViewSchema.$columns
+  @column()
+  declare columns: any
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare isDefault: boolean
+  @column()
+  declare isPublic: boolean
+  @column()
+  declare name: string
+  @column()
+  declare panel: string
+  @column()
+  declare query: any
+  @column()
+  declare tableKey: string
+  @column()
+  declare tenantKey: string | null
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
+  @column()
+  declare userId: string
+}
+
 export class PupitreUploadSchema extends BaseModel {
   static $columns = ['consumedAt', 'createdAt', 'disk', 'field', 'key', 'owner', 'panel', 'resource'] as const
   $columns = PupitreUploadSchema.$columns
@@ -556,6 +717,37 @@ export class PupitreUploadSchema extends BaseModel {
   declare panel: string
   @column()
   declare resource: string
+}
+
+export class PupitreUserSessionSchema extends BaseModel {
+  static $columns = ['createdAt', 'expiresAt', 'guard', 'id', 'ip', 'lastActiveAt', 'panel', 'rememberTokenId', 'remembered', 'revokedAt', 'tokenHash', 'userAgent', 'userId'] as const
+  $columns = PupitreUserSessionSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column.dateTime()
+  declare expiresAt: DateTime
+  @column()
+  declare guard: string
+  @column({ isPrimary: true })
+  declare id: string
+  @column()
+  declare ip: string
+  @column.dateTime()
+  declare lastActiveAt: DateTime
+  @column()
+  declare panel: string
+  @column()
+  declare rememberTokenId: string | null
+  @column()
+  declare remembered: boolean
+  @column.dateTime()
+  declare revokedAt: DateTime | null
+  @column()
+  declare tokenHash: string
+  @column()
+  declare userAgent: string
+  @column()
+  declare userId: string
 }
 
 export class RevisionSchema extends BaseModel {

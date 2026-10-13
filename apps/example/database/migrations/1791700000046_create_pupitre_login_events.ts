@@ -1,0 +1,21 @@
+import { BaseSchema } from '@adonisjs/lucid/schema'
+
+export default class extends BaseSchema {
+  protected tableName = 'pupitre_login_events'
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments('id')
+      table.string('user_id').nullable()
+      table.string('panel').notNullable()
+      table.string('event').notNullable()
+      table.string('method').nullable()
+      table.string('ip', 64).notNullable()
+      table.string('user_agent', 512).notNullable()
+      table.timestamp('created_at').notNullable()
+      table.index(['user_id', 'panel', 'created_at'])
+    })
+  }
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}

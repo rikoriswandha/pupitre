@@ -5,9 +5,11 @@ import { randomUUID } from 'node:crypto'
 import { defineConfig } from '@rikology/pupitre'
 import { transmitRealtime } from '@rikology/pupitre-transmit'
 import { auditAdapter } from '@rikology/pupitre/drivers/audit'
+import { jobsAdapter } from '@rikology/pupitre/drivers/queue'
 
 export default defineConfig({
   cache: { dev: false },
+  jobs: jobsAdapter(),
   timezone: 'UTC',
   i18n: {
     fallbackLocale: 'en',

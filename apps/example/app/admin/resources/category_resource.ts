@@ -1,8 +1,10 @@
+import CatalogCluster from '../clusters/catalog_cluster.js'
 import { actions, defineResource, pages, table } from '@rikology/pupitre'
 import Category from '#models/category'
 import CategoryPolicy from '#policies/category_policy'
 
 export default defineResource(Category)
+  .cluster(CatalogCluster)
   .slug('categories')
   .label('Category')
   .pluralLabel('Categories')

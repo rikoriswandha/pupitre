@@ -1,6 +1,9 @@
 import type User from '#models/user'
 
 export default class PostPolicy {
+  managePublicViews(user: User) {
+    return user.email === 'admin@example.com'
+  }
   private isAdmin(user: User) {
     return user.email === 'admin@example.com'
   }

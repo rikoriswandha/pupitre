@@ -40,7 +40,7 @@ pupitreTest(
     await expect(page).toHaveURL(/filters/)
 
     const orderBatch = `Order Batch ${Date.now()}`
-    await page.goto('/admin/acme/categories')
+    await page.goto('/admin/acme/catalog/categories')
     for (const suffix of ['A', 'B']) {
       await page
         .getByRole('button', { name: /create/i })
@@ -55,8 +55,8 @@ pupitreTest(
         .getByRole('button', { name: /create|save/i })
         .last()
         .click()
-      await page.waitForURL(/\/admin\/acme\/categories\/\d+\/edit/)
-      await page.goto('/admin/acme/categories')
+      await page.waitForURL(/\/admin\/acme\/catalog\/categories\/\d+\/edit/)
+      await page.goto('/admin/acme/catalog/categories')
     }
     await page.getByRole('searchbox', { name: 'Search' }).fill(orderBatch)
     await page.getByRole('searchbox', { name: 'Search' }).press('Enter')

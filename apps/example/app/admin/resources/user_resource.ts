@@ -2,6 +2,7 @@ import { actions, defineResource, pages, table } from '@rikology/pupitre'
 import { shieldRolesField } from '@rikology/pupitre-shield'
 import User from '#models/user'
 import UserPolicy from '#policies/user_policy'
+import { loginHistoryWidget } from '@rikology/pupitre'
 
 export default defineResource(User)
   .slug('users')
@@ -41,12 +42,12 @@ export default defineResource(User)
   ])
   .actions({
     header: [actions.create()],
-    row: [actions.edit(), actions.view()],
+    row: [actions.edit(), actions.view(), actions.impersonate()],
     bulk: [actions.delete()],
   })
   .pages({
     list: pages.list(),
     create: pages.create().redirectTo('edit'),
     edit: pages.edit(),
-    view: pages.view(),
+    view: pages.view().footerWidgets([loginHistoryWidget()]),
   })

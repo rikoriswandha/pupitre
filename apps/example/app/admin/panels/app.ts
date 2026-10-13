@@ -4,6 +4,7 @@ import userResource from '../resources/user_resource.js'
 import appTheme from '../themes/app.js'
 
 export default definePanel('app')
+  .strictAuthorization()
   .path('/app')
   .guard('web')
   .locales(['en', 'id'])
