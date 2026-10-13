@@ -20,7 +20,9 @@ jobs:
       - run: npm run build
       - run: npm run check -w apps/docs
       - run: npm run build -w apps/docs
-      - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
+      # `ace build` runs only the init hooks; `codegen` also writes the route-derived Tuyau registry
+      # (.adonisjs/client/registry, gitignored) that inertia/client.ts imports.
+      - run: cp .env.example .env && node ace generate:key && node ace codegen && node ace build --ignore-ts-errors
         working-directory: apps/example
       - run: npm run bundle:budget
       - run: npm run lint
@@ -66,7 +68,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run build
-      - run: cp .env.example .env && node ace generate:key && node ace build --ignore-ts-errors
+      - run: cp .env.example .env && node ace generate:key && node ace codegen && node ace build --ignore-ts-errors
         working-directory: apps/example
       - run: npm run e2e
       - uses: actions/upload-artifact@v4
