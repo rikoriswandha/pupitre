@@ -131,7 +131,7 @@ export function PupitreContent({
   toastDuration = 0,
   props,
 }: PupitreProps & { props: InertiaPupitreProps }) {
-  configureI18n(props.pupitre.locale, props.pupitre.messages)
+  configureI18n(props.pupitre.locale, props.pupitre.messages, props.pupitre.numberLocale)
   useEffect(() => {
     document.documentElement.lang = props.pupitre.locale
   }, [props.pupitre.locale])

@@ -1,7 +1,8 @@
 import type { ComputedFunction } from '@json-render/core'
 import type { ComputedFunctionName } from '@rikology/pupitre/catalog'
+import { getNumberLocale } from '../i18n.js'
 
-/** Built-in $computed signatures: concat({ values }), add/sub/mul/div({ a, b }), sum({ values }), count({ value }), formatNumber({ value, locale?, decimals?, currency? }), formatDate({ value, format?, timezone? }), pluck({ values, key }), join({ values, separator? }), upper/lower({ value }), truncate({ value, length, suffix? }), coalesce({ values }). */
+/** Built-in $computed signatures: concat({ values }), add/sub/mul/div({ a, b }), sum({ values }), count({ value }), formatNumber({ value, locale?, decimals?, currency?, compact? }) (locale defaults to the request's number locale), formatDate({ value, format?, timezone? }), pluck({ values, key }), join({ values, separator? }), upper/lower({ value }), truncate({ value, length, suffix? }), coalesce({ values }). */
 export const builtInFunctions: Record<ComputedFunctionName, ComputedFunction> = {
   concat: ({ values }) => (Array.isArray(values) ? values.join('') : String(values ?? '')),
   add: ({ a, b }) => Number(a) + Number(b),
@@ -16,10 +17,12 @@ export const builtInFunctions: Record<ComputedFunctionName, ComputedFunction> = 
     if (typeof value === 'object') return Object.keys(value).length
     return 1
   },
-  formatNumber: ({ value, locale, decimals, currency }) =>
-    new Intl.NumberFormat(typeof locale === 'string' ? locale : undefined, {
+  formatNumber: ({ value, locale, decimals, currency, compact }) =>
+    new Intl.NumberFormat(typeof locale === 'string' ? locale : getNumberLocale(), {
+      ...(compact === true ? { notation: 'compact' as const } : {}),
       minimumFractionDigits: typeof decimals === 'number' ? decimals : undefined,
-      maximumFractionDigits: typeof decimals === 'number' ? decimals : undefined,
+      maximumFractionDigits:
+        typeof decimals === 'number' ? decimals : compact === true ? 1 : undefined,
       style: typeof currency === 'string' ? 'currency' : 'decimal',
       currency: typeof currency === 'string' ? currency : undefined,
     }).format(Number(value)),

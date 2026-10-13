@@ -15,7 +15,7 @@ type Props = {
 /** Wraps host-owned Inertia pages in the exact panel shell used by Pupitre. */
 export function PupitreShell({ registry, realtime, children }: Props) {
   const props = useInertiaPage<PupitrePageProps>().props
-  configureI18n(props.pupitre.locale, props.pupitre.messages)
+  configureI18n(props.pupitre.locale, props.pupitre.messages, props.pupitre.numberLocale)
   useEffect(() => {
     document.documentElement.lang = props.pupitre.locale
   }, [props.pupitre.locale])
