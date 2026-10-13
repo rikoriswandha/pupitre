@@ -29,6 +29,8 @@ For `.table(callback)`, supply a model: `defineWidget('latest-posts', Post).tabl
 
 Common controls: `.span(number | 'full')`, `.sort(number)`, `.poll(intervalString)`, `.heading(string)`, `.description(string)`, `.canView(callback)`, `.lazy(boolean)`. Defaults are span 1, sort 0 and lazy loading enabled.
 
+Spans count columns of a four-column grid on wide screens (two columns on tablets, one on phones). Widgets fill rows in sort order; a row that would leave empty columns stretches its widgets proportionally, so two `span(1)` charts followed by a `span('full')` table render as two halves rather than two quarters and a hole.
+
 ## Radar and scatter charts
 
 Both stay in the lazy Recharts chunk and expose their values in a screen-reader data table.
@@ -50,7 +52,7 @@ Radar uses the usual numeric `{ labels, datasets }` shape. Scatter has no labels
 
 Register panel dashboard widgets with `.widgets([...])`, custom-page widgets with `definePage(...).widgets([...])`, or header/footer widgets with `pages.list/create/edit/view().widgets([...]).footerWidgets([...])`.
 
-Panel `.filters([...])` and custom-page `.filters([...])` accept named select filter definitions (see [WidgetFilterDefinition](/reference/api-page-widget/)). Their values are URL-backed and supplied to loaders as `filters`. Deferred Inertia data lets the page shell show before queries finish. Keep expensive queries in loaders, never in builder module initialization.
+Panel `.filters([...])` and custom-page `.filters([...])` accept named select filter definitions (see [WidgetFilterDefinition](/reference/api-page-widget/)). Their values are URL-backed and supplied to loaders as `filters`. Each select starts with an "All" option (value `''`, no filter in the URL); give one of your options the value `''` to use your own label for it instead. Deferred Inertia data lets the page shell show before queries finish. Keep expensive queries in loaders, never in builder module initialization.
 
 ## Timeline widgets
 

@@ -31,6 +31,8 @@ Both `defineTheme()` and panel `.theme()` validate values. Color names must be i
 
 The default skin uses warm neutrals and a green primary. Every colored state derives from a handful of base tokens: setting `primary` (or `colors: { primary }`) also re-tints selection fills (`--primary-soft`), colored text (`--primary-ink`), focus rings and the first chart series, in both light and dark mode. The same pattern applies to `success`, `warning`, `destructive` and `info`. Override `--background`, `--card`, `--sidebar`, `--foreground`, `--border` or `--input` through `vars` to change the neutral layers; keep `--primary-foreground` readable on your primary.
 
+The default skin is a **ledger**: content sits on the canvas, each region opens with an ink rule, and lines inside it are hairlines. Two tokens carry that identity and are independent of `primary`: `--rule` (the ink rule colour) and `--pupitre-font-display` (the serif used only for page titles). The title font is Source Serif 4 (OFL-1.1), bundled with `@rikology/pupitre-ui/styles.css` via `@fontsource/source-serif-4`, so it looks the same on every OS and is served from your own origin (CSP `font-src 'self'` is enough). Override the tokens through `vars`, for example `vars: { '--pupitre-font-display': 'var(--font-sans)' }` to keep titles in your sans. Hosts that render Pupitre components outside the panel shell should paint `body` with `var(--background)`, because ledger surfaces are transparent.
+
 Use the registry for structural component changes, not theme tokens. The sidebar collapse/group state persists per panel; table column visibility persists separately. [Customizing UI](/customizing-ui/) explains replacement component ownership.
 
 ## Environment colors

@@ -95,6 +95,33 @@ Pupitre sends `pupitre.locale`, optional `pupitre.messages` (the effective dicti
 
 The optional nullable `users.locale` column stores a user's preferred language. Publish the localization migration with `node ace pupitre:install`, then run `node ace migration:run`. Map the model's locale attribute through `auth.columns.locale` if the host uses a different property name. Declare the corresponding Lucid attribute on your User model. Without the optional column, language selection remains session-based; a null preference falls through to session, Accept-Language, and the panel default.
 
+## Number formats
+
+Numbers and money use a number locale that is separate from the interface language, so an English interface can still show `Rp 1.234.567` or `1 234,5`. Set the panel default and, optionally, the formats users can pick:
+
+```ts
+export default definePanel('admin')
+  .locales(['en', 'id'])
+  .numberLocale('id-ID') // default for everyone; omit to follow the UI language
+  .numberLocales(['id-ID', 'en-US', 'de-CH']) // profile choices; [] hides the choice
+```
+
+The profile shows a "Number format" select whose options are labelled with a sample (`1.234.567,89 · Indonesia`); without `.numberLocales()` it offers one region per common separator style (`en-US`, `id-ID`, `fr-FR`, `de-CH`, `en-IN`, plus the panel default). "Default" clears the preference. The effective number locale is resolved from the user preference, then the session, then `.numberLocale()`, then the UI language. Values outside the offered choices are ignored. The optional nullable `users.number_locale` column (migration `1791800000024_add_pupitre_number_locale_to_users`, mapped through `auth.columns.numberLocale`, default `numberLocale`) persists the choice across devices; without it the choice is session-based.
+
+The number locale applies to `.money()` and `.numeric()` table columns, entries and summaries, numeric stat values, chart axes and tooltips, and the client `formatNumber` computed function. Pupitre sends it to the client as `pupitre.numberLocale`; React code can use `formatNumber(value, options)` and `getNumberLocale()` from `@rikology/pupitre-react`.
+
+### Compact numbers
+
+Long values can be shortened with `.compact()`. Abbreviations follow the number locale's CLDR rules: `1500` is `1.5K` in `en-US` and `1,5 rb` in `id-ID`, `105913958` is `105.9M` or `105,9 jt`. The full value stays available as a tooltip, and copyable entries copy the full value.
+
+```ts
+table.text('revenue').money('IDR').compact()
+schema.textEntry('views').numeric().compact()
+stat('Revenue', 105_913_958).money('IDR').compact()
+```
+
+`.compact()` affects `money`/`numeric` values only. Stat values given as numbers are always formatted with the number locale (`.money(currency)` renders them as money); strings are shown as given. Some locales compact only from a million upward (`de-DE` prints `1000`).
+
 ## Translation coverage
 
 From the repository root, run `npm run i18n:check`. It runs the checker tests and scans the `src` trees of the core, React, UI, Shield, Audit, Settings, and Transmit packages. Every literal `t('…')` key must have a nonempty Indonesian message. Dynamic keys, absent arguments, malformed source, missing messages, and incomplete plural messages fail the command with source locations. Host app and plugin authors should apply the same literal-key rule to their own dictionaries; the repository checker does not scan application record data.

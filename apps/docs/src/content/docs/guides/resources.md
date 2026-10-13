@@ -29,6 +29,8 @@ Default pages are list/create/edit. `.pages({...})` replaces that map, so list e
 
 Adding `.infolist()` automatically adds a view page if none exists. Record pages expose sub-navigation to edit/view, relation tabs and nested resources.
 
+`header` actions are shared by all pages, but built-in actions only appear where they make sense: collection actions (`create`, `export`, `import`, `attach`, `associate`) on the list page, record actions (`edit`, `view`, `delete`, `restore`, `forceDelete`, `replicate`, `impersonate`) on edit/view pages, never linking to the page you are on. Edit pages add "View" and view pages add "Edit" when those pages exist, and both add "Delete" unless the resource is read-only. Custom header actions show on every page. Actions the user is not authorized for, or whose `visible()` returns false, are hidden rather than disabled.
+
 ## Persistence hooks
 
 | Hook | Signature / use |
