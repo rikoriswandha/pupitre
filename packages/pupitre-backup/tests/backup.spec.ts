@@ -110,6 +110,7 @@ test.group('database backups', (group) => {
       table.string('guard')
       table.string('panel')
       table.string('token_hash')
+      table.string('remember_token_id')
       table.string('ip')
       table.string('user_agent', 512)
       table.timestamp('created_at')
