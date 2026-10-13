@@ -86,7 +86,9 @@ const adminPanel = definePanel('admin')
       ]),
     nav.item('Documentation').url('https://pupitre.rikology.com').external(),
   ])
-  .userMenu([{ label: 'Pupitre website', url: 'https://pupitre.rikology.com', external: true, sort: 10 }])
+  .userMenu([
+    { label: 'Pupitre website', url: 'https://pupitre.rikology.com', external: true, sort: 10 },
+  ])
   .theme(adminTheme)
   .plugins([
     media({
