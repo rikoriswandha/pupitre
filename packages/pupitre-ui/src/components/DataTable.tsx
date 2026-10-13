@@ -1,3 +1,4 @@
+import { DataTableViews } from './DataTableViews.js'
 import {
   createElement,
   lazy,
@@ -1177,6 +1178,7 @@ export function DataTable({
       )}
       <TableSurface className="overflow-hidden">
         {(Boolean(descriptor.groups?.length) ||
+          Boolean(descriptor.views) ||
           selected.length > 0 ||
           Boolean(descriptor.reorderable) ||
           descriptor.searchable ||
@@ -1185,6 +1187,16 @@ export function DataTable({
           columnsVisible) && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
             <div className="flex flex-wrap items-center gap-3">
+              {descriptor.views && (
+                <DataTableViews
+                  descriptor={descriptor}
+                  query={Object.fromEntries(
+                    Object.entries(tableData?.query ?? {}).filter(([key]) => key !== 'page')
+                  )}
+                  columns={visibility}
+                  onColumns={setVisibility}
+                />
+              )}
               {!reorderMode && descriptor.groups && descriptor.groups.length > 0 && (
                 <SelectMenu
                   aria-label={t('Group')}
@@ -1577,13 +1589,19 @@ export function DataTable({
         )}
         <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3 text-[0.8125rem] text-muted-foreground sm:px-5">
           <span className="tabular-nums">
-            {meta
-              ? t('Showing {from} to {to} of {total} results', {
-                  from: meta.from ?? 0,
-                  to: meta.to ?? 0,
-                  total: meta.total,
-                })
-              : t('{count} results', { count: rows.length })}
+            {meta?.simple ? (
+              t('{count} results', { count: rows.length })
+            ) : (
+              <>
+                {meta
+                  ? t('Showing {from} to {to} of {total} results', {
+                      from: meta.from ?? 0,
+                      to: meta.to ?? 0,
+                      total: meta.total,
+                    })
+                  : t('{count} results', { count: rows.length })}
+              </>
+            )}
           </span>
           <div className="flex items-center gap-2">
             {descriptor.perPageOptions.length > 0 && (
@@ -1616,7 +1634,13 @@ export function DataTable({
               <Icon name="chevron-left" />
             </button>
             <span className="whitespace-nowrap tabular-nums">
-              {page} / {lastPage}
+              {meta?.simple ? (
+                page
+              ) : (
+                <>
+                  {page} / {lastPage}
+                </>
+              )}
             </span>
             <button
               type="button"

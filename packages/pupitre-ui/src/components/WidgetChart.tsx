@@ -17,6 +17,31 @@ export function WidgetChart({ descriptor, data }: Props) {
           <ChartBody chartType={descriptor.chartType ?? 'line'} data={data} />
         </Suspense>
       </div>
+      {data?.kind === 'scatter' && (
+        <div className="sr-only">
+          <table>
+            <caption>{t('{label} data', { label: descriptor.heading ?? t('Chart') })}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{t('Series')}</th>
+                <th scope="col">X</th>
+                <th scope="col">Y</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.datasets.flatMap((dataset) =>
+                dataset.data.map((point, index) => (
+                  <tr key={`${dataset.label}-${index}`}>
+                    <th scope="row">{dataset.label}</th>
+                    <td>{point.x}</td>
+                    <td>{point.y}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
       {data?.kind === 'chart' && (
         <div className="sr-only">
           <table>

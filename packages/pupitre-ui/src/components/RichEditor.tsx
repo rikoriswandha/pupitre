@@ -2,12 +2,13 @@ import { lazy, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Suspense } from 'react'
 import type { ReactNode } from 'react'
 import type { UploadResponse } from '@rikology/pupitre/catalog'
-import { t, useBoundValue, useFieldError, useUpload } from '@rikology/pupitre-react'
+import { t, useBoundValue, useFieldError, useStateValue, useUpload } from '@rikology/pupitre-react'
 import { Icon } from '../icons.js'
 import { Button, FieldDescription, Tooltip, cn, controlGroupClasses } from '../primitives/index.js'
+import type { BlockEdit, RichFeatures } from './RichEditorExtensions.js'
 
 export type RichEditorProps = {
-  props: {
+  props: RichFeatures & {
     name?: string
     value?: string | null
     label?: string | null
@@ -31,6 +32,7 @@ type LazyEditorProps = {
   value: string
   onChange: (html: string) => void
   toolbar: string[]
+  features: RichFeatures
   minHeight?: number
   maxHeight?: number
   uploadUrl?: string
@@ -43,11 +45,12 @@ type LazyEditorProps = {
 }
 
 const TiptapEditor = lazy(async () => {
-  const [reactEditor, starterKitModule, linkModule, imageModule] = await Promise.all([
+  const [reactEditor, starterKitModule, linkModule, imageModule, richModule] = await Promise.all([
     import('@tiptap/react'),
     import('@tiptap/starter-kit'),
     import('@tiptap/extension-link'),
     import('@tiptap/extension-image'),
+    import('./RichEditorExtensions.js'),
   ])
   const StarterKit = starterKitModule.default
   const Link = linkModule.default
@@ -57,6 +60,7 @@ const TiptapEditor = lazy(async () => {
     value,
     onChange,
     toolbar,
+    features,
     minHeight,
     maxHeight,
     uploadUrl,
@@ -70,12 +74,14 @@ const TiptapEditor = lazy(async () => {
     const imageInput = useRef<HTMLInputElement>(null)
     const [uploadingImage, setUploadingImage] = useState(false)
     const [imageError, setImageError] = useState<string>()
+    const [blockEdit, setBlockEdit] = useState<BlockEdit>()
     const editor = reactEditor.useEditor({
       // Tiptap v3 StarterKit bundles Link; disable it so the configured Link is the only one.
       extensions: [
         StarterKit.configure({ link: false }),
         Link.configure({ openOnClick: false }),
         Image,
+        ...richModule.richEditorExtensions(features, setBlockEdit),
       ],
       content: value,
       editable: !disabled && !readOnly,
@@ -254,6 +260,17 @@ const TiptapEditor = lazy(async () => {
             ))}
           </div>
         )}
+        {features.mergeTags?.length || features.customBlocks?.length ? (
+          <richModule.RichEditorTools editor={editor} features={features} onEdit={setBlockEdit} />
+        ) : null}
+        {blockEdit && (
+          <richModule.RichBlockDialog
+            key={`${blockEdit.block.id}-${blockEdit.position ?? 'new'}`}
+            edit={blockEdit}
+            editor={editor}
+            onClose={() => setBlockEdit(undefined)}
+          />
+        )}
         {uploadUrl && (
           <div className="px-3 pt-2">
             <input
@@ -296,9 +313,24 @@ const TiptapEditor = lazy(async () => {
   return { default: Editor }
 })
 
+function firstRichBlockError(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object') {
+    for (const child of Object.values(value)) {
+      const message = firstRichBlockError(child)
+      if (message) return message
+    }
+  }
+}
+
 export function RichEditor({ props, emit, bindings, children, loading = false }: RichEditorProps) {
   const [value, setValue] = useBoundValue(props.value, bindings?.value)
-  const error = useFieldError(props.error, bindings?.value)
+  const fieldError = useFieldError(props.error, bindings?.value)
+  const errorPath = bindings?.value?.startsWith('/data/')
+    ? bindings.value.replace('/data/', '/errors/')
+    : `/errors/${(props.name ?? 'body').replaceAll('.', '/')}`
+  const nestedErrors = useStateValue(`${errorPath}/blocks`)
+  const error = fieldError ?? firstRichBlockError(nestedErrors)
   const generatedId = useId()
   const describedBy =
     [props.helperText && `${generatedId}-helper`, error && `${generatedId}-error`]
@@ -356,6 +388,7 @@ export function RichEditor({ props, emit, bindings, children, loading = false }:
           value={value ?? ''}
           onChange={update}
           toolbar={toolbar}
+          features={props}
           uploadUrl={props.uploadUrl}
           uploadImage={uploadApi.upload}
           minHeight={props.minHeight}

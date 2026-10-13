@@ -72,8 +72,17 @@ export function jsonFetch(input: RequestInfo | URL, init: RequestInit = {}): Pro
     headers,
   })
 }
-async function saveCsvResponse(response: Response): Promise<void> {
-  const blobUrl = URL.createObjectURL(await response.blob())
+function isExportResponse(response: Response): boolean {
+  const contentType = response.headers.get('content-type') ?? ''
+  return (
+    contentType.includes('text/csv') ||
+    contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+  )
+}
+async function saveExportResponse(response: Response, signal?: AbortSignal): Promise<void> {
+  const blob = await response.blob()
+  signal?.throwIfAborted()
+  const blobUrl = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = blobUrl
   const disposition = response.headers.get('content-disposition')
@@ -81,17 +90,23 @@ async function saveCsvResponse(response: Response): Promise<void> {
   anchor.click()
   URL.revokeObjectURL(blobUrl)
 }
-export async function downloadExportFile(url: string): Promise<void> {
-  const response = await jsonFetch(url, { headers: { Accept: 'text/csv' } })
+export async function downloadExportFile(url: string, signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted()
+  const response = await jsonFetch(url, {
+    signal,
+    headers: {
+      Accept: 'text/csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    },
+  })
   if (!response.ok)
     throw new Error(t('Export download failed ({status})', { status: response.status }))
-  if (!response.headers.get('content-type')?.includes('text/csv'))
-    throw new Error(t('Export download did not return CSV.'))
-  await saveCsvResponse(response)
+  if (!isExportResponse(response))
+    throw new Error(t('Export download did not return a supported file.'))
+  await saveExportResponse(response, signal)
 }
 export async function submitAction(
   url: string,
-  body: { data?: Record<string, unknown>; ids?: Array<string | number> },
+  body: { data?: Record<string, unknown>; ids?: Array<string | number>; format?: 'csv' | 'xlsx' },
   method: ActionDescriptor['method'] = 'post'
 ): Promise<{
   status: number
@@ -121,8 +136,8 @@ export async function submitAction(
     },
     body: JSON.stringify(body),
   })
-  if (response.ok && response.headers.get('content-type')?.includes('text/csv')) {
-    await saveCsvResponse(response)
+  if (response.ok && isExportResponse(response)) {
+    await saveExportResponse(response)
     return { status: response.status, downloaded: true }
   }
   const payload: unknown = await response.json().catch(() => ({}))

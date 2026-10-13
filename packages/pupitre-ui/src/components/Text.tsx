@@ -96,7 +96,7 @@ export function InputFieldLabel({
   fallback?: string
 }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-3">
+    <div data-input-label className="flex min-w-0 items-center justify-between gap-3">
       {props.label !== null && (props.label !== undefined || fallback) && (
         <Label id={`${id}-label`} htmlFor={id}>
           {props.label ?? fallback}

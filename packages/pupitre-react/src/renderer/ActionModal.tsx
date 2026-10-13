@@ -253,7 +253,9 @@ export function ActionModal({
           <PupitreRenderer
             page={
               {
-                key: `modal:${action.name}`,
+                key: formResponse.uploadOwner
+                  ? `${pupitre.panel.id}:${formResponse.uploadOwner.resource}:modal:${formResponse.uploadOwner.record ?? ''}`
+                  : `modal:${action.name}`,
                 kind: 'custom',
                 title: action.label,
                 breadcrumbs: [],

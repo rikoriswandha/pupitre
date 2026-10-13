@@ -55,7 +55,7 @@ export function Checkbox({ props, bindings }: Runtime) {
           />
           <div className="grid min-w-0 gap-1">
             {props.label !== null && (
-              <Label htmlFor={id} className="cursor-pointer leading-6">
+              <Label data-input-label="" htmlFor={id} className="cursor-pointer leading-6">
                 {props.label ?? props.name}
                 {props.required && <span aria-hidden="true"> *</span>}
               </Label>

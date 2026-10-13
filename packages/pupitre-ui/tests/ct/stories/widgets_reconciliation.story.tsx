@@ -7,7 +7,7 @@ const initialStats: WidgetData = {
   kind: 'stats',
   stats: [{ label: 'Count', value: 'Initial count' }],
 }
-const initialCustom = { message: 'Initial custom' }
+const initialCustom: WidgetData = { kind: 'component', data: { message: 'Initial custom' } }
 const widgets: WidgetDescriptor[] = [
   {
     name: 'count',

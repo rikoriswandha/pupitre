@@ -4,6 +4,7 @@ import { RepeaterContext } from './Repeater.js'
 import { Button, cn, Collapse } from '../primitives/index.js'
 import { Icon } from '../icons.js'
 import { PanelNestingContext } from './Section.js'
+import { RepeaterTableRow } from './RepeaterTableRow.js'
 
 type RuntimeProps = {
   props: Record<string, unknown>
@@ -28,6 +29,12 @@ export function RepeaterItem({ props, children, loading = false }: RuntimeProps)
           ])
         )
   ) as CSSProperties
+  if (context.table)
+    return (
+      <RepeaterTableRow index={index} loading={loading}>
+        {children}
+      </RepeaterTableRow>
+    )
   return (
     <article className="min-w-0 overflow-hidden rounded-lg border border-border bg-card">
       <header className="flex items-center justify-between gap-3 bg-muted/40 px-4 py-2.5">

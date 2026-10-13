@@ -1,0 +1,22 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "kanban-board",
+  "type": "registry:component",
+  "title": "KanbanBoard",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/kanban-board-body.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/KanbanBoard.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/KanbanBoard.tsx",
+      "content": "import { lazy, Suspense } from 'react'\nimport type { WidgetDescriptor } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\nconst Board = lazy(() => import('./KanbanBoardBody.js'))\nexport type KanbanCard = {\n  id: string\n  title: string\n  description?: string\n  url?: string\n  movable: boolean\n  entries: { label: string; value: string }[]\n}\nexport type KanbanColumn = {\n  value: string\n  label: string\n  color?: string\n  count: number\n  limit: number\n  cards: KanbanCard[]\n}\nexport type KanbanData = { columns: KanbanColumn[]; createUrl?: string; statusColumn: string }\nexport type KanbanBoardProps = { data: unknown; descriptor: WidgetDescriptor }\nexport function KanbanBoard(props: KanbanBoardProps) {\n  return (\n    <Suspense fallback={<p role=\"status\">{t('Loading board')}</p>}>\n      <Board {...props} />\n    </Suspense>\n  )\n}\n"
+    }
+  ]
+}

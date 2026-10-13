@@ -1,3 +1,10 @@
+import { MediaPicker } from './components/MediaPicker.js'
+import { MediaEntry } from './components/MediaEntry.js'
+import { MediaColumn } from './components/MediaColumn.js'
+import { EnvironmentIndicator } from './components/EnvironmentIndicator.js'
+import { ImpersonationBanner } from './components/ImpersonationBanner.js'
+import { Calendar } from './components/Calendar.js'
+import { KanbanBoard } from './components/KanbanBoard.js'
 import { Builder } from './components/Builder.js'
 import { BuilderItem } from './components/BuilderItem.js'
 import { Step } from './components/Step.js'
@@ -67,6 +74,13 @@ import { ToggleButtons } from './components/ToggleButtons.js'
 import { View } from './components/View.js'
 
 export const components = {
+  MediaPicker,
+  MediaEntry,
+  MediaColumn,
+  EnvironmentIndicator,
+  ImpersonationBanner,
+  Calendar,
+  KanbanBoard,
   Text,
   Textarea,
   Number,
@@ -135,6 +149,9 @@ export const components = {
 } as const
 
 export {
+  MediaPicker,
+  MediaEntry,
+  MediaColumn,
   RelationManager,
   Builder,
   BuilderItem,

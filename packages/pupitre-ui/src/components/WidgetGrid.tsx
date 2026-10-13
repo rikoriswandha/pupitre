@@ -121,7 +121,10 @@ export function WidgetGrid({
               <WidgetTimeline descriptor={widget} data={value} />
             ) : null}
             {widget.kind === 'component' && Custom ? (
-              <Custom descriptor={widget} data={widgetData[widget.dataProp]} />
+              <Custom
+                descriptor={widget}
+                data={value?.kind === 'component' ? value.data : undefined}
+              />
             ) : null}
           </div>
         )

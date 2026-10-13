@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, type ComponentType, type ReactNode } from 'react'
 import { t } from '@rikology/pupitre-react'
 import { ProfileSecurity, type ProfileSecurityProps } from './ProfileSecurity.js'
+import { ProfileSessions } from './ProfileSessions.js'
 
 type ViewComponent = ComponentType<Record<string, unknown> & { children?: ReactNode }>
 export const ViewContext = createContext<Record<string, ViewComponent>>({})
@@ -33,6 +34,25 @@ export function View({ props, children }: RuntimeProps) {
   if (name === 'PupitreProfileSecurity') {
     if (!isProfileSecurityProps(props.props)) return null
     return createElement(ProfileSecurity, props.props)
+  }
+  if (name === 'PupitreProfileSessions') {
+    const value = props.props as Record<string, unknown> | undefined
+    if (
+      !value ||
+      typeof value.basePath !== 'string' ||
+      typeof value.hasPassword !== 'boolean' ||
+      typeof value.passkeysEnabled !== 'boolean' ||
+      typeof value.history !== 'boolean'
+    )
+      return null
+    return (
+      <ProfileSessions
+        basePath={value.basePath}
+        hasPassword={value.hasPassword}
+        passkeysEnabled={value.passkeysEnabled}
+        history={value.history}
+      />
+    )
   }
   const Component = registry[name]
   if (!Component)

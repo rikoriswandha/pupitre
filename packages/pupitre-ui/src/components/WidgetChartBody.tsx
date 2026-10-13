@@ -14,10 +14,55 @@ import {
   YAxis,
   Line,
   LineChart,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Scatter,
+  ScatterChart,
 } from 'recharts'
-import type { WidgetData } from '@rikology/pupitre/catalog'
-type Props = { chartType: 'line' | 'bar' | 'area' | 'pie' | 'doughnut'; data?: WidgetData }
+import type { WidgetData, WidgetDescriptor } from '@rikology/pupitre/catalog'
+type Props = { chartType: NonNullable<WidgetDescriptor['chartType']>; data?: WidgetData }
+const compactFormatter = new Intl.NumberFormat(undefined, { notation: 'compact' })
+const compactNumber = (value: number) => compactFormatter.format(value)
+
 export function WidgetChartBody({ chartType, data }: Props) {
+  if (data?.kind === 'scatter')
+    return (
+      <ResponsiveContainer width="100%" height={256}>
+        <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+          <CartesianGrid stroke="var(--border)" />
+          <XAxis
+            type="number"
+            dataKey="x"
+            name="X"
+            tickCount={4}
+            tickFormatter={compactNumber}
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+          />
+          <YAxis
+            type="number"
+            dataKey="y"
+            name="Y"
+            tickFormatter={compactNumber}
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+          />
+          <Tooltip
+            contentStyle={{ background: 'var(--popover)', color: 'var(--popover-foreground)' }}
+          />
+          <Legend />
+          {data.datasets.map((dataset, index) => (
+            <Scatter
+              key={dataset.label}
+              name={dataset.label}
+              data={dataset.data}
+              fill={dataset.color ?? `var(--chart-${(index % 6) + 1})`}
+            />
+          ))}
+        </ScatterChart>
+      </ResponsiveContainer>
+    )
   if (!data || data.kind !== 'chart') return <div className="h-64 rounded bg-muted" />
   const rows = data.labels.map((label, index) =>
     Object.fromEntries([
@@ -51,6 +96,36 @@ export function WidgetChartBody({ chartType, data }: Props) {
       wrapperStyle={{ fontSize: 12, color: 'var(--muted-foreground)', paddingTop: 12 }}
     />
   )
+  if (chartType === 'radar')
+    return (
+      <ResponsiveContainer width="100%" height={256}>
+        {/* Smaller radius leaves room for angle labels in narrow grid cells. */}
+        <RadarChart
+          data={rows}
+          outerRadius="62%"
+          margin={{ top: 8, right: 24, bottom: 8, left: 24 }}
+        >
+          <PolarGrid stroke="var(--border)" />
+          <PolarAngleAxis
+            dataKey="label"
+            tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
+          />
+          <PolarRadiusAxis tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }} />
+          {data.datasets.map((dataset, index) => (
+            <Radar
+              key={dataset.label}
+              name={dataset.label}
+              dataKey={dataset.label}
+              stroke={seriesColors[index]}
+              fill={seriesColors[index]}
+              fillOpacity={0.15}
+            />
+          ))}
+          {tooltip}
+          {legend}
+        </RadarChart>
+      </ResponsiveContainer>
+    )
   if (chartType === 'pie' || chartType === 'doughnut') {
     const values = data.labels.map((label, index) => ({
       name: label,

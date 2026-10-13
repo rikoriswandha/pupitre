@@ -1,0 +1,18 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "media-column",
+  "type": "registry:component",
+  "title": "MediaColumn",
+  "dependencies": [],
+  "registryDependencies": [
+    "https://pupitre.dev/r/media-entry.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/MediaColumn.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/MediaColumn.tsx",
+      "content": "import { MediaEntry } from './MediaEntry.js'\nimport type { MediaEntryProps } from './MediaEntry.js'\nexport function MediaColumn(props: MediaEntryProps) {\n  return <MediaEntry {...props} linked={false} />\n}\n"
+    }
+  ]
+}

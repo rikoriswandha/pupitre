@@ -16,6 +16,8 @@ type SharedPupitre = PupitrePageProps['pupitre']
 export type ShellProps = {
   panel: SharedPupitre['panel']
   user: SharedPupitre['user']
+  impersonation?: SharedPupitre['impersonation']
+  environment?: SharedPupitre['environment']
   locale?: string
   locales?: string[]
   nav: NavGroup[]
@@ -23,6 +25,8 @@ export type ShellProps = {
   title: string
   headerActions: ActionDescriptor[]
   subNavigation?: SubNavigationItem[]
+  clusterNavigation?: SubNavigationItem[]
+  clusterNavigationPosition?: 'start' | 'top'
   currentUrl: string
   /** Current tenant (tenancy enabled), else `null`. */
   tenant: SharedPupitre['tenant']
@@ -66,6 +70,9 @@ export type ConfirmDialogProps = {
   destructive?: boolean
   icon?: string
   loading?: boolean
+  exportFormats?: readonly ('csv' | 'xlsx')[]
+  exportFormat?: 'csv' | 'xlsx'
+  onExportFormatChange?: (format: 'csv' | 'xlsx') => void
   onConfirm: () => void
   onCancel: () => void
 }

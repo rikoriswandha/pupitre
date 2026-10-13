@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "environment-indicator",
+  "type": "registry:component",
+  "title": "EnvironmentIndicator",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "@rikology/pupitre@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/EnvironmentIndicator.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/EnvironmentIndicator.tsx",
+      "content": "import type { PupitrePageProps } from '@rikology/pupitre/catalog'\nimport { t } from '@rikology/pupitre-react'\n\nimport { cn, toneSoft, toTone } from '../primitives/index.js'\n\nconst stripColors = {\n  primary: 'bg-primary',\n  success: 'bg-success',\n  warning: 'bg-warning',\n  danger: 'bg-danger',\n  info: 'bg-info',\n  gray: 'bg-muted-foreground',\n}\n\nexport function EnvironmentIndicator({\n  environment,\n}: {\n  environment?: PupitrePageProps['pupitre']['environment']\n}) {\n  if (!environment) return null\n  const tone = toTone(environment.color)\n  return (\n    <>\n      <span\n        aria-hidden=\"true\"\n        data-environment-strip=\"\"\n        className={cn('pointer-events-none fixed inset-x-0 top-0 z-50 h-1', stripColors[tone])}\n      />\n      <span\n        data-environment-indicator=\"\"\n        className={cn('max-w-28 truncate rounded px-2 py-1 text-xs font-semibold', toneSoft[tone])}\n      >\n        <span className=\"sr-only\">{t('Environment: {label}', { label: environment.label })}</span>\n        <span aria-hidden=\"true\">{environment.label}</span>\n      </span>\n    </>\n  )\n}\n"
+    }
+  ]
+}

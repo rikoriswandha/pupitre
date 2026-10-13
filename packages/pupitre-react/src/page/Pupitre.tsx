@@ -454,17 +454,21 @@ export function PupitreContent({
       <ShellComponent
         panel={panel.panel}
         user={panel.user}
+        impersonation={panel.impersonation}
         nav={panel.nav}
         breadcrumbs={page.breadcrumbs}
         title={page.title}
         headerActions={page.actions?.header ?? []}
         subNavigation={page.subNavigation ?? []}
+        clusterNavigation={page.clusterNavigation}
+        clusterNavigationPosition={page.clusterNavigationPosition}
         currentUrl={
           typeof window === 'undefined' ? '' : window.location.pathname + window.location.search
         }
         tenant={panel.tenant}
         tenants={panel.tenants ?? []}
         notifications={panel.notifications}
+        environment={panel.environment}
         locale={panel.locale}
         locales={panel.locales}
       >

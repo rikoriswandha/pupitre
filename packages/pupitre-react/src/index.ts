@@ -1,6 +1,7 @@
 // Initialize strict-CSP schema settings before renderer dependencies construct schemas.
 import '@rikology/pupitre/catalog'
 
+export { useTableViews } from './hooks/table_views.js'
 export type { PupitreProps } from './page/Pupitre.js'
 export { Pupitre } from './page/Pupitre.js'
 export { PupitreShell } from './page/PupitreShell.js'
@@ -14,6 +15,8 @@ export type { PupitreRendererProps } from './renderer/PupitreRenderer.js'
 export { createPupitreStore } from './renderer/store.js'
 export { builtInFunctions } from './renderer/functions.js'
 export { t } from './i18n.js'
+export { useWidget, WidgetRequestError } from './hooks/widget.js'
+export type { WidgetControls } from './hooks/widget.js'
 export { matchesKeyBinding } from './key_bindings.js'
 export { setRouter } from './bridge/inertia.js'
 export { getRouter } from './bridge/inertia.js'

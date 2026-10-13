@@ -25,6 +25,7 @@ export function PupitreShell({ registry, realtime, children }: Props) {
       <Shell
         panel={props.pupitre.panel}
         user={props.pupitre.user}
+        impersonation={props.pupitre.impersonation}
         nav={props.pupitre.nav}
         breadcrumbs={props.page.breadcrumbs}
         title={props.page.title}
@@ -35,6 +36,7 @@ export function PupitreShell({ registry, realtime, children }: Props) {
         tenant={props.pupitre.tenant}
         tenants={props.pupitre.tenants ?? []}
         notifications={props.pupitre.notifications}
+        environment={props.pupitre.environment}
         locale={props.pupitre.locale}
         locales={props.pupitre.locales}
       >

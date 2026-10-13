@@ -6,6 +6,12 @@
 - Localization: accessible, tenant-aware language switcher in the user menu and profile; built-in dialogs, forms, editors, uploads, widgets and accessibility text are translated.
 - Tables: QueryBuilder editor (typed values, negation, AND/OR groups, active summaries) in every filter layout, and keyboard-accessible multi-column sort controls with priority announcements.
 - Catalog extensions: DataTable and nested infolist entries render registered custom columns/entries with formatted values and row/record context.
+- Shell: environment badge and top strip across sidebar/collapsed/top-nav layouts, impersonation banner with CSRF-protected leave, responsive cluster sub-navigation.
+- Tables: Views toolbar (save/update/rename/default/public/delete, saved column visibility), simple pagination and header actions for custom-data tables, CSV/Excel format picker for exports.
+- Forms: accessible table repeater (numbered row controls, drag and keyboard reorder, per-cell errors, horizontal scroll at narrow widths); rich editor merge-tag and mention suggestions and custom-block preview cards with isolated edit modals.
+- Widgets: radar and scatter charts in the lazy chart chunk with screen-reader data tables.
+- Profile: Browser sessions and Recent logins sections.
+- Plugin surfaces (lazy): `Calendar` (month/week/day/agenda, drag and keyboard rescheduling with rollback), `KanbanBoard` (dnd-kit sortable cards, keyboard moves, per-column loading, rollback), `MediaPicker`/`MediaEntry`/`MediaColumn`.
 
 ### Fixed
 - Dark theme primary (`oklch(0.545 0.1 163)`) raises primary-button text contrast above WCAG AA (4.53:1).

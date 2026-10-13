@@ -61,7 +61,7 @@ export function Toggle({ props, bindings }: Runtime) {
           />
           <div className="grid min-w-0 gap-1">
             {props.label !== null && (
-              <Label htmlFor={id}>
+              <Label data-input-label="" htmlFor={id}>
                 {props.label ?? props.name}
                 {props.required && <span aria-hidden="true"> *</span>}
               </Label>

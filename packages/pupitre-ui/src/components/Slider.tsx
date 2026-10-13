@@ -32,7 +32,7 @@ export function Slider({ props, bindings }: Runtime) {
   return (
     <Field invalid={!!error}>
       {props.label !== null && props.label !== undefined && (
-        <Label htmlFor={`${id}-0`}>
+        <Label data-input-label="" htmlFor={`${id}-0`}>
           {props.label}
           {props.required && <span aria-hidden="true"> *</span>}
         </Label>

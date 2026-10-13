@@ -1,0 +1,21 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "media-picker",
+  "type": "registry:component",
+  "title": "MediaPicker",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0",
+    "react@^19.2.3"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/media-picker-content.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/MediaPicker.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/MediaPicker.tsx",
+      "content": "import { lazy, Suspense } from 'react'\nimport { t } from '@rikology/pupitre-react'\nimport type { MediaPickerProps } from './MediaPickerContent.js'\nconst Content = lazy(() => import('./MediaPickerContent.js'))\nexport function MediaPicker(props: MediaPickerProps) {\n  return (\n    <Suspense fallback={<span role=\"status\">{t('Loading media')}</span>}>\n      <Content {...props} />\n    </Suspense>\n  )\n}\n"
+    }
+  ]
+}

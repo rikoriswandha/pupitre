@@ -267,3 +267,84 @@ test('export polling aborts between progress checks', async ({ assert }) => {
     restoreFetch()
   }
 })
+
+for (const close of ['cancel', 'unmount'] as const) {
+  test(`queued export polling aborts on confirm ${close}`, async ({ assert }) => {
+    const root = createRoot(document.createElement('div'))
+    let dialog: ConfirmDialogProps | undefined
+    let signal: AbortSignal | undefined
+    let started!: () => void
+    const pollingStarted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const notices: string[] = []
+    let downloads = 0
+    const restoreFetch = setFetch(async (url, init) => {
+      if (init?.method === 'POST')
+        return new Response(
+          JSON.stringify({
+            jobId: 'export-1',
+            progressUrl: '/exports/1',
+            downloadUrl: '/exports/1/download',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      if (String(url).endsWith('/download')) downloads++
+      signal = init?.signal ?? undefined
+      started()
+      return new Response(
+        JSON.stringify({ id: 'export-1', status: 'queued', totalRows: 1, processedRows: 0 }),
+        { status: 200 }
+      )
+    })
+    let unmounted = false
+    let pending: Promise<void> | undefined
+    try {
+      await act(async () =>
+        root.render(
+          createElement(ActionConfirm, {
+            action: {
+              name: 'export',
+              label: 'Export',
+              kind: 'confirm',
+              url: '/export',
+              method: 'post',
+              enabled: true,
+            } as ActionDescriptor,
+            registry: {
+              ConfirmDialog: (props: ConfirmDialogProps) => {
+                dialog = props
+                return null
+              },
+            } as unknown as ShellRegistry,
+            onResult: () => {},
+            onCancel: () => {},
+            toast: (message) => notices.push(message.title),
+          })
+        )
+      )
+      await act(async () => {
+        pending = Promise.resolve(dialog?.onConfirm())
+        await pollingStarted
+      })
+      await act(async () => {
+        if (close === 'cancel') dialog?.onCancel()
+        else {
+          root.unmount()
+          unmounted = true
+        }
+      })
+      assert.isTrue(signal?.aborted, 'closing the dialog aborts its progress request signal')
+      await act(async () => pending)
+      assert.equal(downloads, 0)
+      assert.deepEqual(notices, ['Export queued'])
+    } finally {
+      // Ensure a failing red run does not leave a five-minute poll behind.
+      restoreFetch()
+      const stop = setFetch(async () => new Response('{}', { status: 500 }))
+      if (pending) await act(async () => pending)
+      stop()
+      if (!unmounted) await act(async () => root.unmount())
+    }
+  })
+}

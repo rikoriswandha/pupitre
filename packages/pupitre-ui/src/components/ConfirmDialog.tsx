@@ -12,6 +12,9 @@ export type ConfirmDialogProps = {
   destructive?: boolean
   icon?: string
   loading?: boolean
+  exportFormats?: readonly ('csv' | 'xlsx')[]
+  exportFormat?: 'csv' | 'xlsx'
+  onExportFormatChange?: (format: 'csv' | 'xlsx') => void
   onConfirm: () => void
   onCancel: () => void
 }
@@ -25,6 +28,9 @@ export function ConfirmDialog({
   destructive,
   icon,
   loading,
+  exportFormats,
+  exportFormat,
+  onExportFormatChange,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -58,6 +64,24 @@ export function ConfirmDialog({
               )}
             </div>
           </div>
+          {exportFormats && exportFormats.length > 1 && (
+            <fieldset className="flex gap-4 px-6 pb-5" disabled={loading}>
+              <legend className="mb-2 text-sm font-medium">{t('Export format')}</legend>
+              {exportFormats.map((format) => (
+                <label key={format} className="flex min-h-6 items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    className="size-6 accent-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+                    name="export-format"
+                    value={format}
+                    checked={exportFormat === format}
+                    onChange={() => onExportFormatChange?.(format)}
+                  />
+                  {format === 'csv' ? t('CSV') : t('Excel (XLSX)')}
+                </label>
+              ))}
+            </fieldset>
+          )}
           <div className="flex justify-end gap-2 border-t border-border bg-muted/30 px-6 py-3">
             <Button color="gray" disabled={loading} onClick={onCancel}>
               {cancelLabel}

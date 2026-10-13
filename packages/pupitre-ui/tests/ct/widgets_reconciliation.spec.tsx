@@ -22,7 +22,7 @@ test('context polling consumes dataUrl and reconciles fresh props without resett
     await route.fulfill({
       json: url.pathname.endsWith('/count')
         ? { kind: 'stats', stats: [{ label: 'Count', value: 'Polled count' }] }
-        : { message: 'Polled custom' },
+        : { kind: 'component', data: { message: 'Polled custom' } },
     })
   })
   const view = await mount(<WidgetReconciliationStory />)

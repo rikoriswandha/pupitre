@@ -1,3 +1,4 @@
+import { ImpersonationBanner } from './ImpersonationBanner.js'
 import type { ShellProps } from '@rikology/pupitre-react'
 import { Dialog } from '@base-ui/react/dialog'
 import { t } from '@rikology/pupitre-react'
@@ -20,6 +21,8 @@ import { ShellBrand, ShellSidebar } from './ShellSidebar.js'
 import { TenantSwitcher } from './TenantSwitcher.js'
 import { UserMenu } from './UserMenu.js'
 import { usePanelTheme } from './use_panel_theme.js'
+import { EnvironmentIndicator } from './EnvironmentIndicator.js'
+import { ClusterNavigation } from './ClusterNavigation.js'
 
 const contentWidths: Record<string, string> = {
   'md': '28rem',
@@ -43,6 +46,7 @@ const contentWidths: Record<string, string> = {
 export function Shell({
   panel,
   user,
+  impersonation,
   locale,
   locales,
   nav,
@@ -50,10 +54,13 @@ export function Shell({
   title,
   headerActions,
   subNavigation = [],
+  clusterNavigation = [],
+  clusterNavigationPosition = 'start',
   currentUrl,
   tenant,
   tenants,
   notifications,
+  environment,
   children,
 }: ShellProps) {
   const mainId = useId()
@@ -102,6 +109,7 @@ export function Shell({
 
   const tools = (
     <div className="flex shrink-0 items-center gap-1">
+      <EnvironmentIndicator environment={environment} />
       <NotificationTray notifications={notifications} />
       <UserMenu panel={panel} user={user} locale={locale} locales={locales} />
     </div>
@@ -240,6 +248,7 @@ export function Shell({
           className="mx-auto w-full min-w-0 flex-1 px-4 pb-16 pt-6 outline-none sm:px-6 lg:px-8 lg:pt-8"
           style={{ maxWidth: maxContentWidth }}
         >
+          <ImpersonationBanner impersonation={impersonation} />
           <header className="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
             <div className="min-w-0">
               {breadcrumbs.length > 0 && (
@@ -286,25 +295,36 @@ export function Shell({
               />
             )}
           </header>
-          {subNavigation.length > 0 && (
-            <nav
-              aria-label={t('Record navigation')}
-              className={cn(underlineTabListClasses, 'mb-6')}
-            >
-              {subNavigation.map((item) => (
-                <NavLink
-                  key={item.key}
-                  href={item.url}
-                  aria-current={item.active ? 'page' : undefined}
-                  className={underlineTabClasses}
+          <div
+            className={cn(
+              clusterNavigation.length > 0 &&
+                clusterNavigationPosition === 'start' &&
+                'lg:flex lg:items-start lg:gap-6'
+            )}
+          >
+            <ClusterNavigation items={clusterNavigation} position={clusterNavigationPosition} />
+            <div className="min-w-0 flex-1">
+              {subNavigation.length > 0 && (
+                <nav
+                  aria-label={t('Record navigation')}
+                  className={cn(underlineTabListClasses, 'mb-6')}
                 >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-          )}
-          {/* Header widgets, page content and footer widgets stack as separate panels. */}
-          <div className="min-w-0 space-y-6">{children}</div>
+                  {subNavigation.map((item) => (
+                    <NavLink
+                      key={item.key}
+                      href={item.url}
+                      aria-current={item.active ? 'page' : undefined}
+                      className={underlineTabClasses}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </nav>
+              )}
+              {/* Header widgets, page content and footer widgets stack as separate panels. */}
+              <div className="min-w-0 space-y-6">{children}</div>
+            </div>
+          </div>
         </main>
       </div>
     </div>

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "impersonation-banner",
+  "type": "registry:component",
+  "title": "ImpersonationBanner",
+  "dependencies": [
+    "@rikology/pupitre-react@^1.0.0"
+  ],
+  "registryDependencies": [
+    "https://pupitre.dev/r/primitives.json"
+  ],
+  "files": [
+    {
+      "path": "../src/components/ImpersonationBanner.tsx",
+      "type": "registry:file",
+      "target": "~/inertia/components/pupitre/components/ImpersonationBanner.tsx",
+      "content": "import { t, useVisit } from '@rikology/pupitre-react'\nimport { Button } from '../primitives/index.js'\n\nexport function ImpersonationBanner({\n  impersonation,\n}: {\n  impersonation?: { name: string; leaveUrl: string }\n}) {\n  const visit = useVisit()\n  if (!impersonation) return null\n  return (\n    <section\n      aria-label={t('Impersonation')}\n      className=\"mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted p-4 text-foreground\"\n    >\n      <p>{t('You are signed in as {name}', { name: impersonation.name })}</p>\n      <Button variant=\"outline\" onClick={() => visit(impersonation.leaveUrl, { method: 'post' })}>\n        {t('Leave')}\n      </Button>\n    </section>\n  )\n}\n"
+    }
+  ]
+}

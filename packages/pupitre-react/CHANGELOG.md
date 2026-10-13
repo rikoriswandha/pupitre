@@ -7,6 +7,12 @@
 - Localization: client `t(key, params?)` resolves synchronously from the compact `pupitre.messages` shared prop and follows locale changes across Inertia visits.
 - Catalog extensions: `defineRegistry(components, { extensions })` merges extension schemas, requires a component per extension, and reports unregistered or unknown spec types with an actionable developer error.
 - Tables: `useTable` supports JSON QueryBuilder filter state and ordered multi-column sort, including explicit default clearing.
+- Widgets: `useWidget(descriptor, initialData)` returns `{ data, loading, errors, reload(params?), runAction(name, data?) }` with stale-response suppression and `WidgetRequestError`; component widgets receive unwrapped loader data.
+- Tables: `useTableViews(descriptor, onColumns)` lists, applies (prefix-preserving Inertia visits) and mutates saved views.
+- Shell: optional `environment`, `impersonation` and cluster navigation props are forwarded through built-in and host-owned shells; export confirmations support XLSX downloads and format choice.
+
+### Fixed
+- Action modals: uploads use the server-issued `uploadOwner` instead of deriving resource context from the action name.
 
 ## Unreleased (1.0.0, milestone M4)
 
