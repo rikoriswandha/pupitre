@@ -32,16 +32,18 @@ export default defineWidget('store-kpis')
     const lowStockCount = Number(lowStockRow?.$extras.total ?? 0)
 
     return [
-      stat('Revenue', `Rp ${current.toLocaleString('id-ID')}`)
+      // Numeric values follow each user's number format; compact shortens with a full tooltip.
+      stat('Revenue', current)
+        .money('IDR')
+        .compact()
         .description(`${change >= 0 ? '+' : ''}${change}% vs previous 7 days`)
         .descriptionIcon(change >= 0 ? 'trending-up' : 'trending-down')
         .color(change >= 0 ? 'success' : 'danger')
         .chart(revenueByDay.slice(7)),
       stat('Orders', orderCount).description('All statuses').chart(ordersByDay.slice(7)),
-      stat(
-        'Average order',
-        `Rp ${(orderCount ? Math.round(current / orderCount) : 0).toLocaleString('id-ID')}`
-      ).description('Revenue ÷ orders'),
+      stat('Average order', orderCount ? Math.round(current / orderCount) : 0)
+        .money('IDR')
+        .description('Revenue ÷ orders'),
       stat('Low stock', lowStockCount)
         .description(lowStockCount ? 'Products under 10 units' : 'All products stocked')
         .descriptionIcon(lowStockCount ? 'triangle-alert' : 'check')

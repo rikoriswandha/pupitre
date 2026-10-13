@@ -13,8 +13,9 @@ pupitreTest(
     await admin.fillField('Slug', `schema-parity-${stamp}`)
     await admin.fillField('Category', 'Culture')
     await expect(page.locator('[title="Use lowercase words separated by hyphens."]')).toBeVisible()
-    // Hint, prefix and suffix actions render inline; the header copy sits in "More actions".
-    await expect(page.getByRole('button', { name: 'Manage categories' })).toHaveCount(3)
+    // Hint, prefix and suffix actions render inline, plus the resource's custom header action
+    // (collection builtins such as Create/Import stay on the list page).
+    await expect(page.getByRole('button', { name: 'Manage categories' })).toHaveCount(4)
 
     await admin.fillField('Phone', '2125550199')
     const phone = await admin.field('Phone')

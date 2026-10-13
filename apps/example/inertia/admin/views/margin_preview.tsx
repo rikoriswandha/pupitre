@@ -1,5 +1,5 @@
 import { useStateValue } from '@rikology/pupitre-react'
-import { Badge, Panel, PanelHeader } from '@rikology/pupitre-ui'
+import { Badge } from '@rikology/pupitre-ui'
 
 /**
  * Host component rendered by `schema.view('MarginPreview', props)`. Server props
@@ -19,14 +19,17 @@ export function MarginPreview(props: Record<string, unknown>) {
   })
   const tone = percent >= 40 ? 'success' : percent >= 20 ? 'warning' : 'danger'
   return (
-    <Panel role="region" aria-label="Margin preview">
-      <PanelHeader
-        heading="Margin preview"
-        description="Host React component reading live form state."
-        icon="trending-up"
-        aside={<Badge color={tone}>{percent}% margin</Badge>}
-      />
-      <div className="px-5 pb-5 sm:px-6">
+    <section role="region" aria-label="Margin preview">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 pb-4">
+        <div>
+          <h3 className="text-[0.9375rem] font-semibold">Margin preview</h3>
+          <p className="text-[0.8125rem] text-muted-foreground">
+            Host React component reading live form state.
+          </p>
+        </div>
+        <Badge color={tone}>{percent}% margin</Badge>
+      </div>
+      <div>
         <div
           className="h-2 overflow-hidden rounded-full bg-muted"
           role="meter"
@@ -55,6 +58,6 @@ export function MarginPreview(props: Record<string, unknown>) {
           </div>
         </dl>
       </div>
-    </Panel>
+    </section>
   )
 }

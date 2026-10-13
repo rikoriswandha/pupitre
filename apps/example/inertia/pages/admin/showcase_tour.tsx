@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react'
 import type { PupitrePageProps } from '@rikology/pupitre/catalog'
 import { PupitreShell } from '@rikology/pupitre-react'
-import { Badge, Icon, Kbd, Panel, PanelHeader } from '@rikology/pupitre-ui'
+import { Badge, Icon, Kbd, LedgerSection } from '@rikology/pupitre-ui'
 import { registry } from '../../admin/registry.js'
 
 /** `path` is relative to the (tenant-scoped) panel path; `profile` uses the panel's profile URL. */
@@ -116,19 +116,28 @@ export default function ShowcaseTour() {
   const base = pupitre.panel.path
   return (
     <PupitreShell registry={registry}>
-      <div className="space-y-6">
+      <div className="space-y-10">
         <p className="max-w-2xl text-sm text-muted-foreground">
           Every surface below is declared on the server and rendered by the catalog. Press{' '}
           <Kbd>⌘K</Kbd> for global search, use the bell for notifications, and switch tenants from
           the user menu.
         </p>
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-x-6 gap-y-10 lg:grid-cols-2">
           {AREAS.map((area) => (
-            <Panel key={area.heading} role="region" aria-label={area.heading}>
-              <PanelHeader heading={area.heading} icon={area.icon} />
+            <LedgerSection
+              key={area.heading}
+              role="region"
+              aria-label={area.heading}
+              heading={
+                <span className="flex items-center gap-2">
+                  <Icon name={area.icon} className="size-4 text-muted-foreground" />
+                  {area.heading}
+                </span>
+              }
+            >
               <ul className="divide-y divide-border border-t border-border">
                 {area.stops.map((stop) => (
-                  <li key={stop.label} className="px-5 py-3 sm:px-6">
+                  <li key={stop.label} className="py-3">
                     <Link
                       href={
                         stop.profile
@@ -150,7 +159,7 @@ export default function ShowcaseTour() {
                   </li>
                 ))}
               </ul>
-            </Panel>
+            </LedgerSection>
           ))}
         </div>
       </div>
