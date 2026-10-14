@@ -12,14 +12,21 @@ pupitreTest(
     await expect(page).toHaveURL(/\/admin\/acme\/posts\/\d+$/)
 
     const recordUrl = page.url()
+    const recordNavigation = page.getByRole('navigation', { name: 'Record navigation' })
+    await expect(page.getByRole('region', { name: 'Comments' })).toHaveCount(0)
+    await recordNavigation.getByRole('link', { name: 'Relations' }).click()
+    await expect(page).toHaveURL(/\/admin\/acme\/posts\/\d+\?relation=comments$/)
+    await expect(recordNavigation.getByRole('link', { name: 'Relations' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
     await expect(page.getByRole('tab', { name: /Comments/ })).toBeVisible()
     await expect(page.getByRole('tab', { name: /Tags/ })).toBeVisible()
     await page.getByRole('tab', { name: /Comments/ }).click()
     await expect(page.getByRole('region', { name: 'Comments' })).toBeVisible()
     await expect(page.getByText('Reader note 01')).toBeVisible()
 
-    await page.goto(`${recordUrl.replace(/\/$/, '')}/edit`)
-    await page.getByRole('tab', { name: /Tags/ }).click()
+    await page.goto(`${recordUrl.replace(/\/$/, '')}/edit?relation=tags`)
     await expect(page.getByRole('region', { name: 'Tags' })).toBeVisible()
     await expect(
       page.getByRole('region', { name: 'Tags' }).getByText('Research', { exact: true })
