@@ -59,7 +59,8 @@ export type WidgetDefinition = {
   span: number | 'full'
   sort: number
   poll?: string
-  canView?: (ctx: HttpContext) => boolean | Promise<boolean>
+  /** `record` is the page record for resource edit/view page widgets. */
+  canView?: (ctx: HttpContext, record?: unknown) => boolean | Promise<boolean>
   lazy: boolean
   toJSON(): string
 }

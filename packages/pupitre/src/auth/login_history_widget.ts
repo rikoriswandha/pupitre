@@ -41,6 +41,7 @@ async function historyAllowed(ctx: HttpContext, record: unknown) {
 export function loginHistoryWidget() {
   return defineWidget('login-history')
     .heading(t('Login history'))
+    .canView(historyAllowed)
     .table((table) =>
       table
         .records(async ({ ctx, page, perPage, record }) => {

@@ -88,8 +88,9 @@ function pollMilliseconds(value?: string): number | undefined {
   return Math.round(amount * (match[2] === 'ms' ? 1 : match[2] === 's' ? 1000 : 60_000))
 }
 
-async function canView(ctx: HttpContext, definition: WidgetDefinition): Promise<void> {
-  if (definition.canView && !(await definition.canView(ctx))) throw new E_PUPITRE_FORBIDDEN()
+async function canView(ctx: HttpContext, definition: WidgetDefinition, record?: unknown) {
+  if (definition.canView && !(await definition.canView(ctx, record)))
+    throw new E_PUPITRE_FORBIDDEN()
 }
 async function loadTableWidget(
   ctx: HttpContext,
@@ -207,7 +208,7 @@ export async function loadWidget(
   checkVisibility = true,
   context?: WidgetPageContext
 ): Promise<WidgetData> {
-  if (checkVisibility) await canView(ctx, definition)
+  if (checkVisibility) await canView(ctx, definition, record)
   // Edit access alone does not grant access to a record's history.
   if (definition.kind === 'timeline' && record && typeof ctx.params.slug === 'string') {
     const resource = requestResource(ctx, ctx.params.slug)
@@ -364,7 +365,7 @@ export async function prepareWidgets(
       if (resource && !(await authorizeResource(ctx, resource, 'view', record as LucidRow)))
         continue
     }
-    if (!definition.canView || (await definition.canView(ctx))) visible.push(definition)
+    if (!definition.canView || (await definition.canView(ctx, record))) visible.push(definition)
   }
   const deferred: string[] = []
   const extraProps: Record<string, unknown> = {}
@@ -485,7 +486,7 @@ export default class WidgetController {
       definition = ctx.pupitre.panel.widgets.find((item) => item.name === ctx.params.name)
     }
     if (!definition) throw new E_PUPITRE_NOT_FOUND()
-    await canView(ctx, definition)
+    await canView(ctx, definition, record)
     return { definition, record }
   }
 

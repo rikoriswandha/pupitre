@@ -290,11 +290,20 @@ test.group('Browser sessions', (group) => {
       const actor = await user()
       await user('other@example.test')
       const url = `/admin/_pupitre/widgets/login-history?resource=users&widgetPage=view&record=${actor.id}`
-      const allowed = await request(app, url, cookies(await login(app)))
+      const allowedCookie = cookies(await login(app))
+      const deniedCookie = cookies(await login(app, 'other@example.test'))
+      const allowed = await request(app, url, allowedCookie)
       assert.equal(allowed.status, 200)
       assert.include(await allowed.text(), 'password')
-      const denied = await request(app, url, cookies(await login(app, 'other@example.test')))
+      const denied = await request(app, url, deniedCookie)
       assert.equal(denied.status, 403)
+      // A denied viewer must not receive the widget, or its deferred load 403s on the page.
+      const viewPage = (cookie: string) =>
+        fetch(`${app.baseUrl}/admin/users/${actor.id}`, {
+          headers: { 'Cookie': cookie, 'X-Inertia': 'true', 'Accept': 'text/html' },
+        }).then((response) => response.text())
+      assert.include(await viewPage(allowedCookie), 'widget_footer_login_history')
+      assert.notInclude(await viewPage(deniedCookie), 'widget_footer_login_history')
     } finally {
       await cleanup(app)
     }
