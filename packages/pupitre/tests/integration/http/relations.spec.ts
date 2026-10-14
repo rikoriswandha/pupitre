@@ -8,7 +8,7 @@ import {
   table,
   relationGroup,
 } from '../../../index.js'
-import { pageProps } from '../../../catalog/wire.js'
+import { pageProps, type PupitrePageProps } from '../../../catalog/wire.js'
 import RelationComment from '../../fixtures/models/relation_comment.js'
 import RelationPost from '../../fixtures/models/relation_post.js'
 import RelationTag from '../../fixtures/models/relation_tag.js'
@@ -233,40 +233,54 @@ test.group('relation manager HTTP runtime', (group) => {
         tableData.rows.map((row: { key: number }) => row.key),
         [existing.id]
       )
-      const editPage = await fetch(`${fixture.baseUrl}/admin/relation-posts/${first.id}/edit`, {
-        headers: {
-          'Accept': 'text/html',
-          'X-Inertia': 'true',
-          'X-Inertia-Version': '1',
-          'Cookie': cookie,
-        },
-        redirect: 'manual',
-      })
-      assert.equal(editPage.status, 200)
-      const editBody = (await editPage.json()) as { props: unknown }
-      const editProps = pageProps.parse(editBody.props)
-      const root = editProps.page.spec.root
-      const elements = editProps.page.spec.elements
-      assert.equal(elements[root]?.type, 'Group')
-      const formEntries = Object.entries(elements).filter(([, element]) => element.type === 'Form')
-      assert.isNotEmpty(formEntries)
-      const containsRelationManager = (elementId: string): boolean => {
-        const element = elements[elementId]
-        if (!element) return false
-        if (element.type === 'RelationManager') return true
-        if (!('children' in element)) return false
-        return (element.children ?? []).some(containsRelationManager)
+      const inertiaPage = async (path: string) => {
+        const response = await fetch(`${fixture.baseUrl}${path}`, {
+          headers: {
+            'Accept': 'text/html',
+            'X-Inertia': 'true',
+            'X-Inertia-Version': '1',
+            'Cookie': cookie,
+          },
+          redirect: 'manual',
+        })
+        assert.equal(response.status, 200, path)
+        const body: unknown = await response.json()
+        assert.isTrue(!!body && typeof body === 'object' && 'props' in body, path)
+        return pageProps.parse(body && typeof body === 'object' && 'props' in body && body.props)
       }
-      for (const [, element] of formEntries) {
-        const children = 'children' in element ? (element.children ?? []) : []
-        assert.isFalse(children.some(containsRelationManager))
-      }
+      const elementTypes = (props: PupitrePageProps) =>
+        Object.values(props.page.spec.elements).map((element) => element.type)
+      // The edit page shows the form only; the Relations tab opens the managers on their own page.
+      const editProps = await inertiaPage(`/admin/relation-posts/${first.id}/edit`)
+      assert.include(elementTypes(editProps), 'Form')
+      assert.notInclude(elementTypes(editProps), 'RelationManager')
+      assert.isUndefined(editProps.page.relations)
+      const editTabs = editProps.page.subNavigation ?? []
       assert.include(
-        editProps.page.subNavigation?.map((item) => item.key) ?? [],
+        editTabs.map((item) => item.key),
         'nested:revisions'
       )
       assert.deepEqual(
-        editProps.page.relations?.map((relation) => relation.group),
+        editTabs.filter((item) => item.active).map((item) => item.key),
+        ['edit']
+      )
+      const relationsTab = editTabs.find((item) => item.key === 'relations')
+      assert.equal(relationsTab?.url, `/admin/relation-posts/${first.id}/edit?relation=comments`)
+
+      const relationProps = await inertiaPage(
+        `/admin/relation-posts/${first.id}/edit?relation=tags`
+      )
+      assert.notInclude(elementTypes(relationProps), 'Form')
+      assert.equal(relationProps.page.spec.elements[relationProps.page.spec.root]?.type, 'Tabs')
+      assert.deepEqual(relationProps.page.state, { ui: { tabs: { 'resource-relations': 'tags' } } })
+      assert.deepEqual(
+        (relationProps.page.subNavigation ?? [])
+          .filter((item) => item.active)
+          .map((item) => item.key),
+        ['relations']
+      )
+      assert.deepEqual(
+        relationProps.page.relations?.map((relation) => relation.group),
         ['Content', 'Content']
       )
       const nestedCreate = await fetch(
@@ -539,15 +553,18 @@ test.group('relation manager HTTP runtime', (group) => {
       assert.equal(modalTag.name, 'Updated in modal')
 
       parentCanUpdate = false
-      const page = await fetch(`${fixture.baseUrl}/admin/relation-posts/${first.id}`, {
-        headers: {
-          'Accept': 'text/html',
-          'X-Inertia': 'true',
-          'X-Inertia-Version': '1',
-          'Cookie': cookie,
-        },
-        redirect: 'manual',
-      })
+      const page = await fetch(
+        `${fixture.baseUrl}/admin/relation-posts/${first.id}?relation=comments`,
+        {
+          headers: {
+            'Accept': 'text/html',
+            'X-Inertia': 'true',
+            'X-Inertia-Version': '1',
+            'Cookie': cookie,
+          },
+          redirect: 'manual',
+        }
+      )
       assert.equal(page.status, 200)
       const response = (await page.json()) as { props: unknown }
       const props = pageProps.parse(response.props)

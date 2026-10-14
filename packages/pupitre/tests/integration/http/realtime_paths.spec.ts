@@ -405,7 +405,7 @@ test.group('Pupitre realtime publish paths', () => {
       const cookie = await fixture.loginAs(user)
       const parent = await RelationPost.create({ title: 'Parent', tenantId: 1 })
       const base = `/admin/acme/relation-posts/${parent.id}`
-      const response = await fetch(`${fixture.baseUrl}${base}/edit`, {
+      const response = await fetch(`${fixture.baseUrl}${base}/edit?relation=comments`, {
         headers: {
           'Cookie': cookie,
           'Accept': 'text/html',

@@ -308,15 +308,20 @@ test.group('saved table views HTTP', () => {
       })
       assert.equal(created.status, 200)
       const saved = (await created.json()) as { id: string }
-      const defaultPage = await request(fixture, owner, `/admin/acme/posts/${post.id}/edit?q=outer`)
+      const defaultPage = await request(
+        fixture,
+        owner,
+        `/admin/acme/posts/${post.id}/edit?relation=category&q=outer`
+      )
       assert.equal(defaultPage.status, 302)
+      assert.include(defaultPage.headers.get('location')!, 'relation=category')
       assert.include(defaultPage.headers.get('location')!, 'q=outer')
       assert.include(defaultPage.headers.get('location')!, 'category%5Bq%5D=Category')
       assert.include(defaultPage.headers.get('location')!, saved.id)
       const explicit = await request(
         fixture,
         owner,
-        `/admin/acme/posts/${post.id}/edit?category[q]=explicit`
+        `/admin/acme/posts/${post.id}/edit?relation=category&category[q]=explicit`
       )
       assert.equal(explicit.status, 200)
       const foreign = await Post.create({

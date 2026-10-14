@@ -46,7 +46,11 @@ import {
   resourceAttributes,
   syncRelationshipRepeaters,
 } from '../repeater_relationships.js'
-import { compileRelationDescriptor, loadRelationTableData } from './relation_controller.js'
+import {
+  compileRelationDescriptor,
+  firstViewableRelation,
+  loadRelationTableData,
+} from './relation_controller.js'
 import { flattenRelationManagers } from '../../definition/relation_manager.js'
 import { E_PUPITRE_NOT_FOUND } from '../../errors.js'
 import { publishResourceChange, resourceRealtime } from '../../realtime.js'
@@ -135,13 +139,23 @@ function nestedParentBreadcrumb(
     url: parentResource.urls.edit(id),
   }
 }
+/**
+ * Relation manager selected by `?relation=<key>`. Its presence switches a record page from the
+ * form/infolist to the relation managers (the Relations sub-navigation tab).
+ */
+function requestedRelation(ctx: HttpContext, target: ResourceRuntime): string | undefined {
+  const value = ctx.request.qs().relation
+  return typeof value === 'string' && flattenRelationManagers(target.definition.relations).length
+    ? value
+    : undefined
+}
 async function resourceSubNavigation(
   ctx: HttpContext,
   target: ResourceRuntime,
   kind: 'edit' | 'view',
   record: LucidRow,
   recordId: string | number,
-  relations: RelationDescriptor[]
+  relationPage: boolean
 ): Promise<SubNavigationItem[]> {
   const items: SubNavigationItem[] = []
   // Same abilities as the row Edit/View actions, so a tab never leads to a 403.
@@ -150,7 +164,7 @@ async function resourceSubNavigation(
       key: 'edit',
       label: t('Edit'),
       url: target.urls.edit(recordId),
-      active: kind === 'edit' && !ctx.request.qs().relation,
+      active: kind === 'edit' && !relationPage,
     })
   }
   if (target.definition.pages.view && (await authorizeResource(ctx, target, 'view', record))) {
@@ -158,15 +172,17 @@ async function resourceSubNavigation(
       key: 'view',
       label: t('View'),
       url: target.urls.view(recordId),
-      active: kind === 'view' && !ctx.request.qs().relation,
+      active: kind === 'view' && !relationPage,
     })
   }
-  if (relations.length) {
+  const relation = await firstViewableRelation(ctx, target)
+  if (relation !== undefined) {
+    const page = kind === 'edit' ? target.urls.edit(recordId) : target.urls.view(recordId)
     items.push({
       key: 'relations',
       label: t('Relations'),
-      url: '#resource-relations',
-      active: false,
+      url: `${page}?relation=${encodeURIComponent(relation)}`,
+      active: relationPage,
     })
   }
   for (const child of ctx.pupitre.panel.resources) {
@@ -461,28 +477,24 @@ async function relationPageProps(
   return { relations, extraProps, deferred }
 }
 
-function withRelationTabs(
-  spec: JsonRenderSpec,
-  state: unknown,
-  relations: RelationDescriptor[],
-  requested?: string
-) {
-  const elements = { ...spec.elements } as Record<string, unknown>
-  const managerRoot = 'pupitre.relationManagers'
-  const tabIds = relations.map((item) => `pupitre.relationManager.${item.key}`)
-  elements[managerRoot] = {
-    type: 'Tabs',
-    props: {
-      id: 'resource-relations',
-      tabs: relations.map(({ key, label, group, icon, badge }) => ({
-        key,
-        label: group ? t('{group} / {label}', { group, label }) : label,
-        ...(icon ? { icon } : {}),
-        ...(badge !== undefined ? { badge } : {}),
-      })),
-      active: { $bindState: '/ui/tabs/resource-relations' },
+/** Spec of the `?relation=` record page: one tab per relation manager, opened on `requested`. */
+function relationTabs(relations: RelationDescriptor[], requested: string) {
+  const root = 'pupitre.relationManagers'
+  const elements: Record<string, unknown> = {
+    [root]: {
+      type: 'Tabs',
+      props: {
+        id: 'resource-relations',
+        tabs: relations.map(({ key, label, group, icon, badge }) => ({
+          key,
+          label: group ? t('{group} / {label}', { group, label }) : label,
+          ...(icon ? { icon } : {}),
+          ...(badge !== undefined ? { badge } : {}),
+        })),
+        active: { $bindState: '/ui/tabs/resource-relations' },
+      },
+      children: relations.map((item) => `pupitre.relationManager.${item.key}`),
     },
-    children: tabIds,
   }
   for (const relation of relations) {
     const tabId = `pupitre.relationManager.${relation.key}`
@@ -494,27 +506,58 @@ function withRelationTabs(
     }
     elements[managerId] = { type: 'RelationManager', props: { descriptor: relation } }
   }
-  const root = 'pupitre.relationManagers.root'
-  elements[root] = {
-    type: 'Group',
-    props: {},
-    children: [spec.root, managerRoot],
-  }
-  const currentState = state && typeof state === 'object' ? (state as Record<string, unknown>) : {}
-  const ui =
-    currentState.ui && typeof currentState.ui === 'object'
-      ? (currentState.ui as Record<string, unknown>)
-      : {}
-  const tabs = ui.tabs && typeof ui.tabs === 'object' ? (ui.tabs as Record<string, unknown>) : {}
   const active = relations.some((relation) => relation.key === requested)
     ? requested
     : relations[0]?.key
   return {
-    spec: { ...spec, root, elements } as JsonRenderSpec,
-    state: {
-      ...currentState,
-      ui: { ...ui, tabs: { ...tabs, 'resource-relations': active } },
-    },
+    spec: { root, elements } as JsonRenderSpec,
+    state: { ui: { tabs: { 'resource-relations': active } } },
+  }
+}
+/**
+ * Body of an edit/view page: the form/infolist, or the relation managers when `?relation=` is
+ * set. Returns a redirect when a relation table must first apply its default saved view.
+ */
+async function recordPageBody(
+  ctx: HttpContext,
+  target: ResourceRuntime,
+  record: LucidRow,
+  viewOnly: boolean,
+  compile: () => Promise<{ spec: JsonRenderSpec; state: Record<string, unknown> }>
+): Promise<
+  | { redirect: string }
+  | {
+      spec: JsonRenderSpec
+      state: Record<string, unknown>
+      relationPage: boolean
+      relations?: RelationDescriptor[]
+      extraProps: Record<string, unknown>
+      deferred: string[]
+    }
+> {
+  const requested = requestedRelation(ctx, target)
+  if (requested === undefined) {
+    const compiled = await compile()
+    return {
+      spec: compiled.spec,
+      state: compiled.state,
+      relationPage: false,
+      extraProps: {},
+      deferred: [],
+    }
+  }
+  const { relations, extraProps, deferred } = await relationPageProps(ctx, target, record, viewOnly)
+  for (const relation of relations) {
+    const relationDefault = defaultTableView(relation.table, ctx.request.qs())
+    if (relationDefault)
+      return { redirect: tableViewUrl(ctx.request.url(true), relation.table, relationDefault) }
+  }
+  return {
+    ...relationTabs(relations, requested),
+    relationPage: true,
+    relations,
+    extraProps,
+    deferred,
   }
 }
 export default class ResourceController {
@@ -742,36 +785,24 @@ export default class ResourceController {
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'update', record)
     const pageConfig = target.definition.pages.edit
-    if (!pageConfig || !target.definition.form) return ctx.response.notFound()
+    const form = target.definition.form
+    if (!pageConfig || !form) return ctx.response.notFound()
     const data = (await target.definition.hooks.fill?.(record, ctx)) ?? serialized(record)
-    await fillRelationshipRepeaters(target, record, data)
-    const compiled = await compileForm(target.definition.form, {
-      ...(await schemaContext(ctx, target, 'edit', record)),
-      form: {
-        method: 'put',
-        url: target.urls.update(recordValue(record, keyName(target.model)) as string | number),
-        submitLabel: t('Save'),
-        cancelUrl: target.urls.list,
-        dirtyGuard: true,
-      },
-      data,
+    const body = await recordPageBody(ctx, target, record, false, async () => {
+      await fillRelationshipRepeaters(target, record, data)
+      return compileForm(form, {
+        ...(await schemaContext(ctx, target, 'edit', record)),
+        form: {
+          method: 'put',
+          url: target.urls.update(recordValue(record, keyName(target.model)) as string | number),
+          submitLabel: t('Save'),
+          cancelUrl: target.urls.list,
+          dirtyGuard: true,
+        },
+        data,
+      })
     })
-    const relationProps = await relationPageProps(ctx, target, record, false)
-    for (const relation of relationProps.relations) {
-      const relationDefault = defaultTableView(relation.table, ctx.request.qs())
-      if (relationDefault)
-        return ctx.response.redirect(
-          tableViewUrl(ctx.request.url(true), relation.table, relationDefault)
-        )
-    }
-    const composed = relationProps.relations.length
-      ? withRelationTabs(
-          compiled.spec,
-          compiled.state,
-          relationProps.relations,
-          typeof ctx.request.qs().relation === 'string' ? ctx.request.qs().relation : undefined
-        )
-      : { spec: compiled.spec, state: compiled.state }
+    if ('redirect' in body) return ctx.response.redirect(body.redirect)
     const actions = await compileActions(ctx, target, headerDefinitions(target, 'edit'), record)
     const id = recordValue(record, keyName(target.model)) as string | number
     const widgetProps = await pageWidgets(ctx, target, 'edit', record)
@@ -782,8 +813,8 @@ export default class ResourceController {
         resource: target,
         parentBreadcrumb: nestedParentBreadcrumb(ctx, target),
         kind: 'edit',
-        spec: composed.spec,
-        state: composed.state,
+        spec: body.spec,
+        state: body.state,
         title: String(data[target.definition.recordTitle ?? keyName(target.model)] ?? target.label),
         recordId: id,
         recordLabel: String(
@@ -791,17 +822,17 @@ export default class ResourceController {
         ),
         headerActions: actions,
         widgets: widgetProps.widgets,
-        relations: relationProps.relations,
+        relations: body.relations,
         subNavigation: await resourceSubNavigation(
           ctx,
           target,
           'edit',
           record,
           id,
-          relationProps.relations
+          body.relationPage
         ),
-        extraProps: { ...relationProps.extraProps, ...widgetProps.extraProps },
-        deferred: [...relationProps.deferred, ...widgetProps.deferred],
+        extraProps: { ...body.extraProps, ...widgetProps.extraProps },
+        deferred: [...body.deferred, ...widgetProps.deferred],
       }),
       pageConfig.component
     )
@@ -814,23 +845,10 @@ export default class ResourceController {
     if (!record) return ctx.response.notFound()
     await ensureAuthorized(ctx, target, 'view', record)
     const nodes = target.definition.infolist ?? []
-    const compiled = await compileInfolist(nodes, await schemaContext(ctx, target, 'view', record))
-    const relationProps = await relationPageProps(ctx, target, record, true)
-    for (const relation of relationProps.relations) {
-      const relationDefault = defaultTableView(relation.table, ctx.request.qs())
-      if (relationDefault)
-        return ctx.response.redirect(
-          tableViewUrl(ctx.request.url(true), relation.table, relationDefault)
-        )
-    }
-    const composed = relationProps.relations.length
-      ? withRelationTabs(
-          compiled.spec,
-          compiled.state,
-          relationProps.relations,
-          typeof ctx.request.qs().relation === 'string' ? ctx.request.qs().relation : undefined
-        )
-      : { spec: compiled.spec, state: compiled.state }
+    const body = await recordPageBody(ctx, target, record, true, async () =>
+      compileInfolist(nodes, await schemaContext(ctx, target, 'view', record))
+    )
+    if ('redirect' in body) return ctx.response.redirect(body.redirect)
     const actions = await compileActions(ctx, target, headerDefinitions(target, 'view'), record)
     const id = recordValue(record, keyName(target.model)) as string | number
     const widgetProps = await pageWidgets(ctx, target, 'view', record)
@@ -841,8 +859,8 @@ export default class ResourceController {
         resource: target,
         parentBreadcrumb: nestedParentBreadcrumb(ctx, target),
         kind: 'view',
-        spec: composed.spec,
-        state: composed.state,
+        spec: body.spec,
+        state: body.state,
         title: String(
           recordValue(record, target.definition.recordTitle ?? keyName(target.model)) ??
             target.label
@@ -854,17 +872,17 @@ export default class ResourceController {
         ),
         headerActions: actions,
         widgets: widgetProps.widgets,
-        relations: relationProps.relations,
+        relations: body.relations,
         subNavigation: await resourceSubNavigation(
           ctx,
           target,
           'view',
           record,
           id,
-          relationProps.relations
+          body.relationPage
         ),
-        extraProps: { ...relationProps.extraProps, ...widgetProps.extraProps },
-        deferred: [...relationProps.deferred, ...widgetProps.deferred],
+        extraProps: { ...body.extraProps, ...widgetProps.extraProps },
+        deferred: [...body.deferred, ...widgetProps.deferred],
       }),
       target.definition.pages.view?.component
     )

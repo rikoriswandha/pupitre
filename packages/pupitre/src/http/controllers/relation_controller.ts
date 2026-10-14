@@ -80,6 +80,20 @@ function relatedModel(target: ResourceRuntime, manager: RelationManagerDefinitio
   relation.boot()
   return relation.relatedModel() as LucidModel
 }
+/**
+ * Key of the first relation manager when the user may list every related model, i.e. when the
+ * record's `?relation=` page renders instead of failing with 403.
+ */
+export async function firstViewableRelation(
+  ctx: HttpContext,
+  target: ResourceRuntime
+): Promise<string | undefined> {
+  const managers = flattenRelationManagers(target.definition.relations)
+  for (const manager of managers) {
+    if (!(await authorizeModel(ctx, relatedModel(target, manager), 'viewAny'))) return undefined
+  }
+  return managers[0]?.relation
+}
 function relationUrl(
   target: ResourceRuntime,
   manager: RelationManagerDefinition,
