@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 (2026-10-14)
+
+### Added
+- CSS hooks: structural elements carry stable `data-pupitre-<name>` attributes (shell, sidebar, nav, page header/title, section, tabs, wizard, form, field, control, infolist, widgets, table parts, kanban, button/badge/actions/panel/empty, popup/dialog, auth) so a theme `stylesheet` can restyle layout without copying components. Button/badge expose `data-variant`/`data-color`, action lists `data-appearance`, table rows `data-selected`, slide-overs `data-slide-over`. Hooks are a rendering contract; registry replacements should keep them. See the Theming guide.
+
 ## 1.1.1 (2026-10-14)
 
 ### Changed

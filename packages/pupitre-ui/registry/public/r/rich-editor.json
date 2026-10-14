@@ -4,8 +4,8 @@
   "type": "registry:component",
   "title": "RichEditor",
   "dependencies": [
-    "@rikology/pupitre-react@^1.1.0",
-    "@rikology/pupitre@^1.1.0",
+    "@rikology/pupitre-react@^1.2.0",
+    "@rikology/pupitre@^1.2.0",
     "@tiptap/extension-image@^3.31.4",
     "@tiptap/extension-link@^3.31.4",
     "@tiptap/react@^3.31.4",

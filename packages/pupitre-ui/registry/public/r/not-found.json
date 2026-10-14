@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "NotFound",
   "dependencies": [
-    "@rikology/pupitre-react@^1.1.0"
+    "@rikology/pupitre-react@^1.2.0"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/primitives.json"
@@ -14,7 +14,7 @@
       "path": "../src/components/NotFound.tsx",
       "type": "registry:file",
       "target": "~/inertia/components/pupitre/components/NotFound.tsx",
-      "content": "import { t } from '@rikology/pupitre-react'\nimport { buttonClasses, ledgerRuleClasses } from '../primitives/index.js'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className={`w-full max-w-md ${ledgerRuleClasses} py-8`}>\n        <p\n          aria-hidden=\"true\"\n          className=\"mb-5 text-8xl font-semibold tracking-tight tabular-nums text-subtle-foreground\"\n        >\n          404\n        </p>\n        <h1 className=\"font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]\">\n          {title}\n        </h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a href=\"/\" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>\n          {t('Return home')}\n        </a>\n      </div>\n    </main>\n  )\n}\n"
+      "content": "import { t } from '@rikology/pupitre-react'\nimport { buttonClasses, ledgerRuleClasses } from '../primitives/index.js'\n\nexport type NotFoundProps = { title: string; message: string }\n\nexport function NotFound({ title, message }: NotFoundProps) {\n  return (\n    <main className=\"grid min-h-[60vh] place-items-center bg-background px-6 text-center text-foreground\">\n      <div className={`w-full max-w-md ${ledgerRuleClasses} py-8`}>\n        <p\n          aria-hidden=\"true\"\n          className=\"mb-5 text-8xl font-semibold tracking-tight tabular-nums text-subtle-foreground\"\n        >\n          404\n        </p>\n        <h1\n          data-pupitre-page-title=\"\"\n          className=\"font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]\"\n        >\n          {title}\n        </h1>\n        <p className=\"mt-2 text-muted-foreground\">{message}</p>\n        <a href=\"/\" className={buttonClasses({ color: 'primary', className: 'mt-6' })}>\n          {t('Return home')}\n        </a>\n      </div>\n    </main>\n  )\n}\n"
     }
   ]
 }

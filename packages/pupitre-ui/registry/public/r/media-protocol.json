@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "media_protocol",
   "dependencies": [
-    "@rikology/pupitre-react@^1.1.0"
+    "@rikology/pupitre-react@^1.2.0"
   ],
   "registryDependencies": [],
   "files": [

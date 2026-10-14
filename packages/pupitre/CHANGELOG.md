@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 (2026-10-14)
+
+### Changed
+- Release: `@rikology/pupitre`, `-react` and `-ui` move lockstep to `1.2.0` (`-react`/`-ui` now require `^1.2.0` of their siblings); `catalogVersion` is `1.2`.
+- Relations: the record **Relations** tab is a real page tab. It opens `…/edit?relation=<key>` (or the view page with `?relation=`), which renders only the relation managers and marks Relations as the active tab. Edit/view pages without `?relation=` render only the form/infolist and no longer load relation tables. Previously the tab was an in-page `#resource-relations` anchor to managers stacked under the form, so on short pages clicking it did nothing visible and it was never shown as active. The tab appears only when the user may `viewAny` every related model.
+
 ## 1.1.1 (2026-10-14)
 
 ### Changed

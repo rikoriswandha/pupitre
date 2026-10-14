@@ -5,7 +5,7 @@
   "title": "TenantSwitcher",
   "dependencies": [
     "@base-ui/react@^1.9.0",
-    "@rikology/pupitre-react@^1.1.0"
+    "@rikology/pupitre-react@^1.2.0"
   ],
   "registryDependencies": [
     "https://pupitre.rikology.com/r/icons.json",

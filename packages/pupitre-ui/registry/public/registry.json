@@ -8,7 +8,7 @@
       "type": "registry:component",
       "title": "ActionBar",
       "dependencies": [
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -27,8 +27,8 @@
       "type": "registry:component",
       "title": "ActionButton",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -48,8 +48,8 @@
       "title": "ActionList",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/action-button.json",
@@ -69,7 +69,7 @@
       "type": "registry:component",
       "title": "Actions",
       "dependencies": [
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/action-list.json"
@@ -87,7 +87,7 @@
       "type": "registry:component",
       "title": "AuthShell",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -127,7 +127,7 @@
       "title": "Builder",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -148,7 +148,7 @@
       "type": "registry:component",
       "title": "BuilderItem",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -170,8 +170,8 @@
       "type": "registry:component",
       "title": "Calendar",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -193,8 +193,8 @@
       "title": "CalendarBody",
       "dependencies": [
         "@dnd-kit/core@^6.3.1",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -214,8 +214,8 @@
       "type": "registry:component",
       "title": "Checkbox",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -236,8 +236,8 @@
       "title": "CheckboxList",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -258,8 +258,8 @@
       "type": "registry:component",
       "title": "ClusterNavigation",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/primitives.json"
@@ -290,7 +290,7 @@
         "@codemirror/state@^6.7.6",
         "@codemirror/view@^6.43.14",
         "@lezer/highlight@^1.2.5",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -310,7 +310,7 @@
       "type": "registry:component",
       "title": "CodeEntry",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -349,8 +349,8 @@
       "type": "registry:component",
       "title": "Color",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -388,7 +388,7 @@
       "title": "ConfirmDialog",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -408,8 +408,8 @@
       "title": "DataTable",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "@tanstack/react-table@^8.21.3",
         "react@^19.2.3"
       ],
@@ -438,8 +438,8 @@
       "type": "registry:component",
       "title": "DataTableEditableCell",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -474,8 +474,8 @@
       "type": "registry:component",
       "title": "DataTableGroups",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -494,7 +494,7 @@
       "type": "registry:component",
       "title": "DataTableQueryBuilder",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -513,8 +513,8 @@
       "type": "registry:component",
       "title": "DataTableSummary",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [],
       "files": [
@@ -531,8 +531,8 @@
       "title": "DataTableViews",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -552,8 +552,8 @@
       "type": "registry:component",
       "title": "Date",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -574,8 +574,8 @@
       "type": "registry:component",
       "title": "DateTime",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -610,7 +610,7 @@
       "type": "registry:component",
       "title": "EntryShell",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -630,8 +630,8 @@
       "type": "registry:component",
       "title": "EnvironmentIndicator",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/primitives.json"
@@ -667,8 +667,8 @@
       "type": "registry:component",
       "title": "FileUpload",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -689,7 +689,7 @@
       "type": "registry:component",
       "title": "Form",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -726,8 +726,8 @@
       "title": "GlobalSearch",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "cmdk@^1.1.1",
         "react@^19.2.3"
       ],
@@ -782,8 +782,8 @@
       "type": "registry:component",
       "title": "Hidden",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -817,7 +817,7 @@
       "type": "registry:component",
       "title": "IconEntry",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/entry-shell.json",
@@ -855,7 +855,7 @@
       "title": "ImageCropper",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react-easy-crop@^6.2.4",
         "react@^19.2.3"
       ],
@@ -893,7 +893,7 @@
       "type": "registry:component",
       "title": "ImpersonationBanner",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/primitives.json"
@@ -912,8 +912,8 @@
       "title": "ImportModal",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -933,8 +933,8 @@
       "type": "registry:component",
       "title": "Infolist",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -956,8 +956,8 @@
       "type": "registry:component",
       "title": "KanbanBoard",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -979,7 +979,7 @@
         "@dnd-kit/core@^6.3.1",
         "@dnd-kit/sortable@^10.0.0",
         "@dnd-kit/utilities@^3.2.2",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -998,8 +998,8 @@
       "type": "registry:component",
       "title": "KeyValue",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1038,8 +1038,8 @@
       "type": "registry:component",
       "title": "MarkdownEditor",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "dompurify@^3.4.16",
         "marked@^18.1.0",
         "react@^19.2.3"
@@ -1077,7 +1077,7 @@
       "type": "registry:component",
       "title": "MediaEntry",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1097,7 +1097,7 @@
       "type": "registry:component",
       "title": "MediaPicker",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1116,7 +1116,7 @@
       "type": "registry:component",
       "title": "MediaPickerContent",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1136,7 +1136,7 @@
       "type": "registry:component",
       "title": "media_protocol",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [],
       "files": [
@@ -1153,7 +1153,7 @@
       "title": "Modal",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -1172,7 +1172,7 @@
       "type": "registry:component",
       "title": "NotFound",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/primitives.json"
@@ -1191,8 +1191,8 @@
       "title": "NotificationTray",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1213,8 +1213,8 @@
       "title": "Number",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1237,7 +1237,7 @@
       "type": "registry:component",
       "title": "PasskeyLogin",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "@simplewebauthn/browser@^14.0.0",
         "react@^19.2.3"
       ],
@@ -1258,7 +1258,7 @@
       "type": "registry:component",
       "title": "Placeholder",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1278,7 +1278,7 @@
       "title": "Pupitre primitives",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3",
         "tailwind-merge@^3.7.0"
       ],
@@ -1308,7 +1308,7 @@
       "type": "registry:component",
       "title": "ProfileSecurity",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "@simplewebauthn/browser@^14.0.0",
         "react@^19.2.3"
       ],
@@ -1331,7 +1331,7 @@
       "type": "registry:component",
       "title": "ProfileSessions",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "@simplewebauthn/browser@^14.0.0",
         "react@^19.2.3"
       ],
@@ -1353,8 +1353,8 @@
       "title": "Radio",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1374,7 +1374,7 @@
       "type": "registry:component",
       "title": "RelationManager",
       "dependencies": [
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/action-list.json",
@@ -1393,7 +1393,7 @@
       "type": "registry:component",
       "title": "RepeatableEntry",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1412,8 +1412,8 @@
       "type": "registry:component",
       "title": "Repeater",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1434,7 +1434,7 @@
       "type": "registry:component",
       "title": "RepeaterItem",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1457,7 +1457,7 @@
       "type": "registry:component",
       "title": "RepeaterTableRow",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1478,8 +1478,8 @@
       "type": "registry:component",
       "title": "RichEditor",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "@tiptap/extension-image@^3.31.4",
         "@tiptap/extension-link@^3.31.4",
         "@tiptap/react@^3.31.4",
@@ -1505,8 +1505,8 @@
       "title": "RichEditorExtensions",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "@tiptap/extension-mention@^3.31.4",
         "@tiptap/pm@^3.31.4",
         "@tiptap/react@^3.31.4",
@@ -1531,8 +1531,8 @@
       "type": "registry:component",
       "title": "Section",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1555,8 +1555,8 @@
       "title": "Select",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1580,7 +1580,7 @@
       "title": "Shell",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react-dom@^19.2.3",
         "react@^19.2.3"
       ],
@@ -1611,7 +1611,7 @@
       "type": "registry:component",
       "title": "ShellSidebar",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1632,8 +1632,8 @@
       "title": "Slider",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1721,7 +1721,7 @@
       "type": "registry:component",
       "title": "Tabs",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1741,8 +1741,8 @@
       "type": "registry:component",
       "title": "Tags",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1766,7 +1766,7 @@
       "title": "TenantSwitcher",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -1785,8 +1785,8 @@
       "type": "registry:component",
       "title": "Text",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1809,7 +1809,7 @@
       "type": "registry:component",
       "title": "TextEntry",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1830,8 +1830,8 @@
       "type": "registry:component",
       "title": "Textarea",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1853,8 +1853,8 @@
       "type": "registry:component",
       "title": "Time",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1875,7 +1875,7 @@
       "type": "registry:component",
       "title": "Toaster",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -1895,8 +1895,8 @@
       "type": "registry:component",
       "title": "Toggle",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1917,8 +1917,8 @@
       "title": "ToggleButtons",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3",
         "zod@^4.3.6"
       ],
@@ -1955,7 +1955,7 @@
       "type": "registry:hook",
       "title": "use_panel_theme",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [],
@@ -1973,7 +1973,7 @@
       "title": "UserMenu",
       "dependencies": [
         "@base-ui/react@^1.9.0",
-        "@rikology/pupitre-react@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -1992,7 +1992,7 @@
       "type": "registry:component",
       "title": "View",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -2012,7 +2012,7 @@
       "type": "registry:component",
       "title": "WidgetCatalogAdapters",
       "dependencies": [
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -2034,8 +2034,8 @@
       "type": "registry:component",
       "title": "WidgetChart",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -2055,8 +2055,8 @@
       "type": "registry:component",
       "title": "WidgetChartBody",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "recharts@^3.10.1"
       ],
       "registryDependencies": [],
@@ -2073,7 +2073,7 @@
       "type": "registry:component",
       "title": "WidgetCustom",
       "dependencies": [
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [],
@@ -2090,8 +2090,8 @@
       "type": "registry:component",
       "title": "WidgetGrid",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [
@@ -2114,8 +2114,8 @@
       "type": "registry:component",
       "title": "WidgetStats",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/icons.json",
@@ -2134,8 +2134,8 @@
       "type": "registry:component",
       "title": "WidgetTable",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/action-bar.json",
@@ -2156,8 +2156,8 @@
       "type": "registry:component",
       "title": "WidgetTimeline",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
-        "@rikology/pupitre@^1.1.0"
+        "@rikology/pupitre-react@^1.2.0",
+        "@rikology/pupitre@^1.2.0"
       ],
       "registryDependencies": [
         "https://pupitre.rikology.com/r/primitives.json"
@@ -2175,7 +2175,7 @@
       "type": "registry:component",
       "title": "Wizard",
       "dependencies": [
-        "@rikology/pupitre-react@^1.1.0",
+        "@rikology/pupitre-react@^1.2.0",
         "react@^19.2.3"
       ],
       "registryDependencies": [

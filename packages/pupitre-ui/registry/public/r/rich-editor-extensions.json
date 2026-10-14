@@ -5,8 +5,8 @@
   "title": "RichEditorExtensions",
   "dependencies": [
     "@base-ui/react@^1.9.0",
-    "@rikology/pupitre-react@^1.1.0",
-    "@rikology/pupitre@^1.1.0",
+    "@rikology/pupitre-react@^1.2.0",
+    "@rikology/pupitre@^1.2.0",
     "@tiptap/extension-mention@^3.31.4",
     "@tiptap/pm@^3.31.4",
     "@tiptap/react@^3.31.4",

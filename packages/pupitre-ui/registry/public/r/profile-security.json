@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "ProfileSecurity",
   "dependencies": [
-    "@rikology/pupitre-react@^1.1.0",
+    "@rikology/pupitre-react@^1.2.0",
     "@simplewebauthn/browser@^14.0.0",
     "react@^19.2.3"
   ],

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 (2026-10-14)
+
+### Changed
+- Release: lockstep minor with `@rikology/pupitre` and `-ui` 1.2.0; no runtime changes.
+
 ## 1.1.1 (2026-10-14)
 
 ### Fixed

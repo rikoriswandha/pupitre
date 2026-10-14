@@ -4,7 +4,7 @@
   "type": "registry:component",
   "title": "ActionBar",
   "dependencies": [
-    "@rikology/pupitre@^1.1.0",
+    "@rikology/pupitre@^1.2.0",
     "react@^19.2.3"
   ],
   "registryDependencies": [
