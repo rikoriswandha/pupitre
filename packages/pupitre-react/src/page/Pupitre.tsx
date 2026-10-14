@@ -207,6 +207,20 @@ export function PupitreContent({
     }, 0)
     return () => clearTimeout(timeout)
   }, [panel.flash, pushToast])
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    // The server answers forbidden Inertia requests it cannot redirect back with JSON 403.
+    const onHttpException = (event: Event) => {
+      const { response } = (event as CustomEvent<{ response: { status: number; data: unknown } }>)
+        .detail
+      const message = (response.data as { message?: unknown } | null)?.message
+      if (response.status !== 403 || typeof message !== 'string') return
+      event.preventDefault()
+      pushToast({ type: 'error', title: t('Forbidden'), body: message })
+    }
+    document.addEventListener('inertia:httpException', onHttpException)
+    return () => document.removeEventListener('inertia:httpException', onHttpException)
+  }, [pushToast])
   const runAction = useCallback(
     async (
       action: ActionDescriptor,
