@@ -31,6 +31,8 @@ export function Modal({
         <Dialog.Backdrop className={backdropClasses} />
         <Dialog.Popup
           data-pupitre-popup=""
+          data-pupitre-dialog=""
+          data-slide-over={slideOver ? '' : undefined}
           className={slideOver ? sheetPopupClasses(width) : dialogPopupClasses(width)}
         >
           <header className="flex shrink-0 items-start gap-3 px-6 pt-5 pb-4">

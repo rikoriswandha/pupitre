@@ -24,6 +24,7 @@ function Card({ card, busy }: { card: KanbanCard; busy: boolean }) {
     useSortable({ id: `card:${card.id}`, disabled: busy || !card.movable })
   return (
     <article
+      data-pupitre-kanban-card=""
       ref={setNodeRef}
       data-over={isOver}
       style={{
@@ -87,6 +88,7 @@ function Column({
   const { setNodeRef, isOver } = useDroppable({ id: `column:${column.value}` })
   return (
     <section
+      data-pupitre-kanban-column=""
       ref={setNodeRef}
       aria-label={column.label}
       data-over={isOver}
@@ -293,6 +295,7 @@ export default function KanbanBoardBody({ data: initial, descriptor }: KanbanBoa
       }}
     >
       <div
+        data-pupitre-kanban=""
         ref={boardRef}
         aria-busy={busy}
         className="flex max-w-full gap-4 overflow-x-auto pb-4"

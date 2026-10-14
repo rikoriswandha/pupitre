@@ -89,15 +89,21 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
       }}
     >
       <div
+        data-pupitre-wizard=""
         className={cn('min-w-0', !nested && !embedded && 'border-t border-rule')}
         data-wizard={typeof props.id === 'string' ? props.id : undefined}
       >
         <ol
+          data-pupitre-wizard-steps=""
           aria-label={t('Form steps')}
           className="flex gap-6 overflow-x-auto border-b border-border pt-3"
         >
           {steps.map((step, index) => (
-            <li key={step.key} className="flex min-w-max flex-1 items-stretch">
+            <li
+              data-pupitre-wizard-step=""
+              key={step.key}
+              className="flex min-w-max flex-1 items-stretch"
+            >
               <button
                 ref={active === index ? activeButton : undefined}
                 type="button"
@@ -154,10 +160,15 @@ export function Wizard({ props, children, bindings }: RuntimeProps) {
           ))}
         </ol>
         <PanelNestingContext.Provider value={true}>
-          <div className="py-5">{children}</div>
+          <div data-pupitre-wizard-body="" className="py-5">
+            {children}
+          </div>
         </PanelNestingContext.Provider>
         {!embedded && (
-          <div className="flex justify-between gap-3 border-t border-border pt-5">
+          <div
+            data-pupitre-wizard-footer=""
+            className="flex justify-between gap-3 border-t border-border pt-5"
+          >
             <Button
               type="button"
               variant="outline"

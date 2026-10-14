@@ -65,6 +65,7 @@ export function Infolist({ props = {}, children }: { props?: Props; children?: R
       <InfolistContext.Provider value={true}>
         <PanelNestingContext.Provider value={true}>
           <div
+            data-pupitre-infolist=""
             className={cn(
               'min-w-0',
               // Sections bring their own rule; a flat list of entries opens with the sheet's.

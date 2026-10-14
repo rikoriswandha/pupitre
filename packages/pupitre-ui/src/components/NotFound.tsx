@@ -13,7 +13,10 @@ export function NotFound({ title, message }: NotFoundProps) {
         >
           404
         </p>
-        <h1 className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]">
+        <h1
+          data-pupitre-page-title=""
+          className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]"
+        >
           {title}
         </h1>
         <p className="mt-2 text-muted-foreground">{message}</p>

@@ -25,6 +25,7 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
     .map((feature) => feature.slice('social:'.length))
   return (
     <div
+      data-pupitre-auth=""
       className="grid min-h-dvh place-items-center bg-background px-4 py-12 text-foreground"
       style={style}
     >
@@ -57,9 +58,15 @@ export function AuthShell({ panel, title, children }: AuthShellProps) {
           )}
           <p className="text-sm font-semibold text-foreground">{panel.brand.name}</p>
         </div>
-        <div className="[&_form]:space-y-5 [&_form_input]:w-full [&_form_button[type=submit]]:w-full [&_form_button[type=submit]]:bg-primary [&_form_button[type=submit]]:text-primary-foreground">
+        <div
+          data-pupitre-auth-card=""
+          className="[&_form]:space-y-5 [&_form_input]:w-full [&_form_button[type=submit]]:w-full [&_form_button[type=submit]]:bg-primary [&_form_button[type=submit]]:text-primary-foreground"
+        >
           <header className="pb-6">
-            <h1 className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]">
+            <h1
+              data-pupitre-page-title=""
+              className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em]"
+            >
               {title}
             </h1>
             {title === t('Sign in') && (

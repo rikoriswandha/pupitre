@@ -75,7 +75,7 @@ export function DataTableGroups({
         return (
           <Fragment key={group.key}>
             {/* Group headings read as ledger subheads: a ruled line and a semibold label. */}
-            <tr className="border-t border-rule/60">
+            <tr data-pupitre-table-group="" className="border-t border-rule/60">
               <th colSpan={colSpan} className="px-4 pb-2 pt-5 text-left">
                 {canCollapse ? (
                   <button

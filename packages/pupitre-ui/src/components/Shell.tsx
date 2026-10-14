@@ -140,7 +140,10 @@ export function Shell({
       </a>
 
       {!topNav && (
-        <aside className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+        <aside
+          data-pupitre-sidebar=""
+          className="sticky top-0 hidden h-dvh flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex"
+        >
           <div
             className={cn(
               'flex shrink-0 items-center gap-2 px-3',
@@ -178,7 +181,10 @@ export function Shell({
       )}
 
       {topNav && (
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background px-4 sm:px-6">
+        <header
+          data-pupitre-topnav=""
+          className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-background px-4 sm:px-6"
+        >
           <ShellBrand panel={panel} />
           <TenantSwitcher tenant={tenant} tenants={tenants} compact />
           <ShellSidebar
@@ -198,6 +204,7 @@ export function Shell({
       <div data-pupitre-content="" className="flex min-w-0 flex-col">
         {!topNav && (
           <header
+            data-pupitre-topbar=""
             aria-label={t('Panel toolbar')}
             className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4 sm:px-6 lg:px-8"
           >
@@ -212,6 +219,7 @@ export function Shell({
                 <Dialog.Backdrop className={backdropClasses} />
                 <Dialog.Popup
                   data-pupitre-popup=""
+                  data-pupitre-sidebar=""
                   className="fixed inset-y-0 left-0 z-[101] flex w-72 max-w-[85vw] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-dialog outline-none transition-transform duration-250 ease-drawer data-ending-style:-translate-x-full data-starting-style:-translate-x-full"
                   style={style}
                 >
@@ -243,16 +251,20 @@ export function Shell({
         )}
 
         <main
+          data-pupitre-main=""
           id={mainId}
           tabIndex={-1}
           className="mx-auto w-full min-w-0 flex-1 px-4 pb-16 pt-6 outline-none sm:px-6 lg:px-8 lg:pt-8"
           style={{ maxWidth: maxContentWidth }}
         >
           <ImpersonationBanner impersonation={impersonation} />
-          <header className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+          <header
+            data-pupitre-page-header=""
+            className="mb-8 flex flex-wrap items-end justify-between gap-x-6 gap-y-4"
+          >
             <div className="min-w-0">
               {breadcrumbs.length > 0 && (
-                <nav aria-label={t('Breadcrumb')} className="mb-1.5">
+                <nav data-pupitre-breadcrumbs="" aria-label={t('Breadcrumb')} className="mb-1.5">
                   <ol className="flex min-w-0 flex-wrap items-center gap-1 text-[0.8125rem] text-muted-foreground">
                     {breadcrumbs.map((crumb, index) => (
                       <li
@@ -282,7 +294,10 @@ export function Shell({
                   </ol>
                 </nav>
               )}
-              <h1 className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em] text-foreground text-balance">
+              <h1
+                data-pupitre-page-title=""
+                className="font-display text-[1.875rem] font-normal leading-9 tracking-[-0.01em] text-foreground text-balance"
+              >
                 {title}
               </h1>
             </div>
@@ -307,6 +322,7 @@ export function Shell({
               {/* One tab (the page you are on) navigates nowhere; show tabs only with a choice. */}
               {subNavigation.length > 1 && (
                 <nav
+                  data-pupitre-page-tabs=""
                   aria-label={t('Record navigation')}
                   className={cn(underlineTabListClasses, 'mb-6')}
                 >
@@ -323,7 +339,9 @@ export function Shell({
                 </nav>
               )}
               {/* Header widgets, page content and footer widgets stack as separate panels. */}
-              <div className="min-w-0 space-y-10">{children}</div>
+              <div data-pupitre-page-body="" className="min-w-0 space-y-10">
+                {children}
+              </div>
             </div>
           </div>
         </main>

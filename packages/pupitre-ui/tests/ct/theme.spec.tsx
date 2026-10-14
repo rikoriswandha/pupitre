@@ -29,6 +29,36 @@ test('collapsed rail toggle persists its state per panel', async ({ mount, page 
     /md:grid-cols-\[4rem/
   )
 })
+
+test('shell emits documented CSS hooks and an unlayered host rule overrides utilities', async ({
+  mount,
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  const view = await mount(<ThemeStory />)
+  const root = view.locator('..')
+  for (const hook of [
+    'shell',
+    'sidebar',
+    'brand',
+    'nav',
+    'nav-group',
+    'nav-item',
+    'topbar',
+    'main',
+    'page-header',
+    'page-title',
+    'page-body',
+  ]) {
+    await expect(root.locator(`[data-pupitre-${hook}]`).first(), hook).toBeAttached()
+  }
+  await page.addStyleTag({
+    content: '[data-pupitre-page-title] { font-family: monospace; border-top: 7px solid red; }',
+  })
+  const title = root.locator('[data-pupitre-page-title]')
+  await expect(title).toHaveCSS('font-family', 'monospace')
+  await expect(title).toHaveCSS('border-top-width', '7px')
+})
 test('mobile navigation opens at 375px and density does not inflate checkbox controls', async ({
   mount,
   page,

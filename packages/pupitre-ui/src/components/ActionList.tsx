@@ -77,6 +77,8 @@ export function ActionList({
   if (!inline.length && !groups.size && !overflow.length) return null
   return (
     <div
+      data-pupitre-actions=""
+      data-appearance={appearance}
       className={cn(
         'flex items-center',
         appearance === 'links' ? 'flex-nowrap gap-1' : 'flex-wrap gap-2',

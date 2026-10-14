@@ -43,7 +43,11 @@ export function ConfirmDialog({
     >
       <Dialog.Portal>
         <Dialog.Backdrop className={backdropClasses} />
-        <Dialog.Popup data-pupitre-popup="" className={dialogPopupClasses('sm')}>
+        <Dialog.Popup
+          data-pupitre-popup=""
+          data-pupitre-dialog=""
+          className={dialogPopupClasses('sm')}
+        >
           <div className="flex items-start gap-4 px-6 py-5">
             <span
               className={`grid size-10 shrink-0 place-items-center rounded-full ${destructive ? 'bg-danger-soft text-danger-ink' : 'bg-info-soft text-info-ink'}`}

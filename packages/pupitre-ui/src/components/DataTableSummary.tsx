@@ -6,6 +6,7 @@ type Props = { summary: NonNullable<TableData['summary']>; columns: ColumnDescri
 export function DataTableSummary({ summary, columns }: Props) {
   return (
     <div
+      data-pupitre-table-summary=""
       role="region"
       aria-label={t('Table summary')}
       // Totals close the ledger under an ink rule, like a column sum on paper.

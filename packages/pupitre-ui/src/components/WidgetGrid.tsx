@@ -53,6 +53,7 @@ const spanClasses = 'md:col-span-(--widget-md) xl:col-span-(--widget-xl)'
 function WidgetSkeleton({ style }: { style: CSSProperties }) {
   return (
     <div
+      data-pupitre-widget=""
       aria-busy="true"
       className={`min-h-32 animate-pulse border-t border-rule bg-muted/60 motion-reduce:animate-none ${spanClasses}`}
       style={style}
@@ -115,7 +116,7 @@ export function WidgetGrid({
     4
   )
   return (
-    <div className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-12">
+    <div data-pupitre-widgets="" className="grid grid-cols-1 gap-x-8 gap-y-10 md:grid-cols-12">
       {filters.length > 0 && (
         <div className="col-span-full flex flex-wrap items-center justify-end gap-x-4 gap-y-2">
           {filters.map((filter) => {
@@ -153,7 +154,12 @@ export function WidgetGrid({
           return <WidgetSkeleton key={widget.name} style={style} />
         const Custom = widget.component ? customWidgets[widget.component] : undefined
         return (
-          <div key={widget.name} className={`min-w-0 ${spanClasses}`} style={style}>
+          <div
+            data-pupitre-widget=""
+            key={widget.name}
+            className={`min-w-0 ${spanClasses}`}
+            style={style}
+          >
             {widget.kind === 'stats' ? <WidgetStats descriptor={widget} data={value} /> : null}
             {widget.kind === 'chart' ? <WidgetChart descriptor={widget} data={value} /> : null}
             {widget.kind === 'table' ? <WidgetTable descriptor={widget} data={value} /> : null}

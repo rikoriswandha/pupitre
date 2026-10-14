@@ -46,7 +46,11 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   const flush = () => {
     if (!fields.length) return
     content.push(
-      <section key={`fields-${content.length}`} className={cn(ledgerRuleClasses, 'pt-5')}>
+      <section
+        data-pupitre-form-fields=""
+        key={`fields-${content.length}`}
+        className={cn(ledgerRuleClasses, 'pt-5')}
+      >
         <PanelNestingContext.Provider value={true}>
           <div className="space-y-5">{fields}</div>
         </PanelNestingContext.Provider>
@@ -123,6 +127,7 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
   }
   return (
     <form
+      data-pupitre-form=""
       noValidate
       className={cn(
         embedded || nested ? 'space-y-5' : 'space-y-10',
@@ -148,7 +153,10 @@ export function Form({ props, children, bindings, loading = false }: RuntimeProp
       </FormWizardContext.Provider>
       {/* Inside an action modal the modal footer owns submit/cancel. */}
       {!embedded && (!onlyWizard || typeof props.cancelUrl === 'string') && (
-        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+        <div
+          data-pupitre-form-actions=""
+          className="flex flex-wrap items-center gap-3 border-t border-border pt-5"
+        >
           {!onlyWizard && (
             <Button type="submit" color="primary" loading={loading || submitting}>
               {typeof props.submitLabel === 'string' ? props.submitLabel : t('Submit')}

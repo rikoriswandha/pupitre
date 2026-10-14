@@ -63,13 +63,23 @@ export function Section({ props, children, bindings }: RuntimeProps) {
     </>
   )
   const header = hasHeader ? (
-    <header className={cn('flex items-start justify-between gap-4 pt-3 pb-4', compact && 'pb-3')}>
+    <header
+      data-pupitre-section-header=""
+      className={cn('flex items-start justify-between gap-4 pt-3 pb-4', compact && 'pb-3')}
+    >
       <div className="flex min-w-0 items-start gap-2">
         {typeof props.icon === 'string' && (
           <Icon name={props.icon} className="mt-1 size-4 shrink-0 text-muted-foreground" />
         )}
         <div className="min-w-0">
-          {heading && <h2 className="text-[0.9375rem] font-semibold text-foreground">{heading}</h2>}
+          {heading && (
+            <h2
+              data-pupitre-section-heading=""
+              className="text-[0.9375rem] font-semibold text-foreground"
+            >
+              {heading}
+            </h2>
+          )}
           {description && (
             <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
               {description}
@@ -86,6 +96,7 @@ export function Section({ props, children, bindings }: RuntimeProps) {
     <PanelNestingContext.Provider value={true}>
       <Collapse open={!collapsed}>
         <div
+          data-pupitre-section-body=""
           className={cn(
             'grid min-w-0 grid-cols-1 sm:grid-cols-[repeat(var(--section-columns),minmax(0,1fr))]',
             // View pages: entries draw their own hairlines, so columns sit on a ruled grid.
@@ -99,7 +110,7 @@ export function Section({ props, children, bindings }: RuntimeProps) {
         </div>
       </Collapse>
       {footerActions.length > 0 && (
-        <div className="mt-5 border-t border-border py-4">
+        <div data-pupitre-section-footer="" className="mt-5 border-t border-border py-4">
           <ActionList actions={footerActions} align="end" />
         </div>
       )}
@@ -119,6 +130,7 @@ export function Section({ props, children, bindings }: RuntimeProps) {
     )
   return (
     <section
+      data-pupitre-section=""
       className={cn(
         'min-w-0',
         plain ? '[&+section]:border-t [&+section]:border-border' : ledgerRuleClasses,

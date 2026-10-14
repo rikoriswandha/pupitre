@@ -15,6 +15,7 @@ export function Tab({ props, children }: RuntimeProps) {
   const selected = context.active === key
   return (
     <section
+      data-pupitre-tab-panel=""
       role="tabpanel"
       id={`${context.id}-${key}-panel`}
       aria-labelledby={`${context.id}-${key}-tab`}

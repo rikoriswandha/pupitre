@@ -162,8 +162,8 @@ export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'color'>
 
 export function Button({
   className,
-  variant,
-  color,
+  variant = 'solid',
+  color = 'gray',
   size,
   square,
   loading = false,
@@ -173,6 +173,9 @@ export function Button({
 }: ButtonProps) {
   return (
     <BaseButton
+      data-pupitre-button=""
+      data-variant={variant}
+      data-color={color}
       className={buttonClasses({ variant, color, size, square, className })}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
@@ -206,6 +209,7 @@ export function Input({
 }: InputHTMLAttributes<HTMLInputElement> & { bare?: boolean }) {
   return (
     <BaseInput
+      data-pupitre-control=""
       className={cn(
         bare ? bareControlClasses : cn(controlClasses, 'h-(--control-h) px-3'),
         className
@@ -218,6 +222,7 @@ export function Input({
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
+      data-pupitre-control=""
       className={cn(controlClasses, 'min-h-20 px-3 py-2 leading-6', className)}
       {...props}
     />
@@ -235,7 +240,11 @@ export function InputGroup({
   style?: CSSProperties
 }) {
   return (
-    <div className={cn(controlGroupClasses, 'h-(--control-h)', className)} style={style}>
+    <div
+      data-pupitre-control=""
+      className={cn(controlGroupClasses, 'h-(--control-h)', className)}
+      style={style}
+    >
       {children}
     </div>
   )
@@ -299,7 +308,11 @@ export function Field({
   invalid?: boolean
 }) {
   return (
-    <BaseField.Root className={cn('grid gap-1.5', className)} invalid={props.invalid}>
+    <BaseField.Root
+      data-pupitre-field=""
+      className={cn('grid gap-1.5', className)}
+      invalid={props.invalid}
+    >
       {children}
     </BaseField.Root>
   )
@@ -385,6 +398,8 @@ export function Badge({
 }) {
   return (
     <span
+      data-pupitre-badge=""
+      data-color={color}
       className={cn(
         'inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-md font-medium ring-1 ring-inset [&_svg]:shrink-0',
         size === 'sm' ? 'px-1.5 py-px text-[0.6875rem] leading-4' : 'px-2 py-0.5 text-xs leading-4',
@@ -474,7 +489,7 @@ export const panelClasses =
   'rounded-xl border border-border bg-card text-card-foreground shadow-panel'
 
 export function Panel({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn(panelClasses, className)} {...props} />
+  return <div data-pupitre-panel="" className={cn(panelClasses, className)} {...props} />
 }
 
 /** The ink rule that opens a ledger section or table. */
@@ -501,12 +516,22 @@ export function LedgerSection({
 }) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3'
   return (
-    <section className={cn('min-w-0', ledgerRuleClasses, className)} {...props}>
+    <section
+      data-pupitre-section=""
+      className={cn('min-w-0', ledgerRuleClasses, className)}
+      {...props}
+    >
       {(heading || description || aside) && (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-3 pb-4">
+        <div
+          data-pupitre-section-header=""
+          className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 pt-3 pb-4"
+        >
           <div className="min-w-0">
             {heading && (
-              <Heading className="text-[0.9375rem] font-semibold leading-6 text-foreground">
+              <Heading
+                data-pupitre-section-heading=""
+                className="text-[0.9375rem] font-semibold leading-6 text-foreground"
+              >
                 {heading}
               </Heading>
             )}
@@ -578,6 +603,7 @@ export function EmptyState({
 }) {
   return (
     <div
+      data-pupitre-empty=""
       className={cn(
         'flex flex-col items-center justify-center text-center',
         compact ? 'px-4 py-7' : 'px-6 py-12',
@@ -718,6 +744,7 @@ export function SelectMenu({
       onValueChange={(next) => onValueChange(next ?? '')}
     >
       <BaseSelect.Trigger
+        data-pupitre-control=""
         role="combobox"
         {...trigger}
         disabled={disabled || readOnly}

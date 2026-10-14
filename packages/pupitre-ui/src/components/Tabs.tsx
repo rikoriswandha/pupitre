@@ -38,8 +38,9 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
 
   return (
     <TabContext.Provider value={{ active: active ?? initial, select: setActive, id }}>
-      <div id={id} className="min-w-0" data-tabs-id={id}>
+      <div id={id} className="min-w-0" data-tabs-id={id} data-pupitre-tabs="">
         <div
+          data-pupitre-tabs-list=""
           role="tablist"
           aria-label={typeof props.label === 'string' ? props.label : undefined}
           className={cn(
@@ -53,6 +54,7 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
         >
           {tabs.map((tab) => (
             <button
+              data-pupitre-tab=""
               key={tab.key}
               type="button"
               role="tab"
@@ -95,7 +97,9 @@ export function Tabs({ props, children, bindings }: RuntimeProps) {
           ))}
         </div>
         <PanelNestingContext.Provider value={true}>
-          <div className="pt-5">{children}</div>
+          <div data-pupitre-tabs-body="" className="pt-5">
+            {children}
+          </div>
         </PanelNestingContext.Provider>
       </div>
     </TabContext.Provider>

@@ -360,11 +360,11 @@ const NO_ROWS: TableRow[] = []
 
 /** A standalone table opens with the ledger's ink rule and sits directly on the canvas. */
 function LedgerTableSurface(props: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('min-w-0', ledgerRuleClasses)} {...props} />
+  return <div data-pupitre-table="" className={cn('min-w-0', ledgerRuleClasses)} {...props} />
 }
 /** Inside a ruled section, tab or modal the surrounding heading already opens the table. */
 function NestedTableSurface(props: HTMLAttributes<HTMLDivElement>) {
-  return <div className="min-w-0" {...props} />
+  return <div data-pupitre-table="" className="min-w-0" {...props} />
 }
 
 export function DataTable({
@@ -857,6 +857,8 @@ export function DataTable({
     const item = row.original
     return (
       <tr
+        data-pupitre-table-row=""
+        data-selected={selected.includes(item.key) ? 'true' : undefined}
         key={row.original.key}
         className={`border-t border-border transition-colors hover:bg-muted/40 ${selected.includes(item.key) ? 'bg-primary-soft/60' : ''} ${item.className ?? ''} ${descriptor.striped && row.index % 2 ? 'bg-muted/30' : ''}`}
         draggable={reorderMode}
@@ -868,7 +870,7 @@ export function DataTable({
         }}
       >
         {descriptor.reorderable && (
-          <td className="px-2 text-muted-foreground">
+          <td data-pupitre-table-cell="" className="px-2 text-muted-foreground">
             {reorderMode && (
               <div className="flex items-center gap-1">
                 <Button
@@ -904,7 +906,7 @@ export function DataTable({
           </td>
         )}
         {descriptor.selectable && (
-          <td className="px-4 py-(--row-py)">
+          <td data-pupitre-table-cell="" className="px-4 py-(--row-py)">
             <CheckboxControl
               className="size-6 -my-1 align-middle"
               aria-label={t('Select row {key}', { key: item.key })}
@@ -918,6 +920,7 @@ export function DataTable({
           const column = columnDescriptors.get(cell.column.id)
           return (
             <td
+              data-pupitre-table-cell=""
               key={cell.id}
               className={`px-4 py-(--row-py) tabular-nums ${index === 0 ? 'font-medium text-foreground' : 'text-muted-foreground'} ${
                 column?.alignment === 'end'
@@ -938,7 +941,9 @@ export function DataTable({
             </td>
           )
         })}
-        <td className="w-px whitespace-nowrap px-4 py-(--row-py)">{renderActions(item)}</td>
+        <td data-pupitre-table-cell="" className="w-px whitespace-nowrap px-4 py-(--row-py)">
+          {renderActions(item)}
+        </td>
       </tr>
     )
   }
@@ -1229,7 +1234,10 @@ export function DataTable({
           (Boolean(descriptor.multiSort) && tableState.sorts.length > 0) ||
           (descriptor.filters.length > 0 && descriptor.filtersLayout !== 'above') ||
           columnsVisible) && (
-          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+          <div
+            data-pupitre-table-toolbar=""
+            className="flex flex-wrap items-center justify-between gap-3 py-3"
+          >
             <div className="flex flex-wrap items-center gap-3">
               {descriptor.views && (
                 <DataTableViews
@@ -1254,7 +1262,10 @@ export function DataTable({
                 />
               )}
               {selected.length > 0 && (
-                <div className="flex items-center gap-3 transition-opacity duration-150 ease-ui starting:opacity-0">
+                <div
+                  data-pupitre-table-bulk=""
+                  className="flex items-center gap-3 transition-opacity duration-150 ease-ui starting:opacity-0"
+                >
                   <span className="text-sm font-medium tabular-nums">
                     {t('{count} selected', { count: selected.length })}
                   </span>
@@ -1298,6 +1309,7 @@ export function DataTable({
                     <Icon name="search" className="size-4" />
                   </InputSlot>
                   <Input
+                    data-pupitre-table-search=""
                     bare
                     type="search"
                     aria-label={t('Search')}
@@ -1448,14 +1460,26 @@ export function DataTable({
             </DataTableGrid>
           )
         ) : (
-          <div className="overflow-x-auto">
+          <div data-pupitre-table-scroll="" className="overflow-x-auto">
             {/* Ledger columns: text sits flush with the rule; rows are hairline-ruled. */}
-            <table className="w-full border-collapse text-sm [&_tr>*:first-child]:pl-0 [&_tr>*:last-child]:pr-0">
-              <thead className="text-xs font-medium text-muted-foreground">
+            <table
+              data-pupitre-table-element=""
+              className="w-full border-collapse text-sm [&_tr>*:first-child]:pl-0 [&_tr>*:last-child]:pr-0"
+            >
+              <thead
+                data-pupitre-table-head=""
+                className="text-xs font-medium text-muted-foreground"
+              >
                 <tr>
-                  {descriptor.reorderable && <th className="w-8 px-2" aria-label={t('Reorder')} />}
+                  {descriptor.reorderable && (
+                    <th
+                      data-pupitre-table-header=""
+                      className="w-8 px-2"
+                      aria-label={t('Reorder')}
+                    />
+                  )}
                   {descriptor.selectable && (
-                    <th className="w-10 px-3 py-2">
+                    <th data-pupitre-table-header="" className="w-10 px-3 py-2">
                       <CheckboxControl
                         className="size-6 -my-1 align-middle"
                         aria-label={t('Select all rows')}
@@ -1477,6 +1501,7 @@ export function DataTable({
                     const descending = tableState.sorts[sortIndex]?.startsWith('-')
                     return (
                       <th
+                        data-pupitre-table-header=""
                         key={header.id}
                         aria-sort={
                           sortIndex === 0
@@ -1546,23 +1571,31 @@ export function DataTable({
                       </th>
                     )
                   })}
-                  <th className="w-px whitespace-nowrap px-4 py-3 text-right font-medium">
+                  <th
+                    data-pupitre-table-header=""
+                    className="w-px whitespace-nowrap px-4 py-3 text-right font-medium"
+                  >
                     {t('Actions')}
                   </th>
                 </tr>
                 {!reorderMode &&
                   descriptor.columns.some((column) => column.individuallySearchable) && (
                     <tr>
-                      {descriptor.reorderable && <th className="px-2" />}
-                      {descriptor.selectable && <th className="px-3" />}
+                      {descriptor.reorderable && (
+                        <th data-pupitre-table-header="" className="px-2" />
+                      )}
+                      {descriptor.selectable && (
+                        <th data-pupitre-table-header="" className="px-3" />
+                      )}
                       {table.getHeaderGroups()[0]?.headers.map((header) => {
                         const column = columnDescriptors.get(header.column.id)
-                        if (!column?.individuallySearchable) return <th key={header.id} />
+                        if (!column?.individuallySearchable)
+                          return <th data-pupitre-table-header="" key={header.id} />
                         const queryKey = `columns[${column.name}][search]`
                         const searchValue =
                           columnSearchDraft[column.name] ?? tableState.query[queryKey] ?? ''
                         return (
-                          <th key={header.id} className="px-3 pb-2">
+                          <th data-pupitre-table-header="" key={header.id} className="px-3 pb-2">
                             <input
                               type="search"
                               aria-label={t('Search {label}', { label: column.label })}
@@ -1582,11 +1615,12 @@ export function DataTable({
                           </th>
                         )
                       })}
-                      <th />
+                      <th data-pupitre-table-header="" />
                     </tr>
                   )}
               </thead>
               <tbody
+                data-pupitre-table-body=""
                 aria-busy={loading || tableState.isLoading}
                 className={loading || tableState.isLoading ? 'opacity-60' : undefined}
               >
@@ -1636,7 +1670,10 @@ export function DataTable({
         )}
         {/* An empty first page has nothing to paginate; the empty state says it all. */}
         {(rows.length > 0 || page > 1) && (
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3 text-[0.8125rem] text-muted-foreground">
+          <footer
+            data-pupitre-table-pagination=""
+            className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3 text-[0.8125rem] text-muted-foreground"
+          >
             <span className="tabular-nums">
               {meta?.simple ? (
                 t('{count} results', { count: rows.length })

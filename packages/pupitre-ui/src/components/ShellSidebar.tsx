@@ -47,6 +47,7 @@ export function ShellBrand({
   const name = brand?.name ?? (panel.id || 'Pupitre')
   return (
     <NavLink
+      data-pupitre-brand=""
       href={panel.path || '/'}
       onClick={onNavigate}
       aria-label={compact ? name : undefined}
@@ -156,13 +157,18 @@ export function ShellSidebar({
 
   if (topNav)
     return (
-      <nav aria-label={t('Main navigation')} className="flex min-w-0 items-center gap-1">
+      <nav
+        data-pupitre-nav=""
+        aria-label={t('Main navigation')}
+        className="flex min-w-0 items-center gap-1"
+      >
         {nav.map((group, groupIndex) => {
           const groupActive = group.items.some((item) => isActive(item, currentUrl))
           if (!group.label)
             return group.items.map((item) => (
-              <section key={`${item.label}:${item.url ?? ''}`}>
+              <section data-pupitre-nav-group="" key={`${item.label}:${item.url ?? ''}`}>
                 <NavLink
+                  data-pupitre-nav-item=""
                   href={item.url ?? '#'}
                   target={item.external ? '_blank' : undefined}
                   rel={item.external ? 'noreferrer' : undefined}
@@ -176,7 +182,11 @@ export function ShellSidebar({
               </section>
             ))
           return (
-            <section key={`${group.label}:${groupIndex}`} className="relative">
+            <section
+              data-pupitre-nav-group=""
+              key={`${group.label}:${groupIndex}`}
+              className="relative"
+            >
               <details
                 className="group"
                 onKeyDown={(event) => {
@@ -209,6 +219,7 @@ export function ShellSidebar({
                   {group.items.map((item) => (
                     <li key={`${item.label}:${item.url ?? ''}`}>
                       <NavLink
+                        data-pupitre-nav-item=""
                         href={item.url ?? '#'}
                         target={item.external ? '_blank' : undefined}
                         rel={item.external ? 'noreferrer' : undefined}
@@ -236,6 +247,7 @@ export function ShellSidebar({
 
   return (
     <nav
+      data-pupitre-nav=""
       ref={sideNavRef}
       aria-label={t('Main navigation')}
       className={cn(
@@ -246,7 +258,7 @@ export function ShellSidebar({
       {nav.map((group, groupIndex) => {
         const groupCollapsed = group.collapsible && collapsedGroups[group.label]
         return (
-          <section key={`${group.label}:${groupIndex}`}>
+          <section data-pupitre-nav-group="" key={`${group.label}:${groupIndex}`}>
             {group.label &&
               !railCollapsed &&
               (group.collapsible ? (
@@ -306,6 +318,7 @@ export function ShellSidebar({
                   const label = `${item.label}${item.badge !== undefined ? `, ${item.badge}` : ''}`
                   const link = (
                     <NavLink
+                      data-pupitre-nav-item=""
                       href={item.url ?? '#'}
                       target={item.external ? '_blank' : undefined}
                       rel={item.external ? 'noreferrer' : undefined}
@@ -374,6 +387,7 @@ export function ShellSidebar({
                             return (
                               <li key={child.label}>
                                 <NavLink
+                                  data-pupitre-nav-item=""
                                   href={child.url ?? '#'}
                                   aria-current={childActive ? 'page' : undefined}
                                   onClick={onNavigate}
