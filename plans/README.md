@@ -19,6 +19,7 @@ plan fully before starting, honor its STOP conditions, and update your row when 
 | 004 | Translatable record-field contract spike (`pupitre-translatable`, ADR-0028) | P2 | M | MED | — | TODO |
 | 005 | XLSX import (`actions.import().formats(['csv','xlsx'])`, bounded dependency-free reader) | P2 | L | MED | — | TODO |
 | 006 | Workflow plugin spike: transaction-safe transitions (`pupitre-workflow`, ADR-0029) | P1 | L | HIGH | 002 | TODO |
+| 007 | AG-UI agent endpoint + chat surface (`pupitre-agent`, ADR-0030; search/get/list/action tools, CopilotKit as optional client only) | P2 | L | MED | — (002 optional) | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -30,8 +31,13 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 - 003 does not require 002; it only touches core (`definition/`, `builder/`, `plugins/apply.ts`, `search/`).
 - 001, 004, 005 are independent. 004 and 006 each scaffold a new workspace package; run them on
   separate branches to avoid `package.json` workspace-list and lockfile conflicts.
-- ADR numbers are reserved: 0027 → plan 001, 0028 → plan 004, 0029 → plan 006. Any other plan that
-  needs an ADR takes the next free number after 0029.
+- ADR numbers are reserved: 0027 → plan 001, 0028 → plan 004, 0029 → plan 006, 0030 → plan 007. Any other
+  plan that needs an ADR takes the next free number after 0030.
+- 007 touches core only to export `executeAction` and `searchResources` (additive). It scaffolds a new
+  workspace package; run it on its own branch like 004/006. Ordering with 003: 003 adds a fourth
+  required `providers` argument to `searchResources`; whichever lands second must update the
+  `search_records` tool call (007 passes `ctx.pupitre.panel.globalSearch?.providers ?? []` if 003 is
+  already DONE, else the three-argument form).
 
 ## Direction findings not planned (available on request)
 
