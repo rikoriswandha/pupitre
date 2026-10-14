@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 (2026-10-14)
+
+### Fixed
+- Authorization: a JSON 403 `{ message }` answer to an Inertia request (sent by `@rikology/pupitre` when redirecting back would only repeat the forbidden request) shows an error toast titled "Forbidden" instead of Inertia's HTML error dialog.
+
 ## 1.1.0 (2026-10-14)
 
 ### Added

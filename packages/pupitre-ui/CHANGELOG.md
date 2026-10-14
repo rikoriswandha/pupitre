@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 (2026-10-14)
+
+### Changed
+- Release: lockstep patch with `@rikology/pupitre` and `-react` 1.1.1; no UI component changes.
+
 ## 1.1.0 (2026-10-14)
 
 ### Changed

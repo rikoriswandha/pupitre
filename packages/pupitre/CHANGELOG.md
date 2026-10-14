@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1 (2026-10-14)
+
+### Changed
+- Release: `@rikology/pupitre`, `-react` and `-ui` move lockstep to `1.1.1` (patch; sibling ranges stay `^1.1.0`, `catalogVersion` stays `1.1`).
+
+### Fixed
+- Widgets: `.canView(ctx, record?)` now receives the page record on resource edit/view pages (page props and the widget data/action endpoint). `loginHistoryWidget()` uses it, so users without `viewLoginHistory` no longer get the widget whose deferred load 403'd, looped on redirect-back, and left a "Forbidden" toast on the next page.
+- Authorization: record Edit/View tabs are shown only when the viewer has the `update`/`view` ability for that record; previously the Edit tab was always offered and led to a 403.
+- Authorization: a forbidden GET whose redirect-back target is the request's own URL (e.g. an Inertia deferred-prop reload) no longer redirects back to itself until the browser gives up, leaving a stale "Forbidden" flash for the next page. Like the existing panel-home case, it answers 403 directly; Inertia requests get JSON `{ message }`, which `@rikology/pupitre-react` shows as a "Forbidden" toast on the current page instead of Inertia's HTML error dialog.
+
 ## 1.1.0 (2026-10-14)
 
 ### Changed
