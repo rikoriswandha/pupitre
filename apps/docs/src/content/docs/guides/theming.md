@@ -35,6 +35,48 @@ The default skin is a **ledger**: content sits on the canvas, each region opens 
 
 Use the registry for structural component changes, not theme tokens. The sidebar collapse/group state persists per panel; table column visibility persists separately. [Customizing UI](/customizing-ui/) explains replacement component ownership.
 
+## CSS hooks
+
+Tokens re-tint the default skin; CSS hooks let a theme `stylesheet` restyle structure (the ledger rule, unboxed sections, title serif) without copying components. Every structural element carries a stable `data-pupitre-<name>` attribute. Target it with an attribute selector:
+
+```css
+/* /admin-theme.css — registered via defineTheme({ stylesheet: '/admin-theme.css' }) */
+[data-pupitre-section] {
+  border-top: 0;
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--elevation-panel);
+  padding: 1.25rem;
+}
+[data-pupitre-page-title] {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+[data-pupitre-button][data-variant='solid'][data-color='primary'] {
+  border-radius: 9999px;
+}
+```
+
+Pupitre's own styles are Tailwind utilities inside the `utilities` cascade layer; an unlayered rule in your stylesheet wins over them at any specificity, so `!important` is unnecessary. The stylesheet loads after `@rikology/pupitre-ui/styles.css` and is removed when the panel unmounts. Hooks mark element identity, not appearance: class names on the same element are implementation detail and change between releases, hook names do not.
+
+| Hook | Element |
+| --- | --- |
+| `shell`, `content`, `main`, `page-header`, `page-title`, `breadcrumbs`, `page-tabs`, `page-body` | Shell frame, `<main>`, page heading row, `<h1>`, breadcrumb `<nav>`, record sub-navigation, content stack. `shell` also carries `data-density` and `data-sidebar`. |
+| `sidebar`, `topnav`, `topbar`, `brand`, `nav`, `nav-group`, `nav-item` | Desktop and mobile sidebar, top-navigation header, toolbar header, brand link, navigation `<nav>`, group `<section>`, item `<a>` (`aria-current="page"` when active). |
+| `section`, `section-header`, `section-heading`, `section-body`, `section-footer` | Unboxed page region (widgets, view-page sections, schema sections) and its parts. |
+| `tabs`, `tabs-list`, `tab`, `tabs-body`, `tab-panel` | Schema tabs; `tab` carries `aria-selected`. |
+| `wizard`, `wizard-steps`, `wizard-step`, `wizard-body`, `wizard-footer` | Schema wizard. |
+| `form`, `form-fields`, `form-actions`, `field`, `control` | `<form>`, its fields block and submit row; one field (label, control, error); input, textarea, input group, select trigger. |
+| `infolist` | View-page infolist root. |
+| `widgets`, `widget` | Widget grid and each cell (also the loading skeleton). |
+| `table`, `table-toolbar`, `table-search`, `table-bulk`, `table-scroll`, `table-element`, `table-head`, `table-header`, `table-body`, `table-row`, `table-cell`, `table-group`, `table-summary`, `table-pagination`, `table-grid` | Data table root, toolbar, search input, bulk-action bar, scroll container, `<table>`, `<thead>`, `<th>`, `<tbody>`, `<tr>` (`data-selected` when checked), `<td>`, group heading row, summary row, pagination, grid layout. |
+| `kanban`, `kanban-column`, `kanban-card` | Kanban board, column, card. |
+| `button`, `badge`, `actions`, `panel`, `empty` | Button (`data-variant`, `data-color`), badge (`data-color`), action list (`data-appearance`), raised panel, empty state. |
+| `popup`, `dialog` | Any floating surface (menus, selects, popovers, dialogs); `dialog` narrows to modals and slide-overs (`data-slide-over`). |
+| `auth`, `auth-card` | Authentication pages: wrapper and form container. |
+
+Hooks are rendering contracts: a registry replacement for a component should keep the hooks its default emits, or host stylesheets written against them stop matching.
+
 ## Environment colors
 
 Panel `.environmentIndicator({ color: 'warning', label: 'Staging' })` adds an environment badge to the topbar and a thin strip at the shell top. Its six semantic colors use contrast-safe foreground/background pairs in both themes, independent of host token overrides. The visible label communicates the environment without relying on color. See [Panels](/guides/panels/#environment-indicator) for production defaults and async visibility.

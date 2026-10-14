@@ -26,6 +26,7 @@ Gate M3 = semua baris dengan target `M1`–`M3` berstatus ✅. Kolom "Pupitre" a
 | `->unsavedChangesAlerts()` | `Form.dirtyGuard` | M1 | ✅ | |
 | `->maxContentWidth()` | theme `contentWidth` | M3 | ✅ | Lebar konten shell `md`–`7xl`, `full`, atau `screen` |
 | `->renderHook()` | — | — | — | ganti komponen via registry |
+| CSS hook classes `fi-*` + custom theme CSS | atribut `data-pupitre-<name>` + theme `stylesheet` | post-1.0 | ✅ | Selector stabil untuk shell, nav, section, tabs, wizard, form/field/control, tabel, kanban, button/badge/dialog; rule host tanpa layer menang atas utility Tailwind tanpa `!important` |
 | `->userMenuItems()` | `.userMenu([...])` | M2 | ✅ | visible closure, sort, method, external link |
 | `->breadcrumbs()` | otomatis; `.breadcrumbs(false)` | M1 | ✅ | |
 | `->viteTheme()` | — | — | — | Tailwind host |

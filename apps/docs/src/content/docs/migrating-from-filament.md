@@ -177,7 +177,7 @@ export const comments = defineRelationManager(Post, 'comments')
 // PostResource.relations([comments])
 ```
 
-Groups use `relationGroup(label, managers)`. Read-only managers use `.readOnly()`, badges `.badge((ctx, record) => ...)`. Attach/detach/associate/dissociate use action factories. Nested resource registration becomes parent `.nested([child])` plus child `.parent(parentModelOrResource, relation)`. Routes, ownership, policies and queries remain parent/tenant-scoped.
+Groups use `relationGroup(label, managers)`. Read-only managers use `.readOnly()`, badges `.badge((ctx, record) => ...)`. Unlike Filament, managers do not render below the edit form: they open from the record's Relations tab (`?relation=<key>`). Attach/detach/associate/dissociate use action factories. Nested resource registration becomes parent `.nested([child])` plus child `.parent(parentModelOrResource, relation)`. Routes, ownership, policies and queries remain parent/tenant-scoped.
 
 Simple resources use `pages.list().modals()`; no separate create/edit page routes are registered in that mode.
 

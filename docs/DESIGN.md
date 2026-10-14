@@ -356,7 +356,7 @@ export default definePage('settings').path('/settings').icon('settings')
   .actions([clearCache])
 ```
 
-**Relation managers.** `defineRelationManager(Post, 'comments')` membungkus table + form untuk relasi hasMany/manyToMany. Di halaman edit tampil sebagai tab di bawah form; datanya deferred prop per relation, URL state tabelnya diberi prefix (`comments[sort]`). Attach/detach/associate untuk manyToMany dan belongsTo bawaan. Nested resource (`/posts/:id/revisions`) adalah resource penuh dengan `parent()`; sidebar menampilkan breadcrumb parent.
+**Relation managers.** `defineRelationManager(Post, 'comments')` membungkus table + form untuk relasi hasMany/manyToMany. Relation manager tidak dirender di bawah form/infolist; tab **Relations** di sub-navigation record membuka `?relation=<key>` pada halaman edit/view, yang hanya menampilkan tab per relation manager (read-only di halaman view). Datanya deferred prop per relation, URL state tabelnya diberi prefix (`comments[sort]`). Attach/detach/associate untuk manyToMany dan belongsTo bawaan. Nested resource (`/posts/:id/revisions`) adalah resource penuh dengan `parent()`; sidebar menampilkan breadcrumb parent.
 
 **Global search.** Tiap resource dengan `globallySearchable()` menyumbang query; endpoint `GET /_pupitre/search?q=` menjalankan semuanya paralel dengan batas 5 hasil per resource, hasil = `{ resource, title, details, url }`. Client memakai cmdk; shortcut dari panel.
 

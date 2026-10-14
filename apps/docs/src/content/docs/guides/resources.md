@@ -64,7 +64,7 @@ export const Comments = defineRelationManager(Post, 'comments')
   .actions({ header: [actions.create()], row: [actions.edit(), actions.delete()] })
 ```
 
-Register with resource `.relations([Comments])`; `relationGroup(label, [...])` groups managers. Managers support icon, badge `(ctx, record)`, read-only mode and record title. Their tables load as deferred data on edit/view pages. Use attach/detach for many-to-many and associate/dissociate for appropriate relationships. Related-model policy and parent access are checked on the server.
+Register with resource `.relations([Comments])`; `relationGroup(label, [...])` groups managers. Managers support icon, badge `(ctx, record)`, read-only mode and record title. They are not rendered under the form or infolist: the record's **Relations** tab opens `…/edit?relation=<key>` (or `…/:id?relation=<key>` from the view page), which shows one tab per manager with its table loaded as deferred data. Relation managers on the view page are read-only. The Relations tab only appears when the user may `viewAny` every related model. Use attach/detach for many-to-many and associate/dissociate for appropriate relationships. Related-model policy and parent access are checked on the server.
 
 ## Soft deletes and global search
 
