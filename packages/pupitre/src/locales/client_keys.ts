@@ -211,6 +211,7 @@ const clientKeys: readonly string[] = [
   'Filter {label}',
   'Filters',
   'Flip',
+  'Forbidden',
   'Forgot password',
   'Form steps',
   'Global search',

@@ -39,17 +39,28 @@ function handledError(message: string, status: number, code: string) {
     const translated = resolveTranslations(error.message, locale, messages)
     if (json) return ctx.response.status(status).json({ message: translated })
     if (status === 403) {
-      if (ctx.pupitre?.panel.tenancy && !ctx.pupitre.tenant)
-        return ctx.response.status(status).send(translated)
+      let refuse = Boolean(ctx.pupitre?.panel.tenancy && !ctx.pupitre.tenant)
       const referer = ctx.request.header('referer')
-      const panelPath = ctx.pupitre?.panel.path
-      if (referer && panelPath) {
+      if (!refuse && referer) {
         try {
-          const path = new URL(referer).pathname.replace(/\/$/, '')
-          if (path === panelPath || path === `${panelPath}/login`)
-            return ctx.response.status(status).send(translated)
+          const back = new URL(referer)
+          const path = back.pathname.replace(/\/$/, '')
+          const panelPath = ctx.pupitre?.panel.path
+          const current = new URL(ctx.request.url(true), back)
+          // Redirecting back would only repeat a forbidden request: the panel home/login,
+          // or this same GET (e.g. a deferred-prop partial reload of the current page).
+          refuse =
+            Boolean(panelPath && (path === panelPath || path === `${panelPath}/login`)) ||
+            (['GET', 'HEAD'].includes(ctx.request.method()) &&
+              current.pathname.replace(/\/$/, '') === path &&
+              current.search === back.search)
         } catch {}
       }
+      // Inertia requests get JSON so pupitre-react shows a toast, not Inertia's HTML dialog.
+      if (refuse)
+        return ctx.request.header('x-inertia')
+          ? ctx.response.status(status).json({ message: translated })
+          : ctx.response.status(status).send(translated)
       ctx.session?.flash('pupitre', [{ type: 'error', title: t('Forbidden'), body: error.message }])
       return ctx.response.redirect().back()
     }

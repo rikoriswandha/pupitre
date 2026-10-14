@@ -135,16 +135,17 @@ function nestedParentBreadcrumb(
     url: parentResource.urls.edit(id),
   }
 }
-function resourceSubNavigation(
+async function resourceSubNavigation(
   ctx: HttpContext,
   target: ResourceRuntime,
-  kind: 'list' | 'create' | 'edit' | 'view',
-  recordId: string | number | undefined,
+  kind: 'edit' | 'view',
+  record: LucidRow,
+  recordId: string | number,
   relations: RelationDescriptor[]
-): SubNavigationItem[] {
-  if (recordId === undefined || (kind !== 'edit' && kind !== 'view')) return []
+): Promise<SubNavigationItem[]> {
   const items: SubNavigationItem[] = []
-  if (target.definition.pages.edit) {
+  // Same abilities as the row Edit/View actions, so a tab never leads to a 403.
+  if (target.definition.pages.edit && (await authorizeResource(ctx, target, 'update', record))) {
     items.push({
       key: 'edit',
       label: t('Edit'),
@@ -152,7 +153,7 @@ function resourceSubNavigation(
       active: kind === 'edit' && !ctx.request.qs().relation,
     })
   }
-  if (target.definition.pages.view) {
+  if (target.definition.pages.view && (await authorizeResource(ctx, target, 'view', record))) {
     items.push({
       key: 'view',
       label: t('View'),
@@ -791,7 +792,14 @@ export default class ResourceController {
         headerActions: actions,
         widgets: widgetProps.widgets,
         relations: relationProps.relations,
-        subNavigation: resourceSubNavigation(ctx, target, 'edit', id, relationProps.relations),
+        subNavigation: await resourceSubNavigation(
+          ctx,
+          target,
+          'edit',
+          record,
+          id,
+          relationProps.relations
+        ),
         extraProps: { ...relationProps.extraProps, ...widgetProps.extraProps },
         deferred: [...relationProps.deferred, ...widgetProps.deferred],
       }),
@@ -847,7 +855,14 @@ export default class ResourceController {
         headerActions: actions,
         widgets: widgetProps.widgets,
         relations: relationProps.relations,
-        subNavigation: resourceSubNavigation(ctx, target, 'view', id, relationProps.relations),
+        subNavigation: await resourceSubNavigation(
+          ctx,
+          target,
+          'view',
+          record,
+          id,
+          relationProps.relations
+        ),
         extraProps: { ...relationProps.extraProps, ...widgetProps.extraProps },
         deferred: [...relationProps.deferred, ...widgetProps.deferred],
       }),

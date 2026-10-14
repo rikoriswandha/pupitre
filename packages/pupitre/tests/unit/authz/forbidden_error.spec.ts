@@ -70,4 +70,50 @@ test.group('E_PUPITRE_FORBIDDEN response handling', () => {
       },
     ])
   })
+
+  test('answers a forbidden GET of the referring URL instead of redirecting back to it', async ({
+    assert,
+  }) => {
+    const flashes: unknown[] = []
+    let redirected = false
+    let response: { status: number; body: unknown } | undefined
+    const error = new E_PUPITRE_FORBIDDEN()
+    const ctx = (method: string, url: string) =>
+      ({
+        request: {
+          header: (name: string) =>
+            ({
+              'accept': 'text/html, application/xhtml+xml',
+              'x-inertia': 'true',
+              'referer': 'http://pupitre.test/admin/acme/users/1?tab=a',
+            })[name],
+          method: () => method,
+          url: () => url,
+        },
+        pupitre: { panel: { path: '/admin/acme' } },
+        session: { flash: (_key: string, value: unknown) => flashes.push(value) },
+        response: {
+          status: (status: number) => ({
+            json: (body: unknown) => (response = { status, body }),
+          }),
+          redirect: () => ({ back: () => (redirected = true) }),
+        },
+      }) as unknown as HttpContext
+    const handler = (error as unknown as HandledError).handle
+
+    // Inertia deferred-prop reloads re-request the current page; a redirect back loops.
+    handler.call(error, error, ctx('GET', '/admin/acme/users/1/?tab=a'))
+    assert.deepEqual(response, {
+      status: 403,
+      body: { message: 'You are not authorized to perform this action' },
+    })
+    assert.isFalse(redirected)
+    assert.lengthOf(flashes, 0)
+
+    // A different page, or a mutation of the same URL, still redirects back with the flash.
+    handler.call(error, error, ctx('GET', '/admin/acme/users/1?tab=b'))
+    handler.call(error, error, ctx('POST', '/admin/acme/users/1?tab=a'))
+    assert.isTrue(redirected)
+    assert.lengthOf(flashes, 2)
+  })
 })

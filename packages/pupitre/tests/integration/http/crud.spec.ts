@@ -102,7 +102,18 @@ test.group('Pupitre CRUD HTTP runtime', () => {
       )
       const missing = await inertia(fixture.baseUrl, '/admin/posts/999999/edit')
       assert.equal(missing.status, 404)
+
+      // Record tabs follow the same abilities as the pages they open.
+      const tabKeys = (props: z.infer<typeof pageProps>) =>
+        (props.page.subNavigation ?? []).map((item) => item.key)
+      assert.deepEqual(tabKeys(viewProps), ['edit', 'view'])
+      denyPolicyAbility('update')
+      const readOnly = await responseProps(
+        await inertia(fixture.baseUrl, `/admin/posts/${record.id}`)
+      )
+      assert.deepEqual(tabKeys(readOnly), ['view'])
     } finally {
+      allowPolicyAbilities()
       await closeTestApp(fixture)
     }
   })
