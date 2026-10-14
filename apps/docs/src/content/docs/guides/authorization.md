@@ -35,7 +35,7 @@ Use `.strictAuthorization(false)` to turn the option off on a derived immutable 
 | Dissociate | `dissociate` | `update` |
 | Custom resource action `.can('publish')` | `publish` | None |
 
-The fallback changes the method name, not the authorization requirement. Define dedicated relation/reorder methods when the generic fallback is too permissive. Related-model options and managers also resolve policies. Pages use `.canAccess(ctx)`, widgets `.canView(ctx)`, and host abilities may be checked through Bouncer for actions outside a resource.
+The fallback changes the method name, not the authorization requirement. Define dedicated relation/reorder methods when the generic fallback is too permissive. Related-model options and managers also resolve policies. Pages use `.canAccess(ctx)`, widgets `.canView(ctx, record?)` (`record` on resource edit/view pages), and host abilities may be checked through Bouncer for actions outside a resource.
 
 ## Server boundaries
 

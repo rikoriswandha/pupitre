@@ -29,6 +29,8 @@ For `.table(callback)`, supply a model: `defineWidget('latest-posts', Post).tabl
 
 Common controls: `.span(number | 'full')`, `.sort(number)`, `.poll(intervalString)`, `.heading(string)`, `.description(string)`, `.canView(callback)`, `.lazy(boolean)`. Defaults are span 1, sort 0 and lazy loading enabled.
 
+`.canView((ctx, record?) => boolean | Promise<boolean>)` hides the widget when it returns false: the page omits it and its data endpoint answers 403. On resource edit/view pages `record` is the page record, so per-record checks (such as `loginHistoryWidget()`'s `viewLoginHistory` policy ability) belong here rather than only in the loader; a loader that throws for a viewer who still sees the widget shows them a Forbidden toast.
+
 Spans count columns of a four-column grid on wide screens (two columns on tablets, one on phones). Widgets fill rows in sort order; a row that would leave empty columns stretches its widgets proportionally, so two `span(1)` charts followed by a `span('full')` table render as two halves rather than two quarters and a hole.
 
 ## Radar and scatter charts
