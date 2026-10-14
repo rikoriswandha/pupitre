@@ -20,8 +20,8 @@ export default class UserPolicy {
   create(_user: User) {
     return true
   }
-  update(_user: User) {
-    return true
+  update(user: User, target: User) {
+    return this.isAdmin(user) || user.id === target.id
   }
   delete(user: User) {
     return this.isAdmin(user)
