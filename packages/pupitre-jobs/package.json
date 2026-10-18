@@ -64,7 +64,7 @@
     "@adonisjs/core": "^7.0.0",
     "@adonisjs/lucid": "^22.0.0",
     "luxon": "^3.4.4",
-    "@adonisjs/queue": ">=0.6.0"
+    "@adonisjs/queue": "~0.6.2"
   },
   "peerDependenciesMeta": {
     "@adonisjs/queue": {
