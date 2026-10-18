@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/experimental-ct-react'
 import AxeBuilder from '@axe-core/playwright'
 import { CalendarStory } from './stories/calendar.story.js'
 
+// The interval fixtures are relative to "now". Pin a mid-week, mid-month instant so month-view
+// row breaks and trailing days do not depend on the day the suite runs.
+const FIXED_NOW = new Date('2026-10-14T05:00:00Z')
+const dayAfterFixedNow = (days: number) =>
+  new Date(FIXED_NOW.getTime() + days * 86400000).toISOString().slice(0, 10)
+
 test('calendar views, period navigation and keyboard move persist', async ({ mount, page }) => {
   await mount(<CalendarStory />)
   const select = page.getByRole('combobox', { name: 'Calendar view' })
@@ -94,10 +100,11 @@ test('calendar defaults to agenda on a narrow viewport', async ({ mount, page })
 })
 
 test('timed intervals cover every day and hour with an exclusive end', async ({ mount, page }) => {
+  await page.clock.setFixedTime(FIXED_NOW)
   await mount(<CalendarStory intervals />)
-  const today = new Date().toISOString().slice(0, 10)
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-  const third = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 10)
+  const today = dayAfterFixedNow(0)
+  const tomorrow = dayAfterFixedNow(1)
+  const third = dayAfterFixedNow(2)
   await expect(
     page.locator(`[data-calendar-date="${tomorrow}T00:00"]`).getByText('Overnight', { exact: true })
   ).toBeVisible()
@@ -131,9 +138,10 @@ test('calendar has only one draggable start segment for a multi-day event', asyn
   mount,
   page,
 }) => {
+  await page.clock.setFixedTime(FIXED_NOW)
   await mount(<CalendarStory intervals />)
-  const today = new Date().toISOString().slice(0, 10)
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const today = dayAfterFixedNow(0)
+  const tomorrow = dayAfterFixedNow(1)
   const first = page.locator(`[data-calendar-date="${today}T00:00"]`)
   const next = page.locator(`[data-calendar-date="${tomorrow}T00:00"]`)
   await expect(page.locator('[data-calendar-drag]')).toHaveCount(1)
