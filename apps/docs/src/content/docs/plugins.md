@@ -1,5 +1,6 @@
 ---
-title: Writing plugins
+title: "Writing plugins"
+description: "Build server-side Pupitre plugins that contribute resources, pages, widgets and adapters to a host panel."
 ---
 
 Plugins are ordinary server-side definitions. Export an options factory returning `definePlugin()` and add its result to a panel's `.plugins([...])` list.

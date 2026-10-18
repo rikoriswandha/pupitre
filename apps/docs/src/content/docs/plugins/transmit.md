@@ -1,6 +1,8 @@
 ---
-title: Transmit — realtime refresh
-description: Replace polling with authenticated server-sent event pings.
+title: "Transmit: realtime refresh"
+description: "Configure authenticated server-sent event refreshes with AdonisJS Transmit and Pupitre server and browser adapters."
+sidebar:
+  label: "Transmit"
 ---
 
 `@rikology/pupitre-transmit` bridges AdonisJS Transmit to Pupitre's realtime adapter and browser client. Despite living alongside panel plugins, it is configured through `realtime`, not `.plugins([...])`.

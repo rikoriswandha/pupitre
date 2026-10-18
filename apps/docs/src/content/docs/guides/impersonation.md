@@ -1,6 +1,6 @@
 ---
-title: Impersonation
-description: Safely troubleshoot tenant accounts with administrator-initiated impersonation.
+title: "Impersonation"
+description: "Configure administrator-initiated impersonation on session-authenticated panels to troubleshoot user and tenant accounts."
 ---
 
 Enable impersonation on a session-authenticated panel with built-in `.login()` and add the record action to the resource backed by your configured authentication user model. Panels without built-in login are rejected at boot.

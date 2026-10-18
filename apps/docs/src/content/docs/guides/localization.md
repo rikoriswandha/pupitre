@@ -1,7 +1,6 @@
 ---
-title: Localization
-sidebar:
-  order: 15
+title: "Localization"
+description: "Enable English and Indonesian panel locales and translate host labels while controlling number formatting separately."
 ---
 
 Pupitre includes English (`en`, the source language) and Indonesian (`id`). Enable the languages on each panel:

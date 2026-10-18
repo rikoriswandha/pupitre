@@ -1,10 +1,13 @@
 ---
-title: Widgets and dashboards
+title: "Widgets and dashboards"
+description: "Build dashboard stats, charts and table widgets with server-side data loaders, filters and tenant-aware queries."
 sidebar:
-  order: 7
+  label: "Widgets"
 ---
 
 `defineWidget(name, model?)` creates a dashboard or resource-page widget. Stats and charts load data from a server callback; table widgets use the same table compiler as resources.
+
+![Admin dashboard in light mode with summary statistics, charts and operational widgets.](/screenshots/dashboard-light.webp)
 
 ```ts
 import { defineWidget, stat } from '@rikology/pupitre'

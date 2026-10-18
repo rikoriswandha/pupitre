@@ -1,9 +1,13 @@
 ---
-title: Kanban boards
-description: Scoped resource boards with authorized, persistent status moves.
+title: "Kanban: resource boards"
+description: "Build tenant-scoped resource boards and persist authorized status changes through the official Kanban plugin."
+sidebar:
+  label: "Kanban"
 ---
 
 The server-only `@rikology/pupitre-kanban` plugin contributes a board page. The default Pupitre UI registry includes a lazy `KanbanBoard`; custom copied registries must register that component.
+
+![Order Kanban board with populated cards in Pending, Paid, Shipped and Delivered status columns.](/screenshots/kanban-light.webp)
 
 ```ts
 import { kanban } from '@rikology/pupitre-kanban'

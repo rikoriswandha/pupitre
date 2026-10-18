@@ -9,10 +9,10 @@ import { withBase } from "@cloudflare/nimbus-docs/runtime";
 export const prerender = true;
 const homeHref = withBase("/", import.meta.env.BASE_URL);
 const suggestions = [
+  { href: "/introduction/", label: "Introduction", blurb: "What Pupitre is and how it works" },
   { href: "/getting-started/", label: "Getting started", blurb: "Installation and your first panel" },
   { href: "/guides/forms/", label: "Forms and schema", blurb: "Fields, validation and reactivity" },
   { href: "/migrating-from-filament/", label: "Migrating from Filament", blurb: "PHP to TypeScript equivalents" },
-  { href: "/reference/cli/", label: "CLI reference", blurb: "Generators and diagnostics" },
 ].map((item) => ({ ...item, href: withBase(item.href, import.meta.env.BASE_URL) }));
 ---
 
@@ -22,7 +22,7 @@ const suggestions = [
     <main id="main-content" tabindex="-1" class="flex-1 mx-auto max-w-2xl w-full px-6 py-24 text-center">
       <p class="text-sm font-medium text-muted-foreground">404</p>
       <h1
-        class="mt-2 text-foreground leading-tight"
+        class="font-display mt-2 text-foreground leading-tight"
         style="font-size: var(--nb-h1-size); font-weight: var(--nb-h1-weight); letter-spacing: var(--nb-h1-tracking);"
       >
         Page not found

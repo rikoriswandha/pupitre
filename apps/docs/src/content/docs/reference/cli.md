@@ -1,5 +1,8 @@
 ---
-title: CLI reference
+title: "CLI reference"
+description: "Generate panel definitions and UI components, inspect authorization coverage and review Pupitre-specific Ace command flags."
+sidebar:
+  order: 0
 ---
 
 Commands are registered by the configure hook under `@rikology/pupitre/commands`. Run inside the host application as `node ace <command>`. The flags below are Pupitre-specific; standard Ace help remains available.

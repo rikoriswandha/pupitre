@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `dark:` follows the theme toggle (`data-mode`), not only the OS setting. */
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
 /* ============================================================
  * Nimbus Theme — THE file you edit to customize your site.
  *
@@ -22,29 +25,31 @@
 :root {
 	color-scheme: light;
 
-	/* Surfaces (paired with foregrounds for contrast) */
-	--nb-background: oklch(0.99 0 0);
-	--nb-foreground: oklch(0.21 0 0);
+	/* Surfaces — warm paper canvas and ink, mirroring @rikology/pupitre-ui
+	   (see DESIGN.md). Neutrals carry hue ~75 at low chroma. */
+	--nb-background: oklch(0.976 0.0065 84);
+	--nb-foreground: oklch(0.225 0.012 65);
 
-	--nb-card: oklch(1 0 0);
+	--nb-card: oklch(0.996 0.0015 84);
 	--nb-card-foreground: var(--nb-foreground);
 
-	--nb-muted: oklch(0.98 0 0);
-	--nb-muted-foreground: oklch(0.556 0 0);
+	--nb-muted: oklch(0.963 0.005 82);
+	--nb-muted-foreground: oklch(0.49 0.012 68);
 
-	--nb-accent: oklch(0.967 0 0);
+	--nb-accent: oklch(0.94 0.008 80);
 	--nb-accent-foreground: var(--nb-foreground);
 
-	/* Primary action / brand — Pupitre violet */
-	--nb-primary: oklch(0.48 0.2 290);
-	--nb-primary-foreground: oklch(0.985 0 0);
-	--nb-primary-hover: oklch(0.4 0.17 290);
+	/* Primary action / brand — Pupitre blotter green */
+	--nb-primary: oklch(0.47 0.095 163);
+	--nb-primary-foreground: oklch(0.985 0.008 160);
+	--nb-primary-hover: oklch(0.41 0.088 163);
 
-	/* Borders / focus */
-	--nb-border: oklch(0.935 0 0);
-	--nb-border-strong: oklch(0.87 0 0);
-	--nb-selected: oklch(0.89 0 0);
-	--nb-ring: oklch(0.48 0.2 290 / 0.35);
+	/* Borders / focus — `rule` is the ink line that opens a landing region */
+	--nb-border: oklch(0.905 0.008 78);
+	--nb-border-strong: oklch(0.868 0.008 76);
+	--nb-rule: oklch(0.38 0.014 66);
+	--nb-selected: oklch(0.89 0.01 78);
+	--nb-ring: oklch(0.47 0.095 163 / 0.35);
 
 	/* Status colors — paired (saturated for text/border + muted for bg) */
 	--nb-info: oklch(0.424 0.199 265.638);
@@ -90,16 +95,19 @@
 	/* Used only by the API reference (registry: api-layout); harmless elsewhere. */
 	--nb-code-rail-width: 34rem;
 
-	/* Typography — self-hosted via @fontsource-variable in BaseLayout.astro */
+	/* Typography — self-hosted via @fontsource in BaseLayout.astro. Page titles
+	   use the Pupitre display serif, as panel titles do. */
 	--nb-font-sans:
 		"Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
 		sans-serif;
+	--nb-font-display:
+		"Source Serif 4", "Iowan Old Style", Charter, Georgia, serif;
 	--nb-font-mono:
 		"JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Code",
 		"Source Code Pro", Menlo, Consolas, monospace;
-	--nb-h1-size: 2.1875rem;
-	--nb-h1-weight: 600;
-	--nb-h1-tracking: -0.025em;
+	--nb-h1-size: 2.375rem;
+	--nb-h1-weight: 400;
+	--nb-h1-tracking: -0.015em;
 	--nb-h2-size: 1.3rem;
 	--nb-h2-weight: 650;
 	--nb-h2-tracking: -0.015em;
@@ -125,26 +133,27 @@
 [data-mode="dark"] {
 	color-scheme: dark;
 
-	--nb-background: oklch(0.085 0 0);
-	--nb-foreground: oklch(0.97 0 0);
+	--nb-background: oklch(0.172 0.005 70);
+	--nb-foreground: oklch(0.94 0.006 82);
 
-	--nb-card: #0F0F0F;
+	--nb-card: oklch(0.205 0.006 70);
 	--nb-card-foreground: var(--nb-foreground);
 
-	--nb-muted: #060606;
-	--nb-muted-foreground: oklch(0.708 0 0);
+	--nb-muted: oklch(0.155 0.005 70);
+	--nb-muted-foreground: oklch(0.72 0.008 78);
 
-	--nb-accent: oklch(0.269 0 0);
+	--nb-accent: oklch(0.25 0.007 72);
 	--nb-accent-foreground: var(--nb-foreground);
 
-	--nb-primary: oklch(0.72 0.15 290);
-	--nb-primary-foreground: oklch(0.085 0 0);
-	--nb-primary-hover: oklch(0.8 0.11 290);
+	--nb-primary: oklch(0.74 0.105 163);
+	--nb-primary-foreground: oklch(0.172 0.005 70);
+	--nb-primary-hover: oklch(0.8 0.09 163);
 
-	--nb-border: oklch(0.269 0 0);
-	--nb-border-strong: oklch(0.371 0 0);
-	--nb-selected: oklch(0.371 0 0);
-	--nb-ring: oklch(0.72 0.15 290 / 0.35);
+	--nb-border: oklch(0.275 0.007 72);
+	--nb-border-strong: oklch(0.36 0.008 72);
+	--nb-rule: oklch(0.6 0.01 76);
+	--nb-selected: oklch(0.33 0.008 72);
+	--nb-ring: oklch(0.74 0.105 163 / 0.35);
 
 	--nb-info: oklch(0.707 0.165 254.624);
 	--nb-info-foreground: oklch(0.707 0.165 254.624);
@@ -195,6 +204,7 @@
 
 	--color-border: var(--nb-border);
 	--color-border-strong: var(--nb-border-strong);
+	--color-rule: var(--nb-rule);
 	--color-selected: var(--nb-selected);
 	--color-ring: var(--nb-ring);
 
@@ -215,6 +225,7 @@
 	--color-danger-muted: var(--nb-danger-muted);
 
 	--font-sans: var(--nb-font-sans);
+	--font-display: var(--nb-font-display);
 	--font-mono: var(--nb-font-mono);
 
 	--shadow-sm: var(--nb-shadow-sm);
@@ -239,7 +250,7 @@ body {
 }
 
 ::selection {
-	background: color-mix(in oklch, var(--nb-primary) 10%, transparent);
+	background: color-mix(in oklab, var(--nb-primary) 18%, transparent);
 	color: var(--nb-foreground);
 }
 

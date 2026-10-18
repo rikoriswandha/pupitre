@@ -1,6 +1,8 @@
 ---
-title: Media library
-description: Reusable tenant-scoped media, image conversions, and accessible pickers.
+title: "Media: media library"
+description: "Install a tenant-scoped media library with image conversions and reusable media pickers for forms, tables and infolists."
+sidebar:
+  label: "Media library"
 ---
 
 The official `@rikology/pupitre-media` plugin adds a thumbnail-grid Media resource and reusable media IDs to your forms, tables, and infolists. React components ship in `pupitre-ui`, not the server package; the interactive picker is lazy-loaded.

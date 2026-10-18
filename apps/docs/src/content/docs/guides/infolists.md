@@ -1,10 +1,11 @@
 ---
-title: Infolists
-sidebar:
-  order: 4
+title: "Infolists"
+description: "Create read-only resource view schemas with formatted entries, layouts and related record information."
 ---
 
 An infolist is a read-only schema for the resource view page. Add `.infolist((s) => [...])`; Pupitre adds a view page if it is missing.
+
+![Field Notes 01 record view with a published badge, summary and body, publication timestamp, views and two line items.](/screenshots/post-view-light.webp)
 
 ```ts
 .infolist((s) => [

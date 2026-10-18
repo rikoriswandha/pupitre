@@ -1,0 +1,81 @@
+---
+title: Introduction
+description: Learn how Pupitre panels, server-side definitions and React components fit together before building your first AdonisJS admin surface.
+---
+
+Pupitre is an admin panel framework for **AdonisJS v7 and Inertia React**. You describe model-backed resources, forms, tables, actions and dashboards in TypeScript on the server; Pupitre supplies the routes, validation and React rendering that connect them.
+
+It is for developers building back-office tools inside an existing AdonisJS application, and for the editors, support staff and administrators who use those tools. Your application still owns its models, migrations, authentication and authorization policies. Pupitre is not a separate hosted backend or a converter for PHP applications.
+
+![Pupitre admin dashboard in light mode with summary statistics, charts and operational widgets.](/screenshots/dashboard-light.webp)
+
+## The mental model
+
+A **panel** is an independently routed admin surface. It brings together **resources** for Lucid models, **custom pages** for other workflows, and **clusters** that group related navigation entries.
+
+Within those surfaces, form fields, table columns, read-only infolist entries, actions and widgets are server-side definitions. Pupitre compiles the definitions into serializable specs and descriptors plus the state and data needed for a request. One generic Inertia page renders the appropriate surface through a catalog of React components.
+
+The default components come from `@rikology/pupitre-ui`. Keep using the package, override individual registry entries, or copy components into your application through the shadcn registry. Owning the UI does not require replacing your resource definitions.
+
+:::tip[Start with the defaults]
+Build a resource with the standard registry first. Use [theming](/guides/theming/) for colors and layout, [UI customization](/customizing-ui/) to replace an existing component, and [custom components](/guides/custom-components/) when you need a new catalog type.
+:::
+
+## What happens on a request?
+
+<Steps>
+
+1. **Resolve the panel and user.** Panel routes and middleware select the host authentication guard, resolve tenant membership when configured, and establish the request's Pupitre context.
+2. **Authorize the operation.** Resource operations map to Bouncer abilities; scoped queries constrain which records are available. Custom pages and plugin surfaces use their configured access checks.
+3. **Compile and render.** The server compiles the relevant definitions and returns Inertia props. The generic React page uses your component registry to render the shell, form, table, record or dashboard.
+4. **Validate mutations on the server.** Form submissions and actions return to server endpoints for authorization and validation. Resource saves run their lifecycle hooks and persistence in a transaction; the response updates or redirects the interface.
+
+</Steps>
+
+Table search, sorting, filtering and pagination use URL query state. Changing those controls reloads authorized table data without requiring a new form or page implementation for each resource.
+
+:::caution[Declare authorization before exposing a panel]
+A core resource without a policy allows access and logs a warning by default. Define host Bouncer policies and consider panel `.strictAuthorization()` to reject missing policy coverage. Plugin surfaces may have their own fail-closed requirements; review [authorization](/guides/authorization/) and each plugin's setup.
+:::
+
+## Package map
+
+Install the core in your host application; the configure hook adds the React runtime and default UI. Infrastructure and plugin dependencies depend on the features you enable.
+
+| Package | Responsibility |
+| --- | --- |
+| `@rikology/pupitre` | Server builders, compiler, routes, scoped queries, validation and optional adapters. Its `/catalog` export defines the shared Zod wire contract. |
+| `@rikology/pupitre-react` | Generic React Inertia page, spec renderer, state hooks and action transport. |
+| `@rikology/pupitre-ui` | Default visual components and a copyable shadcn registry for host-owned UI. |
+| `@rikology/pupitre-shield` | Database-backed roles and permissions integrated with Bouncer. |
+| `@rikology/pupitre-audit` | Read-only activity and record timelines backed by host audit-trail data. |
+| `@rikology/pupitre-settings` | Typed grouped settings with transactional persistence and scoped pages. |
+| `@rikology/pupitre-media` | Media library, reusable pickers and image conversions. |
+| `@rikology/pupitre-calendar` | Calendar widgets and pages with authorized rescheduling. |
+| `@rikology/pupitre-kanban` | Resource boards with persistent, authorized status moves. |
+| `@rikology/pupitre-jobs` | AdonisJS Queue job monitoring and controlled retries. |
+| `@rikology/pupitre-health` | Protected dashboards for host infrastructure checks. |
+| `@rikology/pupitre-backup` | Database snapshots, retention and private downloads. |
+| `@rikology/pupitre-transmit` | Server and browser adapters for authenticated Transmit realtime refreshes. |
+| `@rikology/create-pupitre-plugin` | Scaffolder for publishable server-side plugin packages. |
+
+See [official plugins](/plugins/overview/) for installation boundaries and [adapters](/guides/adapters/) for host infrastructure integration. Server plugins contribute definitions; their standard React surfaces live in the UI registry rather than in the server plugin packages.
+
+## Feature tour
+
+<CardGrid>
+  <LinkCard title="Forms, tables and records" description="Build editable schemas, searchable lists and read-only record views." href="/guides/resources/" />
+  <LinkCard title="Pages and dashboards" description="Compose stats, charts and tables with server-side widget loaders." href="/guides/widgets/" />
+  <LinkCard title="Users and access" description="Map operations to Bouncer policies and enforce resource access." href="/guides/authorization/" />
+  <LinkCard title="Tenant-aware panels" description="Resolve membership and scope resources to an active tenant." href="/guides/tenancy/" />
+</CardGrid>
+
+Explore [forms](/guides/forms/), [tables](/guides/tables/) and [infolists](/guides/infolists/) for individual building blocks; [actions](/guides/actions/) for record workflows; and [localization](/guides/localization/) for panel languages.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="Build your first panel" description="Install Pupitre and connect a model, resource and host policy." href="/getting-started/" />
+  <LinkCard title="Configure a panel" description="Understand routing, resources and shared panel behavior." href="/guides/panels/" />
+  <LinkCard title="Coming from Filament?" description="Translate familiar concepts into AdonisJS and Inertia React." href="/migrating-from-filament/" />
+</CardGrid>

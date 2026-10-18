@@ -1,5 +1,8 @@
 ---
-title: Customizing the UI
+title: "Customizing the UI"
+description: "Replace default React components or copy the UI registry into your host while preserving the server-side resource definitions."
+sidebar:
+  label: "Customizing the UI"
 ---
 
 Pupitre separates the backend DSL, React runtime and visual components. `@rikology/pupitre-react` renders specs; `@rikology/pupitre-ui` supplies components; `@rikology/pupitre/catalog` owns the Zod wire contract. Change one visual component without changing your resource definitions.

@@ -1,7 +1,22 @@
 ---
-title: Getting started
-description: Install Pupitre and build your first model-backed admin panel.
+title: "Getting started"
+description: "Install Pupitre in an AdonisJS v7 application and configure a model-backed panel with authentication and authorization."
 ---
+
+Build a model-backed admin surface inside your AdonisJS application. This guide connects the installer, panel definition, host authentication and first resource so you can reach an authorized Posts list.
+
+![Posts resource list in light mode with table columns, filters, record actions and pagination.](/screenshots/posts-table-light.webp)
+
+The screenshot shows the example application's completed Posts list. Your first resource starts with the columns and actions you define below.
+
+<Steps>
+
+1. Check the host prerequisites and run the installer.
+2. Register the panel and configure its authentication model.
+3. Generate a resource and attach a host Bouncer policy.
+4. Start the application and open the resource's list page.
+
+</Steps>
 
 ## Prerequisites
 
@@ -14,6 +29,10 @@ node ace add @rikology/pupitre
 The configure hook installs `@rikology/pupitre-react`, `@rikology/pupitre-ui`, Tailwind CSS and its Vite plugin. It registers the Pupitre provider, Ace commands, `#start/pupitre` preload and `indexAdmin()` assembler init hook. It adds the `#admin/*` import mapping and imports the UI stylesheet when `inertia/css/app.css` exists.
 
 It publishes `config/pupitre.ts`, the starter panel, generic Inertia page and component registry. It also publishes migrations for password-reset tokens, user profile/verification fields, MFA, passkeys, social identity and exports. Existing host files are preserved. Review generated migrations against your user model before running them; do not blindly add columns that already exist in your application.
+
+:::caution[Review generated migrations]
+The installer preserves existing files, but your host user schema may already contain some published columns. Review migrations before applying them.
+:::
 
 To rerun host setup with explicit defaults:
 
@@ -37,6 +56,24 @@ export default definePanel('admin')
   .login()
   .resources([PostResource])
 ```
+
+The starter layout keeps server definitions separate from the host-owned frontend:
+
+<FileTree>
+
+- app/
+  - admin/
+    - panels/
+      - **admin.ts**
+    - resources/
+      - post_resource.ts
+- inertia/
+  - admin/
+    - registry.ts
+  - pages/
+    - pupitre.tsx
+
+</FileTree>
 
 When enabling built-in auth, configure the host model in `config/pupitre.ts`:
 
@@ -92,3 +129,12 @@ Keep AdonisJS Shield CSRF protection enabled for all mutation routes, including 
 Configure shared-store `@adonisjs/limiter` for multi-process deployments and correct trusted-proxy IP handling. Login, passkey sign-in options/verification and social callback quotas are 60 requests/minute per IP/panel; password failures additionally use a 5/minute email+IP window. Other sensitive auth endpoints, including passkey registration, use 5/minute limits. The single-process fallback resets on restart and evicts the oldest insertion-order key at its 10,000-key capacity, potentially forgetting active quotas under identity churn; it is not a distributed limiter. See [authentication](/guides/auth/#rate-limits).
 
 Set body-parser/proxy limits and storage quotas alongside Pupitre's bounded uploads: 10 MiB by default, 5 MiB for avatars and 10 MiB for CSV imports. SVG, HTML/XHTML and JavaScript uploads are rejected, and image endpoints accept passive images only. Audit host policies, custom plugins and copied registry source before exposure; Pupitre defaults do not secure arbitrary application endpoints.
+
+## Next steps
+
+<CardGrid>
+  <LinkCard title="Model your resources" description="Add record pages, lifecycle hooks and related data." href="/guides/resources/" />
+  <LinkCard title="Build your forms" description="Compose validated fields and reactive layouts." href="/guides/forms/" />
+  <LinkCard title="Review authorization" description="Map resource operations to policies and enable strict coverage." href="/guides/authorization/" />
+  <LinkCard title="Extend your panel" description="Compare official plugins and their host requirements." href="/plugins/overview/" />
+</CardGrid>

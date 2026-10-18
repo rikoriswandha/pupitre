@@ -1,0 +1,87 @@
+---
+title: Official plugins
+description: Compare the official Pupitre plugins, choose their host dependencies and register server-side features on your panel.
+sidebar:
+  label: Overview
+---
+
+Official plugins extend panels with resources, pages, widgets and infrastructure integrations. Choose only the packages you need: installation, migrations, peer dependencies and authorization are specific to each integration.
+
+## Choose an integration
+
+| Package | What it adds | Setup guide |
+| --- | --- | --- |
+| `@rikology/pupitre-shield` | Global roles and resource permissions with generated Bouncer policies. | [Shield](/plugins/shield/) |
+| `@rikology/pupitre-audit` | Read-only Activity resource and record timelines from host audit-trail data. | [Audit](/plugins/audit/) |
+| `@rikology/pupitre-settings` | Typed settings groups with transactional saves and global or tenant-scoped pages. | [Settings](/plugins/settings/) |
+| `@rikology/pupitre-media` | Media library, reusable pickers, private media resolution and image conversions. | [Media library](/plugins/media/) |
+| `@rikology/pupitre-transmit` | Authenticated realtime refresh pings through server and browser Transmit adapters. | [Transmit](/plugins/transmit/) |
+| `@rikology/pupitre-calendar` | Calendar widgets and pages with scoped resource events and authorized rescheduling. | [Calendar](/plugins/calendar/) |
+| `@rikology/pupitre-kanban` | Resource boards with persistent status moves and optional card ordering. | [Kanban](/plugins/kanban/) |
+| `@rikology/pupitre-jobs` | Queue job state, failure details, retention and controlled retries. | [Jobs monitor](/plugins/jobs/) |
+| `@rikology/pupitre-health` | Authorized infrastructure check dashboard and a host-owned check registry. | [Health](/plugins/health/) |
+| `@rikology/pupitre-backup` | Consistent database snapshots with private downloads and retention. | [Backup](/plugins/backup/) |
+
+## Install and register
+
+Most panel plugins export an options factory whose result belongs in `.plugins([...])`. This Shield example demonstrates the pattern; use the selected plugin's guide for its actual options and host requirements.
+
+<Steps>
+
+1. **Install and configure the package.** For Shield, the AdonisJS configure hook publishes migrations and registers its Ace commands:
+
+   ```sh
+   node ace add @rikology/pupitre-shield
+   ```
+
+2. **Review and apply the migrations.** Match the generated users-table reference and primary-key type to your host schema before running:
+
+   ```sh
+   node ace migration:run
+   ```
+
+3. **Register the factory result on a panel.** Point Shield at the host authentication user model:
+
+   ```ts
+   import { definePanel } from '@rikology/pupitre'
+   import { shield } from '@rikology/pupitre-shield'
+
+   export default definePanel('admin')
+     .guard('web')
+     .login()
+     .plugins([
+       shield({ userModel: () => import('#models/user') }),
+     ])
+   ```
+
+4. **Finish plugin-specific setup.** For Shield, synchronize permissions and grant an existing host user the configured super-administrator role:
+
+   ```sh
+   node ace shield:sync --user=admin@example.com
+   ```
+
+   Replace the example email with your administrator's account. Review which resources Shield protects and preserve explicit host policies as described in [Shield setup](/plugins/shield/).
+
+</Steps>
+
+:::note[There is no universal configure command]
+Calendar and Kanban require no plugin database tables or configure hook. Audit needs the host audit-trail provider and migrations; Media needs a Drive disk; Jobs needs a configured queue. Read the setup guide before assuming installation alone enables a feature.
+:::
+
+:::caution[Transmit is an adapter, not a panel plugin entry]
+Configure Transmit through `config.pupitre.realtime` and pass its browser adapter to the generic Pupitre page. Do not add it to `.plugins([...])`. Protect Transmit routes with host authentication and keep CSRF enabled; follow the [Transmit guide](/plugins/transmit/).
+:::
+
+## UI and access boundaries
+
+The official server packages contribute definitions, not React implementations. Standard plugin surfaces ship in `@rikology/pupitre-ui`; copied registries must include the components they use. Media's additional field and entry types also require its catalog extension in the host registry.
+
+A plugin is not a replacement for application access control. Configure each integration's policy or authorization callback, tenant behavior and infrastructure credentials. Audit displays records produced by the host's capture pipeline. Backup snapshots contain the entire selected database, so restrict them to trusted database administrators rather than treating them as tenant exports.
+
+## Go further
+
+<CardGrid>
+  <LinkCard title="Writing plugins" description="Create a server-side plugin with resources, pages and widgets." href="/plugins/" />
+  <LinkCard title="Infrastructure adapters" description="Connect panel features to your host services and drivers." href="/guides/adapters/" />
+  <LinkCard title="Own the UI" description="Override or copy the React components used by plugin surfaces." href="/customizing-ui/" />
+</CardGrid>

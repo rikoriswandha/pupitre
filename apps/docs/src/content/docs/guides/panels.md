@@ -1,7 +1,6 @@
 ---
-title: Panels
-sidebar:
-  order: 1
+title: "Panels"
+description: "Define independently routed admin panels and configure their resources, navigation, authentication and shared behavior."
 ---
 
 A panel is an independently routed admin surface. `definePanel(id)` defaults to `/<id>` and returns an immutable builder: keep the returned value from every chain. You can create multiple panel modules for different domains, guards or audiences.

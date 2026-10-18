@@ -1,8 +1,9 @@
 ---
-title: Actions
-sidebar:
-  order: 6
+title: "Actions"
+description: "Define server-authorized row, header and bulk actions with confirmation dialogs, forms and execution callbacks."
 ---
+
+Actions attach server-side workflows to a page or selected records. Use them for operations that need authorization, confirmation or a small form rather than a new CRUD page.
 
 `action('kebab-case-name')` creates a custom action. Assign it to resource header, row or bulk placement; that placement supplies its execution context.
 

@@ -1,7 +1,8 @@
 ---
-title: Adapters and drivers
+title: "Adapters and drivers"
+description: "Connect Pupitre to host mail, storage, queue and realtime infrastructure through optional adapters and drivers."
 sidebar:
-  order: 15
+  label: "Adapters"
 ---
 
 Pupitre can use the host's infrastructure without requiring every optional peer. Configure adapters in `config/pupitre.ts` using a value or `() => Promise<adapter>`. Installing an adapter package does not configure its database tables, mail transport or queue worker for you.

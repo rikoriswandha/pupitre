@@ -1,7 +1,6 @@
 ---
-title: Tenancy
-sidebar:
-  order: 10
+title: "Tenancy"
+description: "Configure URL or implicit tenant selection, membership checks and query scoping for resources and related operations."
 ---
 
 Panel tenancy supports URL and implicit modes. URL mode places the tenant identifier below the panel path; implicit mode uses the authenticated user's current tenant attribute. Both resolve membership before a resource query can run.

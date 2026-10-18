@@ -1,7 +1,13 @@
 ---
-title: Calendar
-description: Authorized, tenant-scoped event calendars and publication scheduling.
+title: "Calendar: event scheduling"
+description: "Add authorized, tenant-scoped calendar pages for resource events and configure publication scheduling."
+sidebar:
+  label: "Calendar"
 ---
+
+Use calendar widgets to display dated resource records in a scheduling workflow. Resource event helpers apply the existing resource policies and tenant scope.
+
+![September 2026 publication calendar with event cards and the Asia/Jakarta timezone selected.](/screenshots/calendar-light.webp)
 
 `@rikology/pupitre-calendar` is a server-only plugin. Its lazy `Calendar` UI is included in `@rikology/pupitre-ui`'s components registry.
 

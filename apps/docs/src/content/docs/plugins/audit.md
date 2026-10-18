@@ -1,6 +1,8 @@
 ---
-title: Audit — activity and timelines
-description: Display recorded activity with a read-only resource and record timelines.
+title: "Audit: activity and timelines"
+description: "Display host-recorded audit activity in a read-only resource and add record timelines without replacing event capture."
+sidebar:
+  label: "Audit"
 ---
 
 `@rikology/pupitre-audit` displays audit history. It does not capture events itself or replace the host's audit retention, redaction, delivery or verification policy.

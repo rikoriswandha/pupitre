@@ -1,7 +1,6 @@
 ---
-title: Authorization
-sidebar:
-  order: 9
+title: "Authorization"
+description: "Map resource operations to Bouncer policies and enable strict authorization to reject missing policy coverage."
 ---
 
 Pupitre maps resource access to Bouncer policies. Use `.policy(PostPolicy)` or a lazy policy import; otherwise `config.pupitre.policies` resolves `<Model>Policy` (or the model-name key). Install/register Bouncer middleware as part of your host application.

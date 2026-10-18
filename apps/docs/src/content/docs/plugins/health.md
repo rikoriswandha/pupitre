@@ -1,7 +1,11 @@
 ---
-title: Health
-description: A protected infrastructure health dashboard using AdonisJS checks.
+title: "Health: infrastructure checks"
+description: "Connect host infrastructure checks to an authorized health dashboard without exposing a public health endpoint."
+sidebar:
+  label: "Health"
 ---
+
+Health shows authorized operators the results of infrastructure checks defined by the host application. The dashboard is a protected panel page, not a public status endpoint.
 
 Install `@rikology/pupitre-health`, then run `node ace add @rikology/pupitre-health` to publish `start/health.ts`. The host owns the `HealthChecks` registry; the plugin has no public health endpoint and never persists results.
 

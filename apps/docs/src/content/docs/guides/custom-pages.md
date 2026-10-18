@@ -1,7 +1,6 @@
 ---
-title: Custom pages
-sidebar:
-  order: 8
+title: "Custom pages"
+description: "Build authorized custom pages with forms, save handlers, widgets or host registry components outside model CRUD workflows."
 ---
 
 Use a custom page when the workflow is not a model's CRUD lifecycle. Put its module in `app/admin/pages/*_page.ts`, or register it directly on the panel.

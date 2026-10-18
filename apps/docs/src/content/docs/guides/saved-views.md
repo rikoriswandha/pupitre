@@ -1,7 +1,11 @@
 ---
-title: Saved table views
-description: Personal defaults, public views and immutable developer presets.
+title: "Saved table views"
+description: "Configure developer table presets and personal or public saved views with scoped persistence and authorization."
+sidebar:
+  label: "Saved views"
 ---
+
+Saved views let operators return to a useful table configuration without rebuilding its filters. Combine developer presets with authorized personal and public views.
 
 Enable `.savedViews()` on a resource or relation-manager table and run the generated `1791700000044_create_pupitre_table_views` migration. Developer presets use `tableView('Drafts').query({ filters: { status: 'draft' } }).icon('file-pen').default()`. Every factory method returns a new builder.
 

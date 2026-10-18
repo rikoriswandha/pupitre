@@ -1,7 +1,6 @@
 ---
-title: Testing
-sidebar:
-  order: 16
+title: "Testing"
+description: "Test panel definitions at the controller boundary with Japa helpers and verify custom components in a browser."
 ---
 
 Test your application definitions at the controller boundary and your replacement components in a browser. Core helpers do not replace full routing/CSRF/browser verification.

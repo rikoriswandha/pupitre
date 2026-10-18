@@ -1,7 +1,11 @@
 ---
-title: Backup plugin
-description: Consistent database snapshots with private downloads, retention, and administrator-only access.
+title: "Backup: database snapshots"
+description: "Configure private database snapshots, retention and authorized downloads with the official Backup plugin."
+sidebar:
+  label: "Backup"
 ---
+
+Backup adds a protected resource for creating and managing database snapshots. Its downloads are private, and access should be limited to trusted system administrators.
 
 Install `@rikology/pupitre-backup`, run `node ace add @rikology/pupitre-backup`, and apply `node ace migration:run`. The configure hook publishes `pupitre_backups` and registers the Ace command loader.
 

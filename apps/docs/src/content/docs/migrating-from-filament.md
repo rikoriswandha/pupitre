@@ -1,6 +1,6 @@
 ---
-title: Migrating from Filament
-description: Translate Filament concepts into AdonisJS v7, Lucid and Inertia React.
+title: "Migrating from Filament"
+description: "Translate Filament panels, resources, validation and policies into AdonisJS v7, Lucid and Inertia React."
 ---
 
 Pupitre borrows Filament's declarative model, not its PHP runtime. Migrate your domain models, validation and policies to AdonisJS first, then move the admin definitions. These are API equivalents, not an automated source converter.

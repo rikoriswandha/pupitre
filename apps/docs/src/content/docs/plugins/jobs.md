@@ -1,6 +1,8 @@
 ---
-title: Jobs monitor
-description: Monitor AdonisJS Queue jobs, inspect failures and safely retry registered jobs.
+title: "Jobs: queue monitoring"
+description: "Configure a Jobs resource to inspect AdonisJS Queue job state, view failures and retry registered jobs with authorization."
+sidebar:
+  label: "Jobs monitor"
 ---
 
 `@rikology/pupitre-jobs` adds an operational Jobs resource to your panel. It is server-only and uses the existing table, infolist and stats components.

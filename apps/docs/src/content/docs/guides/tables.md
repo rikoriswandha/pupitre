@@ -1,8 +1,11 @@
 ---
-title: Tables
-sidebar:
-  order: 5
+title: "Tables"
+description: "Define searchable columns, filters, sorting and record actions for model-backed tables using the server-side table builders."
 ---
+
+Tables turn a resource query into a searchable, filterable record list. Configure its presentation on the server while Pupitre keeps sorting, filters and pagination in the URL.
+
+![Posts resource table in light mode with searchable columns, filters and per-record actions.](/screenshots/posts-table-light.webp)
 
 The callback argument to `.table((t) => ...)` configures the table. The exported `table` namespace creates columns and filters:
 

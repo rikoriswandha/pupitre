@@ -86,7 +86,7 @@ function assertPublicReference(text, path) {
 }
 
 await mkdir(new URL('reference/', content), { recursive: true })
-for (const [slug, title, files] of references) {
+for (const [index, [slug, title, files]] of references.entries()) {
   const sections = []
   for (const relative of files) {
     const path = `packages/pupitre/${relative}`
@@ -105,7 +105,8 @@ for (const [slug, title, files] of references) {
     })
     if (declarations.length) sections.push(`## ${relative}\n\n[Source](https://github.com/rikoriswandha/pupitre/blob/main/${path})\n\n\`\`\`ts\n${declarations.join('\n\n')}\n\`\`\`\n`)
   }
-  const page = `---\ntitle: "API: ${title}"\ndescription: Public TypeScript declarations verified against the package export entries.\n---\n\nThis reference is generated before development, checking and building from declarations reachable through the package's published entry points, following re-exports. Internal source-module exports are omitted. Types shown together share their source module; follow the source link for imports and implementation. Use the guides for examples and runtime behavior.\n\n${sections.join('\n')}`
+  const frontmatter = `---\ntitle: "API: ${title}"\ndescription: Public TypeScript declarations for ${title.toLowerCase()} exported by @rikology/pupitre.\nsidebar:\n  order: ${index + 1}\n---`
+  const page = `${frontmatter}\n\nThis reference is generated before development, checking and building from declarations reachable through the package's published entry points, following re-exports. Internal source-module exports are omitted. Types shown together share their source module; follow the source link for imports and implementation. Use the guides for examples and runtime behavior.\n\n${sections.join('\n')}`
   assertPublicReference(page, `reference/api-${slug}.md`)
   await writeFile(new URL(`reference/api-${slug}.md`, content), page)
 }

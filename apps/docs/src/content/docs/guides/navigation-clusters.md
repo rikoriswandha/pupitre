@@ -1,6 +1,6 @@
 ---
-title: Navigation clusters
-description: Group resources and pages behind one authorized navigation entry.
+title: "Navigation clusters"
+description: "Group related resources and custom pages behind a shared navigation entry without changing their individual policies."
 ---
 
 Clusters organize related resources and custom pages without adding a landing page or changing their policies.

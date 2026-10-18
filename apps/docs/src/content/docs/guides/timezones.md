@@ -1,7 +1,6 @@
 ---
-title: Timezones
-sidebar:
-  order: 14
+title: "Timezones"
+description: "Configure timezone precedence for datetime input and display while keeping stored instants in UTC and dates distinct."
 ---
 
 Store datetime values in UTC and make display/parse timezone explicit. Precedence is component override, user timezone, panel timezone, then global Pupitre configuration (default UTC).

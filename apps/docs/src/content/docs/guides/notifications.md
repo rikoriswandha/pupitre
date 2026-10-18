@@ -1,7 +1,6 @@
 ---
-title: Notifications
-sidebar:
-  order: 12
+title: "Notifications"
+description: "Send action toasts and persisted inbox messages, configure delivery adapters and distinguish their notification lifecycles."
 ---
 
 Action handlers (including custom-page actions) receive notification builders. A custom page's `save({ data, ctx })` callback does not receive `notify`. Toasts and persisted inbox messages are distinct delivery paths.

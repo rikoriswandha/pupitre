@@ -1,7 +1,6 @@
 ---
-title: Resources
-sidebar:
-  order: 2
+title: "Resources"
+description: "Bind Lucid models to CRUD pages, configure resource schemas and queries, and add relation managers and lifecycle hooks."
 ---
 
 `defineResource(Model)` binds a Lucid model to generated CRUD routes. Its default slug is the pluralized kebab-case model name, with a trailing `Model` removed. Override public URLs using `.slug()` rather than depending on class naming.

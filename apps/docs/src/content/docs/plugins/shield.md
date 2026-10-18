@@ -1,6 +1,8 @@
 ---
-title: Shield — roles and permissions
-description: Install database-backed roles and resource permissions for Pupitre.
+title: "Shield: roles and permissions"
+description: "Install database-backed roles and resource permissions and connect generated policies to AdonisJS Bouncer."
+sidebar:
+  label: "Shield"
 ---
 
 `@rikology/pupitre-shield` adds a Roles resource and generic Bouncer policies. Install it in the host AdonisJS application:

@@ -1,8 +1,13 @@
 ---
-title: Forms and schema
+title: "Forms and schema"
+description: "Compose typed form fields and layouts, configure validation and reactive state, and manage relationships and file uploads."
 sidebar:
-  order: 3
+  label: "Forms"
 ---
+
+A form schema describes editable fields and their layout for a resource, custom page or action. The same builders connect the rendered inputs to server validation and reactive state.
+
+![Field Notes 01 edit form showing title, slug, status, publication date, category, views, a priority slider and content editors.](/screenshots/post-form-light.webp)
 
 Use resource `.form((s) => [...])`, page `.form(...)`, or action `.form([schema.text(...)])`. The callback namespace and exported `schema` share component factories. Builders are immutable, and containers accept builder arrays via `.components()` (repeaters use `.schema()`). The [schema API reference](/reference/api-schema/) contains every factory and option with its exact signature.
 

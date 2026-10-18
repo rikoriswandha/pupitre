@@ -1,10 +1,11 @@
 ---
-title: Authentication
-sidebar:
-  order: 11
+title: "Authentication"
+description: "Configure panel login, registration, password reset and profile features using your host application authentication guard."
 ---
 
 Pupitre uses the host authentication guard. `.guard('web')` selects a guard; `.login()` enables Pupitre's login/logout routes. If using existing host auth, leave login disabled and register appropriate panel middleware.
+
+![Panel login screen in light mode with email and password fields.](/screenshots/login-light.webp)
 
 ```ts
 .login().registration().passwordReset().emailVerification()

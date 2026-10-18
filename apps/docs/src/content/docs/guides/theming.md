@@ -1,8 +1,11 @@
 ---
-title: Theming
-sidebar:
-  order: 13
+title: "Theming"
+description: "Configure panel colors, dark mode, density and layout with server-defined themes, CSS variables and host stylesheets."
 ---
+
+Themes control a panel's visual tokens and layout without replacing its resource definitions. Use panel settings for shared behavior and a host stylesheet for more specific styling.
+
+![Admin dashboard in dark mode with themed navigation, statistics and chart widgets.](/screenshots/dashboard-dark.webp)
 
 Define a reusable theme on the server, then attach it to a panel:
 

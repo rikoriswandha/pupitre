@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
+import Icon from "@cloudflare/nimbus-docs/components/Icon.astro";
 import { Code } from "../components/ui/code";
 import { LinkButton } from "../components/ui/link-button";
 import { config } from "virtual:nimbus/config";
@@ -14,78 +15,271 @@ const href = (id: string): string => {
   if (!entry) throw new Error(`Landing page links to missing docs entry "${id}"`);
   return withBase(entry.url, import.meta.env.BASE_URL);
 };
+const asset = (path: string): string => withBase(path, import.meta.env.BASE_URL);
 
-const example = `import { defineResource, table } from '@rikology/pupitre'
+const install = `node ace add @rikology/pupitre
+node ace make:resource Post`;
+
+const example = `import { defineResource, table, actions } from '@rikology/pupitre'
 import Post from '#models/post'
+import PostPolicy from '#policies/post_policy'
 
 export default defineResource(Post)
+  .policy(PostPolicy)
   .recordTitle('title')
   .form((s) => [
     s.text('title').required().maxLength(200),
-    s.select('status').options({ draft: 'Draft', published: 'Published' }),
+    s.select('status').options({
+      draft: 'Draft',
+      published: 'Published',
+    }),
   ])
   .table((t) => t.columns([
     table.text('title').searchable().sortable(),
     table.badge('status'),
-  ]))`;
+  ]))
+  .actions({ row: [actions.edit(), actions.delete()] })`;
 
-const pillars = [
-  {
-    title: "Adonis-native.",
-    body: "Lucid persistence, VineJS validation, Bouncer policies and your application's session guard.",
-  },
-  {
-    title: "React, not remote JavaScript.",
-    body: "Declarative specs power forms and tables. Simple reactive closures become safe expressions, not executable source sent to the browser.",
-  },
-  {
-    title: "Yours to change.",
-    body: "Replace a registry component without forking the backend. Add behavior through panel plugins and optional adapters.",
-  },
+const handled = [
+  "Index, create, edit and view pages, with their routes",
+  "VineJS validation derived from the form schema",
+  "Lucid queries for search, sort, filters and pagination",
+  "Bouncer policy checks on pages, records and actions",
+  "Action transport, modals and notifications",
+];
+
+const features = [
+  { icon: "ph:database", title: "Resources and relations", body: "Lucid-backed CRUD, nested resources, relation managers, soft deletes and global search.", id: "guides/resources" },
+  { icon: "ph:textbox", title: "Reactive forms", body: "A typed field catalog with layouts, repeaters, wizards, uploads and a rich editor.", id: "guides/forms" },
+  { icon: "ph:table", title: "Tables that scale", body: "Columns, filters, list tabs, grouping, summaries, saved views, export and import.", id: "guides/tables" },
+  { icon: "ph:lightning", title: "Actions and modals", body: "Row, bulk and header actions with forms, confirmations, queues and rate limits.", id: "guides/actions" },
+  { icon: "ph:chart-line-up", title: "Dashboards", body: "Stats, charts and timeline widgets with filters, plus custom pages.", id: "guides/widgets" },
+  { icon: "ph:shield-check", title: "Authorization first", body: "Policies decide every route and action; strict mode fails closed on gaps.", id: "guides/authorization" },
+  { icon: "ph:fingerprint", title: "Complete sign-in", body: "Rate-limited login, MFA, passkeys, social sign-in and session history.", id: "guides/auth" },
+  { icon: "ph:buildings", title: "Multi-tenancy", body: "Tenant-scoped panels, membership checks and query scoping built in.", id: "guides/tenancy" },
+  { icon: "ph:palette", title: "Themes you own", body: "Token theming, dark mode, and copyable shadcn registry components.", id: "guides/theming" },
+];
+
+const steps = [
+  { n: "1", title: "Describe", body: "Write panels, resources, forms, tables and actions with immutable TypeScript builders on the server." },
+  { n: "2", title: "Compile", body: "Pupitre turns the builders into an authorized JSON spec. Simple reactive closures become safe expressions, never source sent to the browser." },
+  { n: "3", title: "Render", body: "One Inertia page renders the spec through a catalog of React components. Copy any of them into your app to change it." },
+];
+
+const plugins = [
+  { name: "Shield", body: "Roles and permissions", id: "plugins/shield" },
+  { name: "Audit", body: "Activity and record timelines", id: "plugins/audit" },
+  { name: "Settings", body: "Typed settings pages", id: "plugins/settings" },
+  { name: "Media", body: "Media library and pickers", id: "plugins/media" },
+  { name: "Transmit", body: "Realtime refresh over SSE", id: "plugins/transmit" },
+  { name: "Calendar", body: "Event calendars", id: "plugins/calendar" },
+  { name: "Kanban", body: "Status boards", id: "plugins/kanban" },
+  { name: "Jobs", body: "Queue monitor and retries", id: "plugins/jobs" },
+  { name: "Health", body: "Infrastructure checks", id: "plugins/health" },
+  { name: "Backup", body: "Database snapshots", id: "plugins/backup" },
 ];
 ---
 
 <BaseLayout title={config.title} description={config.description}>
   <div class="flex flex-col min-h-screen">
     <Header showSidebar={false} />
-    <main id="main-content" tabindex="-1" class="flex-1 mx-auto max-w-3xl w-full px-6 py-20">
-      <h1
-        class="text-foreground leading-tight max-w-[14ch] [text-wrap:balance]"
-        style="font-size: clamp(2.25rem, 6vw, 3.5rem); font-weight: var(--nb-h1-weight); letter-spacing: -0.045em;"
-      >
-        Your models. Your admin. Your code.
-      </h1>
-      <p class="mt-4 max-w-[60ch] text-[1.0625rem] text-muted-foreground leading-relaxed [text-wrap:pretty]">
-        Build an AdonisJS admin panel with typed resources, reactive forms and server-authorized
-        actions. Keep the React components yours.
-      </p>
-      <div class="mt-8 flex flex-wrap gap-3">
-        <LinkButton href={href("getting-started")} variant="primary" size="lg" icon>Get started</LinkButton>
-        <LinkButton href={href("migrating-from-filament")} variant="secondary" size="lg">Coming from Filament?</LinkButton>
-      </div>
-
-      <section class="docs-content mt-20">
-        <h2>Less plumbing. More application.</h2>
-        <p>
-          Pupitre turns Lucid models and immutable TypeScript builders into an Inertia React admin
-          panel. Describe the form and table once; Pupitre handles the routes, validation, scoped
-          queries and action transport.
-        </p>
-        <Code code={example} lang="ts" />
-        <div class="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          {pillars.map((pillar) => (
-            <div class="rounded-lg border border-border p-4">
-              <div class="font-medium text-foreground">{pillar.title}</div>
-              <div class="mt-1 text-sm text-muted-foreground leading-relaxed">{pillar.body}</div>
-            </div>
-          ))}
+    <main id="main-content" tabindex="-1" class="flex-1">
+      <!-- Hero -->
+      <section class="mx-auto w-full max-w-6xl px-6 pt-16 pb-12 sm:pt-24">
+        <div class="max-w-3xl">
+          <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] font-medium text-muted-foreground">
+            <span>AdonisJS v7</span><span aria-hidden="true">·</span><span>Inertia React</span><span aria-hidden="true">·</span><span>MIT licensed</span>
+          </p>
+          <h1
+            class="font-display mt-4 text-foreground leading-[1.05] [text-wrap:balance]"
+            style="font-size: clamp(2.6rem, 6.5vw, 4.25rem); font-weight: 400; letter-spacing: -0.02em;"
+          >
+            Your models. Your admin. Your code.
+          </h1>
+          <p class="mt-5 max-w-[58ch] text-[1.125rem] text-muted-foreground leading-relaxed [text-wrap:pretty]">
+            Pupitre is a Filament-class admin panel framework for AdonisJS. Declare typed resources,
+            reactive forms, tables and server-authorized actions; keep every React component yours.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <LinkButton href={href("getting-started")} variant="primary" size="lg" icon>Get started</LinkButton>
+            <LinkButton href={href("introduction")} variant="secondary" size="lg">How it works</LinkButton>
+            <LinkButton href={href("migrating-from-filament")} variant="minimal" size="lg">Coming from Filament?</LinkButton>
+          </div>
+          <div class="mt-8 max-w-md [&_.nb-code-figure]:my-0">
+            <Code code={install} lang="sh" />
+          </div>
         </div>
-        <p class="mt-10">
-          Start with <a href={href("getting-started")}>your first panel</a>, explore the{" "}
-          <a href={href("guides/forms")}>form components</a>, or compare the{" "}
-          <a href={href("migrating-from-filament")}>Filament API equivalents</a>.
+
+        <figure class="mt-14">
+          <div class="overflow-hidden rounded-xl border border-border-strong bg-card shadow-lg">
+            <img
+              src={asset("/screenshots/dashboard-light.webp")}
+              alt="Pupitre example panel dashboard in light mode: sidebar navigation, stats strip and charts"
+              width="1440"
+              height="900"
+              class="block w-full h-auto dark:hidden"
+              fetchpriority="high"
+            />
+            <img
+              src={asset("/screenshots/dashboard-dark.webp")}
+              alt="Pupitre example panel dashboard in dark mode: sidebar navigation, stats strip and charts"
+              width="1440"
+              height="900"
+              class="hidden w-full h-auto dark:block"
+              loading="lazy"
+            />
+          </div>
+          <figcaption class="mt-3 text-center text-[0.8125rem] text-muted-foreground">
+            The dashboard of the example app in <code class="font-mono text-[0.75rem] rounded bg-accent px-1 py-0.5">apps/example</code>, rendered with the
+            default{" "}<code class="font-mono text-[0.75rem] rounded bg-accent px-1 py-0.5">@rikology/pupitre-ui</code> skin.
+          </figcaption>
+        </figure>
+      </section>
+
+      <!-- Describe once -->
+      <section class="mx-auto w-full max-w-6xl px-6 py-12">
+        <div class="border-t border-rule pt-4">
+          <h2 class="text-[1.375rem] font-semibold tracking-[-0.015em] text-foreground">Describe it once. Ship a whole admin.</h2>
+          <p class="mt-2 max-w-[62ch] text-muted-foreground leading-relaxed">
+            A resource is one file next to your Lucid model. Pupitre reads it and handles the plumbing
+            you would otherwise write by hand.
+          </p>
+        </div>
+        <div class="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
+          <div class="min-w-0 [&_.nb-code-figure]:my-0">
+            <Code code={example} lang="ts" meta='title="app/admin/resources/post_resource.ts"' />
+          </div>
+          <div>
+            <p class="text-[0.9375rem] font-semibold text-foreground">What you get from that file</p>
+            <ul class="mt-3 divide-y divide-border border-y border-border">
+              {handled.map((item) => (
+                <li class="flex items-start gap-3 py-3 text-[0.9375rem] text-foreground">
+                  <Icon name="ph:check" class="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <figure class="mt-6 overflow-hidden rounded-lg border border-border-strong bg-card shadow-default">
+              <img
+                src={asset("/screenshots/posts-table-light.webp")}
+                alt="Posts resource table with searchable title column, status badges, filters and row actions"
+                width="1440"
+                height="900"
+                loading="lazy"
+                class="block w-full h-auto dark:hidden"
+              />
+              <img
+                src={asset("/screenshots/posts-table-dark.webp")}
+                alt="Posts resource table in dark mode with searchable title column, status badges, filters and row actions"
+                width="1440"
+                height="900"
+                loading="lazy"
+                class="hidden w-full h-auto dark:block"
+              />
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="mx-auto w-full max-w-6xl px-6 py-12">
+        <div class="border-t border-rule pt-4">
+          <h2 class="text-[1.375rem] font-semibold tracking-[-0.015em] text-foreground">Everything a back office needs</h2>
+          <p class="mt-2 max-w-[62ch] text-muted-foreground leading-relaxed">
+            Familiar Filament concepts, rebuilt for Lucid, VineJS, Bouncer and React.
+          </p>
+        </div>
+        <ul class="mt-6 grid grid-cols-1 gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature) => (
+            <li class="border-b border-border">
+              <a href={href(feature.id)} class="group flex h-full gap-4 py-5 no-underline">
+                <Icon name={feature.icon} class="mt-0.5 size-5 shrink-0 text-primary" />
+                <span>
+                  <span class="block font-semibold text-foreground group-hover:text-primary transition-colors">{feature.title}</span>
+                  <span class="mt-1 block text-sm leading-relaxed text-muted-foreground">{feature.body}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <!-- How it works -->
+      <section class="mx-auto w-full max-w-6xl px-6 py-12">
+        <div class="border-t border-rule pt-4">
+          <h2 class="text-[1.375rem] font-semibold tracking-[-0.015em] text-foreground">How it works</h2>
+          <p class="mt-2 max-w-[62ch] text-muted-foreground leading-relaxed">
+            Server builders stay the source of truth; the browser renders a compiled spec.
+          </p>
+        </div>
+        <ol class="mt-8 grid grid-cols-1 gap-8 md:grid-cols-3">
+          {steps.map((step) => (
+            <li class="border-t border-border pt-4">
+              <span class="font-display text-[2.25rem] leading-none text-primary">{step.n}</span>
+              <h3 class="mt-3 text-[1.0625rem] font-semibold text-foreground">{step.title}</h3>
+              <p class="mt-1.5 text-[0.9375rem] leading-relaxed text-muted-foreground">{step.body}</p>
+            </li>
+          ))}
+        </ol>
+        <p class="mt-8 text-[0.9375rem]">
+          <a href={href("introduction")} class="font-medium text-primary">Read the full introduction</a>
+          <span class="text-muted-foreground"> for the request lifecycle and package map.</span>
         </p>
       </section>
+
+      <!-- Plugins -->
+      <section class="mx-auto w-full max-w-6xl px-6 py-12">
+        <div class="border-t border-rule pt-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="text-[1.375rem] font-semibold tracking-[-0.015em] text-foreground">Official plugins</h2>
+            <p class="mt-2 max-w-[62ch] text-muted-foreground leading-relaxed">
+              Opt-in packages you install and register on a panel.
+            </p>
+          </div>
+          <a href={href("plugins")} class="text-[0.9375rem] font-medium text-primary">Write your own plugin</a>
+        </div>
+        <ul class="mt-6 grid grid-cols-2 gap-x-6 sm:grid-cols-3 lg:grid-cols-5">
+          {plugins.map((plugin) => (
+            <li class="border-b border-border">
+              <a href={href(plugin.id)} class="group block py-3 no-underline">
+                <span class="block font-medium text-foreground group-hover:text-primary transition-colors">{plugin.name}</span>
+                <span class="block text-[0.8125rem] text-muted-foreground">{plugin.body}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <!-- Closing -->
+      <section class="mx-auto w-full max-w-6xl px-6 pt-12 pb-20">
+        <div class="border-t border-rule pt-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+          <div class="flex items-center gap-4">
+            <img src={asset("/logo.png")} alt="" width="56" height="56" class="size-14 rounded-[14px]" loading="lazy" />
+            <div>
+              <p class="font-display text-[1.75rem] leading-tight text-foreground">Build your first panel</p>
+              <p class="text-muted-foreground">From <code class="font-mono text-[0.875em] rounded bg-accent px-1 py-0.5">node ace add</code> to a working resource in a few minutes.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <LinkButton href={href("getting-started")} variant="primary" size="lg" icon>Get started</LinkButton>
+            <LinkButton href={config.github ?? "https://github.com/rikoriswandha/pupitre"} variant="secondary" size="lg" target="_blank" rel="noopener">
+              <Icon name="ph:github-logo" class="size-4" /> GitHub
+            </LinkButton>
+          </div>
+        </div>
+      </section>
     </main>
+
+    <footer class="border-t border-border">
+      <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-[0.8125rem] text-muted-foreground">
+        <p>Pupitre is MIT licensed. Built for AdonisJS v7 and Inertia React.</p>
+        <nav aria-label="Footer" class="flex flex-wrap gap-x-5 gap-y-2">
+          <a href={href("changelog")} class="text-muted-foreground no-underline hover:text-foreground">Changelog</a>
+          <a href={href("reference/cli")} class="text-muted-foreground no-underline hover:text-foreground">CLI reference</a>
+          <a href={asset("/llms.txt")} class="text-muted-foreground no-underline hover:text-foreground">llms.txt</a>
+          <a href="https://github.com/rikoriswandha/pupitre" class="text-muted-foreground no-underline hover:text-foreground" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </footer>
   </div>
 </BaseLayout>

@@ -1,6 +1,8 @@
 ---
-title: Custom fields, columns and entries
-description: Extend the catalog with typed server builders and accessible host components.
+title: "Custom fields, columns and entries"
+description: "Extend the catalog with typed server builders, validation and accessible host components for fields, columns and entries."
+sidebar:
+  label: "Custom components"
 ---
 
 A catalog extension adds a new form field, table column or infolist entry. Unlike replacing a built-in component, it gives your component its own props schema, builder methods and server validation. The example application's Comments resource demonstrates all three, including an action modal and a nested repeater.

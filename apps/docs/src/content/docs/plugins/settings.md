@@ -1,7 +1,11 @@
 ---
-title: Settings plugin
-description: Typed settings groups with transactional persistence and tenant-isolated custom pages.
+title: "Settings: typed settings"
+description: "Define typed settings groups with transactional persistence, defaults and tenant-isolated panel pages."
+sidebar:
+  label: "Settings"
 ---
+
+Settings groups turn typed configuration into panel forms backed by transactional storage. Choose a global or tenant scope and an explicit access policy for each workflow.
 
 Install `@rikology/pupitre-settings`, run `node ace add @rikology/pupitre-settings`, then `node ace migration:run`. The configure hook publishes an idempotent migration for `pupitre_settings`.
 
